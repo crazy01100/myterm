@@ -72,6 +72,7 @@ zip_count="$(find "$assets_dir" -maxdepth 1 -type f -name 'MyTerm-*-arm64.zip' |
 archive="$(find "$assets_dir" -maxdepth 1 -type f -name 'MyTerm-*-arm64.zip' -print -quit)"
 archive_name="$(basename "$archive")"
 expected_archive_sha="$(/usr/bin/shasum -a 256 "$archive" | awk '{print $1}')"
+update_user_agent="MyTerm/$release_version Sparkle/2.9.5"
 
 work_dir="$(mktemp -d /tmp/myterm-public-verification.XXXXXX)"
 trap '/bin/rm -rf "$work_dir"' EXIT
@@ -79,13 +80,13 @@ trap '/bin/rm -rf "$work_dir"' EXIT
 verify_once() {
     /bin/rm -f "$work_dir"/*
 
-    curl --fail --silent --show-error --location --connect-timeout 15 --max-time 60 \
+    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
         -D "$work_dir/index.headers" -o "$work_dir/index.html" "$base_url/" || return 1
-    curl --fail --silent --show-error --location --connect-timeout 15 --max-time 60 \
+    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
         -D "$work_dir/appcast.headers" -o "$work_dir/appcast.xml" "$base_url/appcast.xml" || return 1
-    curl --fail --silent --show-error --location --connect-timeout 15 --max-time 60 \
+    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
         -o "$work_dir/release-notes.html" "$base_url/releases/$release_version.html" || return 1
-    curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 \
+    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 120 \
         -o "$work_dir/$archive_name" "$base_url/downloads/$archive_name" || return 1
 
     /usr/bin/cmp -s "$appcast" "$work_dir/appcast.xml" || return 1
