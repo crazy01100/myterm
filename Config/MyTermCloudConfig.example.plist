@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>GOOGLE_DESKTOP_CLIENT_ID</key>
+    <string>YOUR_DESKTOP_CLIENT_ID.apps.googleusercontent.com</string>
+    <key>GOOGLE_DESKTOP_CLIENT_SECRET</key>
+    <string>YOUR_DESKTOP_CLIENT_SECRET</string>
+    <key>FIREBASE_API_KEY</key>
+    <string>YOUR_FIREBASE_WEB_API_KEY</string>
+    <key>FIREBASE_PROJECT_ID</key>
+    <string>myterm-59a95</string>
+</dict>
+</plist>

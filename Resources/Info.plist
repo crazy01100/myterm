@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_TW</string>
+    <key>CFBundleDisplayName</key>
+    <string>MyTerm</string>
+    <key>CFBundleExecutable</key>
+    <string>MySSHClient</string>
+    <key>CFBundleIdentifier</key>
+    <string>tw.local.MySSHClient</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>MyTerm</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <!-- CFBundleShortVersionString、CFBundleVersion 與 MyTermBuildDate
+         由 scripts/build-app.sh 在建置時注入，避免版本散落在多個檔案。 -->
+    <key>LSMinimumSystemVersion</key>
+    <string>26.0</string>
+    <key>LSArchitecturePriority</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+</dict>
+</plist>

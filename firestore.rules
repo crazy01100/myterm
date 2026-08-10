@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isValidVaultKeyEnvelope() {
+      return request.resource.data.keys().hasOnly([
+          'documentType',
+          'schemaVersion',
+          'payload'
+        ])
+        && request.resource.data.documentType == 'vaultKeyEnvelope'
+        && request.resource.data.schemaVersion == 1
+        && request.resource.data.payload is bytes
+        && request.resource.data.payload.size() > 0
+        && request.resource.data.payload.size() <= 65536;
+    }
+
+    function isValidEncryptedMetadataRecord() {
+      return request.resource.data.keys().hasOnly([
+          'recordType',
+          'ciphertext',
+          'nonce',
+          'authenticationTag',
+          'keyVersion',
+          'formatVersion',
+          'revision',
+          'modifiedAt',
+          'modifiedByDeviceID',
+          'deleted'
+        ])
+        && request.resource.data.recordType in ['host', 'group', 'password']
+        && request.resource.data.ciphertext is bytes
+        && request.resource.data.ciphertext.size() <= 65536
+        && request.resource.data.nonce is bytes
+        && request.resource.data.nonce.size() == 12
+        && request.resource.data.authenticationTag is bytes
+        && request.resource.data.authenticationTag.size() == 16
+        && request.resource.data.keyVersion == 1
+        && request.resource.data.formatVersion == 1
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.modifiedAt is timestamp
+        && request.resource.data.modifiedByDeviceID is string
+        && request.resource.data.modifiedByDeviceID.size() == 36
+        && request.resource.data.deleted is bool
+        && ((request.resource.data.deleted == true
+              && request.resource.data.ciphertext.size() == 0)
+            || (request.resource.data.deleted == false
+              && request.resource.data.ciphertext.size() > 0));
+    }
+
+    function isValidEncryptedMetadataCreate() {
+      return isValidEncryptedMetadataRecord()
+        && request.resource.data.revision == 1;
+    }
+
+    function isValidEncryptedMetadataUpdate() {
+      return isValidEncryptedMetadataRecord()
+        && request.resource.data.recordType == resource.data.recordType
+        && request.resource.data.keyVersion == resource.data.keyVersion
+        && request.resource.data.formatVersion == resource.data.formatVersion
+        && request.resource.data.revision == resource.data.revision + 1;
+    }
+
+    // Master Key 只以端對端加密封套保存；不開放 list 與 delete。
+    match /users/{userId}/vaultKeys/{documentId} {
+      allow get: if documentId == 'current' && isOwner(userId);
+      allow create, update: if documentId == 'current'
+        && isOwner(userId)
+        && isValidVaultKeyEnvelope();
+    }
+
+    // 主機、群組與密碼只以逐筆 AEAD 密文保存。禁止直接刪除、
+    // 額外欄位與不受限大小；刪除狀態只能寫成經驗證的 tombstone。
+    match /users/{userId}/vault/{documentId} {
+      allow get, list: if isOwner(userId);
+      allow create: if documentId.size() == 36
+        && isOwner(userId)
+        && isValidEncryptedMetadataCreate();
+      allow update: if documentId.size() == 36
+        && isOwner(userId)
+        && isValidEncryptedMetadataUpdate();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

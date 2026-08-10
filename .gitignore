@@ -1,0 +1,47 @@
+.DS_Store
+.build/
+.build-*/
+.build-app/
+.swiftpm/
+build/
+DerivedData/
+*.xcuserstate
+
+# Generated release artifacts belong in GitHub Releases, not source control.
+/MyTerm-*-arm64.zip
+/CHECKSUMS.txt
+*.dmg
+*.pkg
+*.xcarchive
+
+# Personal migration exports can contain real hostnames, addresses and users.
+/Exports/Termius/*
+!/Exports/Termius/README.md
+
+# Firebase local configuration and emulator output.
+/Config/Local/
+/GoogleService-Info.plist
+/Resources/GoogleService-Info.plist
+/.firebase/
+/.npm-cache/
+/node_modules/
+/firebase-emulator-data/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+npm-debug.log*
+
+# Signing, authentication, recovery and environment secrets.
+*.p8
+*.p12
+*.cer
+*.key
+*Sparkle*Private*Key*
+*Sparkle*Key*Backup*
+*.mobileprovision
+*.provisionprofile
+*service-account*.json
+*recovery-key*
+.env
+.env.*
+!.env.example

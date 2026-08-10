@@ -1,0 +1,20 @@
+{
+  "name": "myterm-firebase-development-tools",
+  "private": true,
+  "version": "0.0.0",
+  "description": "MyTerm 本機 Firebase Emulator 與 Security Rules 測試工具；不屬於 App 執行時相依套件。",
+  "type": "module",
+  "scripts": {
+    "emulators": "./scripts/firebase-tools.sh emulators:start --project demo-myterm --only auth,firestore",
+    "test:firestore-rules": "./scripts/firebase-tools.sh emulators:exec --project demo-myterm --only firestore \"node --test Tests/FirebaseRules/firestore.rules.test.mjs\"",
+    "deploy:firestore": "./scripts/firebase-tools.sh deploy --project myterm-59a95 --only firestore:rules,firestore:indexes"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.1",
+    "firebase": "12.17.1",
+    "firebase-tools": "15.26.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

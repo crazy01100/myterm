@@ -1,0 +1,110 @@
+#!/bin/zsh
+set -euo pipefail
+
+project_dir="${0:A:h:h}"
+app_path="$project_dir/build/MyTerm.app"
+expected_version=""
+expected_build=""
+
+usage() {
+    echo "Usage: scripts/verify-app.sh --version VERSION --build BUILD [--app /path/to/MyTerm.app]"
+}
+
+while (( $# > 0 )); do
+    case "$1" in
+        --version)
+            (( $# >= 2 )) || { echo "Missing value for --version" >&2; exit 64; }
+            expected_version="$2"
+            shift 2
+            ;;
+        --build)
+            (( $# >= 2 )) || { echo "Missing value for --build" >&2; exit 64; }
+            expected_build="$2"
+            shift 2
+            ;;
+        --app)
+            (( $# >= 2 )) || { echo "Missing value for --app" >&2; exit 64; }
+            app_path="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            usage >&2
+            exit 64
+            ;;
+    esac
+done
+
+if [[ -z "$expected_version" || -z "$expected_build" ]]; then
+    usage >&2
+    exit 64
+fi
+
+plist="$app_path/Contents/Info.plist"
+executable="$app_path/Contents/MacOS/MySSHClient"
+sparkle_framework="$app_path/Contents/Frameworks/Sparkle.framework"
+[[ -d "$app_path" ]] || { echo "App bundle not found: $app_path" >&2; exit 1; }
+[[ -x "$executable" ]] || { echo "Executable missing or not executable: $executable" >&2; exit 1; }
+[[ -d "$sparkle_framework" ]] || { echo "Sparkle.framework is missing: $sparkle_framework" >&2; exit 1; }
+[[ -x "$sparkle_framework/Versions/Current/Autoupdate" ]] || {
+    echo "Sparkle Autoupdate helper is missing or not executable." >&2
+    exit 1
+}
+[[ -d "$sparkle_framework/Versions/Current/Updater.app" ]] || {
+    echo "Sparkle Updater.app is missing." >&2
+    exit 1
+}
+/usr/bin/plutil -lint "$plist" >/dev/null
+
+sparkle_public_key_file="$project_dir/Config/Release/SparklePublicKey.txt"
+if [[ -f "$sparkle_public_key_file" ]]; then
+    expected_sparkle_public_key="$(/usr/bin/tr -d '\r\n' < "$sparkle_public_key_file")"
+    actual_sparkle_public_key="$(/usr/bin/plutil -extract SUPublicEDKey raw "$plist" 2>/dev/null || true)"
+    [[ "$actual_sparkle_public_key" == "$expected_sparkle_public_key" ]] || {
+        echo "Sparkle public key is missing or does not match the staged release key." >&2
+        exit 1
+    }
+fi
+
+actual_version="$(/usr/bin/plutil -extract CFBundleShortVersionString raw "$plist")"
+actual_build="$(/usr/bin/plutil -extract CFBundleVersion raw "$plist")"
+minimum_system="$(/usr/bin/plutil -extract LSMinimumSystemVersion raw "$plist")"
+architectures="$(/usr/bin/lipo -archs "$executable")"
+
+[[ "$actual_version" == "$expected_version" ]] || {
+    echo "Version mismatch: expected $expected_version, got $actual_version" >&2
+    exit 1
+}
+[[ "$actual_build" == "$expected_build" ]] || {
+    echo "Build mismatch: expected $expected_build, got $actual_build" >&2
+    exit 1
+}
+[[ "$minimum_system" == "26.0" ]] || {
+    echo "Minimum macOS mismatch: expected 26.0, got $minimum_system" >&2
+    exit 1
+}
+[[ "$architectures" == "arm64" ]] || {
+    echo "Architecture mismatch: expected arm64, got $architectures" >&2
+    exit 1
+}
+
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$app_path"
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$sparkle_framework"
+
+sparkle_link="$(/usr/bin/otool -L "$executable" | /usr/bin/awk '/Sparkle\.framework/ {print $1; exit}')"
+[[ "$sparkle_link" == @rpath/Sparkle.framework/* ]] || {
+    echo "Unexpected Sparkle linkage: ${sparkle_link:-missing}" >&2
+    exit 1
+}
+if ! /usr/bin/otool -l "$executable" \
+    | /usr/bin/awk '/cmd LC_RPATH/ {found=1} found && /path @loader_path\/\.\.\/Frameworks|path @executable_path\/\.\.\/Frameworks/ {ok=1} END {exit !ok}'; then
+    echo "Executable does not contain the required Sparkle Frameworks rpath." >&2
+    exit 1
+fi
+"$project_dir/scripts/check-release-safety.sh" --app "$app_path"
+
+echo "Verified MyTerm $actual_version (Build $actual_build), macOS $minimum_system+, $architectures."
