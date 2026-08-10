@@ -2,9 +2,9 @@
 
 最後更新：2026-08-10
 文件狀態：`已核准並執行`
-實作狀態：`R6 Cloudflare Pages 更新站進行中`
+實作狀態：`R7 一鍵發布與人工放行進行中`
 
-> 2026-08-10 使用者已核准本計劃。R1 至 R5 已完成；Sparkle 私鑰與加密備份已就緒，GitHub 採私人 repository。更新站確定使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。
+> 2026-08-10 使用者已核准本計劃。R1 至 R5 已完成，R6 更新站與自動部署核心已就緒，R7 正在等待第一個正式 RC 草稿驗證；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。
 
 ## 1. 目標
 
@@ -100,16 +100,16 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 | App 版本 | `0.13.0` Build `20260810050000` R4 測試候選；尚未標記為正式 `1.0.0` |
 | 支援架構 | Apple Silicon `arm64` |
 | 最低系統 | macOS 26 |
-| 自我測試 | 最近完整回歸為 276 項通過、0 失敗 |
-| 更新框架 | Sparkle `2.9.5` 已固定並嵌入；正式公鑰已配置，正式 feed 尚未配置 |
+| 自我測試 | 2026-08-10 最新完整回歸為 276 項通過、0 失敗 |
+| 更新框架 | Sparkle `2.9.5` 已固定並嵌入；正式公鑰與發布腳本的正式 feed URL 已配置，0.13.0 測試 App 本身未連正式 feed |
 | 版本來源 | 建置時由 `--version` 單一參數注入，不再寫死於 `Info.plist` |
 | Bundle Build | 由 `--build` 明確提供；預設拒絕重複或倒退 |
 | 簽署 | 保留 Sparkle framework／helpers 既有簽章，再以 ad-hoc 封裝外層 App；不再用 blanket `--deep` 重簽 |
-| Git | 工作目錄尚未完成正式 Git／GitHub 發布初始化 |
+| Git | `main` 已推送至私人 `crazy01100/myterm` repository；本機與遠端一致 |
 | GitHub Actions | Pages 部署 workflow 已建立；只處理已簽署發布成品，不建置或簽署正式 App |
 | Cloudflare Pages | `myterm-updates` 與 `mtus.lieniapp.work` 已啟用，bootstrap 更新站與安全標頭已通過外部驗證 |
 | Sparkle 金鑰 | 正式金鑰已建立於登入 Keychain，並完成 iCloud AES-256 備份與隔離還原簽署驗證 |
-| `appcast.xml` | 本機更新實驗室已建立並完成簽章驗證；正式公開 feed 尚未建立 |
+| `appcast.xml` | 本機更新實驗室已完成；正式 feed URL 固定為 `https://mtus.lieniapp.work/appcast.xml`，第一個正式 RC 尚待建立 Draft |
 
 此表是後續驗收基準；任何現況變更都要在進度表記錄證據。
 
@@ -284,15 +284,26 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 
 | 編號 | 狀態 | 執行者 | 任務 | 驗收證據／人工動作 |
 |---|---|---|---|---|
-| R7.1 | `尚未開始` | Codex | 建立 `release` 腳本，要求版本與 release notes | 缺參數或工作目錄不乾淨時拒絕發布 |
-| R7.2 | `尚未開始` | Codex | 自動執行 276 項測試、Release 建置與簽章驗證 | 測試紀錄 |
-| R7.3 | `尚未開始` | Codex | 自動建立 ZIP、Ed25519 簽章、SHA-256 與 appcast | 產物清單與驗證 |
-| R7.4 | `尚未開始` | Codex | 自動建立 GitHub Draft Release，不立即公開 | Draft URL |
+| R7.1 | `已完成` | Codex | 建立 `release` 腳本，要求版本與 release notes | `scripts/release.sh`；缺參數、範本未完成或工作目錄不乾淨時拒絕，且不提供跳過測試選項 |
+| R7.2 | `已完成` | Codex | 自動執行 276 項測試、Release 建置與簽章驗證 | 2026-08-10：132 核心＋2 OAuth loopback＋142 加密／同步測試，276 項通過、0 失敗 |
+| R7.3 | `已完成` | Codex | 自動建立 ZIP、Ed25519 簽章、SHA-256 與 appcast | 以 0.13.0 既有測試 ZIP 產生五個資產；ZIP／完整 feed 雙簽章、SHA-256、manifest、macOS 26、arm64、Pages 重建均通過；遭修改說明被拒絕 |
+| R7.4 | `等待人工驗證` | Codex＋使用者 | 自動建立 GitHub Draft Release，不立即公開 | 功能已完成；等待選定第一個 RC 版本與 release notes 後取得 Draft URL |
 | R7.5 | `等待人工驗證` | 使用者 | 檢查版本、說明、下載檔、校驗碼與更新預覽 | 使用者按下放行前不公開 |
 | R7.6 | `尚未開始` | Codex | 放行後發布 GitHub Release，觸發 Actions 自動部署 Pages | 發布 URL、Actions 結果與 feed 驗證 |
 | R7.7 | `尚未開始` | Codex | 發布後從外部 URL 重下載並再次驗證簽章／SHA-256 | 避免上傳後內容錯誤 |
 
 完成條件：開發者只需提供版本與更新說明；機械工作自動完成，但公開前仍必須由使用者確認。
+
+正式草稿入口：
+
+```sh
+./scripts/release.sh \
+  --version 1.0.0-rc.1 \
+  --build "$(date '+%Y%m%d%H%M%S')" \
+  --notes /path/to/release-notes.md
+```
+
+`--prepare-only` 可只建立並驗證本機資產。兩種模式都不會公開 Release；只有使用者人工檢查後發布 Draft，才會觸發 R6 的 GitHub Actions 與 Cloudflare Pages 部署。
 
 ### R8 — 1.0 Release Candidate 人工驗收
 
@@ -417,7 +428,7 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R4 本機更新實驗室 | `已完成` | 已完成 | 已完成 | beta.1 → beta.2 真實更新、重啟與版本切換成功；相同版本不重複提示；離線、404、竄改與錯簽安全失敗 |
 | R5 Git／GitHub | `已完成` | 已完成 | 已完成 | `crazy01100/myterm` Private repository 已建立並完成首次 push；R6 後僅增加 Release 事件觸發的 Pages 部署 workflow 與兩項加密 Secret，未新增付費資源 |
 | R6 Cloudflare Pages | `進行中` | 需要 | 必要 | Direct Upload、HTTPS feed 與回復流程正常 |
-| R7 一鍵發布 | `尚未開始` | 需要 | 必要 | 一個指令建立 Draft，人工放行 |
+| R7 一鍵發布 | `進行中` | 已完成 | 等待首個 RC | 一個指令建立 Draft，人工放行 |
 | R8 Release Candidate | `尚未開始` | 需要 | 必要 | 第二台 Mac 全情境驗收 |
 | R9 正式 1.0.0 | `尚未開始` | 需要 | 必要 | 正式下載與 appcast 可用 |
 | R10 正式 1.0.1 更新鏈 | `尚未開始` | 需要 | 必要 | 1.0.0 可自動升級至 1.0.1 |

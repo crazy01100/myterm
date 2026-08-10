@@ -72,6 +72,17 @@ build_number="$(date '+%Y%m%d%H%M%S')"
 
 只需執行測試時可使用 `./scripts/run-tests.sh`。單獨建置 App 時仍必須傳入 `--version` 與 `--build`。完整規則見 [本機正式候選建置說明](docs/RELEASE_BUILD_GUIDE.md)。
 
+需要建立正式候選草稿時，先依 [Release notes 範本](docs/RELEASE_NOTES_TEMPLATE.md) 準備一份不含「發布前確認」區塊的說明，再執行：
+
+```sh
+./scripts/release.sh \
+  --version 1.0.0-rc.1 \
+  --build "$(date '+%Y%m%d%H%M%S')" \
+  --notes /path/to/release-notes.md
+```
+
+這個入口會重新執行完整測試與安全驗證、建立簽署 ZIP、完整簽署的 `appcast.xml`、HTML 更新說明、SHA-256 與 manifest，最後只建立私人 GitHub **Draft Release**。它不會自動公開 Release，也不會觸發 Cloudflare 部署；必須人工核對後另行放行。
+
 ## 使用方式
 
 1. 可先從「+」建立群組，再新增主機並選擇密碼、私鑰或 SSH Agent／config 驗證。
