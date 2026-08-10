@@ -34,6 +34,7 @@ if root.tag != "rss":
 PY
 
 /usr/bin/grep -Fq "Content-Security-Policy:" "$site_dir/_headers" || { echo "缺少 CSP。" >&2; exit 65; }
+/usr/bin/grep -Fq "Strict-Transport-Security: max-age=31536000" "$site_dir/_headers" || { echo "缺少 HSTS。" >&2; exit 65; }
 /usr/bin/grep -Fq "X-Content-Type-Options: nosniff" "$site_dir/_headers" || { echo "缺少 nosniff。" >&2; exit 65; }
 /usr/bin/grep -Fq "Cache-Control: no-cache, no-store, must-revalidate" "$site_dir/_headers" || { echo "appcast 沒有禁止快取。" >&2; exit 65; }
 /usr/bin/grep -Fq "Cache-Control: public, max-age=31536000, immutable" "$site_dir/_headers" || { echo "版本化下載檔沒有 immutable 快取。" >&2; exit 65; }

@@ -76,30 +76,83 @@ update_user_agent="MyTerm/$release_version Sparkle/2.9.5"
 
 work_dir="$(mktemp -d /tmp/myterm-public-verification.XXXXXX)"
 trap '/bin/rm -rf "$work_dir"' EXIT
+last_error="尚未執行驗證"
+
+fetch_public_file() {
+    local label="$1"
+    local url="$2"
+    local output="$3"
+    local headers="$4"
+    local max_time="$5"
+    local error_file="$work_dir/curl-error.txt"
+    local -a curl_args=(
+        --fail
+        --silent
+        --show-error
+        --location
+        --user-agent "$update_user_agent"
+        --connect-timeout 15
+        --max-time "$max_time"
+        -o "$output"
+    )
+
+    if [[ -n "$headers" ]]; then
+        curl_args+=( -D "$headers" )
+    fi
+
+    if ! curl "${curl_args[@]}" "$url" 2>"$error_file"; then
+        local curl_message
+        curl_message="$(/usr/bin/tr '\n' ' ' < "$error_file" | /usr/bin/sed -E 's/[[:space:]]+$//')"
+        last_error="$label 取得失敗（$url）：${curl_message:-curl 未提供錯誤內容}"
+        return 1
+    fi
+}
 
 verify_once() {
     /bin/rm -f "$work_dir"/*
 
-    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
-        -D "$work_dir/index.headers" -o "$work_dir/index.html" "$base_url/" || return 1
-    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
-        -D "$work_dir/appcast.headers" -o "$work_dir/appcast.xml" "$base_url/appcast.xml" || return 1
-    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 60 \
-        -o "$work_dir/release-notes.html" "$base_url/releases/$release_version.html" || return 1
-    curl --fail --silent --show-error --location --user-agent "$update_user_agent" --connect-timeout 15 --max-time 120 \
-        -o "$work_dir/$archive_name" "$base_url/downloads/$archive_name" || return 1
+    fetch_public_file "首頁" "$base_url/" "$work_dir/index.html" "$work_dir/index.headers" 60 || return 1
+    fetch_public_file "appcast" "$base_url/appcast.xml" "$work_dir/appcast.xml" "$work_dir/appcast.headers" 60 || return 1
+    fetch_public_file "更新說明" "$base_url/releases/$release_version.html" "$work_dir/release-notes.html" "" 60 || return 1
+    fetch_public_file "安裝檔" "$base_url/downloads/$archive_name" "$work_dir/$archive_name" "" 120 || return 1
 
-    /usr/bin/cmp -s "$appcast" "$work_dir/appcast.xml" || return 1
-    /usr/bin/cmp -s "$notes" "$work_dir/release-notes.html" || return 1
-    [[ "$(/usr/bin/shasum -a 256 "$work_dir/$archive_name" | awk '{print $1}')" == "$expected_archive_sha" ]] || return 1
-    /usr/bin/grep -Fq "$release_version" "$work_dir/index.html" || return 1
+    if ! /usr/bin/cmp -s "$appcast" "$work_dir/appcast.xml"; then
+        last_error="公開 appcast.xml 與 GitHub Release 資產不同。"
+        return 1
+    fi
+    if ! /usr/bin/cmp -s "$notes" "$work_dir/release-notes.html"; then
+        last_error="公開更新說明與 GitHub Release 資產不同。"
+        return 1
+    fi
+    local actual_archive_sha
+    actual_archive_sha="$(/usr/bin/shasum -a 256 "$work_dir/$archive_name" | awk '{print $1}')"
+    if [[ "$actual_archive_sha" != "$expected_archive_sha" ]]; then
+        last_error="公開安裝檔 SHA-256 不符（預期 $expected_archive_sha，實際 $actual_archive_sha）。"
+        return 1
+    fi
+    if ! /usr/bin/grep -Fq "$release_version" "$work_dir/index.html"; then
+        last_error="公開首頁尚未顯示版本 $release_version。"
+        return 1
+    fi
 
     /usr/bin/tr -d '\r' < "$work_dir/index.headers" > "$work_dir/index.normalized.headers"
     /usr/bin/tr -d '\r' < "$work_dir/appcast.headers" > "$work_dir/appcast.normalized.headers"
-    /usr/bin/grep -Eiq '^content-security-policy:' "$work_dir/index.normalized.headers" || return 1
-    /usr/bin/grep -Eiq '^strict-transport-security:' "$work_dir/index.normalized.headers" || return 1
-    /usr/bin/grep -Eiq '^x-content-type-options:[[:space:]]*nosniff' "$work_dir/index.normalized.headers" || return 1
-    /usr/bin/grep -Eiq '^cache-control:.*no-cache.*no-store.*must-revalidate' "$work_dir/appcast.normalized.headers" || return 1
+    if ! /usr/bin/grep -Eiq '^content-security-policy:' "$work_dir/index.normalized.headers"; then
+        last_error="公開首頁缺少 Content-Security-Policy。"
+        return 1
+    fi
+    if ! /usr/bin/grep -Eiq '^strict-transport-security:[[:space:]]*max-age=31536000' "$work_dir/index.normalized.headers"; then
+        last_error="公開首頁缺少預期的 Strict-Transport-Security。"
+        return 1
+    fi
+    if ! /usr/bin/grep -Eiq '^x-content-type-options:[[:space:]]*nosniff' "$work_dir/index.normalized.headers"; then
+        last_error="公開首頁缺少 X-Content-Type-Options: nosniff。"
+        return 1
+    fi
+    if ! /usr/bin/grep -Eiq '^cache-control:.*no-cache.*no-store.*must-revalidate' "$work_dir/appcast.normalized.headers"; then
+        last_error="公開 appcast.xml 的 Cache-Control 不符合禁止快取要求。"
+        return 1
+    fi
 }
 
 for ((attempt = 1; attempt <= attempts; attempt++)); do
@@ -112,10 +165,11 @@ for ((attempt = 1; attempt <= attempts; attempt++)); do
     fi
 
     if (( attempt < attempts )); then
-        echo "公開更新站尚未收斂（$attempt/$attempts），${retry_delay} 秒後重試。"
+        echo "公開更新站尚未收斂（$attempt/$attempts）：$last_error"
+        echo "${retry_delay} 秒後重試。"
         /bin/sleep "$retry_delay"
     fi
 done
 
-echo "公開更新站在 $attempts 次驗證後仍與 Release 資產不一致。" >&2
+echo "公開更新站在 $attempts 次驗證後仍未通過：$last_error" >&2
 exit 1
