@@ -1746,6 +1746,20 @@ private struct UnifiedSyncActivationView: View {
         case .working(let message):
             progress(message)
 
+        case .needsCloudAdoption:
+            VStack(alignment: .leading, spacing: 14) {
+                Label("這台 Mac 留有較舊的本機資料", systemImage: "arrow.triangle.branch")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                Text("同一個 Google 帳號的雲端保管庫已有不同版本的主機或群組。這通常發生在安裝正式版前曾使用測試版本。")
+                    .foregroundStyle(.secondary)
+                Label("建議採用雲端資料完成這台 Mac 的首次同步。MyTerm 會先備份本機主機與群組，保留可沿用的本機私鑰路徑；相同主機的密碼若不同，將採用雲端版本。", systemImage: "externaldrive.badge.timemachine")
+                    .font(.callout)
+                Text("這個動作不會用這台 Mac 的舊主機資料覆蓋雲端版本。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
         case .completed(let recoveryKey):
             VStack(alignment: .leading, spacing: 14) {
                 Label("跨裝置同步已成功啟用", systemImage: "checkmark.shield.fill")
@@ -1844,6 +1858,22 @@ private struct UnifiedSyncActivationView: View {
                     clearSensitiveInput()
                     setupStore.reset()
                     setupStore.prepare(accountStore: accountStore)
+                }
+                .buttonStyle(.borderedProminent)
+
+            case .needsCloudAdoption:
+                Button("取消", role: .cancel) {
+                    setupStore.reset()
+                    dismiss()
+                }
+                Spacer()
+                Button("使用雲端資料並啟用同步") {
+                    setupStore.adoptCloudData(
+                        hostStore: hostStore,
+                        settings: settings,
+                        accountStore: accountStore,
+                        vaultSetupStore: vaultSetupStore
+                    )
                 }
                 .buttonStyle(.borderedProminent)
 

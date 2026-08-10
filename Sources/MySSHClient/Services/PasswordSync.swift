@@ -239,6 +239,13 @@ enum PasswordSyncOutcome: Equatable, Sendable {
     case needsRecentOverwriteConfirmation(PasswordSyncPendingConfirmation)
 }
 
+enum PasswordSyncConflictResolution: Sendable {
+    case preferLocal
+    case preferRemote
+
+    var downloadsRemoteConflict: Bool { self == .preferRemote }
+}
+
 struct PasswordSyncService: Sendable {
     func synchronize(
         hosts: [HostProfile],
@@ -248,7 +255,8 @@ struct PasswordSyncService: Sendable {
         idToken: String,
         masterKey: VaultMasterKey,
         deviceID: UUID,
-        forceRecentOverwrite: Bool
+        forceRecentOverwrite: Bool,
+        conflictResolution: PasswordSyncConflictResolution = .preferLocal
     ) async throws -> PasswordSyncOutcome {
         let hostByID = Dictionary(uniqueKeysWithValues: hosts.map { ($0.id, $0) })
         let baselineStore = PasswordSyncBaselineStore()
@@ -333,6 +341,7 @@ struct PasswordSyncService: Sendable {
             case (nil, .some, nil): downloads.append(id)
             case (.some(let localValue), .some(let remoteValue), nil):
                 if localValue.digest == remoteValue.digest { repairs.append(id) }
+                else if conflictResolution.downloadsRemoteConflict { downloads.append(id) }
                 else { conflicts.append(id) }
             case (nil, nil, .some): throw PasswordSyncError.remoteRecordMissing
             case (.some, nil, .some): throw PasswordSyncError.remoteRecordMissing
@@ -345,7 +354,8 @@ struct PasswordSyncService: Sendable {
                 if !localSame && remoteSame { uploads.append(id); break }
                 if localSame && !remoteSame { downloads.append(id); break }
                 if localValue.digest == remoteValue.digest { repairs.append(id); break }
-                conflicts.append(id)
+                if conflictResolution.downloadsRemoteConflict { downloads.append(id) }
+                else { conflicts.append(id) }
             case (nil, nil, nil): break
             }
         }

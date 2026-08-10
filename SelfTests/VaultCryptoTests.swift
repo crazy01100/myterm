@@ -1130,6 +1130,14 @@ do {
     let hostID = UUID(uuidString: "81000000-2000-3000-4000-500000000001")!
     let passwordRecordID = PasswordSyncCodec.recordID(for: hostID)
     check(passwordRecordID == PasswordSyncCodec.recordID(for: hostID), "password record UUID is deterministic for a host")
+    check(
+        PasswordSyncConflictResolution.preferRemote.downloadsRemoteConflict,
+        "new-device password recovery resolves conflicts by downloading the cloud copy"
+    )
+    check(
+        !PasswordSyncConflictResolution.preferLocal.downloadsRemoteConflict,
+        "normal password sync keeps last-writer conflict handling"
+    )
     check(passwordRecordID != hostID, "password record UUID does not expose the host UUID directly")
 
     let passwordData = Data("Case-Sensitive 密碼 !@#$%^&*()".utf8)

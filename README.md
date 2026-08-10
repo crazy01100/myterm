@@ -68,7 +68,7 @@ build_number="$(date '+%Y%m%d%H%M%S')"
   --build "$build_number"
 ```
 
-版本與 Build 必須明確提供；Build 只能增加，重複或倒退會被拒絕。流程會依序執行敏感資料檢查、276 項測試、arm64 Release 建置、App 驗證、ZIP 打包、SHA-256 產生，並將解壓後的 App 再驗證一次。App 產生在 `build/MyTerm.app`，ZIP 與 `CHECKSUMS.txt` 產生在 `build/release/`；目前採 ad-hoc 簽署。
+版本與 Build 必須明確提供；Build 只能增加，重複或倒退會被拒絕。流程會依序執行敏感資料檢查、278 項測試、arm64 Release 建置、App 驗證、ZIP 打包、SHA-256 產生，並將解壓後的 App 再驗證一次。App 產生在 `build/MyTerm.app`，ZIP 與 `CHECKSUMS.txt` 產生在 `build/release/`；目前採 ad-hoc 簽署。
 
 只需執行測試時可使用 `./scripts/run-tests.sh`。單獨建置 App 時仍必須傳入 `--version` 與 `--build`。完整規則見 [本機正式候選建置說明](docs/RELEASE_BUILD_GUIDE.md)。
 

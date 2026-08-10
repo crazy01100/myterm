@@ -20,6 +20,7 @@ enum UnifiedSyncSetupState: Equatable {
     case checking
     case awaitingPassphrase(UnifiedSyncSetupMode)
     case working(String)
+    case needsCloudAdoption
     case completed(recoveryKey: String?)
     case failed(String)
 }
@@ -228,6 +229,135 @@ final class UnifiedSyncSetupStore: ObservableObject {
                 self.state = .completed(recoveryKey: recoveryKey)
             } catch {
                 try? settings.setMetadataSyncEnabled(false)
+                if error as? UnifiedSyncSetupError == .incompatibleInventory {
+                    self.state = .needsCloudAdoption
+                } else {
+                    self.state = .failed(error.localizedDescription)
+                }
+            }
+            self.activationTask = nil
+        }
+    }
+
+    func adoptCloudData(
+        hostStore: HostStore,
+        settings: SyncSettingsStore,
+        accountStore: CloudAccountStore,
+        vaultSetupStore: VaultSetupStore
+    ) {
+        guard activationTask == nil, state == .needsCloudAdoption else { return }
+        state = .working("正在備份本機資料並安全套用雲端版本…")
+        activationTask = Task { [weak self, weak hostStore, weak settings, weak accountStore, weak vaultSetupStore] in
+            guard let self, let hostStore, let settings, let accountStore, let vaultSetupStore else { return }
+            do {
+                guard case .signedIn(let account) = accountStore.state,
+                      let projectID = accountStore.firebaseProjectID else {
+                    throw UnifiedSyncSetupError.signedOut
+                }
+                let token = try await accountStore.validIDToken()
+                let envelopeBackend = FirestoreVaultBackend(projectID: projectID)
+                guard let remoteEnvelope = try await envelopeBackend.fetchEnvelope(
+                    ownerUID: account.uid,
+                    idToken: token
+                ),
+                      let localEnvelope = try VaultEnvelopeStore().load(ownerUID: account.uid),
+                      remoteEnvelope == localEnvelope,
+                      let masterKey = try VaultMasterKeyStore.load(
+                        ownerUID: account.uid,
+                        version: remoteEnvelope.passphraseEnvelope.masterKeyVersion
+                      ) else {
+                    throw UnifiedSyncSetupError.cloudChanged
+                }
+
+                let metadataBackend = FirestoreMetadataBackend(projectID: projectID)
+                let remoteMetadata = try await metadataBackend.fetchAll(
+                    ownerUID: account.uid,
+                    idToken: token
+                )
+                let activeRemoteMetadata = remoteMetadata.filter { !$0.deleted }
+                var cloudDocument = try Self.cloudInventory(
+                    records: remoteMetadata,
+                    ownerUID: account.uid,
+                    masterKey: masterKey
+                )
+                let localPrivateKeyPaths = Dictionary(uniqueKeysWithValues: hostStore.hosts.compactMap { host in
+                    host.privateKeyPath.isEmpty ? nil : (host.id, host.privateKeyPath)
+                })
+                for index in cloudDocument.hosts.indices {
+                    if cloudDocument.hosts[index].authenticationMethod == .privateKey,
+                       let localPath = localPrivateKeyPaths[cloudDocument.hosts[index].id] {
+                        cloudDocument.hosts[index].privateKeyPath = localPath
+                    }
+                }
+                _ = try hostStore.applyVerifiedCloudMerge(cloudDocument)
+
+                let deviceID = try SyncDeviceIdentityStore().loadOrCreate()
+                let metadataBaseline = try MetadataSyncBaselinePlanner.makeBaseline(
+                    localGroups: cloudDocument.groups,
+                    localHosts: cloudDocument.hosts,
+                    remoteRecords: activeRemoteMetadata,
+                    ownerUID: account.uid,
+                    masterKey: masterKey,
+                    deviceID: deviceID
+                )
+                try MetadataSyncBaselineStore().save(metadataBaseline, ownerUID: account.uid)
+
+                self.state = .working("正在採用雲端密碼並建立這台 Mac 的同步基線…")
+                try PasswordSyncBaselineStore().save(
+                    PasswordSyncBaseline(
+                        schemaVersion: PasswordSyncBaseline.schemaVersion,
+                        ownerUIDDigest: MetadataSyncBaselineStore.ownerDigest(account.uid),
+                        deviceID: deviceID,
+                        entries: []
+                    ),
+                    ownerUID: account.uid
+                )
+                let passwordSnapshot = try await metadataBackend.fetchSnapshot(
+                    ownerUID: account.uid,
+                    idToken: token
+                )
+                let passwordOutcome = try await PasswordSyncService().synchronize(
+                    hosts: cloudDocument.hosts,
+                    snapshot: passwordSnapshot,
+                    backend: metadataBackend,
+                    ownerUID: account.uid,
+                    idToken: token,
+                    masterKey: masterKey,
+                    deviceID: deviceID,
+                    forceRecentOverwrite: true,
+                    conflictResolution: .preferRemote
+                )
+                guard case .completed = passwordOutcome else {
+                    throw UnifiedSyncSetupError.verificationFailed
+                }
+
+                self.state = .working("正在重新下載驗證完整同步結果…")
+                let verifiedRemote = try await metadataBackend.fetchAll(
+                    ownerUID: account.uid,
+                    idToken: token
+                )
+                let verifiedPlan = try MetadataManualSyncPlanner.makePlan(
+                    localGroups: hostStore.groups,
+                    localHosts: hostStore.hosts,
+                    remoteRecords: verifiedRemote,
+                    baseline: metadataBaseline,
+                    ownerUID: account.uid,
+                    masterKey: masterKey
+                )
+                guard verifiedPlan.conflictCount == 0,
+                      verifiedPlan.uploadCount == 0,
+                      verifiedPlan.downloadCount == 0,
+                      verifiedPlan.repairCount == 0,
+                      verifiedPlan.unchangedCount == hostStore.groups.count + hostStore.hosts.count else {
+                    throw UnifiedSyncSetupError.verificationFailed
+                }
+
+                try settings.setMetadataSyncEnabled(true)
+                vaultSetupStore.refresh(account: account)
+                await vaultSetupStore.checkCloudEnvelope(projectID: projectID, idToken: token)
+                self.state = .completed(recoveryKey: nil)
+            } catch {
+                try? settings.setMetadataSyncEnabled(false)
                 self.state = .failed(error.localizedDescription)
             }
             self.activationTask = nil
@@ -246,6 +376,25 @@ final class UnifiedSyncSetupStore: ObservableObject {
     private struct MetadataPreparationResult {
         let document: InventoryDocument
         let baseline: MetadataSyncBaseline
+    }
+
+    private static func cloudInventory(
+        records: [EncryptedSyncRecord],
+        ownerUID: String,
+        masterKey: VaultMasterKey
+    ) throws -> InventoryDocument {
+        var groups: [HostGroup] = []
+        var hosts: [HostProfile] = []
+        for record in records {
+            switch try MetadataSyncCodec.decrypt(record, ownerUID: ownerUID, masterKey: masterKey) {
+            case .group(let group): groups.append(group)
+            case .host(let host): hosts.append(host)
+            case .tombstone: continue
+            }
+        }
+        let document = InventoryDocument(groups: groups, hosts: hosts)
+        try CloudInventoryRestoreValidator.validate(document)
+        return document
     }
 
     private static func prepareMetadata(

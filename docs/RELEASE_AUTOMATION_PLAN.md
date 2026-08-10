@@ -2,9 +2,9 @@
 
 最後更新：2026-08-10
 文件狀態：`已核准並執行`
-實作狀態：`R7 已完成，準備 R8 第二台 Mac 驗收`
+實作狀態：`R7 已完成，R8 第二台 Mac 驗收進行中`
 
-> 2026-08-10 使用者已核准本計劃。R1 至 R7 已完成，第一個正式 RC 已通過人工放行、發布、部署、外部驗證與 Pages 回復演練；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。下一階段為 R8 第二台 Mac 的 RC1 → RC2 驗收。
+> 2026-08-10 使用者已核准本計劃。R1 至 R7 已完成，第一個正式 RC 已通過人工放行、發布、部署、外部驗證與 Pages 回復演練；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。R8 已在第二台 Mac 找到並修正「沿用測試版資料時首次啟用同步缺少安全復原入口」的問題，下一階段為 RC1 → RC2 真實更新與同步驗收。
 
 ## 1. 目標
 
@@ -100,7 +100,7 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 | App 版本 | `1.0.0-rc.1` Build `20260810113741` 已發布為私人 GitHub Pre-release，並部署至正式更新站 |
 | 支援架構 | Apple Silicon `arm64` |
 | 最低系統 | macOS 26 |
-| 自我測試 | 2026-08-10 最新完整回歸為 276 項通過、0 失敗 |
+| 自我測試 | 2026-08-10 最新完整回歸為 278 項通過、0 失敗 |
 | 更新框架 | Sparkle `2.9.5` 已固定並嵌入；正式公鑰與發布腳本的正式 feed URL 已配置，0.13.0 測試 App 本身未連正式 feed |
 | 版本來源 | 建置時由 `--version` 單一參數注入，不再寫死於 `Info.plist` |
 | Bundle Build | 由 `--build` 明確提供；預設拒絕重複或倒退 |
@@ -311,10 +311,10 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 
 | 編號 | 狀態 | 驗證項目 | 人工驗收方式 |
 |---|---|---|---|
-| R8.1 | `尚未開始` | 全新下載與 Gatekeeper | 第二台 Mac 下載、移入 Applications，以系統允許方式第一次開啟；不得關閉 Gatekeeper |
+| R8.1 | `已完成` | 全新下載與 Gatekeeper | 第二台 Mac 已下載 RC1、移入 Applications，並透過 macOS 系統允許方式正常開啟；未關閉 Gatekeeper |
 | R8.2 | `尚未開始` | 純本機模式 | 不登入 Google 也能建立主機、SSH、SFTP、Terminal、Serial |
-| R8.3 | `尚未開始` | Google 登入與同步 | 登入、啟用同步、下載主機及密碼 |
-| R8.4 | `尚未開始` | 更新安裝 | RC1 從 App 內更新到 RC2 |
+| R8.3 | `進行中` | Google 登入與同步 | RC1 成功沿用同 Bundle ID 的既有 Google 登入與端對端金鑰；偵測到舊測試資料與雲端 3 筆差異後安全停止。RC2 增加「先備份本機、採用雲端主機與衝突密碼、建立雙基線、回讀驗證後才啟用」流程，等待第二台 Mac 驗收 |
+| R8.4 | `等待人工驗證` | 更新安裝 | RC1 從 App 內更新到 RC2；RC2 Draft／公開部署完成後由第二台 Mac 操作 |
 | R8.5 | `尚未開始` | 資料保留 | 主機、群組、密碼、known_hosts、設定、登入與同步狀態都存在 |
 | R8.6 | `尚未開始` | 同名／舊版本 | 相同版本不提示；較舊版本不覆蓋新版 |
 | R8.7 | `尚未開始` | 更新失敗復原 | 中斷網路或提供錯誤簽章，舊 App 仍可開啟 |
