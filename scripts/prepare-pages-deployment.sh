@@ -47,6 +47,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+canonicalize_path() {
+    /usr/bin/python3 - "$1" "$project_dir" <<'PY'
+import os
+import sys
+
+path, project_dir = sys.argv[1:]
+if not os.path.isabs(path):
+    path = os.path.join(project_dir, path)
+print(os.path.realpath(path))
+PY
+}
+
+assets_dir="$(canonicalize_path "$assets_dir")"
+output_dir="$(canonicalize_path "$output_dir")"
+
 [[ -n "$assets_dir" && -d "$assets_dir" ]] || { echo "找不到發布資產目錄。" >&2; exit 66; }
 [[ "$release_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || {
     echo "版本格式不正確：$release_version" >&2
