@@ -103,7 +103,9 @@ fetch_public_file() {
     if ! curl "${curl_args[@]}" "$url" 2>"$error_file"; then
         local curl_message
         curl_message="$(/usr/bin/tr '\n' ' ' < "$error_file" | /usr/bin/sed -E 's/[[:space:]]+$//')"
-        last_error="$label 取得失敗（$url）：${curl_message:-curl 未提供錯誤內容}"
+        # macOS 內建的 Bash 3.2 在部分語系下，可能把緊接變數的全形
+        # 標點誤判成變數名稱的一部分；明確加上大括號以避免錯誤。
+        last_error="${label} 取得失敗（${url}）：${curl_message:-curl 未提供錯誤內容}"
         return 1
     fi
 }
@@ -127,11 +129,11 @@ verify_once() {
     local actual_archive_sha
     actual_archive_sha="$(/usr/bin/shasum -a 256 "$work_dir/$archive_name" | awk '{print $1}')"
     if [[ "$actual_archive_sha" != "$expected_archive_sha" ]]; then
-        last_error="公開安裝檔 SHA-256 不符（預期 $expected_archive_sha，實際 $actual_archive_sha）。"
+        last_error="公開安裝檔 SHA-256 不符（預期 ${expected_archive_sha}，實際 ${actual_archive_sha}）。"
         return 1
     fi
     if ! /usr/bin/grep -Fq "$release_version" "$work_dir/index.html"; then
-        last_error="公開首頁尚未顯示版本 $release_version。"
+        last_error="公開首頁尚未顯示版本 ${release_version}。"
         return 1
     fi
 
@@ -165,7 +167,7 @@ for ((attempt = 1; attempt <= attempts; attempt++)); do
     fi
 
     if (( attempt < attempts )); then
-        echo "公開更新站尚未收斂（$attempt/$attempts）：$last_error"
+        echo "公開更新站尚未收斂（${attempt}/${attempts}）：${last_error}"
         echo "${retry_delay} 秒後重試。"
         /bin/sleep "$retry_delay"
     fi

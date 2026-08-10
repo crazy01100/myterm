@@ -4,7 +4,7 @@
 文件狀態：`已核准並執行`
 實作狀態：`R7 已完成，R8 第二台 Mac 驗收進行中`
 
-> 2026-08-10 使用者已核准本計劃。R1 至 R7 已完成，第一個正式 RC 已通過人工放行、發布、部署、外部驗證與 Pages 回復演練；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。R8 已在第二台 Mac 找到並修正「沿用測試版資料時首次啟用同步缺少安全復原入口」的問題，下一階段為 RC1 → RC2 真實更新與同步驗收。
+> 2026-08-10 使用者已核准本計劃。R1 至 R7 已完成，RC1 與 RC2 均已通過人工放行、發布、部署與外部驗證，Pages 回復演練亦已完成；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。R8 已在第二台 Mac 找到並修正「沿用測試版資料時首次啟用同步缺少安全復原入口」的問題，下一階段為 RC1 → RC2 真實更新與同步驗收。
 
 ## 1. 目標
 
@@ -97,7 +97,7 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 
 | 項目 | 現況 |
 |---|---|
-| App 版本 | `1.0.0-rc.1` Build `20260810113741` 已發布為私人 GitHub Pre-release，並部署至正式更新站 |
+| App 版本 | `1.0.0-rc.2` Build `20260810131318` 已發布為私人 GitHub Pre-release，並部署至正式更新站 |
 | 支援架構 | Apple Silicon `arm64` |
 | 最低系統 | macOS 26 |
 | 自我測試 | 2026-08-10 最新完整回歸為 278 項通過、0 失敗 |
@@ -107,9 +107,9 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 | 簽署 | 保留 Sparkle framework／helpers 既有簽章，再以 ad-hoc 封裝外層 App；不再用 blanket `--deep` 重簽 |
 | Git | `main` 已推送至私人 `crazy01100/myterm` repository；本機與遠端一致 |
 | GitHub Actions | Pages 部署 workflow 已建立；只處理已簽署發布成品，不建置或簽署正式 App |
-| Cloudflare Pages | `myterm-updates` 與 `mtus.lieniapp.work` 已啟用；更新子網域採 DNS Only CNAME，避免 Free Bot Fight Mode 誤攔更新程式，Pages 自行提供 HSTS 等安全標頭；RC1 已通過外部驗證 |
+| Cloudflare Pages | `myterm-updates` 與 `mtus.lieniapp.work` 已啟用；更新子網域採 DNS Only CNAME，避免 Free Bot Fight Mode 誤攔更新程式，Pages 自行提供 HSTS 等安全標頭；RC2 已通過外部驗證 |
 | Sparkle 金鑰 | 正式金鑰已建立於登入 Keychain，並完成 iCloud AES-256 備份與隔離還原簽署驗證 |
-| `appcast.xml` | 本機更新實驗室已完成；正式 feed URL 固定為 `https://mtus.lieniapp.work/appcast.xml`，RC1 線上內容與 GitHub Release 資產一致 |
+| `appcast.xml` | 本機更新實驗室已完成；正式 feed URL 固定為 `https://mtus.lieniapp.work/appcast.xml`，RC2 線上內容與 GitHub Release 資產一致 |
 
 此表是後續驗收基準；任何現況變更都要在進度表記錄證據。
 
@@ -285,12 +285,12 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | 編號 | 狀態 | 執行者 | 任務 | 驗收證據／人工動作 |
 |---|---|---|---|---|
 | R7.1 | `已完成` | Codex | 建立 `release` 腳本，要求版本與 release notes | `scripts/release.sh`；缺參數、範本未完成或工作目錄不乾淨時拒絕，且不提供跳過測試選項 |
-| R7.2 | `已完成` | Codex | 自動執行 276 項測試、Release 建置與簽章驗證 | 2026-08-10：132 核心＋2 OAuth loopback＋142 加密／同步測試，276 項通過、0 失敗 |
-| R7.3 | `已完成` | Codex | 自動建立 ZIP、Ed25519 簽章、SHA-256 與 appcast | RC1 五個資產、ZIP／完整 feed 雙簽章、SHA-256、manifest、macOS 26、arm64、Pages 重建均通過；ZIP SHA-256 `f168a52017b68b16c80fa5925029332640f786505a3841e57e78b71a5192ed2a`；遭修改說明被拒絕 |
-| R7.4 | `已完成` | Codex＋使用者 | 自動建立 GitHub Draft Release，不立即公開 | `1.0.0-rc.1` Build `20260810113741`；先建立私人 Draft，五個自訂資產由 GitHub 重新下載後再次通過簽章與 SHA-256，target commit `cc59d22`；經 R7.5 放行後才發布為 Pre-release |
-| R7.5 | `已完成` | 使用者 | 檢查版本、說明、下載檔、校驗碼與更新預覽 | 2026-08-10 使用者確認 RC1 Release 頁與資產內容正常並明確要求繼續 |
-| R7.6 | `已完成` | Codex | 放行後發布 GitHub Release，觸發 Actions 自動部署 Pages | Pre-release `v1.0.0-rc.1` 已發布；Actions run `31355868387` 完成 Pages 部署與公開站驗證 |
-| R7.7 | `已完成` | Codex | 發布後從外部 URL 重下載並再次驗證簽章／SHA-256 | GitHub-hosted runner 重新取得首頁、appcast、更新說明與 6 MB ZIP；內容、版本、ZIP SHA-256 `f168a52017b68b16c80fa5925029332640f786505a3841e57e78b71a5192ed2a` 及安全標頭全部通過 |
+| R7.2 | `已完成` | Codex | 自動執行完整測試、Release 建置與簽章驗證 | RC2：132 核心＋2 OAuth loopback＋144 加密／同步測試，278 項通過、0 失敗 |
+| R7.3 | `已完成` | Codex | 自動建立 ZIP、Ed25519 簽章、SHA-256 與 appcast | RC2 五個資產、ZIP／完整 feed 雙簽章、SHA-256、manifest、macOS 26、arm64、Pages 重建均通過；ZIP SHA-256 `790049e09ea3ed2f92d8a45e40ba27f32165b51fd12bcda8f5e1299ea862d7d3` |
+| R7.4 | `已完成` | Codex＋使用者 | 自動建立 GitHub Draft Release，不立即公開 | `1.0.0-rc.2` Build `20260810131318`；先建立私人 Draft，五個自訂資產通過簽章與 SHA-256，target commit `0441c3915fafdc8b7db1ef852a2f62c92d6dc455`；經 R7.5 放行後才發布為 Pre-release |
+| R7.5 | `已完成` | 使用者 | 檢查版本、說明、下載檔、校驗碼與更新預覽 | 2026-08-10 使用者確認 RC2 Release 頁與五個資產正常，並明確要求發布 |
+| R7.6 | `已完成` | Codex | 放行後發布 GitHub Release，觸發 Actions 自動部署 Pages | Pre-release `v1.0.0-rc.2` 已發布；Actions run `31358179030` 完成 Pages 部署與公開站驗證 |
+| R7.7 | `已完成` | Codex | 發布後從外部 URL 重下載並再次驗證簽章／SHA-256 | GitHub-hosted runner 重新取得首頁、appcast、更新說明與 ZIP；內容、版本、ZIP SHA-256 `790049e09ea3ed2f92d8a45e40ba27f32165b51fd12bcda8f5e1299ea862d7d3` 及安全標頭全部通過 |
 
 完成條件：開發者只需提供版本與更新說明；機械工作自動完成，但公開前仍必須由使用者確認。
 
@@ -314,7 +314,7 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R8.1 | `已完成` | 全新下載與 Gatekeeper | 第二台 Mac 已下載 RC1、移入 Applications，並透過 macOS 系統允許方式正常開啟；未關閉 Gatekeeper |
 | R8.2 | `尚未開始` | 純本機模式 | 不登入 Google 也能建立主機、SSH、SFTP、Terminal、Serial |
 | R8.3 | `進行中` | Google 登入與同步 | RC1 成功沿用同 Bundle ID 的既有 Google 登入與端對端金鑰；偵測到舊測試資料與雲端 3 筆差異後安全停止。RC2 增加「先備份本機、採用雲端主機與衝突密碼、建立雙基線、回讀驗證後才啟用」流程，等待第二台 Mac 驗收 |
-| R8.4 | `等待人工驗證` | 更新安裝 | RC1 從 App 內更新到 RC2；RC2 Draft／公開部署完成後由第二台 Mac 操作 |
+| R8.4 | `等待人工驗證` | 更新安裝 | RC2 已發布並部署；由第二台 Mac 在 RC1 內按「檢查更新…」，完成下載、安裝與重新啟動 |
 | R8.5 | `尚未開始` | 資料保留 | 主機、群組、密碼、known_hosts、設定、登入與同步狀態都存在 |
 | R8.6 | `尚未開始` | 同名／舊版本 | 相同版本不提示；較舊版本不覆蓋新版 |
 | R8.7 | `尚未開始` | 更新失敗復原 | 中斷網路或提供錯誤簽章，舊 App 仍可開啟 |
@@ -428,8 +428,8 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R4 本機更新實驗室 | `已完成` | 已完成 | 已完成 | beta.1 → beta.2 真實更新、重啟與版本切換成功；相同版本不重複提示；離線、404、竄改與錯簽安全失敗 |
 | R5 Git／GitHub | `已完成` | 已完成 | 已完成 | `crazy01100/myterm` Private repository 已建立並完成首次 push；R6 後僅增加 Release 事件觸發的 Pages 部署 workflow 與兩項加密 Secret，未新增付費資源 |
 | R6 Cloudflare Pages | `已完成` | 已完成 | 已完成 | Direct Upload、DNS Only 自訂網域、HTTPS、安全標頭、外部驗證與部署歷史回復均通過 |
-| R7 一鍵發布 | `已完成` | 已完成 | 已完成 | RC1 經人工放行後發布；GitHub Actions 自動部署，外部 runner 完整驗證公開成品 |
-| R8 Release Candidate | `尚未開始` | 需要 | 必要 | 第二台 Mac 全情境驗收 |
+| R7 一鍵發布 | `已完成` | 已完成 | 已完成 | RC2 經人工放行後發布；GitHub Actions 自動部署，外部 runner 完整驗證公開成品 |
+| R8 Release Candidate | `進行中` | 已完成 RC2 自動驗證 | 必要 | 第二台 Mac 正在進行 RC1 → RC2 更新與同步驗收 |
 | R9 正式 1.0.0 | `尚未開始` | 需要 | 必要 | 正式下載與 appcast 可用 |
 | R10 正式 1.0.1 更新鏈 | `尚未開始` | 需要 | 必要 | 1.0.0 可自動升級至 1.0.1 |
 
