@@ -2,7 +2,7 @@
 
 最後更新：2026-08-10
 文件狀態：`已核准並執行`
-實作狀態：`R5 進行中；首次私人 GitHub push 準備中`
+實作狀態：`R5 已完成；下一階段為 R6 Cloudflare Pages 更新站`
 
 > 2026-08-10 使用者已核准本計劃。R1 至 R4 已完成；Sparkle 私鑰與加密備份已就緒，GitHub 採私人 repository，Cloudflare 正式更新站尚未建立。
 
@@ -236,7 +236,7 @@ R4 隔離界線：測試 App 使用 `tw.local.MySSHClient.UpdateLab`、獨立 Ap
 | R5.1 | `已完成` | Codex＋使用者 | 決定 LICENSE 與是否先建立私人 repository | 2026-08-10 選擇 Private；現階段不加入開源 LICENSE，未來公開前再決定 |
 | R5.2 | `已完成` | Codex | 最終檢查 `.gitignore` 與歷史候選檔案 | 120 個來源候選已檢查；Exports、舊 ZIP、`.app`、Build cache、Local config、Firebase CLI Token 與 Keychain 資料均被忽略 |
 | R5.3 | `已完成` | Codex | 執行主機名稱、IP、帳號、OAuth、Firebase、私鑰掃描 | 276 項測試與 `check-release-safety.sh` 通過；只保留 Firebase Project ID、測試保留網段與 Sparkle 公鑰等非機密公開參數 |
-| R5.4 | `已完成` | Codex | 初始化 Git，建立第一個本機提交 | 本機 `main`、`origin` 與首次來源提交已建立；提交作者使用 GitHub noreply 身分，等待 push 驗證 |
+| R5.4 | `已完成` | Codex | 初始化 Git，建立第一個本機提交 | 首次提交 `ffac6ee16b671fdb9af8ffdb5e148ad94c3391d6` 已推送；本機與 `origin/main` 完全一致，作者使用 GitHub noreply 身分 |
 | R5.5 | `已完成` | 使用者 | 建立／確認 GitHub repository 名稱與可見性 | 已核准 `crazy01100/myterm`；GitHub API 確認為空白 Private repository |
 | R5.6 | `已完成（現階段）` | Codex | 建立保護規則：PR 不取得發布金鑰、第三方 Action 固定 SHA | `docs/GITHUB_SECURITY.md`；初始 repository 不建立 workflow，Sparkle 私鑰不進 GitHub；日後第三方 Action 必須固定完整 SHA |
 | R5.7 | `移至首次啟用 Actions 前` | 使用者 | GitHub Actions 用量與付款設定確認 | 初始版本不執行 Actions，不產生用量；第一次建立 workflow 前再檢查，若要求付款或信用卡立即停止 |
@@ -408,7 +408,7 @@ ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網
 | R2 Sparkle 核心 | `已完成` | 已完成 | 已完成 | 0.13.0 候選通過封裝驗證；未配置提示正常，介面精簡為 App 選單單一入口 |
 | R3 更新金鑰 | `已完成` | 已完成 | 已完成 | 正式金鑰、公鑰嵌入、iCloud AES-256 備份與隔離還原簽署均通過；第二份私人外接備份列為未來強化 |
 | R4 本機更新實驗室 | `已完成` | 已完成 | 已完成 | beta.1 → beta.2 真實更新、重啟與版本切換成功；相同版本不重複提示；離線、404、竄改與錯簽安全失敗 |
-| R5 Git／GitHub | `進行中` | 已完成 | 已完成 | 安全掃描與本機首次提交完成；等待私人 repository 首次 push 驗證 |
+| R5 Git／GitHub | `已完成` | 已完成 | 已完成 | `crazy01100/myterm` Private repository 已建立並完成首次 push；沒有 Actions、Release、機密或付費資源 |
 | R6 Cloudflare Pages | `尚未開始` | 需要 | 必要 | HTTPS feed 與回復流程正常 |
 | R7 一鍵發布 | `尚未開始` | 需要 | 必要 | 一個指令建立 Draft，人工放行 |
 | R8 Release Candidate | `尚未開始` | 需要 | 必要 | 第二台 Mac 全情境驗收 |
