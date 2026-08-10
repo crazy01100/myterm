@@ -326,9 +326,9 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 
 | 編號 | 狀態 | 執行者 | 任務 | 驗收證據／人工動作 |
 |---|---|---|---|---|
-| R9.1 | `進行中` | Codex | 將 RC 的已驗證程式設定為 `1.0.0` | 正式版沿用 RC2 已驗證程式碼；準備 Git commit／tag 候選與 Draft Release |
-| R9.2 | `尚未開始` | Codex | 重新執行全部測試、安全掃描與發布腳本 | 最終報告 |
-| R9.3 | `等待人工驗證` | 使用者 | 審閱 Release、安裝說明、已知限制與隱私／安全文件 | 明確核准發布 |
+| R9.1 | `已完成` | Codex | 將 RC 的已驗證程式設定為 `1.0.0` | 正式版沿用 RC2 已驗證程式碼；候選 commit `7f278759560e8069a56ba2b488ac3b513424c3ac`，GitHub Draft Release `v1.0.0` 已建立但尚未發布 |
+| R9.2 | `已完成` | Codex | 重新執行全部測試、安全掃描與發布腳本 | 2026-08-10：278 項測試、Release 建置、安全掃描、App／ZIP、Sparkle 雙簽章與五個發布資產驗證全部通過；Build `20260810134441`，ZIP SHA-256 `828f1cb4a612dcc54e6ad36d8547c6984d246daa4e5b5a66873e66fc79da6120`。五個資產另從 GitHub Draft 重新下載驗證通過 |
+| R9.3 | `等待人工驗證` | 使用者 | 審閱 Release、安裝說明、已知限制與隱私／安全文件 | Draft：`https://github.com/crazy01100/myterm/releases/tag/untagged-6bf26bcddedd9697f8b2`；明確核准後才可發布 |
 | R9.4 | `尚未開始` | Codex | 發布私人 GitHub Release 並由 Actions 部署 Cloudflare Pages 成品 | 公開 URL |
 | R9.5 | `尚未開始` | Codex | 從正式 `appcast.xml` 檢查版本與簽章 | 線上驗證報告 |
 | R9.6 | `等待人工驗證` | 使用者 | 第二台 Mac 下載正式 `1.0.0` 並確認啟動 | 最終安裝確認 |
@@ -430,7 +430,7 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R6 Cloudflare Pages | `已完成` | 已完成 | 已完成 | Direct Upload、DNS Only 自訂網域、HTTPS、安全標頭、外部驗證與部署歷史回復均通過 |
 | R7 一鍵發布 | `已完成` | 已完成 | 已完成 | RC2 經人工放行後發布；GitHub Actions 自動部署，外部 runner 完整驗證公開成品 |
 | R8 Release Candidate | `已完成` | 已完成 | 已完成／接受既有證據 | RC1 → RC2、同步密碼、資料保留、相同版本與斷線復原已通過；純本機採既有完整測試，朋友試用移至發布後 |
-| R9 正式 1.0.0 | `進行中` | 需要 | 必要 | 正式 Draft、下載與 appcast 尚待放行 |
+| R9 正式 1.0.0 | `進行中` | 已完成 | 等待放行 | 1.0.0 Draft 與五個資產均已建立，並自 GitHub 重新下載完成簽章、SHA-256、版本、架構與最低系統驗證；等待使用者審閱後發布 |
 | R10 正式 1.0.1 更新鏈 | `尚未開始` | 需要 | 必要 | 1.0.0 可自動升級至 1.0.1 |
 
 ## 12. 進度維護規則
