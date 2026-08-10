@@ -64,3 +64,12 @@ jobs:
           wranglerVersion: "4.120.0"
           command: pages deploy build/pages --project-name=myterm-updates --branch=main
           gitHubToken: ${{ github.token }}
+
+      - name: Verify public update site from external runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${MYTERM_RELEASE_TAG#v}"
+          ./scripts/verify-public-update-site.sh \
+            --assets build/release-assets \
+            --version "$version"
