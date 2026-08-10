@@ -13,7 +13,7 @@
 | Google OAuth | Desktop client、基本身分 scope | NT$0 | 只用 `openid email profile`；不申請敏感／受限 scope |
 | GitHub 儲存庫 | 先私人、日後可公開 | NT$0 | 不購買方案；不啟用付費大型 runner |
 | GitHub Actions | 公開 repo 的標準 runner，或本機/self-hosted | NT$0 | 私人 repo 先只跑必要任務；未設付款方式時超額即停 |
-| Cloudflare Pages | 純靜態網站 | NT$0 | Free；不使用 Pages Functions、R2 或付費 Worker |
+| Cloudflare Pages | `mtus.lieniapp.work` 靜態更新站 | NT$0 | Free Direct Upload；不使用 Git integration、Pages Functions、R2 或付費 Worker；ZIP 必須小於 25 MiB |
 | Cloudflare Worker | 不使用 | NT$0 | 目前架構沒有需求 |
 | Apple Developer Program | 不加入 | NT$0 | Developer ID／公證改為未來可選升級 |
 | Sparkle | 固定使用開源版 2.9.5 | NT$0 | 不購買額外服務；正式網址與金鑰分階段人工驗證 |
@@ -46,4 +46,4 @@
 - 未付 Apple 年費的分享版會是 ad-hoc 簽署；其他人第一次開啟時可能需要右鍵選「打開」，無法達到正式 Developer ID 公證版的無警告體驗。
 - 私人 GitHub Actions 額度用完時，CI 停止；不自動購買更多分鐘。Release 可改成本機 ARM Mac 建置並手動上傳。
 - Firebase 免費額度用完時，同步暫停，但 MyTerm 的本機主機管理、Keychain 與 SSH 連線必須繼續運作。
-- Cloudflare 只放靜態說明頁；安裝檔放 GitHub Releases，避免 Pages 的單檔 25 MiB 限制。
+- Cloudflare 只放靜態更新檔與說明頁；目前 ZIP 約 6.3 MB，可由 Pages 公開提供。若未來單一 ZIP 接近 25 MiB，先停止發布並重新評估公開 release-only repository 或 R2，不自動啟用付費服務。

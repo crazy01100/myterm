@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyTerm 更新安全性</title>
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <main class="shell document">
+    <a class="back-link" href="/">← 回到 MyTerm</a>
+    <h1>更新安全性</h1>
+    <section class="card">
+      <h2>簽章驗證</h2>
+      <p>MyTerm 使用 Sparkle 的 Ed25519 更新簽章。下載檔若遭修改、簽章錯誤或缺少簽章，MyTerm 會拒絕安裝。</p>
+      <h2>金鑰保存</h2>
+      <p>更新私鑰不會放在網站、GitHub 原始碼、GitHub Actions、Firebase 或 Cloudflare。正式更新只在受信任的開發 Mac 上完成簽署。</p>
+      <h2>傳輸</h2>
+      <p>更新清單與檔案只透過 HTTPS 提供，並搭配版本化網址與安全回應標頭。</p>
+    </section>
+  </main>
+</body>
+</html>

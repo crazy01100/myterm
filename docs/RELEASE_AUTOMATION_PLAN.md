@@ -2,9 +2,9 @@
 
 最後更新：2026-08-10
 文件狀態：`已核准並執行`
-實作狀態：`R5 已完成；下一階段為 R6 Cloudflare Pages 更新站`
+實作狀態：`R6 Cloudflare Pages 更新站進行中`
 
-> 2026-08-10 使用者已核准本計劃。R1 至 R4 已完成；Sparkle 私鑰與加密備份已就緒，GitHub 採私人 repository，Cloudflare 正式更新站尚未建立。
+> 2026-08-10 使用者已核准本計劃。R1 至 R5 已完成；Sparkle 私鑰與加密備份已就緒，GitHub 採私人 repository。更新站確定使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。
 
 ## 1. 目標
 
@@ -44,8 +44,9 @@
 | 初期更新策略 | 使用者主動檢查；不在背景靜默安裝 |
 | 更新檔驗證 | Sparkle Ed25519／EdDSA 簽章；拒絕未簽署、簽章錯誤或遭竄改的檔案 |
 | 更新清單 | 使用 HTTPS `appcast.xml`；更新清單與更新說明也啟用簽章驗證 |
-| 安裝檔 | GitHub Releases 保存 ZIP |
-| 更新網站 | Cloudflare Pages 保存靜態 `appcast.xml` 與 release notes |
+| 安裝檔 | 私人 GitHub Release 保存發布紀錄；Cloudflare Pages 公開提供已簽署 ZIP |
+| 更新網站 | `mtus.lieniapp.work`；Cloudflare Pages 保存靜態 `appcast.xml`、ZIP 與 release notes |
+| Pages 部署 | Direct Upload；GitHub Actions 在 Release 發布後使用 Wrangler 自動部署，不綁定 Cloudflare Git integration |
 | Cloudflare Worker | 不使用；目前沒有動態程式需求 |
 | Apple Developer Program | 現階段不加入，不產生年費 |
 | App 簽署 | 暫時維持 ad-hoc；接受第一次安裝仍有 Gatekeeper 提示 |
@@ -105,8 +106,8 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 | Bundle Build | 由 `--build` 明確提供；預設拒絕重複或倒退 |
 | 簽署 | 保留 Sparkle framework／helpers 既有簽章，再以 ad-hoc 封裝外層 App；不再用 blanket `--deep` 重簽 |
 | Git | 工作目錄尚未完成正式 Git／GitHub 發布初始化 |
-| GitHub Actions | 尚未建立 `.github/workflows` |
-| Cloudflare Pages | 尚未建立 MyTerm 正式更新站 |
+| GitHub Actions | Pages 部署 workflow 已建立；只處理已簽署發布成品，不建置或簽署正式 App |
+| Cloudflare Pages | `myterm-updates` 與 `mtus.lieniapp.work` 已啟用，bootstrap 更新站與安全標頭已通過外部驗證 |
 | Sparkle 金鑰 | 正式金鑰已建立於登入 Keychain，並完成 iCloud AES-256 備份與隔離還原簽署驗證 |
 | `appcast.xml` | 本機更新實驗室已建立並完成簽章驗證；正式公開 feed 尚未建立 |
 
@@ -121,9 +122,10 @@ Sparkle 更新檔會以獨立的 Ed25519 私鑰簽署，MyTerm 內只嵌入公�
 ├── 本機發布腳本
 └── 加密的離線私鑰備份
         │
-        ├── GitHub repository：原始碼與發布工具
-        ├── GitHub Draft Release：MyTerm ZIP、SHA-256、更新說明
-        └── Cloudflare Pages：appcast.xml、release notes
+        ├── GitHub repository：原始碼、發布工具與 Pages 靜態網站來源
+        ├── 私人 GitHub Draft Release：MyTerm ZIP、appcast、SHA-256、更新說明
+        └── GitHub Actions：只取出已簽署成品並以 Wrangler 部署
+                └── Cloudflare Pages：appcast.xml、ZIP、release notes
                                      │
                                      ▼
                              使用者的 MyTerm
@@ -247,27 +249,32 @@ R4 隔離界線：測試 App 使用 `tw.local.MySSHClient.UpdateLab`、獨立 Ap
 
 目標：提供固定、安全、可回復的 HTTPS 更新網址。
 
-建議結構：
+正式結構：
 
 ```text
-updates.example.com/
+mtus.lieniapp.work/
 ├── appcast.xml
-├── releases/1.0.0.md
+├── downloads/MyTerm-1.0.0-arm64.zip
+├── releases/1.0.0.html
 ├── install/index.html
 ├── privacy/index.html
 └── security/index.html
 ```
 
-ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網址。
+Cloudflare Pages 使用 Direct Upload。GitHub Actions 在私人 GitHub Release 發布後，自動取得已在主要開發 Mac 完成測試與 Sparkle 簽章的 ZIP、appcast 與說明，部署至 Pages。Cloudflare 不需要讀取整個私人 repository；Sparkle 私鑰也不會進入 GitHub Actions。
+
+GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建立 macOS App；若仍使用 Git integration，就必須把每版 ZIP 提交進 Git 歷史，或另外再做一條部署流程。Direct Upload 可直接部署發布成品，路徑更短。
 
 | 編號 | 狀態 | 執行者 | 任務 | 驗收證據／人工動作 |
 |---|---|---|---|---|
-| R6.1 | `尚未開始` | 使用者 | 選擇更新用子網域 | 例如 `updates.<你的網域>` |
-| R6.2 | `尚未開始` | Codex＋使用者 | 建立 Cloudflare Pages Free 靜態專案 | 不啟用 Worker、Functions、R2 或付費方案 |
-| R6.3 | `尚未開始` | Codex | 設定安全回應標頭與 HTTPS | `curl`／瀏覽器驗證 |
-| R6.4 | `尚未開始` | Codex | 部署測試 appcast 與 release notes | URL 穩定且可下載 |
-| R6.5 | `等待人工驗證` | 使用者 | 確認 Cloudflare 沒有要求付費升級 | 若出現付款要求立即停止 |
+| R6.1 | `已完成` | 使用者 | 選擇更新用子網域 | 2026-08-10 啟用 `mtus.lieniapp.work`，Cloudflare DNS 已建立代理 CNAME |
+| R6.2 | `已完成` | Codex＋使用者 | 建立 Cloudflare Pages Free Direct Upload 靜態專案 | 已建立 `myterm-updates` 並完成首次 10 個靜態檔案部署；未啟用 Worker、Functions、R2、Git integration 或付費方案 |
+| R6.3 | `已完成` | Codex | 設定安全回應標頭與 HTTPS | `mtus.lieniapp.work` 已顯示使用中且 SSL 已啟用；外部節點驗證 CSP、COOP、CORP、Permissions Policy、HSTS、`nosniff` 與 appcast 禁止快取均生效 |
+| R6.4 | `已完成` | Codex | 部署測試 appcast 與 release notes | bootstrap appcast、首頁、安裝頁與安全說明頁已可由外部網路讀取；正式發布資產另於 R7 驗證 |
+| R6.5 | `已完成` | Codex＋使用者 | 確認 Cloudflare 沒有要求付費升級 | 建立、部署、DNS 與 SSL 流程均未出現付款或升級要求 |
 | R6.6 | `尚未開始` | Codex | 驗證舊 appcast 可快速回復 | Pages 部署歷史或 Git revert 測試 |
+| R6.7 | `已完成` | Codex | 建立 GitHub Actions Direct Upload workflow | 只在 Release 發布後自動部署；第三方 Actions 固定完整 commit SHA，且 repo 已允許 Actions 執行 |
+| R6.8 | `已完成` | Codex＋使用者 | 建立最小權限 Cloudflare API Token 並存入 GitHub Actions Secrets | `MyTerm GitHub Pages Deploy` 只具整個指定帳戶的 Pages Write；無到期時間、允許 GitHub 動態 IP。Token 與 Account ID 均只存於 GitHub Secret，未寫入 Git 或文件 |
 
 完成條件：正式 App 使用的 feed URL 已固定，錯誤部署可以回復，沒有新增付費服務。
 
@@ -282,7 +289,7 @@ ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網
 | R7.3 | `尚未開始` | Codex | 自動建立 ZIP、Ed25519 簽章、SHA-256 與 appcast | 產物清單與驗證 |
 | R7.4 | `尚未開始` | Codex | 自動建立 GitHub Draft Release，不立即公開 | Draft URL |
 | R7.5 | `等待人工驗證` | 使用者 | 檢查版本、說明、下載檔、校驗碼與更新預覽 | 使用者按下放行前不公開 |
-| R7.6 | `尚未開始` | Codex | 放行後發布 GitHub Release，再部署已簽署 appcast | 發布 URL 與 feed 驗證 |
+| R7.6 | `尚未開始` | Codex | 放行後發布 GitHub Release，觸發 Actions 自動部署 Pages | 發布 URL、Actions 結果與 feed 驗證 |
 | R7.7 | `尚未開始` | Codex | 發布後從外部 URL 重下載並再次驗證簽章／SHA-256 | 避免上傳後內容錯誤 |
 
 完成條件：開發者只需提供版本與更新說明；機械工作自動完成，但公開前仍必須由使用者確認。
@@ -311,7 +318,7 @@ ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網
 | R9.1 | `尚未開始` | Codex | 將 RC 的已驗證程式設定為 `1.0.0` | Git commit／tag 候選 |
 | R9.2 | `尚未開始` | Codex | 重新執行全部測試、安全掃描與發布腳本 | 最終報告 |
 | R9.3 | `等待人工驗證` | 使用者 | 審閱 Release、安裝說明、已知限制與隱私／安全文件 | 明確核准發布 |
-| R9.4 | `尚未開始` | Codex | 發布 GitHub Release 與 Cloudflare Pages appcast | 公開 URL |
+| R9.4 | `尚未開始` | Codex | 發布私人 GitHub Release 並由 Actions 部署 Cloudflare Pages 成品 | 公開 URL |
 | R9.5 | `尚未開始` | Codex | 從正式 `appcast.xml` 檢查版本與簽章 | 線上驗證報告 |
 | R9.6 | `等待人工驗證` | 使用者 | 第二台 Mac 下載正式 `1.0.0` 並確認啟動 | 最終安裝確認 |
 
@@ -378,8 +385,8 @@ ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網
 | 服務 | 必要用途 | 預期新增費用 |
 |---|---|---:|
 | Sparkle | App 內更新 | NT$0，開源 |
-| GitHub repository／Releases | 原始碼與 ZIP | NT$0 範圍內使用 |
-| Cloudflare Pages | 靜態 appcast 與說明 | NT$0 Free |
+| GitHub repository／Releases | 私人原始碼、發布紀錄與 Actions 觸發來源 | NT$0 免費額度內使用 |
+| Cloudflare Pages | 靜態 appcast、公開 ZIP 與說明 | NT$0 Free；目前 ZIP 約 6.3 MB，低於單檔 25 MiB 限制 |
 | Firebase | 原有加密資料同步 | 不因 App 更新增加服務 |
 | Apple Developer Program | 不加入 | NT$0 |
 
@@ -408,8 +415,8 @@ ZIP 不放 Pages，`appcast.xml` 連到 GitHub Release 的固定 HTTPS 資產網
 | R2 Sparkle 核心 | `已完成` | 已完成 | 已完成 | 0.13.0 候選通過封裝驗證；未配置提示正常，介面精簡為 App 選單單一入口 |
 | R3 更新金鑰 | `已完成` | 已完成 | 已完成 | 正式金鑰、公鑰嵌入、iCloud AES-256 備份與隔離還原簽署均通過；第二份私人外接備份列為未來強化 |
 | R4 本機更新實驗室 | `已完成` | 已完成 | 已完成 | beta.1 → beta.2 真實更新、重啟與版本切換成功；相同版本不重複提示；離線、404、竄改與錯簽安全失敗 |
-| R5 Git／GitHub | `已完成` | 已完成 | 已完成 | `crazy01100/myterm` Private repository 已建立並完成首次 push；沒有 Actions、Release、機密或付費資源 |
-| R6 Cloudflare Pages | `尚未開始` | 需要 | 必要 | HTTPS feed 與回復流程正常 |
+| R5 Git／GitHub | `已完成` | 已完成 | 已完成 | `crazy01100/myterm` Private repository 已建立並完成首次 push；R6 後僅增加 Release 事件觸發的 Pages 部署 workflow 與兩項加密 Secret，未新增付費資源 |
+| R6 Cloudflare Pages | `進行中` | 需要 | 必要 | Direct Upload、HTTPS feed 與回復流程正常 |
 | R7 一鍵發布 | `尚未開始` | 需要 | 必要 | 一個指令建立 Draft，人工放行 |
 | R8 Release Candidate | `尚未開始` | 需要 | 必要 | 第二台 Mac 全情境驗收 |
 | R9 正式 1.0.0 | `尚未開始` | 需要 | 必要 | 正式下載與 appcast 可用 |

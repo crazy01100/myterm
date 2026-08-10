@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>MyTerm 更新</title>
+    <link>https://mtus.lieniapp.work/</link>
+    <description>MyTerm 尚未正式發布，目前沒有可安裝的更新。</description>
+    <language>zh-TW</language>
+  </channel>
+</rss>

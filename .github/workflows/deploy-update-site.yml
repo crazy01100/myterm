@@ -1,0 +1,60 @@
+name: Deploy MyTerm update site
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: myterm-update-site-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy signed release to Cloudflare Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MYTERM_RELEASE_TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Check out public site source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Download signed release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/release-assets
+          gh release download "$MYTERM_RELEASE_TAG" \
+            --dir build/release-assets \
+            --pattern 'MyTerm-*-arm64.zip' \
+            --pattern 'appcast.xml' \
+            --pattern 'release-notes.html' \
+            --pattern 'CHECKSUMS.txt'
+
+      - name: Prepare and verify static deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${MYTERM_RELEASE_TAG#v}"
+          ./scripts/prepare-pages-deployment.sh \
+            --assets build/release-assets \
+            --version "$version" \
+            --output build/pages
+          ./scripts/verify-pages-site.sh build/pages
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.120.0"
+          command: pages deploy build/pages --project-name=myterm-updates --branch=main
+          gitHubToken: ${{ github.token }}

@@ -1,0 +1,165 @@
+:root {
+  color-scheme: light dark;
+  --background: #f4f7fb;
+  --surface: rgba(255, 255, 255, 0.86);
+  --text: #172033;
+  --muted: #697386;
+  --line: rgba(23, 32, 51, 0.1);
+  --accent: #1677ff;
+  --accent-strong: #005bd4;
+  --shadow: 0 18px 55px rgba(29, 51, 84, 0.1);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% 10%, rgba(22, 119, 255, 0.13), transparent 36rem),
+    radial-gradient(circle at 85% 80%, rgba(69, 203, 157, 0.12), transparent 32rem),
+    var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC", sans-serif;
+  line-height: 1.6;
+}
+
+a { color: var(--accent-strong); }
+
+.shell {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 72px 0 40px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 28px 6px 48px;
+}
+
+.brand-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 118px;
+  height: 118px;
+  overflow: hidden;
+  color: white;
+  background: linear-gradient(145deg, #173f7a, #1677ff);
+  border-radius: 28px;
+  box-shadow: var(--shadow);
+  font: 700 30px/1 ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+.brand-mark .cloud {
+  position: absolute;
+  right: 9px;
+  bottom: -6px;
+  color: #dff5ff;
+  font: 42px/1 sans-serif;
+  opacity: 0.95;
+}
+
+.eyebrow, .label {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 2px 0 4px;
+  font-size: clamp(2.7rem, 7vw, 4.8rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+h2 { margin: 0 0 8px; line-height: 1.25; }
+p { margin: 0; }
+.lead { max-width: 650px; color: var(--muted); font-size: 1.12rem; }
+
+.card {
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(20px);
+}
+
+.card p { color: var(--muted); }
+
+.status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.status-card h2 { font-size: 1.8rem; }
+
+.button {
+  flex: 0 0 auto;
+  padding: 11px 17px;
+  color: white;
+  background: var(--accent);
+  border-radius: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.button:hover { background: var(--accent-strong); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.grid .card { box-shadow: none; }
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 28px 8px 0;
+}
+
+.footer-links a { color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--accent); }
+
+.document { max-width: 760px; }
+.document h1 { margin-bottom: 20px; font-size: clamp(2.2rem, 6vw, 3.6rem); }
+.document h2 { margin-top: 30px; }
+.document p, .document li { color: var(--muted); }
+.document .card { margin-top: 24px; }
+.back-link { display: inline-block; margin-bottom: 30px; text-decoration: none; }
+
+@media (max-width: 760px) {
+  .shell { width: min(100% - 28px, 1040px); padding-top: 38px; }
+  .hero { align-items: flex-start; flex-direction: column; }
+  .brand-mark { width: 92px; height: 92px; border-radius: 23px; font-size: 24px; }
+  .brand-mark .cloud { font-size: 34px; }
+  .status-card { align-items: stretch; flex-direction: column; }
+  .button { text-align: center; }
+  .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0d1118;
+    --surface: rgba(24, 31, 43, 0.86);
+    --text: #f1f5fb;
+    --muted: #a4aec0;
+    --line: rgba(255, 255, 255, 0.1);
+    --accent: #4d9cff;
+    --accent-strong: #8ec1ff;
+    --shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+  }
+}
