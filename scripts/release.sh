@@ -138,16 +138,22 @@ fi
 
 print -- "[5/6] 建立 GitHub Draft Release"
 archive_name="MyTerm-$version-build-$build_number-arm64.zip"
+release_flags=(
+    --draft
+    --target "$head_sha"
+    --title "MyTerm $version"
+    --notes-file "$notes_file"
+)
+if [[ ! "$version" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]]; then
+    release_flags+=(--prerelease)
+fi
 gh release create "$tag" \
     "$assets_dir/$archive_name" \
     "$assets_dir/appcast.xml" \
     "$assets_dir/release-notes.html" \
     "$assets_dir/CHECKSUMS.txt" \
     "$assets_dir/release-manifest.json" \
-    --draft \
-    --target "$head_sha" \
-    --title "MyTerm $version" \
-    --notes-file "$notes_file"
+    "${release_flags[@]}"
 
 draft_url="$(gh release view "$tag" --json url --jq .url)"
 print -- "[6/6] GitHub Draft Release 已建立"

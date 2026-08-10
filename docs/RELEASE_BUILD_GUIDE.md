@@ -58,7 +58,7 @@ build_number="$(date '+%Y%m%d%H%M%S')"
 3. 使用 Keychain 內的 Sparkle 私鑰簽署 ZIP 與完整 `appcast.xml`。
 4. 建立五個 GitHub Release 資產：ZIP、`appcast.xml`、`release-notes.html`、`CHECKSUMS.txt`、`release-manifest.json`。
 5. 再次驗證 SHA-256、Sparkle feed／ZIP 簽章、版本、Build、最低 macOS 26、arm64、下載網址、機密掃描與 Cloudflare 25 MiB 限制。
-6. 建立私人 GitHub Draft Release 後停止。
+6. 建立私人 GitHub Draft Release 後停止；`rc`、`beta` 等非純 `x.y.z` 版本會自動標成 Pre-release。
 
 Draft 尚未公開時，不會觸發 Pages workflow。只有人工檢查並發布 Release 後，GitHub Actions 才會把已簽署資產部署到 `mtus.lieniapp.work`。
 
