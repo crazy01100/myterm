@@ -22,7 +22,7 @@ MyTerm 是專為 **Apple Silicon 上的 macOS 26** 設計的本機 SSH 管理工
 - 現代化終端機工作區，使用 SF Mono、精簡狀態列、圓角表面與自適應淺色／深色配色。
 - 原生 App 圖示，以 `>_<` 終端機表情與淺色雲朵為主體。
 - 原生設定視窗，可由 MyTerm 選單或 `Command-,` 開啟，支援自動、淺色與深色主題。
-- 已固定整合 Sparkle 2.9.5，MyTerm App 選單提供「檢查更新…」入口。0.13 測試候選尚未放入正式更新網址與公鑰，因此只顯示安全說明，不會連線或下載檔案。
+- 已固定整合 Sparkle 2.9.5，MyTerm App 選單提供「檢查更新…」入口。正式 Ed25519 公鑰與 `https://mtus.lieniapp.work/appcast.xml` 已啟用；RC1 → RC2 已在第二台 Mac 完成真實下載、驗證、替換與重新啟動。
 - 原生「資料」選單與「設定 > 匯入與匯出」，支援可預覽的 MyTerm JSON 匯入／匯出及 Termius 主機資料匯入。
 - 匯入前預覽完整群組路徑、重複連線處理、錯誤資料報告，並自動建立僅擁有者可讀的備份。
 - 匯入時可選擇全部或搜尋並逐台勾選；只建立實際接受主機所需的群組階層。
@@ -114,6 +114,6 @@ Termius 桌面版 vault 資料以 Electron IndexedDB 加密，加密材料由作
 
 ## 已驗證建置
 
-版本 0.13.0 Build 20260810050000 測試候選已在 macOS 26 arm64 與 Command Line Tools 26.6 建置與測試。2026-08-10 的 132 項核心自我測試、2 項 OAuth loopback 與 142 項端對端加密／復原／Keychain／Firestore／主機與密碼同步／五分鐘保護政策測試，共 276 項全數通過；既有 9 項 Firestore Security Rules 測試亦已完成。真實兩台 Mac 已完成登入、Master Key 復原、加密主機資料上下載、基線與衝突情境驗收。Google 登入採系統瀏覽器、PKCE S256、state、nonce、僅限 127.0.0.1 的隨機連接埠與 Firebase REST；登入狀態使用獨立的 ThisDeviceOnly Keychain 項目。Release App 與解壓後封裝皆通過 ad-hoc 簽章、純 arm64、macOS 26、版本、Sparkle framework／helpers／rpath、正式更新公鑰及禁止檔案驗證；目前尚未設定正式更新 feed。ZIP SHA-256 為 `e0f245b67dc9eb89597d12ff883a9f0c15ab6a69907417912d4f2ee6d3040ab4`。本機更新實驗室已完成 `1.0.0-beta.1` 到 `1.0.0-beta.2` 的真實下載、簽章驗證、替換、重啟與版本切換；相同版本不重複提示，離線、404、無效 XML、竄改檔案與錯誤簽章皆安全失敗。libsodium 靜態併入 App，不需要另一台 Mac 額外安裝。主機／群組刪除同步仍保持安全停用。
+`1.0.0-rc.2` Build `20260810131318` 已在 macOS 26 arm64 與 Command Line Tools 26.6 建置、發布並部署。2026-08-10 的 132 項核心自我測試、2 項 OAuth loopback 與 144 項端對端加密／復原／Keychain／Firestore／主機與密碼同步／五分鐘保護政策測試，共 278 項全數通過；既有 9 項 Firestore Security Rules 測試亦已完成。真實兩台 Mac 已完成 Google 登入、Master Key 復原、統一同步開關、加密主機與密碼下載、雙基線、衝突保護，以及以另一台 Mac 保存的密碼實際 SSH 連線。Google 登入採系統瀏覽器、PKCE S256、state、nonce、僅限 127.0.0.1 的隨機連接埠與 Firebase REST；登入狀態使用獨立的 ThisDeviceOnly Keychain 項目。Release App 與解壓後封裝皆通過 ad-hoc 簽章、純 arm64、macOS 26、版本、Sparkle framework／helpers／rpath、正式更新公鑰及禁止檔案驗證；正式 feed 為 `https://mtus.lieniapp.work/appcast.xml`。RC2 ZIP SHA-256 為 `790049e09ea3ed2f92d8a45e40ba27f32165b51fd12bcda8f5e1299ea862d7d3`，並由 GitHub 外部執行器重新下載驗證。第二台 Mac 已完成 RC1 → RC2 真實更新與重啟；相同版本不重複提示，離線、404、無效 XML、竄改檔案與錯誤簽章皆安全失敗。libsodium 靜態併入 App，不需要另一台 Mac 額外安裝。主機／群組刪除同步仍保持安全停用。
 
 建置流程會將指定的版本、Build 與打包時間注入實際 App bundle，並顯示在「設定 → 帳號與同步 → 目前狀態」。重新打包不會替換已載入記憶體的舊程序；測試新版前必須完整結束並重開。為避免中斷 SSH／Terminal／Serial，重啟應在確認沒有需要保留的連線後執行。
