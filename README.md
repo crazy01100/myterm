@@ -1,119 +1,95 @@
 # MyTerm
 
-MyTerm 是專為 **Apple Silicon 上的 macOS 26** 設計的本機 SSH 管理工具。每台主機的密碼分別存入 macOS Keychain，SSH 工作階段直接顯示在 App 內；只有使用者明確指定的舊主機才會開放相容演算法。
+MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-為保留升級相容性，App 顯示名稱雖已改為 MyTerm，Bundle ID、Keychain service 與 Application Support 目錄仍刻意沿用原本的 `MySSHClient` 識別字，避免既有主機和密碼失去關聯。
+目前正式版本：**1.0.0**
 
-## 版本 0.13 測試候選功能
+- [下載與安裝](https://mtus.lieniapp.work/install/)
+- [更新說明](https://mtus.lieniapp.work/)
+- [系統架構](ARCHITECTURE.md)
+- [安全設計](SECURITY.md)
 
-- 建立、編輯、刪除與搜尋主機；名稱留空時以主機名稱或 IP 顯示。
-- 可收合的多階層群組，支援建立、改名、刪除、指定主機、麵包屑路徑、下層數量與循環防止。
-- 預設使用者名稱可留空；連線時再輸入，也可臨時改用其他帳號而不修改主機設定。
-- 密碼、私鑰與 SSH Agent／config 驗證。
-- 系統預設、舊式 RSA 相容與自訂 SSH 演算法模式。
-- App 專用且嚴格驗證的 `known_hosts`。
-- 單一視窗工作區：固定主機頁，以及每個 SSH、本機 Terminal 或 Serial 工作階段各自的分頁。
-- 左側只顯示群組，右側以自適應卡片顯示群組與主機，適合較大的主機數量。
-- 內建本機 Terminal，以 login shell 執行系統 `/bin/zsh`。
-- 在 Shell 按 `Control-D` 送出 EOF，程序結束後關閉 SSH 或本機 Terminal 分頁；Serial 分頁則立即中斷並關閉。
-- 內建 `/dev/cu.*` 與 `/dev/tty.*` Serial 工作區，提供 baud rate 及可收合的 data bit、stop bit、parity、flow control 設定。
-- 依連線畫面中明確文字辨識 Linux、macOS、BSD 或網路設備家族；不會暗中執行偵測指令。
-- 主機卡片以雙擊連線、右鍵選單編輯，避免工具列出現重複按鈕。
-- 現代化終端機工作區，使用 SF Mono、精簡狀態列、圓角表面與自適應淺色／深色配色。
-- 原生 App 圖示，以 `>_<` 終端機表情與淺色雲朵為主體。
-- 原生設定視窗，可由 MyTerm 選單或 `Command-,` 開啟，支援自動、淺色與深色主題。
-- 已固定整合 Sparkle 2.9.5，MyTerm App 選單提供「檢查更新…」入口。正式 Ed25519 公鑰與 `https://mtus.lieniapp.work/appcast.xml` 已啟用；RC1 → RC2 已在第二台 Mac 完成真實下載、驗證、替換與重新啟動。
-- 原生「資料」選單與「設定 > 匯入與匯出」，支援可預覽的 MyTerm JSON 匯入／匯出及 Termius 主機資料匯入。
-- 匯入前預覽完整群組路徑、重複連線處理、錯誤資料報告，並自動建立僅擁有者可讀的備份。
-- 匯入時可選擇全部或搜尋並逐台勾選；只建立實際接受主機所需的群組階層。
-- 可攜式匯出包含主機資料、多階層群組、偵測平台與演算法設定；刻意排除密碼、私鑰內容與本機私鑰路徑。
-- 獨立的 Known Hosts 工作區，只有按下「載入」或「同步」時才讀取 `~/.ssh/known_hosts`。
-- 已匯入的 known-host 項目保存在僅擁有者可讀的檔案，以主機與金鑰指紋顯示，並作為獨立 SSH 信任來源，不會變成可編輯主機。
-- 透過 Keychain 自動完成第一次 SSH 密碼登入，不使用剪貼簿。
-- 主機未保存密碼時，MyTerm 只擷取 SSH 登入嘗試；等本機 OpenSSH 確認確實以 `password` 驗證成功後，才詢問是否保存到 Keychain。
-- 第一次密碼輸入錯誤時會清除失敗內容，只保留後續成功的嘗試；排除 `keyboard-interactive`，避免保存 OTP 或驗證挑戰。
-- 無法辨識或重複的密碼提示仍可使用手動「填入密碼」。
-- MyTerm 專用自訂快捷鍵，包含複製、貼上、全選、搜尋、受密碼提示保護的 Keychain 密碼填入、主機／本機／Serial 工作區、分頁與中斷連線；每項都可重設或停用，並防止衝突與占用必要的 macOS 快捷鍵。
-- 目前正式功能仍以純本機資料為主，不依賴外部密碼管理器。選用的 Firebase 帳號採 Google Desktop OAuth，可真實登入、從 ThisDeviceOnly Keychain 恢復登入狀態並完整登出；登入不等於啟用同步。
-- 端對端加密核心已完成 HKDF-SHA256、AES-256-GCM、Argon2id 同步密語封套、256-bit 復原金鑰封套與固定格式版本；Master Key 只保存在這台 Mac 的 ThisDeviceOnly Keychain。
-- 「帳號與同步」只有一個同步開關。使用者登入 Google、打開同步並輸入同步密語後，MyTerm 會在背景自動完成本機保管庫、雲端封套、首次主機／群組合併、密碼同步、基線與回讀驗證；全部成功後開關才會真正打開。新保管庫另顯示一次性復原金鑰。
-- 跨裝置同步是選用功能，預設關閉，且啟用狀態綁定 Firebase UID；切換帳號不會沿用另一個帳號的同意。啟用後會在本機編輯、App 回到前景及前景每五分鐘自動檢查，並保留「立即同步」與完整進階只讀預覽。主機、群組與 Keychain 密碼會逐筆端對端加密同步；密碼在目的 Mac 解密後只寫入 Keychain，不建立明文檔。私鑰檔案、私鑰路徑與 known_hosts 永不跨裝置。
-- 單方面變更會自動上傳或在建立 `0600` 備份後下載；同一筆在兩台 Mac 都修改時以最後確認上傳的內容建立下一個 revision。若 Firebase 的可信更新時間距今未滿五分鐘，MyTerm 會詢問「不更新」或「更新並同步」，不會靜默覆蓋。主機／群組刪除同步仍安全停用；不再使用的密碼紀錄則改為經驗證的加密 tombstone。Firestore 只允許登入者存取自己 UID 下的嚴格格式密文，拒絕明文欄位、跨帳號存取、直接刪除及不連續 revision。
-- 自動遷移版本 0.1 主機陣列，建立僅擁有者可讀的 `hosts-v0.1-backup.json` 並保留主機 UUID。
+## 主要功能
 
-密碼到期提醒與自動送出 sudo 密碼刻意不納入目前版本。密碼提示辨識只用來保護手動按鈕與快捷鍵，避免在一般 Shell 提示意外送出已保存密碼。
+- 多階層群組、搜尋、主機卡片與可選的預設使用者名稱。
+- 密碼、私鑰、SSH Agent／config 驗證，以及系統預設、舊式 RSA 相容與自訂演算法。
+- 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
+- 主機密碼保存於 macOS Keychain，不寫入主機資料檔，也不透過剪貼簿填入。
+- 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP。
+- SFTP 上傳、下載、拖放、覆蓋確認、新增資料夾、重新命名、刪除與權限調整。
+- MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
+- 可調整或停用的 App 內快捷鍵；已儲存密碼只會在安全的密碼提示階段允許填入。
+- 自動辨識已顯示在終端機中的作業系統或網路設備資訊，並以保守策略顯示平台徽章。
+- Sparkle 安全更新，可由「MyTerm → 檢查更新⋯」下載並安裝正式版本。
 
-## 建置需求
+## 選用的跨裝置同步
 
-- macOS 26
-- Apple Silicon Mac
-- Command Line Tools for Xcode 26.6，或目前最新版完整 Xcode
+同步預設關閉。需要時登入 Google 帳號、開啟同步並設定同步密語，MyTerm 才會同步主機、群組與主機密碼。
 
-這台 Mac 已安裝 Command Line Tools 26.6。若 Apple 更新後留下 2024 年舊版 `PackageDescription` 私有介面，導致 SwiftPM 回報未定義符號，可執行一次：
+- 每筆資料在 Mac 上以 AES-256-GCM 端對端加密後才送往 Firebase。
+- 同步密語使用 Argon2id 派生金鑰；Master Key 與解密後密碼只保存在各台 Mac 的 Keychain。
+- Firebase 保存密文與必要的版本資訊，無法直接讀取主機內容或密碼。
+- 私鑰檔案、私鑰路徑及 `known_hosts` 永遠只保留在各台 Mac。
+- 可停用同步並繼續以純本機模式使用 App。
+
+## 安裝需求
+
+- Apple Silicon Mac（arm64）
+- macOS 26 或更新版本
+
+目前版本採 ad-hoc 簽署，未加入 Apple Developer Program。第一次從網站下載後，macOS 可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。後續由 MyTerm 內更新時仍會驗證 Sparkle Ed25519 簽章。
+
+## 基本使用
+
+1. 按「＋」建立群組或主機；主機名稱留空時會顯示主機位址。
+2. 預設使用者名稱可以留空，連線時再選擇帳號。
+3. 一般主機維持「系統預設」演算法；只有確認為舊設備時才啟用 RSA 相容或自訂演算法。
+4. 雙擊主機卡片建立 SSH 分頁。第一次看到主機指紋時，請先透過可信管道核對。
+5. 已儲存的 SSH 登入密碼會在第一次登入提示自動送出；`sudo`／`su` 等後續提示可按「填入密碼」或使用設定的快捷鍵。
+6. 「Terminal」開啟位於目前使用者家目錄的本機 zsh；「Serial」連接 `/dev/cu.*` 或 `/dev/tty.*` 裝置。
+7. 「SFTP」開啟本機與遠端雙欄檔案工作區。
+
+## 從原始碼建置
+
+需要 macOS 26、Apple Silicon，以及 Xcode 26 或相容的 Command Line Tools。
 
 ```sh
-sudo mv /Library/Developer/CommandLineTools/usr/lib/swift/pm/ManifestAPI/PackageDescription.swiftmodule/arm64-apple-macos.private.swiftinterface /Library/Developer/CommandLineTools/usr/lib/swift/pm/ManifestAPI/PackageDescription.swiftmodule/arm64-apple-macos.private.swiftinterface.disabled
-sudo mv /Library/Developer/CommandLineTools/usr/lib/swift/pm/PluginAPI/PackagePlugin.swiftmodule/arm64-apple-macos.private.swiftinterface /Library/Developer/CommandLineTools/usr/lib/swift/pm/PluginAPI/PackagePlugin.swiftmodule/arm64-apple-macos.private.swiftinterface.disabled
+git clone https://github.com/crazy01100/myterm.git
+cd myterm
+./scripts/run-tests.sh
+./scripts/build-app.sh --version 1.0.0 --build 20260810141610
 ```
 
-要復原時對調來源與目的路徑即可。另一個做法是安裝完整最新版 Xcode，就不需要此暫時處理。
+產生的 App 位於 `build/MyTerm.app`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-完整候選建置與測試（不會上傳或發布）：
+完整正式候選流程會執行安全檢查、278 項測試、arm64 Release 建置、App 驗證、封裝與 SHA-256 產生：
 
 ```sh
-cd /path/to/MySSHClient
-build_number="$(date '+%Y%m%d%H%M%S')"
 ./scripts/prepare-release-build.sh \
-  --version 0.13.0 \
-  --build "$build_number"
+  --version 1.0.1 \
+  --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-版本與 Build 必須明確提供；Build 只能增加，重複或倒退會被拒絕。流程會依序執行敏感資料檢查、278 項測試、arm64 Release 建置、App 驗證、ZIP 打包、SHA-256 產生，並將解壓後的 App 再驗證一次。App 產生在 `build/MyTerm.app`，ZIP 與 `CHECKSUMS.txt` 產生在 `build/release/`；目前採 ad-hoc 簽署。
+發布流程只會先建立私人 GitHub Draft Release，必須人工核對後才公開；公開 Release 會觸發 GitHub Actions，把簽署的更新資訊部署至 Cloudflare Pages。
 
-只需執行測試時可使用 `./scripts/run-tests.sh`。單獨建置 App 時仍必須傳入 `--version` 與 `--build`。完整規則見 [本機正式候選建置說明](docs/RELEASE_BUILD_GUIDE.md)。
+## 資料與安全界線
 
-需要建立正式候選草稿時，先依 [Release notes 範本](docs/RELEASE_NOTES_TEMPLATE.md) 準備一份不含「發布前確認」區塊的說明，再執行：
+- 主機清單不包含密碼；密碼使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
+- 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
+- MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
+- 1.0.0 的主機／群組刪除只影響操作當下的 Mac，尚不會同步刪除其他裝置的副本。
+- 1.0.0 不會自動送出 `sudo`／`su` 密碼，需在已辨識的安全提示中按按鈕或快捷鍵。
 
-```sh
-./scripts/release.sh \
-  --version 1.0.0-rc.1 \
-  --build "$(date '+%Y%m%d%H%M%S')" \
-  --notes /path/to/release-notes.md
-```
+更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
-這個入口會重新執行完整測試與安全驗證、建立簽署 ZIP、完整簽署的 `appcast.xml`、HTML 更新說明、SHA-256 與 manifest，最後只建立私人 GitHub **Draft Release**。它不會自動公開 Release，也不會觸發 Cloudflare 部署；必須人工核對後另行放行。
+## 已驗證版本
 
-## 使用方式
+MyTerm 1.0.0（Build `20260810141610`）已完成：
 
-1. 可先從「+」建立群組，再新增主機並選擇密碼、私鑰或 SSH Agent／config 驗證。
-2. 主機名稱與預設使用者名稱都可留空；名稱留空時顯示位址，使用者名稱留空時每次連線詢問帳號。
-3. 除非主機較舊，演算法維持「系統預設（推薦）」。
-4. 確認是 RSA／SHA-1 舊主機時使用「舊式 RSA 相容」；只有主機明確需要特定 KEX、cipher 或 key algorithm 時才用「自訂」。
-5. 左側選擇群組，右側卡片顯示主機；單擊選取、雙擊連線。
-6. 按「Terminal」開啟本機 zsh 分頁。切回「主機」時連線仍保持，關閉工作階段分頁才結束程序。
-7. 在 Shell 提示按 `Control-D` 可結束程序並關閉分頁。
-8. 按「Serial」選擇已連接裝置；安全預設為 9600／8-N-1／無 flow control，裝置有特殊要求時才展開進階設定。
-9. 新主機指紋只能在透過可信管道核對後接受。
-10. 使用密碼驗證時，只有工作階段使用主機設定中的預設帳號，第一次 SSH `password:` 才會自動填入；臨時帳號需自行輸入密碼。
-11. 由「MyTerm > 設定⋯」或 `Command-,` 選擇自動、淺色或深色外觀。
-12. 在側邊欄開啟 Known Hosts，第一次按「載入」，需要更新時按「同步」；MyTerm 不在背景讀取 `~/.ssh/known_hosts`。
-13. 由「資料 > 匯入主機資料⋯」或「設定 > 匯入與匯出」預覽 MyTerm 或支援的 Termius JSON。預設匯入全部並跳過位址／連接埠／帳號相同的連線；使用「自訂選擇」可小範圍測試。
-14. 使用「資料 > 匯出主機資料⋯」建立明文主機資料備份。密碼不會離開來源 Mac 的 Keychain，目的 Mac 需重新輸入。
-15. 匯入的密碼主機可正常輸入密碼；OpenSSH 確認該次嘗試成功後，MyTerm 才詢問是否保存。選擇「不要儲存」會立即丟棄。
-16. 在「設定 > 快捷鍵」記錄、停用或重設 MyTerm 專用快捷鍵。`Command-P` 不經剪貼簿直接送出目前主機的 Keychain 密碼，但只在畫面正等待已辨識密碼提示時生效。
+- 278 項本機自動測試與 9 項 Firestore Security Rules 測試。
+- 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
+- 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
+- Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
+- GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
 
-平台徽章刻意採保守策略。若登入 banner 或指令輸出沒有明確作業系統／設備標記，主機會保留通用伺服器圖示。品牌相關徽章以系統符號重新設計，不複製廠商圖案。
-
-## Termius 資料遷移
-
-Termius 桌面版 vault 資料以 Electron IndexedDB 加密，加密材料由作業系統 Keychain 保護。MyTerm 不會繞過保護或從執行中的 App 擷取明文密碼。Termius 目前沒有公開一般用途的主機加密碼完整匯出格式，因此密碼需重新輸入，除非未來提供官方匯出方式。
-
-專案內的 Termius 匯出工具會產生 `myterm-termius-host-export-v1` JSON，只包含可人工檢查的主機與群組資料。MyTerm 透過與原生匯入相同的預覽與衝突檢查處理該檔案；CSV 與原始 Termius vault 檔不接受直接匯入。
-
-安全界線請見 [SECURITY.md](SECURITY.md)，版本里程碑請見 [PLAN.md](PLAN.md)，選用的 Firebase 同步與正式發布則由 [雲端同步與發布總覽](docs/README.md) 追蹤。純本機模式仍是預設，不需要帳號。
-
-## 已驗證建置
-
-`1.0.0` Build `20260810141610` 已在 macOS 26 arm64 與 Command Line Tools 26.6 建置、發布並部署。2026-08-10 的 132 項核心自我測試、2 項 OAuth loopback 與 144 項端對端加密／復原／Keychain／Firestore／主機與密碼同步／五分鐘保護政策測試，共 278 項全數通過；既有 9 項 Firestore Security Rules 測試亦已完成。真實兩台 Mac 已完成 Google 登入、Master Key 復原、統一同步開關、加密主機與密碼下載、雙基線、衝突保護，以及以另一台 Mac 保存的密碼實際 SSH 連線。Google 登入採系統瀏覽器、PKCE S256、state、nonce、僅限 127.0.0.1 的隨機連接埠與 Firebase REST；登入狀態使用獨立的 ThisDeviceOnly Keychain 項目。Release App 與解壓後封裝皆通過 ad-hoc 簽章、純 arm64、macOS 26、版本、Sparkle framework／helpers／rpath、正式更新公鑰及禁止檔案驗證；正式 feed 為 `https://mtus.lieniapp.work/appcast.xml`。正式 ZIP SHA-256 為 `541562ad5d365ed0a9fc9f4bd1bdc8e5f1a0da42e61f1e85b4469dd07affb77e`，GitHub Actions 已自動部署 Cloudflare Pages，並由外部執行器重新下載驗證 appcast、更新說明、ZIP 與安全標頭。第二台 Mac 已完成 RC1 → RC2 真實更新與重啟；相同版本不重複提示，離線、404、無效 XML、竄改檔案與錯誤簽章皆安全失敗。libsodium 靜態併入 App，不需要另一台 Mac 額外安裝。主機／群組刪除同步與 `sudo`／`su` 自動送出密碼已排入 `1.0.1`；`1.0.0` 的 SSH 登入密碼會自動填入，後續安全密碼提示仍需按鈕或快捷鍵一鍵填入。
-
-建置流程會將指定的版本、Build 與打包時間注入實際 App bundle，並顯示在「設定 → 帳號與同步 → 目前狀態」。重新打包不會替換已載入記憶體的舊程序；測試新版前必須完整結束並重開。為避免中斷 SSH／Terminal／Serial，重啟應在確認沒有需要保留的連線後執行。
+正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。

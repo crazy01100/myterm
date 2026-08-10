@@ -1,4 +1,8 @@
 .DS_Store
+
+# Internal planning, progress records and operator notes stay on the development Mac.
+/docs/
+
 .build/
 .build-*/
 .build-app/
@@ -9,6 +13,8 @@ DerivedData/
 
 # Generated release artifacts belong in GitHub Releases, not source control.
 /MyTerm-*-arm64.zip
+/MyTerm.zip
+/MyTerm.app/
 /CHECKSUMS.txt
 *.dmg
 *.pkg
