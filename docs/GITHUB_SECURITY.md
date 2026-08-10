@@ -26,7 +26,7 @@ R6 起加入一條 Cloudflare Pages Direct Upload workflow。它只在私人 Git
 4. 發布 workflow 不負責簽署正式更新；正式簽章維持在主要開發 Mac。
 5. 啟用 workflow 前先確認私人 repository 的 Actions 配額與付款畫面；若要求付款方式，停止並請使用者決定。
 6. Cloudflare Token 只授予 `Account / Cloudflare Pages / Edit`，只存於 GitHub Actions Secret；不得寫入檔案、Release 或執行紀錄。
-7. Pages 部署 workflow 只接受正式 `release.published` 事件，不在不受信任的 Pull Request 中執行。
+7. Pages 部署 workflow 只接受正式 `release.published` 事件，或由具 repository 寫入權限的人員手動指定既有已發布 Release tag 重新部署；不在不受信任的 Pull Request 中執行。
 
 ## 提交前檢查
 
