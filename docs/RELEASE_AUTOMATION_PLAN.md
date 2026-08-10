@@ -2,9 +2,9 @@
 
 最後更新：2026-08-10
 文件狀態：`已核准並執行`
-實作狀態：`R8 已完成，R9 正式 1.0.0 已發布，等待第二台 Mac 最終安裝確認`
+實作狀態：`R9 正式 1.0.0 已完成，準備進入 R10 的 1.0.1 功能與更新鏈驗證`
 
-> 2026-08-10 使用者已核准本計劃。R1 至 R8 已完成，RC1 與 RC2 均已通過人工放行、發布、部署與外部驗證，Pages 回復演練亦已完成；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。第二台 Mac 已完成 RC1 → RC2 真實更新、安全採用雲端資料、跨裝置同步、密碼解密、相同版本與斷線復原驗收。正式 `1.0.0` 已發布並完成外部更新站驗證，目前只等待第二台 Mac 安裝正式版確認。
+> 2026-08-10 使用者已核准本計劃。R1 至 R9 已完成，RC1、RC2 與正式 `1.0.0` 均已通過人工放行、發布、部署與外部驗證，Pages 回復演練亦已完成；Sparkle 私鑰與加密備份均已就緒，GitHub 採私人 repository。更新站使用 `mtus.lieniapp.work`，採 Cloudflare Pages Direct Upload，由 GitHub Actions 自動部署公開成品，但不讓雲端持有 Sparkle 私鑰。第二台 Mac 已完成 RC1 → RC2 → `1.0.0` 真實更新、安全採用雲端資料、跨裝置同步、密碼解密、相同版本與斷線復原驗收。下一階段為 `1.0.1` 的刪除同步、sudo／su 安全自動填入及正式更新鏈驗證。
 
 ## 1. 目標
 
@@ -331,7 +331,7 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R9.3 | `已完成` | 使用者 | 審閱 Release、安裝說明、已知限制與隱私／安全文件 | 2026-08-10：修正刪除同步及 SSH／sudo 密碼行為說明後，使用者明確核准依現有功能發布；兩項後續功能排入 `1.0.1` |
 | R9.4 | `已完成` | Codex | 發布私人 GitHub Release 並由 Actions 部署 Cloudflare Pages 成品 | Release：`https://github.com/crazy01100/myterm/releases/tag/v1.0.0`；Actions `31361646435` 成功部署 `myterm-updates` Pages |
 | R9.5 | `已完成` | Codex | 從正式 `appcast.xml` 檢查版本與簽章 | 外部 GitHub runner 重新取得正式 appcast、更新說明與 ZIP；版本、SHA-256、安全標頭及內容一致性全部通過 |
-| R9.6 | `等待人工驗證` | 使用者 | 第二台 Mac 下載正式 `1.0.0` 並確認啟動 | 最終安裝確認 |
+| R9.6 | `已完成` | 使用者 | 第二台 Mac 下載正式 `1.0.0` 並確認啟動 | 2026-08-10：第二台 Mac 已透過 MyTerm 更新流程成功升級至正式 `1.0.0` |
 
 完成條件：正式網址可用、下載檔與 appcast 簽章一致、第二台 Mac 可用、已知限制有明確說明。
 
@@ -431,7 +431,7 @@ GitHub integration 不採用，因為 Cloudflare 的 Linux 建置環境不能建
 | R6 Cloudflare Pages | `已完成` | 已完成 | 已完成 | Direct Upload、DNS Only 自訂網域、HTTPS、安全標頭、外部驗證與部署歷史回復均通過 |
 | R7 一鍵發布 | `已完成` | 已完成 | 已完成 | RC2 經人工放行後發布；GitHub Actions 自動部署，外部 runner 完整驗證公開成品 |
 | R8 Release Candidate | `已完成` | 已完成 | 已完成／接受既有證據 | RC1 → RC2、同步密碼、資料保留、相同版本與斷線復原已通過；純本機採既有完整測試，朋友試用移至發布後 |
-| R9 正式 1.0.0 | `進行中` | 已完成 | 等待第二台 Mac 安裝 | 正式 Release、Cloudflare Pages 部署與外部更新站驗證已完成；只剩第二台 Mac 下載／啟動正式版確認 |
+| R9 正式 1.0.0 | `已完成` | 已完成 | 已完成 | 正式 Release、Cloudflare Pages、外部更新站驗證及第二台 Mac 升級／啟動全部通過 |
 | R10 正式 1.0.1 更新鏈 | `尚未開始` | 需要 | 必要 | 1.0.0 可自動升級至 1.0.1 |
 
 ## 12. 進度維護規則
