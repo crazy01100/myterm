@@ -344,8 +344,32 @@ final class TerminalSession: ObservableObject, Identifiable {
 @MainActor
 final class SessionManager: ObservableObject {
     @Published private(set) var sessions: [TerminalSession] = []
-    @Published var selectedSessionID: TerminalSession.ID?
+    @Published private var workspaceState = TerminalWorkspaceCollection()
     @Published var lastError: String?
+
+    var workspaces: [TerminalWorkspace] {
+        workspaceState.workspaces
+    }
+
+    var selectedWorkspaceID: TerminalWorkspace.ID? {
+        get { workspaceState.selectedWorkspaceID }
+        set { _ = workspaceState.selectWorkspace(id: newValue) }
+    }
+
+    var selectedSessionID: TerminalSession.ID? {
+        get { workspaceState.selectedSessionID }
+        set {
+            if let newValue {
+                _ = workspaceState.activate(sessionID: newValue)
+            } else {
+                workspaceState.showLibrary()
+            }
+        }
+    }
+
+    var selectedWorkspace: TerminalWorkspace? {
+        workspaceState.selectedWorkspace
+    }
 
     var selectedSession: TerminalSession? {
         session(id: selectedSessionID)
@@ -356,15 +380,27 @@ final class SessionManager: ObservableObject {
         return sessions.first { $0.id == id }
     }
 
+    func workspace(id: TerminalWorkspace.ID?) -> TerminalWorkspace? {
+        workspaceState.workspace(id: id)
+    }
+
+    func sessions(in workspace: TerminalWorkspace) -> [TerminalSession] {
+        workspace.sessionIDs.compactMap { session(id: $0) }
+    }
+
+    func workspace(containing sessionID: TerminalSession.ID) -> TerminalWorkspace? {
+        workspaceState.workspace(containing: sessionID)
+    }
+
     func showHostLibrary() {
-        selectedSessionID = nil
+        workspaceState.showLibrary()
     }
 
     @discardableResult
     func createSSHSession(to host: HostProfile, username: String) throws -> TerminalSession.ID {
         let session = try TerminalSession(host: host, username: username)
         sessions.append(session)
-        selectedSessionID = session.id
+        workspaceState.add(sessionID: session.id)
         return session.id
     }
 
@@ -372,7 +408,7 @@ final class SessionManager: ObservableObject {
     func createLocalSession() -> TerminalSession.ID {
         let session = TerminalSession()
         sessions.append(session)
-        selectedSessionID = session.id
+        workspaceState.add(sessionID: session.id)
         return session.id
     }
 
@@ -380,21 +416,22 @@ final class SessionManager: ObservableObject {
     func createSerialSession(configuration: SerialConfiguration) throws -> TerminalSession.ID {
         let session = try TerminalSession(serial: configuration)
         sessions.append(session)
-        selectedSessionID = session.id
+        workspaceState.add(sessionID: session.id)
         return session.id
     }
 
     func close(_ session: TerminalSession) {
-        let index = sessions.firstIndex { $0.id == session.id }
         session.disconnect()
         sessions.removeAll { $0.id == session.id }
-        if selectedSessionID == session.id {
-            if let index, !sessions.isEmpty {
-                selectedSessionID = sessions[min(index, sessions.count - 1)].id
-            } else {
-                selectedSessionID = nil
-            }
-        }
+        _ = workspaceState.close(sessionID: session.id)
+    }
+
+    @discardableResult
+    func closeActiveSession(in workspaceID: TerminalWorkspace.ID) -> Bool {
+        guard let workspace = workspace(id: workspaceID),
+              let session = session(id: workspace.activeSessionID) else { return false }
+        close(session)
+        return true
     }
 
     func closeSelectedSession() -> Bool {
@@ -404,20 +441,75 @@ final class SessionManager: ObservableObject {
     }
 
     func selectSession(at index: Int) -> Bool {
-        guard sessions.indices.contains(index) else { return false }
-        selectedSessionID = sessions[index].id
-        return true
+        workspaceState.selectWorkspace(at: index)
     }
 
     func selectAdjacentSession(offset: Int) -> Bool {
-        guard !sessions.isEmpty else { return false }
-        guard let selectedSessionID,
-              let currentIndex = sessions.firstIndex(where: { $0.id == selectedSessionID }) else {
-            self.selectedSessionID = offset < 0 ? sessions.last?.id : sessions.first?.id
+        workspaceState.selectAdjacentWorkspace(offset: offset)
+    }
+
+    @discardableResult
+    func selectWorkspace(_ workspaceID: TerminalWorkspace.ID) -> Bool {
+        workspaceState.selectWorkspace(id: workspaceID)
+    }
+
+    @discardableResult
+    func activate(sessionID: TerminalSession.ID) -> Bool {
+        workspaceState.activate(sessionID: sessionID)
+    }
+
+    @discardableResult
+    func moveWorkspace(_ workspaceID: TerminalWorkspace.ID, toInsertionIndex index: Int) -> Bool {
+        workspaceState.moveWorkspace(id: workspaceID, toInsertionIndex: index)
+    }
+
+    @discardableResult
+    func mergeWorkspaces(
+        sourceWorkspaceID: TerminalWorkspace.ID,
+        targetWorkspaceID: TerminalWorkspace.ID,
+        position: TerminalWorkspaceDropPosition
+    ) -> Bool {
+        do {
+            try workspaceState.merge(
+                sourceWorkspaceID: sourceWorkspaceID,
+                targetWorkspaceID: targetWorkspaceID,
+                position: position
+            )
             return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
         }
-        let nextIndex = (currentIndex + offset % sessions.count + sessions.count) % sessions.count
-        self.selectedSessionID = sessions[nextIndex].id
-        return true
+    }
+
+    @discardableResult
+    func detachSession(_ sessionID: TerminalSession.ID, toInsertionIndex index: Int) -> Bool {
+        do {
+            try workspaceState.detach(sessionID: sessionID, toInsertionIndex: index)
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func setSplitAxis(_ splitAxis: TerminalWorkspaceSplitAxis, for workspaceID: TerminalWorkspace.ID) -> Bool {
+        workspaceState.setSplitAxis(splitAxis, for: workspaceID)
+    }
+
+    @discardableResult
+    func toggleSplitAxis(for workspaceID: TerminalWorkspace.ID) -> Bool {
+        workspaceState.toggleSplitAxis(for: workspaceID)
+    }
+
+    @discardableResult
+    func setSplitRatio(_ ratio: Double, for workspaceID: TerminalWorkspace.ID) -> Bool {
+        workspaceState.setSplitRatio(ratio, for: workspaceID)
+    }
+
+    @discardableResult
+    func focusOtherPane() -> Bool {
+        workspaceState.focusOtherPane()
     }
 }

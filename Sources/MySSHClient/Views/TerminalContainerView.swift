@@ -5,16 +5,24 @@ import SwiftTerm
 struct TerminalContainerView: NSViewRepresentable {
     @ObservedObject var session: TerminalSession
     @Environment(\.colorScheme) private var colorScheme
+    let isVisible: Bool
     let isActive: Bool
     let onCloseAfterUserEOF: () -> Void
     let onPlatformDetected: (HostPlatform) -> Void
+    let onActivate: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(session: session, onCloseAfterUserEOF: onCloseAfterUserEOF)
+        Coordinator(
+            session: session,
+            isVisible: isVisible,
+            onCloseAfterUserEOF: onCloseAfterUserEOF,
+            onActivate: onActivate
+        )
     }
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let terminal = LoginAwareTerminalView(frame: .zero)
+        context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         terminal.processDelegate = context.coordinator
         terminal.font = NSFont(name: "SFMono-Regular", size: 14) ?? NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
@@ -22,6 +30,7 @@ struct TerminalContainerView: NSViewRepresentable {
         terminal.scrollerStyle = .overlay
         applyTheme(to: terminal)
         context.coordinator.installControlDMonitor(for: terminal)
+        context.coordinator.installActivationMonitor(for: terminal)
         if session.kind == .ssh {
             terminal.onPlatformDetected = { platform in
                 Task { @MainActor in onPlatformDetected(platform) }
@@ -41,6 +50,9 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         terminal.onUserInput = { [weak session] in
             Task { @MainActor in session?.setPasswordPromptActive(false) }
+        }
+        terminal.onActivated = {
+            Task { @MainActor in onActivate() }
         }
         if session.canUseSavedPassword {
             terminal.onLoginPasswordPrompt = { [weak terminal, weak session] in
@@ -78,7 +90,9 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+        context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
+        context.coordinator.onActivate = onActivate
         applyTheme(to: nsView)
     }
 
@@ -101,6 +115,7 @@ struct TerminalContainerView: NSViewRepresentable {
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
         coordinator.removeControlDMonitor()
+        coordinator.removeActivationMonitor()
         coordinator.cancelPlatformProbe()
         coordinator.session.authenticationDidEnd()
         if nsView.process.running { nsView.process.terminate() }
@@ -109,13 +124,45 @@ struct TerminalContainerView: NSViewRepresentable {
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
         let session: TerminalSession
         let onCloseAfterUserEOF: () -> Void
+        var onActivate: () -> Void
         private var controlDMonitor: Any?
+        private var activationMonitor: Any?
         private var platformProbeTask: Task<Void, Never>?
         private var closeAfterEOFRequested = false
+        var isVisible: Bool
         var isActive = false
-        @MainActor init(session: TerminalSession, onCloseAfterUserEOF: @escaping () -> Void) {
+        @MainActor init(
+            session: TerminalSession,
+            isVisible: Bool,
+            onCloseAfterUserEOF: @escaping () -> Void,
+            onActivate: @escaping () -> Void
+        ) {
             self.session = session
+            self.isVisible = isVisible
             self.onCloseAfterUserEOF = onCloseAfterUserEOF
+            self.onActivate = onActivate
+        }
+
+        func installActivationMonitor(for terminal: LocalProcessTerminalView) {
+            removeActivationMonitor()
+            activationMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown]
+            ) { [weak self, weak terminal] event in
+                guard let self, let terminal, event.window === terminal.window else { return event }
+                guard self.isVisible else { return event }
+                let point = terminal.convert(event.locationInWindow, from: nil)
+                guard terminal.bounds.contains(point) else { return event }
+                terminal.window?.makeFirstResponder(terminal)
+                self.onActivate()
+                return event
+            }
+        }
+
+        func removeActivationMonitor() {
+            if let activationMonitor {
+                NSEvent.removeMonitor(activationMonitor)
+                self.activationMonitor = nil
+            }
         }
 
         func installControlDMonitor(for terminal: LocalProcessTerminalView) {
@@ -206,10 +253,16 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onPlatformDetected: ((HostPlatform) -> Void)?
     var onPasswordPromptStateChanged: ((Bool) -> Void)?
     var onUserInput: (() -> Void)?
+    var onActivated: (() -> Void)?
     private var promptDetector = LoginPasswordPromptDetector()
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
     private var platformDetector = HostPlatformDetector()
     private var passwordCapture = LoginPasswordCapture()
+
+    override func mouseDown(with event: NSEvent) {
+        onActivated?()
+        super.mouseDown(with: event)
+    }
 
     func beginCapturingLoginPassword() {
         passwordCapture.begin()
