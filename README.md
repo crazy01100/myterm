@@ -64,7 +64,7 @@ git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.2-dev.1 \
+  --version 1.0.3-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -74,7 +74,7 @@ cd myterm
 
 ```sh
 ./scripts/prepare-release-build.sh \
-  --version 1.0.2 \
+  --version 1.0.3-rc.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 

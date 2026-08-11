@@ -36,7 +36,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.2-dev.1 \
+  --version 1.0.3-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -51,7 +51,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.2-dev.1 \
+  --version 1.0.3-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')" \
   --build-only
 ```
