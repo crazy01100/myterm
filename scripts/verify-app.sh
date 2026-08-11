@@ -3,13 +3,13 @@ set -euo pipefail
 
 project_dir="${0:A:h:h}"
 source "$project_dir/scripts/code-signing-common.sh"
-app_path="$project_dir/build/MyTerm.app"
+app_path=""
 expected_version=""
 expected_build=""
 require_stable_signing=0
 
 usage() {
-    echo "Usage: scripts/verify-app.sh --version VERSION --build BUILD [--app /path/to/MyTerm.app] [--require-stable-signing]"
+    echo "Usage: scripts/verify-app.sh --app /path/to/App.app --version VERSION --build BUILD [--require-stable-signing]"
 }
 
 while (( $# > 0 )); do
@@ -45,10 +45,14 @@ while (( $# > 0 )); do
     esac
 done
 
-if [[ -z "$expected_version" || -z "$expected_build" ]]; then
+if [[ -z "$app_path" || -z "$expected_version" || -z "$expected_build" ]]; then
     usage >&2
     exit 64
 fi
+[[ "$app_path" != "$project_dir/build/MyTerm.app" ]] || {
+    echo "build/MyTerm.app is prohibited; verify build/dev, a candidate, or a release artifact." >&2
+    exit 64
+}
 
 plist="$app_path/Contents/Info.plist"
 executable="$app_path/Contents/MacOS/MySSHClient"

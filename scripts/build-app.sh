@@ -4,14 +4,16 @@ set -euo pipefail
 project_dir="${0:A:h:h}"
 source "$project_dir/scripts/code-signing-common.sh"
 scratch_dir="$project_dir/.build-app"
-app_dir="$project_dir/build/MyTerm.app"
+app_dir=""
 release_dir="$scratch_dir/arm64-apple-macosx/release"
-build_state_file="$project_dir/build/.last-build-number"
+build_state_file=""
 
 usage() {
     cat <<'EOF'
 Usage: scripts/build-app.sh --version VERSION --build BUILD [options]
 
+  --channel CHANNEL
+                  development (default), candidate, or update-lab
   --version       Display version, for example 0.12.0 or 1.0.0-beta.1
   --build         Positive, monotonically increasing integer
   --build-date    Optional display date; defaults to the current local time
@@ -21,13 +23,13 @@ Usage: scripts/build-app.sh --version VERSION --build BUILD [options]
                   HTTPS appcast URL; requires --sparkle-public-key
   --sparkle-public-key KEY
                   Sparkle Ed25519 public key; may be staged before the feed URL
-  --update-lab    Build an isolated local-update test app with no cloud config
+  --update-lab    Alias for --channel update-lab; no cloud config
   --allow-loopback-http-feed
                   Allow only 127.0.0.1/localhost HTTP for --update-lab
   --app-output PATH
-                  Update-lab-only App path under build/update-lab
+                  Candidate/update-lab App path in its required build subtree
   --build-state-file PATH
-                  Update-lab-only Build state under build/update-lab
+                  Candidate/update-lab Build state in its required subtree
   --code-sign-identity ID
                   Fixed Code Signing identity; defaults to Config/Local
   --require-stable-signing
@@ -51,9 +53,17 @@ preflight_only=0
 update_lab=0
 allow_loopback_http_feed=0
 require_stable_signing=0
+channel="development"
+channel_explicit=0
 
 while (( $# > 0 )); do
     case "$1" in
+        --channel)
+            (( $# >= 2 )) || { echo "Missing value for --channel" >&2; exit 64; }
+            channel="$2"
+            channel_explicit=1
+            shift 2
+            ;;
         --version)
             (( $# >= 2 )) || { echo "Missing value for --version" >&2; exit 64; }
             version="$2"
@@ -89,6 +99,11 @@ while (( $# > 0 )); do
             ;;
         --update-lab)
             update_lab=1
+            if (( channel_explicit == 1 )) && [[ "$channel" != "update-lab" ]]; then
+                echo "--update-lab conflicts with --channel $channel." >&2
+                exit 64
+            fi
+            channel="update-lab"
             shift
             ;;
         --allow-loopback-http-feed)
@@ -173,24 +188,55 @@ if [[ -n "$sparkle_feed_url" ]]; then
         exit 64
     fi
 fi
+if [[ "$channel" != "development" && "$channel" != "candidate" && "$channel" != "update-lab" ]]; then
+    echo "Unknown build channel: $channel" >&2
+    exit 64
+fi
+if [[ "$channel" == "update-lab" ]]; then
+    update_lab=1
+fi
 if (( allow_loopback_http_feed == 1 && update_lab == 0 )); then
     echo "--allow-loopback-http-feed requires --update-lab." >&2
     exit 64
 fi
-if (( update_lab == 1 )); then
-    update_lab_root="$project_dir/build/update-lab"
-    if [[ "$app_dir" != "$update_lab_root"/*.app && "$app_dir" != "$update_lab_root"/*/*.app ]]; then
-        echo "Update-lab App output must stay under build/update-lab and end in .app." >&2
-        exit 64
-    fi
-    if [[ "$build_state_file" != "$update_lab_root"/* ]]; then
-        echo "Update-lab Build state must stay under build/update-lab." >&2
-        exit 64
-    fi
-elif [[ "$app_dir" != "$project_dir/build/MyTerm.app" || "$build_state_file" != "$project_dir/build/.last-build-number" ]]; then
-    echo "Custom output and Build state paths require --update-lab." >&2
-    exit 64
-fi
+case "$channel" in
+    development)
+        expected_app_dir="$project_dir/build/dev/MyTerm Dev.app"
+        expected_build_state="$project_dir/build/dev/.last-build-number"
+        [[ -z "$app_dir" ]] && app_dir="$expected_app_dir"
+        [[ -z "$build_state_file" ]] && build_state_file="$expected_build_state"
+        if [[ "$app_dir" != "$expected_app_dir" || "$build_state_file" != "$expected_build_state" ]]; then
+            echo "Development builds must use build/dev/MyTerm Dev.app and build/dev/.last-build-number." >&2
+            exit 64
+        fi
+        ;;
+    candidate)
+        candidate_root="$project_dir/build/candidates/MyTerm-$version-build-$build_number"
+        expected_app_dir="$candidate_root/MyTerm.app"
+        expected_build_state="$project_dir/build/candidates/.last-build-number"
+        [[ -z "$app_dir" ]] && app_dir="$expected_app_dir"
+        [[ -z "$build_state_file" ]] && build_state_file="$expected_build_state"
+        if [[ "$app_dir" != "$expected_app_dir" || "$build_state_file" != "$expected_build_state" ]]; then
+            echo "Candidate output must use $expected_app_dir and build/candidates/.last-build-number." >&2
+            exit 64
+        fi
+        ;;
+    update-lab)
+        update_lab_root="$project_dir/build/update-lab"
+        [[ -n "$app_dir" && -n "$build_state_file" ]] || {
+            echo "Update-lab requires --app-output and --build-state-file." >&2
+            exit 64
+        }
+        if [[ "$app_dir" != "$update_lab_root"/*.app && "$app_dir" != "$update_lab_root"/*/*.app ]]; then
+            echo "Update-lab App output must stay under build/update-lab and end in .app." >&2
+            exit 64
+        fi
+        if [[ "$build_state_file" != "$update_lab_root"/* ]]; then
+            echo "Update-lab Build state must stay under build/update-lab." >&2
+            exit 64
+        fi
+        ;;
+esac
 if [[ -n "$sparkle_public_key" ]]; then
     decoded_key_size="$(print -rn -- "$sparkle_public_key" | /usr/bin/base64 -D 2>/dev/null | /usr/bin/wc -c | /usr/bin/tr -d ' ')"
     if [[ "$decoded_key_size" != "32" ]]; then
@@ -240,6 +286,11 @@ cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert CFBundleVersion -string "$build_number" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert MyTermBuildDate -string "$build_date" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert SUEnableAutomaticChecks -bool false "$app_dir/Contents/Info.plist"
+if [[ "$channel" == "development" ]]; then
+    /usr/bin/plutil -replace CFBundleDisplayName -string "MyTerm Dev" "$app_dir/Contents/Info.plist"
+    /usr/bin/plutil -replace CFBundleName -string "MyTerm Dev" "$app_dir/Contents/Info.plist"
+    /usr/bin/plutil -insert MyTermDevelopmentMode -bool true "$app_dir/Contents/Info.plist"
+fi
 if (( require_stable_signing == 1 )); then
     stable_release_requirement="$(read_trimmed_file "$project_dir/$MYTERM_CODE_SIGN_REQUIREMENT_FILE")"
     /usr/bin/plutil -insert MyTermStableReleaseRequirement -string "$stable_release_requirement" "$app_dir/Contents/Info.plist"
@@ -326,4 +377,5 @@ mkdir -p "${build_state_file:h}"
 print -r -- "$build_number" > "$build_state_file"
 
 echo "MyTerm $version (Build $build_number, $build_date)"
+echo "Channel: $channel"
 echo "$app_dir"

@@ -6,6 +6,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
+- [開發與發布指南](DEVELOPMENT.md)
 - [系統架構](ARCHITECTURE.md)
 - [安全設計](SECURITY.md)
 
@@ -60,10 +61,12 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
-./scripts/build-app.sh --version 1.0.2 --build "$(date '+%Y%m%d%H%M%S')"
+./scripts/run-dev-app.sh \
+  --version 1.0.2-dev.1 \
+  --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-產生的 App 位於 `build/MyTerm.app`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
+測試 App 固定位於 `build/dev/MyTerm Dev.app`，腳本只會關閉與重啟這個路徑，不會變更 `/Applications/MyTerm.app`。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
 目前原始碼的完整正式候選流程會執行安全檢查、300 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
@@ -74,6 +77,8 @@ cd myterm
 ```
 
 發布流程只會先建立私人 GitHub Draft Release，必須人工核對後才公開；公開 Release 會觸發 GitHub Actions，把簽署的更新資訊部署至 Cloudflare Pages。
+
+各建置通道、腳本用途、候選版與發布流程請見 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 資料與安全界線
 

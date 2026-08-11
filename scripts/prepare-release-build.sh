@@ -69,6 +69,9 @@ done
 [[ -n "$version" && -n "$build_number" ]] || { usage >&2; exit 64; }
 
 cd "$project_dir"
+candidate_dir="$project_dir/build/candidates/MyTerm-$version-build-$build_number"
+candidate_app="$candidate_dir/MyTerm.app"
+candidate_build_state="$project_dir/build/candidates/.last-build-number"
 "$project_dir/scripts/check-release-safety.sh"
 sparkle_arguments=()
 if [[ -n "$sparkle_feed_url" ]]; then
@@ -77,19 +80,36 @@ fi
 if [[ -n "$sparkle_public_key" ]]; then
     sparkle_arguments+=(--sparkle-public-key "$sparkle_public_key")
 fi
-"$project_dir/scripts/build-app.sh" --version "$version" --build "$build_number" "${sparkle_arguments[@]}" --require-stable-signing --preflight
+candidate_arguments=(
+    --channel candidate
+    --version "$version"
+    --build "$build_number"
+    --app-output "$candidate_app"
+    --build-state-file "$candidate_build_state"
+)
+candidate_arguments+=("${sparkle_arguments[@]}")
+candidate_arguments+=(--require-stable-signing)
+"$project_dir/scripts/build-app.sh" "${candidate_arguments[@]}" --preflight
 if (( skip_tests == 0 )); then
     "$project_dir/scripts/run-tests.sh"
 fi
 
-build_arguments=(--version "$version" --build "$build_number")
-build_arguments+=("${sparkle_arguments[@]}")
-build_arguments+=(--require-stable-signing)
+build_arguments=("${candidate_arguments[@]}")
 if [[ -n "$build_date" ]]; then
     build_arguments+=(--build-date "$build_date")
 fi
 "$project_dir/scripts/build-app.sh" "${build_arguments[@]}"
-"$project_dir/scripts/verify-app.sh" --version "$version" --build "$build_number" --require-stable-signing
-"$project_dir/scripts/package-app.sh" --version "$version" --build "$build_number" --require-stable-signing
+"$project_dir/scripts/verify-app.sh" \
+    --app "$candidate_app" \
+    --version "$version" \
+    --build "$build_number" \
+    --require-stable-signing
+"$project_dir/scripts/package-app.sh" \
+    --app "$candidate_app" \
+    --output "$candidate_dir" \
+    --version "$version" \
+    --build "$build_number" \
+    --require-stable-signing
 
-echo "Release candidate prepared without publishing anything."
+echo "Release candidate prepared without publishing anything:"
+echo "$candidate_dir"

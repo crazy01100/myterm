@@ -2,14 +2,14 @@
 set -euo pipefail
 
 project_dir="${0:A:h:h}"
-app_path="$project_dir/build/MyTerm.app"
-output_dir="$project_dir/build/release"
+app_path=""
+output_dir=""
 version=""
 build_number=""
 require_stable_signing=0
 
 usage() {
-    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD [--app PATH] [--output DIR] [--require-stable-signing]"
+    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD --app PATH --output DIR [--require-stable-signing]"
 }
 
 while (( $# > 0 )); do
@@ -50,7 +50,11 @@ while (( $# > 0 )); do
     esac
 done
 
-[[ -n "$version" && -n "$build_number" ]] || { usage >&2; exit 64; }
+[[ -n "$version" && -n "$build_number" && -n "$app_path" && -n "$output_dir" ]] || { usage >&2; exit 64; }
+[[ "$app_path" != "$project_dir/build/MyTerm.app" ]] || {
+    echo "build/MyTerm.app is prohibited; use a versioned candidate or update-lab App." >&2
+    exit 64
+}
 verify_arguments=(--app "$app_path" --version "$version" --build "$build_number")
 if (( require_stable_signing == 1 )); then
     verify_arguments+=(--require-stable-signing)
@@ -73,7 +77,7 @@ verification_dir="$(mktemp -d /private/tmp/MyTerm-package.XXXXXX)"
 trap '/bin/rm -rf -- "$verification_dir"' EXIT
 /usr/bin/ditto -x -k "$archive" "$verification_dir"
 extracted_verify_arguments=(
-    --app "$verification_dir/MyTerm.app"
+    --app "$verification_dir/${app_path:t}"
     --version "$version"
     --build "$build_number"
 )

@@ -1,6 +1,30 @@
 #!/bin/zsh
 set -euo pipefail
 
+usage() {
+    cat <<'EOF'
+Usage: scripts/run-crypto-tests.sh
+
+Runs the MyTerm local secret vault, end-to-end encryption, Firebase backend,
+metadata/password baseline, and synchronization planner tests. No App is
+built or launched.
+EOF
+}
+
+if (( $# > 0 )); then
+    case "$1" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            print -u2 -- "Unknown option: $1"
+            usage >&2
+            exit 64
+            ;;
+    esac
+fi
+
 project_dir="${0:A:h:h}"
 test_dir="$(mktemp -d /private/tmp/MySSHClient-crypto-tests.XXXXXX)"
 trap 'rm -rf "$test_dir"' EXIT

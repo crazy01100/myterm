@@ -69,7 +69,7 @@ done
 
 notes_file="${notes_file:A}"
 archive_name="MyTerm-$version-build-$build_number-arm64.zip"
-source_archive="$project_dir/build/release/$archive_name"
+source_archive="$project_dir/build/candidates/MyTerm-$version-build-$build_number/$archive_name"
 [[ -f "$source_archive" ]] || { print -u2 -- "找不到已封裝的 App：$source_archive"; exit 66; }
 
 if [[ -z "$output_dir" ]]; then
