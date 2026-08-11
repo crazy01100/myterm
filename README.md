@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.0**
+目前正式版本：**1.0.1**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -37,7 +37,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - Apple Silicon Mac（arm64）
 - macOS 26 或更新版本
 
-目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；1.0.1 會改用單一 Keychain 根金鑰，避免提示數量隨主機增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
+目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；1.0.1 已將所有本機機密收斂至單一加密保管庫，使更新後需要的 Keychain 驗證不會隨主機數量增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
 
 ## 基本使用
 
@@ -57,12 +57,12 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
-./scripts/build-app.sh --version 1.0.0 --build 20260810141610
+./scripts/build-app.sh --version 1.0.1 --build 20260811130726
 ```
 
 產生的 App 位於 `build/MyTerm.app`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-完整正式候選流程會執行安全檢查、291 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
+完整正式候選流程會執行安全檢查、295 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
 ```sh
 ./scripts/prepare-release-build.sh \
@@ -78,17 +78,19 @@ cd myterm
 - 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
 - MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
 - 1.0.1 起，主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。
-- 1.0.0 不會自動送出 `sudo`／`su` 密碼，需在已辨識的安全提示中按按鈕或快捷鍵。
+- `sudo`／`su` 密碼不會自動送出，需在已辨識的安全提示中按按鈕或快捷鍵。
 
 更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
 ## 已驗證版本
 
-MyTerm 1.0.0（Build `20260810141610`）已完成：
+MyTerm 1.0.1（Build `20260811130726`）已完成：
 
-- 278 項本機自動測試與 9 項 Firestore Security Rules 測試。
+- 295 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
 - 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
+- 主機與群組的端對端加密刪除同步，以及套用遠端刪除前的本機備份。
+- 舊版分散 Keychain 項目遷移至單一本機加密保管庫；驗證次數不再隨主機數量增加。
 - Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
 - GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
 

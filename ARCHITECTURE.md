@@ -1,6 +1,6 @@
 # MyTerm 系統架構
 
-本文說明 MyTerm 1.0 的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
+本文說明 MyTerm 1.0.1 的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
 
 ## 架構總覽
 
@@ -79,7 +79,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - 已保存的 SSH 登入密碼只在設定帳號一致且第一次登入 `password:` 提示時自動送入 PTY。
 - 未保存密碼時，MyTerm 暫存該次輸入；只有 OpenSSH 診斷資料確認以 `password` 成功驗證後，才詢問是否保存。
 - `keyboard-interactive` 不會被當成可保存密碼，避免誤存 OTP 或一次性挑戰。
-- `sudo`／`su` 等後續提示與 SSH 登入回呼分離；1.0.0 只允許使用者在已辨識提示中手動一鍵填入。
+- `sudo`／`su` 等後續提示與 SSH 登入回呼分離；MyTerm 只允許使用者在已辨識提示中手動一鍵填入。
 
 ## 更新與發布
 
@@ -97,7 +97,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
-- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 將分散機密收斂到單一 Keychain 根金鑰，使更新後最多只需解鎖一個項目。這不會取代 Sparkle 的更新簽章驗證。
+- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 已將分散機密收斂到單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
 
 ## 儲存庫結構
 
@@ -114,10 +114,11 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 `build/`、SwiftPM 快取、`node_modules/`、本機 Firebase 設定、OAuth secret、使用者匯出資料及內部計劃紀錄均不屬於公開原始碼。
 
-## 1.0 已知限制
+## 1.0.1 已知限制
 
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
 - 1.0.1 起，主機與群組刪除會以帶有 revision、裝置識別與 AES-256-GCM 驗證的 tombstone 傳播；遠端刪除套用前會建立本機還原備份。
-- `sudo`／`su` 在 1.0.0 需要按鈕或快捷鍵，不會自動送出密碼。
+- `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
+- 跨裝置同步由 App 啟動、回到前景、切換主要功能及定期排程等本機事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。
