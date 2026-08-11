@@ -94,7 +94,7 @@ cd myterm
 
 ## 發布驗證
 
-MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證，以及 GitHub Actions → Cloudflare Pages 外部更新站驗證。兩台 Mac 的完整人工更新證據目前來自 1.0.1；1.0.3 的 App 內更新驗收仍待完成：
+MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證、GitHub Actions → Cloudflare Pages 外部更新站驗證，以及正式 1.0.2 → 1.0.3 App 內更新驗收：
 
 - 324 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
@@ -104,5 +104,6 @@ MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回�
 - 舊版分散 Keychain 項目遷移至單一本機加密保管庫；驗證次數不再隨主機數量增加。
 - Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
 - 1.0.3 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
+- 正式 App 由 1.0.2 經 Sparkle 更新至 1.0.3；版本、Build、簽章、資料、SSH、SFTP、同步與 Terminal 工作區均正常，Keychain 僅出現一次統一保管庫驗證。
 
 正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。
