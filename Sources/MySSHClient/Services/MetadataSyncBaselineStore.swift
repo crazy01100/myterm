@@ -178,6 +178,19 @@ enum MetadataSyncBaselinePlanner {
             entries: entries
         )
     }
+
+    static func removingEntry(
+        recordID: UUID,
+        from baseline: MetadataSyncBaseline
+    ) -> MetadataSyncBaseline {
+        MetadataSyncBaseline(
+            schemaVersion: baseline.schemaVersion,
+            ownerUIDDigest: baseline.ownerUIDDigest,
+            createdAt: baseline.createdAt,
+            deviceID: baseline.deviceID,
+            entries: baseline.entries.filter { $0.recordID != recordID }
+        )
+    }
 }
 
 private extension JSONEncoder {

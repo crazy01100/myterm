@@ -37,7 +37,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - Apple Silicon Mac（arm64）
 - macOS 26 或更新版本
 
-目前版本採 ad-hoc 簽署，未加入 Apple Developer Program。第一次從網站下載後，macOS 可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。後續由 MyTerm 內更新時仍會驗證 Sparkle Ed25519 簽章。
+目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。1.0.1 起的正式版本會固定使用同一個本機發行憑證簽署，後續更新可維持一致的 Keychain 存取身分；App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
 
 ## 基本使用
 
@@ -62,7 +62,7 @@ cd myterm
 
 產生的 App 位於 `build/MyTerm.app`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-完整正式候選流程會執行安全檢查、278 項測試、arm64 Release 建置、App 驗證、封裝與 SHA-256 產生：
+完整正式候選流程會執行安全檢查、291 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
 ```sh
 ./scripts/prepare-release-build.sh \
@@ -77,7 +77,7 @@ cd myterm
 - 主機清單不包含密碼；密碼使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
 - 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
 - MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
-- 1.0.0 的主機／群組刪除只影響操作當下的 Mac，尚不會同步刪除其他裝置的副本。
+- 1.0.1 起，主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。
 - 1.0.0 不會自動送出 `sudo`／`su` 密碼，需在已辨識的安全提示中按按鈕或快捷鍵。
 
 更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。

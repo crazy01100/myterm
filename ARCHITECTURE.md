@@ -84,7 +84,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 ```text
 開發 Mac
-  └─ 測試、arm64 Release 建置、ad-hoc 簽署、Sparkle Ed25519 簽署
+  └─ 測試、arm64 Release 建置、固定本機發行憑證簽署、Sparkle Ed25519 簽署
        └─ 私人 GitHub Draft Release
             └─ 人工核對並發布
                  └─ GitHub Actions
@@ -96,7 +96,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
-- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認；這不會取代 Sparkle 的更新簽章驗證。
+- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認；1.0.1 起固定使用同一個本機發行憑證，以維持後續版本的 Keychain 存取身分。這不會取代 Sparkle 的更新簽章驗證。
 
 ## 儲存庫結構
 
@@ -117,6 +117,6 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
-- 主機與群組刪除在 1.0.0 不會傳播到其他 Mac；後續版本將以加密 tombstone 實作。
+- 1.0.1 起，主機與群組刪除會以帶有 revision、裝置識別與 AES-256-GCM 驗證的 tombstone 傳播；遠端刪除套用前會建立本機還原備份。
 - `sudo`／`su` 在 1.0.0 需要按鈕或快捷鍵，不會自動送出密碼。
-- 目前採 ad-hoc 簽署，第一次安裝可能出現 macOS 無法驗證開發者的提示。
+- 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。

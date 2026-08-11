@@ -285,6 +285,8 @@ final class HostStore: ObservableObject {
         let previousGroups = groups
         let previousHosts = hosts
         let previousSelection = selectedHostID
+        let incomingHostIDs = Set(document.hosts.map(\.id))
+        let removedHosts = previousHosts.filter { !incomingHostIDs.contains($0.id) }
         groups = document.groups
         hosts = document.hosts
         sortInventory()
@@ -299,7 +301,21 @@ final class HostStore: ObservableObject {
             selectedHostID = previousSelection
             throw error
         }
-        lastNotice = "已從端對端加密同步套用雲端變更；套用前資料已備份。"
+        var cleanupNotices: [String] = []
+        for profile in removedHosts {
+            do {
+                let result = try KeychainStore.deletePassword(for: profile.id)
+                if case .manualCleanupRequired(let status) = result {
+                    cleanupNotices.append(manualKeychainCleanupMessage(for: profile, status: status))
+                }
+            } catch {
+                cleanupNotices.append(
+                    "已同步刪除主機 \(profile.displayName)，但其舊密碼無法自動從 Keychain 移除：\(error.localizedDescription)"
+                )
+            }
+        }
+        lastNotice = (["已從端對端加密同步套用雲端變更；套用前資料已備份。"] + cleanupNotices)
+            .joined(separator: "\n")
         return backupURL
     }
 

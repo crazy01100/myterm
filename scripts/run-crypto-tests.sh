@@ -6,6 +6,7 @@ test_dir="$(mktemp -d /private/tmp/MySSHClient-crypto-tests.XXXXXX)"
 trap 'rm -rf "$test_dir"' EXIT
 
 cd "$project_dir"
+swift build -c debug
 crypto_build_dir="$(swift build -c debug --show-bin-path)"
 sodium_headers="$project_dir/.build/checkouts/swift-sodium/Clibsodium.xcframework/macos-arm64_arm64e_x86_64/Headers/Clibsodium"
 swiftc \

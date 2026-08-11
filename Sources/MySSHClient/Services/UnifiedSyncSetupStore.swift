@@ -218,6 +218,7 @@ final class UnifiedSyncSetupStore: ObservableObject {
                 guard verifiedPlan.conflictCount == 0,
                       verifiedPlan.uploadCount == 0,
                       verifiedPlan.downloadCount == 0,
+                      verifiedPlan.deletionCount == 0,
                       verifiedPlan.repairCount == 0,
                       verifiedPlan.unchangedCount == hostStore.groups.count + hostStore.hosts.count else {
                     throw UnifiedSyncSetupError.verificationFailed
@@ -347,6 +348,7 @@ final class UnifiedSyncSetupStore: ObservableObject {
                 guard verifiedPlan.conflictCount == 0,
                       verifiedPlan.uploadCount == 0,
                       verifiedPlan.downloadCount == 0,
+                      verifiedPlan.deletionCount == 0,
                       verifiedPlan.repairCount == 0,
                       verifiedPlan.unchangedCount == hostStore.groups.count + hostStore.hosts.count else {
                     throw UnifiedSyncSetupError.verificationFailed
@@ -424,17 +426,21 @@ final class UnifiedSyncSetupStore: ObservableObject {
         var remote = try await backend.fetchAll(ownerUID: ownerUID, idToken: idToken)
         var remoteGroups: [UUID: HostGroup] = [:]
         var remoteHosts: [UUID: HostProfile] = [:]
+        var remoteTombstoneIDs: Set<UUID> = []
         for record in remote {
             switch try MetadataSyncCodec.decrypt(record, ownerUID: ownerUID, masterKey: masterKey) {
             case .group(let group): remoteGroups[group.id] = group
             case .host(let host): remoteHosts[host.id] = host
-            case .tombstone: throw AutomaticMetadataSyncError.unsafeDeletion
+            case .tombstone(let recordID, _): remoteTombstoneIDs.insert(recordID)
             }
         }
         var mergedGroups = remoteGroups
         var mergedHosts = remoteHosts
 
         for group in groups {
+            guard !remoteTombstoneIDs.contains(group.id) else {
+                throw UnifiedSyncSetupError.incompatibleInventory
+            }
             if let remoteGroup = remoteGroups[group.id] {
                 guard try MetadataSyncCodec.contentDigest(group: group)
                     == MetadataSyncCodec.contentDigest(group: remoteGroup) else {
@@ -453,6 +459,9 @@ final class UnifiedSyncSetupStore: ObservableObject {
             }
         }
         for host in hosts {
+            guard !remoteTombstoneIDs.contains(host.id) else {
+                throw UnifiedSyncSetupError.incompatibleInventory
+            }
             if let remoteHost = remoteHosts[host.id] {
                 guard try MetadataSyncCodec.contentDigest(host: host)
                     == MetadataSyncCodec.contentDigest(host: remoteHost) else {
@@ -524,7 +533,7 @@ final class UnifiedSyncSetupStore: ObservableObject {
             ownerUID: ownerUID,
             masterKey: masterKey
         )
-        guard plan.conflictCount == 0, plan.deletionCount == 0 else {
+        guard plan.conflictCount == 0 else {
             throw UnifiedSyncSetupError.incompatibleInventory
         }
 
@@ -532,14 +541,24 @@ final class UnifiedSyncSetupStore: ObservableObject {
         var hosts = Dictionary(uniqueKeysWithValues: localHosts.map { ($0.id, $0) })
         var updatedBaseline = baseline
         let remoteByID = Dictionary(uniqueKeysWithValues: remoteRecords.map { ($0.id, $0) })
-        let downloadIDs = Set(plan.items.filter { $0.disposition == .download }.map(\.id))
+        let remoteApplyIDs = Set(plan.items.filter {
+            $0.disposition == .download || $0.disposition == .remoteDeletion
+        }.map(\.id))
 
-        for record in remoteRecords where downloadIDs.contains(record.id) {
-            let localDigest: String
+        for record in remoteRecords where remoteApplyIDs.contains(record.id) {
             switch try MetadataSyncCodec.decrypt(record, ownerUID: ownerUID, masterKey: masterKey) {
             case .group(let group):
                 groups[group.id] = group
-                localDigest = try MetadataSyncCodec.contentDigest(group: group)
+                updatedBaseline = MetadataSyncBaselinePlanner.replacingEntry(
+                    MetadataSyncBaselineEntry(
+                        recordID: record.id,
+                        recordType: record.recordType,
+                        remoteRevision: record.revision,
+                        localContentDigest: try MetadataSyncCodec.contentDigest(group: group),
+                        remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
+                    ),
+                    in: updatedBaseline
+                )
             case .host(var host):
                 if host.authenticationMethod == .privateKey,
                    let localPath = hosts[host.id]?.privateKeyPath,
@@ -547,36 +566,49 @@ final class UnifiedSyncSetupStore: ObservableObject {
                     host.privateKeyPath = localPath
                 }
                 hosts[host.id] = host
-                localDigest = try MetadataSyncCodec.contentDigest(host: host)
-            case .tombstone:
-                throw UnifiedSyncSetupError.incompatibleInventory
+                updatedBaseline = MetadataSyncBaselinePlanner.replacingEntry(
+                    MetadataSyncBaselineEntry(
+                        recordID: record.id,
+                        recordType: record.recordType,
+                        remoteRevision: record.revision,
+                        localContentDigest: try MetadataSyncCodec.contentDigest(host: host),
+                        remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
+                    ),
+                    in: updatedBaseline
+                )
+            case .tombstone(let recordID, let recordType):
+                guard recordID == record.id, recordType == record.recordType else {
+                    throw UnifiedSyncSetupError.verificationFailed
+                }
+                if recordType == .group {
+                    groups[recordID] = nil
+                } else {
+                    hosts[recordID] = nil
+                }
+                updatedBaseline = MetadataSyncBaselinePlanner.removingEntry(
+                    recordID: recordID,
+                    from: updatedBaseline
+                )
             }
-            updatedBaseline = MetadataSyncBaselinePlanner.replacingEntry(
-                MetadataSyncBaselineEntry(
-                    recordID: record.id,
-                    recordType: record.recordType,
-                    remoteRevision: record.revision,
-                    localContentDigest: localDigest,
-                    remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
-                ),
-                in: updatedBaseline
-            )
         }
 
         let actions = plan.items.filter {
             $0.disposition == .uploadCreate
                 || $0.disposition == .uploadUpdate
+                || $0.disposition == .localDeletion
                 || $0.disposition == .baselineRepair
         }.sorted {
             if $0.recordType != $1.recordType { return $0.recordType == .group }
             return $0.id.uuidString < $1.id.uuidString
         }
         for action in actions {
-            let localDigest: String
+            let localDigest: String?
             if let group = groups[action.id], action.recordType == .group {
                 localDigest = try MetadataSyncCodec.contentDigest(group: group)
             } else if let host = hosts[action.id], action.recordType == .host {
                 localDigest = try MetadataSyncCodec.contentDigest(host: host)
+            } else if action.disposition == .localDeletion {
+                localDigest = nil
             } else {
                 throw UnifiedSyncSetupError.incompatibleInventory
             }
@@ -598,7 +630,17 @@ final class UnifiedSyncSetupStore: ObservableObject {
                     revision = oldEntry.remoteRevision + 1
                 }
                 let encrypted: EncryptedSyncRecord
-                if let group = groups[action.id], action.recordType == .group {
+                if localDigest == nil {
+                    encrypted = try MetadataSyncCodec.tombstone(
+                        recordID: action.id,
+                        recordType: action.recordType,
+                        ownerUID: ownerUID,
+                        masterKey: masterKey,
+                        revision: revision,
+                        modifiedAt: .now,
+                        modifiedByDeviceID: baseline.deviceID
+                    )
+                } else if let group = groups[action.id], action.recordType == .group {
                     encrypted = try MetadataSyncCodec.encrypt(
                         group: group,
                         ownerUID: ownerUID,
@@ -621,16 +663,21 @@ final class UnifiedSyncSetupStore: ObservableObject {
                     ? try await backend.create(encrypted, ownerUID: ownerUID, idToken: idToken)
                     : try await backend.upsert(encrypted, ownerUID: ownerUID, idToken: idToken)
             }
-            updatedBaseline = MetadataSyncBaselinePlanner.replacingEntry(
-                MetadataSyncBaselineEntry(
-                    recordID: saved.id,
-                    recordType: saved.recordType,
-                    remoteRevision: saved.revision,
-                    localContentDigest: localDigest,
-                    remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(saved)
-                ),
-                in: updatedBaseline
-            )
+            if saved.deleted {
+                updatedBaseline = MetadataSyncBaselinePlanner.removingEntry(recordID: saved.id, from: updatedBaseline)
+            } else {
+                guard let localDigest else { throw UnifiedSyncSetupError.verificationFailed }
+                updatedBaseline = MetadataSyncBaselinePlanner.replacingEntry(
+                    MetadataSyncBaselineEntry(
+                        recordID: saved.id,
+                        recordType: saved.recordType,
+                        remoteRevision: saved.revision,
+                        localContentDigest: localDigest,
+                        remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(saved)
+                    ),
+                    in: updatedBaseline
+                )
+            }
         }
 
         let document = InventoryDocument(groups: Array(groups.values), hosts: Array(hosts.values))
@@ -646,6 +693,7 @@ final class UnifiedSyncSetupStore: ObservableObject {
         )
         guard verifiedPlan.uploadCount == 0,
               verifiedPlan.downloadCount == 0,
+              verifiedPlan.deletionCount == 0,
               verifiedPlan.repairCount == 0,
               verifiedPlan.conflictCount == 0,
               verifiedPlan.unchangedCount == document.groups.count + document.hosts.count else {

@@ -6,9 +6,10 @@ app_path="$project_dir/build/MyTerm.app"
 output_dir="$project_dir/build/release"
 version=""
 build_number=""
+require_stable_signing=0
 
 usage() {
-    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD [--app PATH] [--output DIR]"
+    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD [--app PATH] [--output DIR] [--require-stable-signing]"
 }
 
 while (( $# > 0 )); do
@@ -33,6 +34,10 @@ while (( $# > 0 )); do
             output_dir="$2"
             shift 2
             ;;
+        --require-stable-signing)
+            require_stable_signing=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -46,7 +51,11 @@ while (( $# > 0 )); do
 done
 
 [[ -n "$version" && -n "$build_number" ]] || { usage >&2; exit 64; }
-"$project_dir/scripts/verify-app.sh" --app "$app_path" --version "$version" --build "$build_number"
+verify_arguments=(--app "$app_path" --version "$version" --build "$build_number")
+if (( require_stable_signing == 1 )); then
+    verify_arguments+=(--require-stable-signing)
+fi
+"$project_dir/scripts/verify-app.sh" "${verify_arguments[@]}"
 
 mkdir -p "$output_dir"
 archive="$output_dir/MyTerm-$version-build-$build_number-arm64.zip"
@@ -63,10 +72,15 @@ print -r -- "$digest  ${archive:t}" > "$checksums"
 verification_dir="$(mktemp -d /private/tmp/MyTerm-package.XXXXXX)"
 trap '/bin/rm -rf -- "$verification_dir"' EXIT
 /usr/bin/ditto -x -k "$archive" "$verification_dir"
-"$project_dir/scripts/verify-app.sh" \
-    --app "$verification_dir/MyTerm.app" \
-    --version "$version" \
+extracted_verify_arguments=(
+    --app "$verification_dir/MyTerm.app"
+    --version "$version"
     --build "$build_number"
+)
+if (( require_stable_signing == 1 )); then
+    extracted_verify_arguments+=(--require-stable-signing)
+fi
+"$project_dir/scripts/verify-app.sh" "${extracted_verify_arguments[@]}"
 
 echo "Archive: $archive"
 echo "SHA-256: $digest"

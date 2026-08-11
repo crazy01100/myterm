@@ -2,6 +2,7 @@
 set -euo pipefail
 
 project_dir="${0:A:h:h}"
+source "$project_dir/scripts/code-signing-common.sh"
 scratch_dir="$project_dir/.build-app"
 app_dir="$project_dir/build/MyTerm.app"
 release_dir="$scratch_dir/arm64-apple-macosx/release"
@@ -27,10 +28,14 @@ Usage: scripts/build-app.sh --version VERSION --build BUILD [options]
                   Update-lab-only App path under build/update-lab
   --build-state-file PATH
                   Update-lab-only Build state under build/update-lab
+  --code-sign-identity ID
+                  Fixed Code Signing identity; defaults to Config/Local
+  --require-stable-signing
+                  Reject ad-hoc signing and require the pinned release identity
 
 The MYTERM_VERSION, MYTERM_BUILD_NUMBER, MYTERM_BUILD_DATE,
-MYTERM_SPARKLE_FEED_URL and MYTERM_SPARKLE_PUBLIC_KEY environment variables
-remain available for automation.
+MYTERM_SPARKLE_FEED_URL, MYTERM_SPARKLE_PUBLIC_KEY and
+MYTERM_CODE_SIGN_IDENTITY environment variables remain available for automation.
 EOF
 }
 
@@ -39,11 +44,13 @@ build_number="${MYTERM_BUILD_NUMBER:-}"
 build_date="${MYTERM_BUILD_DATE:-}"
 sparkle_feed_url="${MYTERM_SPARKLE_FEED_URL:-}"
 sparkle_public_key="${MYTERM_SPARKLE_PUBLIC_KEY:-}"
+code_sign_identity="${MYTERM_CODE_SIGN_IDENTITY:-}"
 sparkle_public_key_file="$project_dir/Config/Release/SparklePublicKey.txt"
 allow_rebuild=0
 preflight_only=0
 update_lab=0
 allow_loopback_http_feed=0
+require_stable_signing=0
 
 while (( $# > 0 )); do
     case "$1" in
@@ -98,6 +105,15 @@ while (( $# > 0 )); do
             build_state_file="$2"
             shift 2
             ;;
+        --code-sign-identity)
+            (( $# >= 2 )) || { echo "Missing value for --code-sign-identity" >&2; exit 64; }
+            code_sign_identity="$2"
+            shift 2
+            ;;
+        --require-stable-signing)
+            require_stable_signing=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -125,6 +141,23 @@ if [[ ! "$build_number" =~ '^[1-9][0-9]*$' ]]; then
 fi
 if [[ -z "$sparkle_public_key" && -f "$sparkle_public_key_file" ]]; then
     sparkle_public_key="$(<"$sparkle_public_key_file")"
+fi
+if [[ -z "$code_sign_identity" ]]; then
+    code_sign_identity="$(read_local_code_sign_identity "$project_dir" 2>/dev/null || true)"
+fi
+if [[ -n "$code_sign_identity" && "$code_sign_identity" != "-" ]]; then
+    require_code_sign_identity "$code_sign_identity"
+fi
+if (( require_stable_signing == 1 )); then
+    require_code_sign_identity "$code_sign_identity"
+    [[ -s "$project_dir/$MYTERM_CODE_SIGN_CERTIFICATE_SHA256_FILE" ]] || {
+        echo "Missing pinned Code Signing certificate fingerprint." >&2
+        exit 66
+    }
+    [[ -s "$project_dir/$MYTERM_CODE_SIGN_REQUIREMENT_FILE" ]] || {
+        echo "Missing pinned Code Signing designated requirement." >&2
+        exit 66
+    }
 fi
 if [[ -n "$sparkle_feed_url" && -z "$sparkle_public_key" ]]; then
     echo "A Sparkle feed URL requires a public key." >&2
@@ -277,7 +310,14 @@ fi
 # Sparkle ships signed nested helpers. Preserve their signatures and seal the
 # finished outer bundle instead of recursively replacing every nested signature.
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app_dir/Contents/Frameworks/Sparkle.framework"
-/usr/bin/codesign --force --sign - "$app_dir"
+if [[ -n "$code_sign_identity" && "$code_sign_identity" != "-" ]]; then
+    /usr/bin/codesign --force --timestamp=none --sign "$code_sign_identity" "$app_dir"
+else
+    /usr/bin/codesign --force --sign - "$app_dir"
+fi
+if (( require_stable_signing == 1 )); then
+    validate_stable_code_signature "$project_dir" "$app_dir"
+fi
 mkdir -p "${build_state_file:h}"
 print -r -- "$build_number" > "$build_state_file"
 

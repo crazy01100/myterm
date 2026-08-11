@@ -47,7 +47,6 @@ struct PendingRecentSyncConfirmation: Identifiable, Equatable {
 
 enum AutomaticMetadataSyncError: LocalizedError, Equatable {
     case missingBaseline
-    case unsafeDeletion
     case unsupportedConflict
     case localChangedDuringSync
     case verificationFailed
@@ -55,7 +54,6 @@ enum AutomaticMetadataSyncError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingBaseline: "請先完成首次同步並建立這台 Mac 的同步基線。"
-        case .unsafeDeletion: "偵測到刪除或刪除後編輯；為避免誤刪，已停止自動同步。"
         case .unsupportedConflict: "同步資料的類型或階層不一致；已停止自動同步。"
         case .localChangedDuringSync: "同步期間本機資料再次變更，稍後會用最新版重新同步。"
         case .verificationFailed: "同步後回讀驗證未通過，沒有套用下載內容。"
@@ -234,13 +232,10 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                 ownerUID: account.uid,
                 masterKey: masterKey
             )
-            guard plan.deletionCount == 0 else { throw AutomaticMetadataSyncError.unsafeDeletion }
-
             let remoteByID = Dictionary(uniqueKeysWithValues: metadataRecords.map { ($0.id, $0) })
             let conflicts = plan.items.filter { $0.disposition == .conflict }
             for conflict in conflicts {
                 guard let remote = remoteByID[conflict.id],
-                      !remote.deleted,
                       remote.recordType == conflict.recordType else {
                     throw AutomaticMetadataSyncError.unsupportedConflict
                 }
@@ -272,13 +267,23 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             }
             var groups = Dictionary(uniqueKeysWithValues: startingGroups.map { ($0.id, $0) })
             var hosts = Dictionary(uniqueKeysWithValues: startingHosts.map { ($0.id, $0) })
-            let downloadIDs = Set(plan.items.filter { $0.disposition == .download }.map(\.id))
-            for record in metadataRecords where downloadIDs.contains(record.id) {
-                let localDigest: String
+            let remoteApplyIDs = Set(plan.items.filter {
+                $0.disposition == .download || $0.disposition == .remoteDeletion
+            }.map(\.id))
+            for record in metadataRecords where remoteApplyIDs.contains(record.id) {
                 switch try MetadataSyncCodec.decrypt(record, ownerUID: account.uid, masterKey: masterKey) {
                 case .group(let group):
                     groups[group.id] = group
-                    localDigest = try MetadataSyncCodec.contentDigest(group: group)
+                    baseline = MetadataSyncBaselinePlanner.replacingEntry(
+                        MetadataSyncBaselineEntry(
+                            recordID: record.id,
+                            recordType: record.recordType,
+                            remoteRevision: record.revision,
+                            localContentDigest: try MetadataSyncCodec.contentDigest(group: group),
+                            remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
+                        ),
+                        in: baseline
+                    )
                 case .host(var host):
                     if host.authenticationMethod == .privateKey,
                        let path = hosts[host.id]?.privateKeyPath,
@@ -286,25 +291,33 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                         host.privateKeyPath = path
                     }
                     hosts[host.id] = host
-                    localDigest = try MetadataSyncCodec.contentDigest(host: host)
-                case .tombstone:
-                    throw AutomaticMetadataSyncError.unsafeDeletion
+                    baseline = MetadataSyncBaselinePlanner.replacingEntry(
+                        MetadataSyncBaselineEntry(
+                            recordID: record.id,
+                            recordType: record.recordType,
+                            remoteRevision: record.revision,
+                            localContentDigest: try MetadataSyncCodec.contentDigest(host: host),
+                            remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
+                        ),
+                        in: baseline
+                    )
+                case .tombstone(let recordID, let recordType):
+                    guard recordID == record.id, recordType == record.recordType else {
+                        throw AutomaticMetadataSyncError.verificationFailed
+                    }
+                    if recordType == .group {
+                        groups[recordID] = nil
+                    } else {
+                        hosts[recordID] = nil
+                    }
+                    baseline = MetadataSyncBaselinePlanner.removingEntry(recordID: recordID, from: baseline)
                 }
-                baseline = MetadataSyncBaselinePlanner.replacingEntry(
-                    MetadataSyncBaselineEntry(
-                        recordID: record.id,
-                        recordType: record.recordType,
-                        remoteRevision: record.revision,
-                        localContentDigest: localDigest,
-                        remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(record)
-                    ),
-                    in: baseline
-                )
             }
 
             let actionItems = plan.items.filter {
                 $0.disposition == .uploadCreate
                     || $0.disposition == .uploadUpdate
+                    || $0.disposition == .localDeletion
                     || $0.disposition == .baselineRepair
                     || $0.disposition == .conflict
             }.sorted {
@@ -315,11 +328,13 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                 guard hostStore.groups == startingGroups, hostStore.hosts == startingHosts else {
                     throw AutomaticMetadataSyncError.localChangedDuringSync
                 }
-                let localDigest: String
+                let localDigest: String?
                 if let group = groups[action.id], action.recordType == .group {
                     localDigest = try MetadataSyncCodec.contentDigest(group: group)
                 } else if let host = hosts[action.id], action.recordType == .host {
                     localDigest = try MetadataSyncCodec.contentDigest(host: host)
+                } else if action.disposition == .localDeletion || action.disposition == .conflict {
+                    localDigest = nil
                 } else {
                     throw AutomaticMetadataSyncError.unsupportedConflict
                 }
@@ -346,7 +361,20 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                         revision = entry.remoteRevision + 1
                     }
                     let pending: EncryptedSyncRecord
-                    if let group = groups[action.id], action.recordType == .group {
+                    if localDigest == nil {
+                        guard action.disposition == .localDeletion || action.disposition == .conflict else {
+                            throw AutomaticMetadataSyncError.unsupportedConflict
+                        }
+                        pending = try MetadataSyncCodec.tombstone(
+                            recordID: action.id,
+                            recordType: action.recordType,
+                            ownerUID: account.uid,
+                            masterKey: masterKey,
+                            revision: revision,
+                            modifiedAt: .now,
+                            modifiedByDeviceID: baseline.deviceID
+                        )
+                    } else if let group = groups[action.id], action.recordType == .group {
                         pending = try MetadataSyncCodec.encrypt(
                             group: group,
                             ownerUID: account.uid,
@@ -369,14 +397,19 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                         ? try await backend.create(pending, ownerUID: account.uid, idToken: token)
                         : try await backend.upsert(pending, ownerUID: account.uid, idToken: token)
                 }
-                let entry = MetadataSyncBaselineEntry(
-                    recordID: saved.id,
-                    recordType: saved.recordType,
-                    remoteRevision: saved.revision,
-                    localContentDigest: localDigest,
-                    remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(saved)
-                )
-                baseline = MetadataSyncBaselinePlanner.replacingEntry(entry, in: baseline)
+                if saved.deleted {
+                    baseline = MetadataSyncBaselinePlanner.removingEntry(recordID: saved.id, from: baseline)
+                } else {
+                    guard let localDigest else { throw AutomaticMetadataSyncError.verificationFailed }
+                    let entry = MetadataSyncBaselineEntry(
+                        recordID: saved.id,
+                        recordType: saved.recordType,
+                        remoteRevision: saved.revision,
+                        localContentDigest: localDigest,
+                        remoteRecordDigest: try MetadataSyncCodec.encryptedRecordDigest(saved)
+                    )
+                    baseline = MetadataSyncBaselinePlanner.replacingEntry(entry, in: baseline)
+                }
                 try baselineStore.save(baseline, ownerUID: account.uid)
             }
 
@@ -396,6 +429,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             )
             guard verifiedPlan.uploadCount == 0,
                   verifiedPlan.downloadCount == 0,
+                  verifiedPlan.deletionCount == 0,
                   verifiedPlan.repairCount == 0,
                   verifiedPlan.conflictCount == 0,
                   verifiedPlan.unchangedCount == finalDocument.groups.count + finalDocument.hosts.count else {
@@ -404,7 +438,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             guard hostStore.groups == startingGroups, hostStore.hosts == startingHosts else {
                 throw AutomaticMetadataSyncError.localChangedDuringSync
             }
-            if !downloadIDs.isEmpty {
+            if !remoteApplyIDs.isEmpty {
                 isApplyingRemoteChanges = true
                 defer { isApplyingRemoteChanges = false }
                 _ = try hostStore.applyVerifiedCloudMerge(finalDocument)
@@ -470,7 +504,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             } else if let host = hostByID[item.id] {
                 digest = try MetadataSyncCodec.contentDigest(host: host)
             } else {
-                throw AutomaticMetadataSyncError.unsupportedConflict
+                digest = "deleted:\(item.recordType):\(item.id.uuidString.lowercased())"
             }
             signatureParts.append("\(item.id.uuidString):\(remote.revision):\(digest)")
         }

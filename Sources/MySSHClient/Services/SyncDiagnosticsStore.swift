@@ -194,12 +194,13 @@ final class SyncDiagnosticsStore: ObservableObject {
                 masterKey: masterKey
             )
             if plan.conflictCount > 0 {
-                fail("metadata-baseline", "主機與群組同步基線", "偵測到 \(plan.conflictCount) 筆衝突或刪除差異，請先執行一次手動同步確認。")
-            } else if plan.uploadCount + plan.downloadCount + plan.repairCount > 0 {
+                fail("metadata-baseline", "主機與群組同步基線", "偵測到 \(plan.conflictCount) 筆同時變更，請回到帳號與同步頁確認處理。")
+            } else if plan.uploadCount + plan.downloadCount + plan.repairCount + plan.deletionCount > 0 {
+                let pendingCount = plan.uploadCount + plan.downloadCount + plan.repairCount + plan.deletionCount
                 warn(
                     "metadata-baseline",
                     "主機與群組同步基線",
-                    "基線有效，但目前有 \(plan.uploadCount + plan.downloadCount + plan.repairCount) 筆變更尚待同步。"
+                    "基線有效，但目前有 \(pendingCount) 筆變更或刪除尚待同步。"
                 )
             } else {
                 pass("metadata-baseline", "主機與群組同步基線", "本機、雲端與同步基線一致。")

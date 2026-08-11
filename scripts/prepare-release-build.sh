@@ -77,18 +77,19 @@ fi
 if [[ -n "$sparkle_public_key" ]]; then
     sparkle_arguments+=(--sparkle-public-key "$sparkle_public_key")
 fi
-"$project_dir/scripts/build-app.sh" --version "$version" --build "$build_number" "${sparkle_arguments[@]}" --preflight
+"$project_dir/scripts/build-app.sh" --version "$version" --build "$build_number" "${sparkle_arguments[@]}" --require-stable-signing --preflight
 if (( skip_tests == 0 )); then
     "$project_dir/scripts/run-tests.sh"
 fi
 
 build_arguments=(--version "$version" --build "$build_number")
 build_arguments+=("${sparkle_arguments[@]}")
+build_arguments+=(--require-stable-signing)
 if [[ -n "$build_date" ]]; then
     build_arguments+=(--build-date "$build_date")
 fi
 "$project_dir/scripts/build-app.sh" "${build_arguments[@]}"
-"$project_dir/scripts/verify-app.sh" --version "$version" --build "$build_number"
-"$project_dir/scripts/package-app.sh" --version "$version" --build "$build_number"
+"$project_dir/scripts/verify-app.sh" --version "$version" --build "$build_number" --require-stable-signing
+"$project_dir/scripts/package-app.sh" --version "$version" --build "$build_number" --require-stable-signing
 
 echo "Release candidate prepared without publishing anything."

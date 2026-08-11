@@ -1029,8 +1029,8 @@ do {
         masterKey: masterKey,
         generatedAt: fixedDate
     )
-    check(remoteDeletionPlan.deletionCount == 1 && remoteDeletionPlan.conflictCount == 1, "a remote tombstone remains an explicit blocked deletion")
-    check(!remoteDeletionPlan.canApplyRemoteChanges, "remote deletion is never applied by guarded metadata download")
+    check(remoteDeletionPlan.deletionCount == 1 && remoteDeletionPlan.conflictCount == 0, "a remote tombstone is recognized as a safe remote-only deletion")
+    check(remoteDeletionPlan.preview.downloadCount == 1, "a safe remote tombstone is presented as a cloud download action")
 
     let localDeletionPlan = try MetadataManualSyncPlanner.makePlan(
         localGroups: [group],
@@ -1041,7 +1041,42 @@ do {
         masterKey: masterKey,
         generatedAt: fixedDate
     )
-    check(localDeletionPlan.conflictCount == 1, "local deletion remains blocked until tombstone sync is implemented")
+    check(localDeletionPlan.deletionCount == 1 && localDeletionPlan.conflictCount == 0, "a local-only deletion is recognized for encrypted tombstone upload")
+    check(localDeletionPlan.preview.uploadCount == 1, "a safe local deletion is presented as an upload action")
+
+    let localDeletionAfterRemoteEditPlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: [group],
+        localHosts: [],
+        remoteRecords: initialUploadRecords.filter { $0.recordType == .group } + [otherDeviceUpload],
+        baseline: baseline,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate
+    )
+    check(localDeletionAfterRemoteEditPlan.conflictCount == 1, "a local deletion racing a remote edit still uses conflict confirmation")
+
+    let localEditAfterRemoteDeletionPlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: [group],
+        localHosts: [manualChangedHost],
+        remoteRecords: initialUploadRecords.filter { $0.recordType == .group } + [remoteDeletion],
+        baseline: baseline,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate
+    )
+    check(localEditAfterRemoteDeletionPlan.conflictCount == 1, "a local edit racing a remote deletion still uses conflict confirmation")
+
+    let retiredBaseline = MetadataSyncBaselinePlanner.removingEntry(recordID: host.id, from: baseline)
+    let retiredPlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: [group],
+        localHosts: [],
+        remoteRecords: initialUploadRecords.filter { $0.recordType == .group } + [remoteDeletion],
+        baseline: retiredBaseline,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate
+    )
+    check(retiredPlan.unchangedCount == 1 && retiredPlan.deletionCount == 0 && retiredPlan.conflictCount == 0, "a completed cloud tombstone stays retired without recurring conflicts")
 
     var newHost = host
     newHost.id = UUID(uuidString: "70000000-0000-0000-0000-000000000003")!

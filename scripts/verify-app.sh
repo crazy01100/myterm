@@ -2,12 +2,14 @@
 set -euo pipefail
 
 project_dir="${0:A:h:h}"
+source "$project_dir/scripts/code-signing-common.sh"
 app_path="$project_dir/build/MyTerm.app"
 expected_version=""
 expected_build=""
+require_stable_signing=0
 
 usage() {
-    echo "Usage: scripts/verify-app.sh --version VERSION --build BUILD [--app /path/to/MyTerm.app]"
+    echo "Usage: scripts/verify-app.sh --version VERSION --build BUILD [--app /path/to/MyTerm.app] [--require-stable-signing]"
 }
 
 while (( $# > 0 )); do
@@ -26,6 +28,10 @@ while (( $# > 0 )); do
             (( $# >= 2 )) || { echo "Missing value for --app" >&2; exit 64; }
             app_path="$2"
             shift 2
+            ;;
+        --require-stable-signing)
+            require_stable_signing=1
+            shift
             ;;
         --help|-h)
             usage
@@ -94,6 +100,9 @@ architectures="$(/usr/bin/lipo -archs "$executable")"
 
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$app_path"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$sparkle_framework"
+if (( require_stable_signing == 1 )); then
+    validate_stable_code_signature "$project_dir" "$app_path"
+fi
 
 sparkle_link="$(/usr/bin/otool -L "$executable" | /usr/bin/awk '/Sparkle\.framework/ {print $1; exit}')"
 [[ "$sparkle_link" == @rpath/Sparkle.framework/* ]] || {

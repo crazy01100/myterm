@@ -35,9 +35,7 @@ struct MetadataManualSyncPlan: Equatable, Sendable {
     var downloadCount: Int { items.count { $0.disposition == .download }
     }
     var deletionCount: Int { items.count { $0.disposition == .remoteDeletion || $0.disposition == .localDeletion } }
-    var conflictCount: Int {
-        items.count { $0.disposition == .conflict || $0.disposition == .remoteDeletion || $0.disposition == .localDeletion }
-    }
+    var conflictCount: Int { items.count { $0.disposition == .conflict } }
     var unchangedCount: Int { items.count { $0.disposition == .unchanged } }
     var canApplyLocalChanges: Bool {
         uploadCount + repairCount > 0 && downloadCount == 0 && conflictCount == 0
@@ -56,9 +54,9 @@ struct MetadataManualSyncPlan: Equatable, Sendable {
             items: items.map { item in
                 let disposition: MetadataSyncPreviewDisposition
                 switch item.disposition {
-                case .uploadCreate, .uploadUpdate: disposition = .upload
-                case .download: disposition = .download
-                case .conflict, .remoteDeletion, .localDeletion: disposition = .conflict
+                case .uploadCreate, .uploadUpdate, .localDeletion: disposition = .upload
+                case .download, .remoteDeletion: disposition = .download
+                case .conflict: disposition = .conflict
                 case .baselineRepair, .unchanged: disposition = .unchanged
                 }
                 return MetadataSyncPreviewItem(
@@ -149,7 +147,7 @@ enum MetadataManualSyncPlanner {
             throw MetadataManualSyncError.invalidBaseline
         }
         let allIDs = Set(local.keys).union(remote.keys).union(baselineByID.keys)
-        let items = try allIDs.map { id in
+        let items = try allIDs.compactMap { id in
             try makeItem(
                 id: id,
                 local: local[id],
@@ -174,18 +172,23 @@ enum MetadataManualSyncPlanner {
         remote: ManualRemoteValue?,
         baseline: MetadataSyncBaselineEntry?,
         deviceID: UUID
-    ) throws -> MetadataManualSyncItem {
+    ) throws -> MetadataManualSyncItem? {
         guard let baseline else {
             switch (local, remote) {
             case (.some(let local), nil):
                 return item(id, local.recordType, local.displayName, .uploadCreate, "本機新增；雲端尚無此識別碼。", nil)
+            case (nil, .some(let remote)) where remote.deleted:
+                // A cloud-only tombstone is already fully retired on this Mac.
+                // It remains in Firestore to prevent another device from
+                // resurrecting the old record, but needs no baseline entry.
+                return nil
             case (nil, .some(let remote)):
                 return item(
                     id,
                     remote.recordType,
                     remote.displayName,
-                    remote.deleted ? .remoteDeletion : .download,
-                    remote.deleted ? "雲端只有刪除標記；目前不會套用。" : "雲端新增，可安全下載合併。",
+                    .download,
+                    "雲端新增，可安全下載合併。",
                     remote.record.revision
                 )
             case (.some(let local), .some(let remote)):
@@ -206,9 +209,30 @@ enum MetadataManualSyncPlanner {
             )
         }
         guard let local else {
+            guard let remote else {
+                return item(id, baseline.recordType, "雲端缺少的刪除紀錄", .conflict, "本機與雲端都缺少基線中的紀錄。", nil)
+            }
+            if remote.deleted {
+                return item(
+                    id,
+                    baseline.recordType,
+                    "已刪除的紀錄",
+                    .remoteDeletion,
+                    "本機與雲端都已刪除；將完成本機基線清理。",
+                    remote.record.revision
+                )
+            }
+            let remoteSame = remote.record.revision == baseline.remoteRevision
+                && remote.recordDigest == baseline.remoteRecordDigest
             return item(
-                id, baseline.recordType, remote?.displayName ?? "已從本機刪除的紀錄", .localDeletion,
-                "本機已刪除；tombstone 同步尚未開放。", remote?.record.revision
+                id,
+                baseline.recordType,
+                remote.displayName,
+                remoteSame ? .localDeletion : .conflict,
+                remoteSame
+                    ? "只有本機刪除；將安全上傳 revision \(baseline.remoteRevision + 1) 的加密刪除標記。"
+                    : "本機刪除後雲端又被修改，需要套用最近變更確認規則。",
+                remote.record.revision
             )
         }
         guard let remote else {
@@ -229,7 +253,7 @@ enum MetadataManualSyncPlanner {
                 local.recordType,
                 local.displayName,
                 remote.deleted ? .remoteDeletion : .download,
-                remote.deleted ? "雲端已刪除此筆；刪除同步尚未開放。" : "只有雲端改變，可先備份再安全套用。",
+                remote.deleted ? "只有雲端刪除；將先備份再安全套用。" : "只有雲端改變，可先備份再安全套用。",
                 remote.record.revision
             )
         }
