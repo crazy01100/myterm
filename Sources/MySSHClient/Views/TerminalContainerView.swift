@@ -121,7 +121,9 @@ struct TerminalContainerView: NSViewRepresentable {
         coordinator.removeControlDMonitor()
         coordinator.removeActivationMonitor()
         coordinator.cancelPlatformProbe()
-        coordinator.session.authenticationDidEnd()
+        // Do not mutate the observed TerminalSession while SwiftUI is destroying
+        // its view graph. Explicit closes already clean up through disconnect(),
+        // while natural process exits are handled by processTerminated().
         if nsView.process.running { nsView.process.terminate() }
     }
 
@@ -263,6 +265,12 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
     private var platformDetector = HostPlatformDetector()
     private var passwordCapture = LoginPasswordCapture()
+    private var isCoalescingInterruptedOutput = false
+    private var interruptedOutputTail: [UInt8] = []
+    private var interruptedOutputFlushWorkItem: DispatchWorkItem?
+    private var interruptedOutputDeadline: DispatchTime?
+    private let interruptedOutputTailLimit = 16 * 1024
+    private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
 
     override func mouseDown(with event: NSEvent) {
         onActivated?()
@@ -280,6 +288,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
 
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
         let captureResult = passwordCapture.consume(data)
+        if data.contains(0x03) {
+            beginCoalescingInterruptedOutput()
+        }
         if passwordPromptStateDetector.userDidSendInput() != nil {
             onPasswordPromptStateChanged?(false)
         }
@@ -296,6 +307,19 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     }
 
     override func dataReceived(slice: ArraySlice<UInt8>) {
+        if isCoalescingInterruptedOutput {
+            retainInterruptedOutputTail(slice)
+            if let deadline = interruptedOutputDeadline, DispatchTime.now() >= deadline {
+                flushInterruptedOutputTail()
+            } else {
+                scheduleInterruptedOutputFlush()
+            }
+            return
+        }
+        deliverReceivedData(slice)
+    }
+
+    private func deliverReceivedData(_ slice: ArraySlice<UInt8>) {
         super.dataReceived(slice: slice)
         if let state = passwordPromptStateDetector.consume(slice) {
             onPasswordPromptStateChanged?(state)
@@ -309,5 +333,40 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             promptDetector = LoginPasswordPromptDetector()
             onLoginPasswordPrompt?()
         }
+    }
+
+    private func beginCoalescingInterruptedOutput() {
+        interruptedOutputFlushWorkItem?.cancel()
+        interruptedOutputTail.removeAll(keepingCapacity: true)
+        interruptedOutputDeadline = .now() + .nanoseconds(Int(interruptedOutputMaximumDelay))
+        isCoalescingInterruptedOutput = true
+        scheduleInterruptedOutputFlush()
+    }
+
+    private func retainInterruptedOutputTail(_ slice: ArraySlice<UInt8>) {
+        interruptedOutputTail.append(contentsOf: slice)
+        if interruptedOutputTail.count > interruptedOutputTailLimit {
+            interruptedOutputTail.removeFirst(interruptedOutputTail.count - interruptedOutputTailLimit)
+        }
+    }
+
+    private func scheduleInterruptedOutputFlush() {
+        interruptedOutputFlushWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.flushInterruptedOutputTail()
+        }
+        interruptedOutputFlushWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(50), execute: workItem)
+    }
+
+    private func flushInterruptedOutputTail() {
+        interruptedOutputFlushWorkItem?.cancel()
+        interruptedOutputFlushWorkItem = nil
+        interruptedOutputDeadline = nil
+        isCoalescingInterruptedOutput = false
+        let tail = interruptedOutputTail
+        interruptedOutputTail.removeAll(keepingCapacity: true)
+        guard !tail.isEmpty else { return }
+        deliverReceivedData(tail[...])
     }
 }
