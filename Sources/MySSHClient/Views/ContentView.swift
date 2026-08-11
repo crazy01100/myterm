@@ -51,7 +51,7 @@ struct ContentView: View {
             }
             Button("取消", role: .cancel) { deleteCandidate = nil }
         } message: {
-            Text("主機資料及其 Keychain 密碼會一併刪除。")
+            Text("主機資料及其本機加密保管庫密碼會一併刪除。")
         }
         .confirmationDialog(
             "刪除群組？",
@@ -411,7 +411,7 @@ private struct TerminalWorkspaceView: View {
                         .controlSize(.small)
                         .disabled(!session.canSafelyUseSavedPassword)
                         .help(session.canSafelyUseSavedPassword
-                              ? "將 Keychain 密碼送進目前偵測到的密碼提示，不使用剪貼簿"
+                              ? "將本機保管庫密碼送進目前偵測到的密碼提示，不使用剪貼簿"
                               : "只有偵測到密碼提示時才可填入")
                     }
                     Menu {
@@ -441,14 +441,14 @@ private struct TerminalWorkspaceView: View {
             }
         }
         .alert("儲存這個主機的登入密碼？", isPresented: passwordSaveOfferBinding) {
-            Button("儲存到 macOS Keychain") {
+            Button("安全儲存密碼") {
                 session.saveVerifiedPassword()
             }
             Button("不要儲存", role: .cancel) {
                 session.declineVerifiedPassword()
             }
         } message: {
-            Text("OpenSSH 已確認剛才輸入的密碼成功登入 \(session.detailDescription)。儲存後，MyTerm 下次可自動登入；密碼只會保存在這台 Mac 的 Keychain。")
+            Text("OpenSSH 已確認剛才輸入的密碼成功登入 \(session.detailDescription)。儲存後，MyTerm 下次可自動登入；密碼會留在這台 Mac 的加密保管庫。")
         }
     }
 

@@ -36,7 +36,8 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 ### 主機與本機資料
 
 - `HostStore` 保存主機及多階層群組，資料檔權限限制為目前使用者。
-- `KeychainStore` 以主機 UUID 與帳號定位密碼，主機資料本身不含密碼。
+- `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。
+- `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
 - `AppShortcutStore` 保存只在 MyTerm 內生效的快捷鍵設定。
 
@@ -46,15 +47,15 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
-- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；認證設定沿用相同主機資料與 Keychain 邊界。
+- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；認證設定沿用相同主機資料與本機加密保管庫邊界。
 
 ## 資料保存位置
 
 | 資料 | 保存位置 | 是否跨裝置 |
 |---|---|---|
 | 主機與群組 | Application Support 內的權限限制檔案 | 啟用同步時，以密文同步 |
-| 主機密碼 | macOS Keychain，`WhenUnlockedThisDeviceOnly` | 啟用同步時先加密；目的 Mac 解密後寫回 Keychain |
-| Master Key、登入狀態 | 各台 Mac 的 ThisDeviceOnly Keychain | 不直接同步 |
+| 主機密碼 | AES-GCM 本機保管庫；根金鑰為 `WhenUnlockedThisDeviceOnly` Keychain 項目 | 啟用同步時再端對端加密；目的 Mac 解密後寫入其本機保管庫 |
+| Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |
 | 私鑰檔案與路徑 | 使用者指定的本機位置／本機設定 | 不同步 |
 | MyTerm `known_hosts` | 各台 Mac 的 Application Support | 不同步 |
 | 匯出檔 | 使用者選擇的位置 | 不由 MyTerm 自動同步 |
@@ -69,7 +70,7 @@ App 顯示名稱已改為 MyTerm，但 Bundle ID、Keychain service 與既有 Ap
 2. 使用者輸入同步密語。MyTerm 以 Argon2id 派生保護金鑰，用來解開或建立 Master Key 封套。
 3. 每筆主機、群組與密碼資料使用 AES-256-GCM 加密，並帶有格式與 revision 資訊。
 4. Firebase Authentication 限制帳號身分；Firestore Security Rules 只允許目前 UID 存取符合格式的密文路徑。
-5. 另一台 Mac 使用相同帳號與同步密語解開 Master Key，再將密碼寫入該台 Mac 的 Keychain。
+5. 另一台 Mac 使用相同帳號與同步密語解開 Master Key，再將密碼寫入該台 Mac 的本機加密保管庫。
 
 Firestore 不保存明文主機內容、同步密語、Master Key 或解密後密碼。復原金鑰是使用者遺失同步密語時的獨立復原途徑，MyTerm 不代為保存其明文。
 
@@ -96,7 +97,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
-- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認；1.0.1 起固定使用同一個本機發行憑證，以維持後續版本的 Keychain 存取身分。這不會取代 Sparkle 的更新簽章驗證。
+- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 將分散機密收斂到單一 Keychain 根金鑰，使更新後最多只需解鎖一個項目。這不會取代 Sparkle 的更新簽章驗證。
 
 ## 儲存庫結構
 

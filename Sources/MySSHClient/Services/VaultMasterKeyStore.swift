@@ -36,27 +36,32 @@ enum VaultMasterKeyStore {
 
     static func save(_ key: VaultMasterKey, ownerUID: String) throws {
         guard !ownerUID.isEmpty else { throw VaultCryptoError.invalidOwner }
-        let query = baseQuery(ownerUID: ownerUID, version: key.version)
-        let attributes: [CFString: Any] = [
-            kSecValueData: key.rawRepresentation,
-            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        let lookupStatus = SecItemCopyMatching(query as CFDictionary, nil)
-        switch lookupStatus {
-        case errSecSuccess:
-            let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-            guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
-        case errSecItemNotFound:
-            var insert = query
-            attributes.forEach { insert[$0.key] = $0.value }
-            let status = SecItemAdd(insert as CFDictionary, nil)
-            guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
-        default:
-            throw KeychainStoreError.operationFailed(lookupStatus)
-        }
+        try LocalSecretVaultStore.save(
+            key.rawRepresentation,
+            service: service,
+            account: account(ownerUID: ownerUID, version: key.version)
+        )
     }
 
     static func load(ownerUID: String, version: UInt32) throws -> VaultMasterKey? {
+        let account = account(ownerUID: ownerUID, version: version)
+        if let data = try LocalSecretVaultStore.data(service: service, account: account) {
+            return try VaultMasterKey(rawRepresentation: data, version: version)
+        }
+        guard try LocalSecretVaultStore.shouldImportLegacy(
+            service: service,
+            account: account
+        ) else { return nil }
+
+        guard var data = try legacyMasterKeyData(ownerUID: ownerUID, version: version) else {
+            return nil
+        }
+        defer { data.resetBytes(in: data.indices) }
+        try LocalSecretVaultStore.save(data, service: service, account: account)
+        return try VaultMasterKey(rawRepresentation: data, version: version)
+    }
+
+    private static func legacyMasterKeyData(ownerUID: String, version: UInt32) throws -> Data? {
         var query = baseQuery(ownerUID: ownerUID, version: version)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
@@ -65,16 +70,29 @@ enum VaultMasterKeyStore {
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
         guard let data = item as? Data else { throw KeychainStoreError.invalidData }
-        return try VaultMasterKey(rawRepresentation: data, version: version)
+        return data
     }
 
     @discardableResult
     static func delete(ownerUID: String, version: UInt32) throws -> KeychainDeletionResult {
-        let status = SecItemDelete(baseQuery(ownerUID: ownerUID, version: version) as CFDictionary)
-        return try KeychainStore.deletionResult(for: status)
+        let removedFromVault = try LocalSecretVaultStore.delete(
+            service: service,
+            account: account(ownerUID: ownerUID, version: version)
+        )
+        return removedFromVault ? .removed : .notFound
     }
 
     static func usesThisDeviceOnlyAccessibility(ownerUID: String, version: UInt32) throws -> Bool {
+        if try LocalSecretVaultStore.contains(
+            service: service,
+            account: account(ownerUID: ownerUID, version: version)
+        ) {
+            return try LocalSecretVaultStore.rootKeyUsesThisDeviceOnlyAccessibility()
+        }
+        guard try LocalSecretVaultStore.shouldImportLegacy(
+            service: service,
+            account: account(ownerUID: ownerUID, version: version)
+        ) else { return false }
         var query = baseQuery(ownerUID: ownerUID, version: version)
         query[kSecAttrAccessible] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         query[kSecMatchLimit] = kSecMatchLimitOne
@@ -88,7 +106,11 @@ enum VaultMasterKeyStore {
         [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
-            kSecAttrAccount: "\(ownerUID):\(version)"
+            kSecAttrAccount: account(ownerUID: ownerUID, version: version)
         ]
+    }
+
+    private static func account(ownerUID: String, version: UInt32) -> String {
+        "\(ownerUID):\(version)"
     }
 }

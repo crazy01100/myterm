@@ -19,6 +19,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/CloudConfiguration.swift \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
     Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift \
+    Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
     Sources/MySSHClient/Services/KeychainStore.swift \
     Sources/MySSHClient/Services/CloudSessionKeychainStore.swift \
     Sources/MySSHClient/Services/LoginPasswordPromptDetector.swift \
@@ -32,7 +33,9 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/SFTPClient.swift \
     SelfTests/main.swift \
     -o "$test_dir/MySSHClientSelfTests"
-"$test_dir/MySSHClientSelfTests"
+MYTERM_SECRET_VAULT_KEYCHAIN_SERVICE="tw.local.MySSHClient.tests.$$.core" \
+MYTERM_SECRET_VAULT_FILE="$test_dir/core-secret-vault.json" \
+    "$test_dir/MySSHClientSelfTests"
 
 swiftc \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
@@ -41,4 +44,4 @@ swiftc \
     -o "$test_dir/OAuthLoopbackTests"
 "$test_dir/OAuthLoopbackTests"
 
-"$project_dir/scripts/run-crypto-tests.sh"
+MYTERM_SECRET_VAULT_TEST_RUN_ID="$$" "$project_dir/scripts/run-crypto-tests.sh"

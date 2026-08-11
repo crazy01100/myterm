@@ -1264,6 +1264,7 @@ do {
     check(false, "encrypted password sync suite: \(error)")
 }
 
+LocalSecretVaultStore.resetForTesting()
 print("\n\(passed) passed, \(failed) failed")
 if failed > 0 { exit(1) }
 }

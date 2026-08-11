@@ -899,5 +899,134 @@ do {
     check(false, "Firebase refresh token Keychain operations: \(error)")
 }
 
+do {
+    let firstHostID = UUID()
+    let secondHostID = UUID()
+    let firstSecret = Data("vault-host-secret-one".utf8)
+    let secondSecret = Data("vault-host-secret-two".utf8)
+    try KeychainStore.save(passwordData: firstSecret, for: firstHostID)
+    try KeychainStore.save(passwordData: secondSecret, for: secondHostID)
+
+    let loadedFirstSecret = try KeychainStore.passwordData(for: firstHostID)
+    let loadedSecondSecret = try KeychainStore.passwordData(for: secondHostID)
+    let usesDeviceOnlyAccessibility = try LocalSecretVaultStore
+        .rootKeyUsesThisDeviceOnlyAccessibility()
+    check(loadedFirstSecret == firstSecret,
+          "unified local vault returns the first host password")
+    check(loadedSecondSecret == secondSecret,
+          "unified local vault returns the second host password")
+    check(usesDeviceOnlyAccessibility,
+          "unified local vault root key is restricted to this unlocked Mac")
+
+    let encryptedBytes = try Data(contentsOf: LocalSecretVaultStore.fileURLForTesting)
+    check(encryptedBytes.range(of: firstSecret) == nil && encryptedBytes.range(of: secondSecret) == nil,
+          "unified local vault file contains no plaintext host password")
+    let attributes = try FileManager.default.attributesOfItem(
+        atPath: LocalSecretVaultStore.fileURLForTesting.path
+    )
+    let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue
+    check(permissions == 0o600, "unified local vault file uses owner-only permissions")
+
+    if let rootService = ProcessInfo.processInfo.environment["MYTERM_SECRET_VAULT_KEYCHAIN_SERVICE"] {
+        let rootQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: rootService,
+            kSecReturnAttributes: true,
+            kSecMatchLimit: kSecMatchLimitAll
+        ]
+        var rootItems: CFTypeRef?
+        let status = SecItemCopyMatching(rootQuery as CFDictionary, &rootItems)
+        let itemCount: Int
+        if let items = rootItems as? [Any] {
+            itemCount = items.count
+        } else if status == errSecSuccess {
+            itemCount = 1
+        } else {
+            itemCount = 0
+        }
+        check(status == errSecSuccess && itemCount == 1,
+              "multiple secrets share exactly one Keychain root item")
+    } else {
+        check(false, "unified local vault test root service is configured")
+    }
+
+    _ = try KeychainStore.deletePassword(for: firstHostID)
+    _ = try KeychainStore.deletePassword(for: secondHostID)
+} catch {
+    check(false, "unified local secret vault security suite: \(error)")
+}
+
+let legacyHostID = UUID()
+let legacySecret = Data("legacy-password-migration-test".utf8)
+let legacyQuery: [CFString: Any] = [
+    kSecClass: kSecClassGenericPassword,
+    kSecAttrService: KeychainStore.service,
+    kSecAttrAccount: legacyHostID.uuidString
+]
+do {
+    var insertion = legacyQuery
+    insertion[kSecValueData] = legacySecret
+    insertion[kSecAttrAccessible] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+    let addStatus = SecItemAdd(insertion as CFDictionary, nil)
+    guard addStatus == errSecSuccess else {
+        throw KeychainStoreError.operationFailed(addStatus)
+    }
+
+    let backgroundVisibleSecret = try KeychainStore.unifiedPasswordData(for: legacyHostID)
+    check(backgroundVisibleSecret == nil,
+          "background sync does not unlock a legacy per-host Keychain password")
+    let migratedLegacySecret = try KeychainStore.passwordData(for: legacyHostID)
+    check(migratedLegacySecret == legacySecret,
+          "legacy per-host Keychain password migrates into the unified vault")
+    _ = try KeychainStore.deletePassword(for: legacyHostID)
+    let deletedLegacySecret = try KeychainStore.passwordData(for: legacyHostID)
+    check(deletedLegacySecret == nil,
+          "deleted migrated password is not resurrected from legacy Keychain data")
+    check(SecItemCopyMatching(legacyQuery as CFDictionary, nil) == errSecSuccess,
+          "legacy password can remain untouched to avoid another ACL prompt")
+} catch {
+    check(false, "legacy Keychain migration and suppression: \(error)")
+}
+SecItemDelete(legacyQuery as CFDictionary)
+
+do {
+    let corruptionService = "tw.local.MySSHClient.tests.corruption"
+    try LocalSecretVaultStore.save(
+        Data("authenticated-secret".utf8),
+        service: corruptionService,
+        account: "one"
+    )
+    let originalEnvelope = try Data(contentsOf: LocalSecretVaultStore.fileURLForTesting)
+    try LocalSecretVaultStore.corruptAuthenticationTagForTesting()
+    do {
+        _ = try LocalSecretVaultStore.data(service: corruptionService, account: "one")
+        check(false, "tampered local vault authentication tag is rejected")
+    } catch LocalSecretVaultError.authenticationFailed {
+        check(true, "tampered local vault authentication tag is rejected")
+    } catch {
+        check(false, "tampered local vault authentication tag is rejected: \(error)")
+    }
+    try originalEnvelope.write(to: LocalSecretVaultStore.fileURLForTesting, options: .atomic)
+    let restoredSecret = try LocalSecretVaultStore.data(
+        service: corruptionService,
+        account: "one"
+    )
+    check(restoredSecret == Data("authenticated-secret".utf8),
+          "authenticated vault remains readable after restoring its verified envelope")
+
+    LocalSecretVaultStore.deleteRootKeyForTesting()
+    do {
+        try LocalSecretVaultStore.warmUp()
+        check(false, "missing root key never overwrites an existing encrypted vault")
+    } catch LocalSecretVaultError.missingRootKey {
+        check(true, "missing root key never overwrites an existing encrypted vault")
+    } catch {
+        check(false, "missing root key never overwrites an existing encrypted vault: \(error)")
+    }
+} catch {
+    check(false, "unified local vault tamper and root-loss protection: \(error)")
+}
+
+LocalSecretVaultStore.resetForTesting()
 print("\n\(passed) passed, \(failed) failed")
 if failed > 0 { exit(1) }

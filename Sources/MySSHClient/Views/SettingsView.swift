@@ -291,7 +291,7 @@ struct SettingsView: View {
                         Text(syncSettingsStore.metadataSyncEnabled ? "跨裝置同步已啟用" : "純本機模式")
                         Text(syncSettingsStore.metadataSyncEnabled
                             ? "主機、群組與已儲存密碼會先在這台 Mac 加密，再同步至雲端。"
-                            : "不需要帳號；主機資料與 Keychain 密碼都不會離開這台 Mac。")
+                            : "不需要帳號；主機資料與加密保管庫密碼都不會離開這台 Mac。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(appBuildDescription)
@@ -1031,7 +1031,7 @@ struct SettingsView: View {
         Form {
             Section {
                 Label("快捷鍵只會在 MyTerm 主視窗內生效，不會建立系統全域熱鍵。", systemImage: "macwindow")
-                Label("填入密碼會直接從 macOS Keychain 送至目前分頁，不會使用剪貼簿。", systemImage: "lock.shield")
+                Label("填入密碼會直接從本機加密保管庫送至目前分頁，不會使用剪貼簿。", systemImage: "lock.shield")
             }
 
             ForEach(AppShortcutCategory.allCases) { category in

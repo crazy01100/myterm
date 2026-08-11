@@ -30,7 +30,7 @@ struct ConnectionUsernameView: View {
                 .textFieldStyle(.roundedBorder)
             if host.authenticationMethod == .password {
                 Text(isDefaultAccount
-                     ? "將使用這台主機在 Keychain 中儲存的預設帳號密碼。"
+                     ? "將使用這台主機在本機加密保管庫中儲存的預設帳號密碼。"
                      : "其他帳號不會套用預設帳號的密碼；請在終端提示時輸入。")
                     .font(.caption)
                     .foregroundStyle(.secondary)

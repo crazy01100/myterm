@@ -14,7 +14,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 多階層群組、搜尋、主機卡片與可選的預設使用者名稱。
 - 密碼、私鑰、SSH Agent／config 驗證，以及系統預設、舊式 RSA 相容與自訂演算法。
 - 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
-- 主機密碼保存於 macOS Keychain，不寫入主機資料檔，也不透過剪貼簿填入。
+- 主機密碼保存於本機 AES-GCM 加密保管庫；只有一把根金鑰存於 macOS Keychain。密碼不寫入主機資料檔，也不透過剪貼簿填入。
 - 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP。
 - SFTP 上傳、下載、拖放、覆蓋確認、新增資料夾、重新命名、刪除與權限調整。
 - MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
@@ -27,7 +27,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 同步預設關閉。需要時登入 Google 帳號、開啟同步並設定同步密語，MyTerm 才會同步主機、群組與主機密碼。
 
 - 每筆資料在 Mac 上以 AES-256-GCM 端對端加密後才送往 Firebase。
-- 同步密語使用 Argon2id 派生金鑰；Master Key 與解密後密碼只保存在各台 Mac 的 Keychain。
+- 同步密語使用 Argon2id 派生金鑰；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫。
 - Firebase 保存密文與必要的版本資訊，無法直接讀取主機內容或密碼。
 - 私鑰檔案、私鑰路徑及 `known_hosts` 永遠只保留在各台 Mac。
 - 可停用同步並繼續以純本機模式使用 App。
@@ -37,7 +37,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - Apple Silicon Mac（arm64）
 - macOS 26 或更新版本
 
-目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。1.0.1 起的正式版本會固定使用同一個本機發行憑證簽署，後續更新可維持一致的 Keychain 存取身分；App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
+目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；1.0.1 會改用單一 Keychain 根金鑰，避免提示數量隨主機增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
 
 ## 基本使用
 
@@ -74,7 +74,7 @@ cd myterm
 
 ## 資料與安全界線
 
-- 主機清單不包含密碼；密碼使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
+- 主機清單不包含密碼；所有本機機密共用 AES-GCM 保管庫，其單一根金鑰使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
 - 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
 - MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
 - 1.0.1 起，主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。

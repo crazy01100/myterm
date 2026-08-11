@@ -213,7 +213,8 @@ final class SyncDiagnosticsStore: ObservableObject {
         do {
             let cloudPasswordRecords = snapshot.records.filter { $0.recordType == .password && !$0.deleted }
             let localPasswordHostIDs = Set(hostStore.hosts.filter {
-                $0.authenticationMethod == .password && KeychainStore.containsPassword(for: $0.id)
+                $0.authenticationMethod == .password
+                    && KeychainStore.containsUnifiedPassword(for: $0.id)
             }.map(\.id))
             var cloudPasswordHostIDs: Set<UUID> = []
             var mismatchedCount = 0
@@ -221,7 +222,7 @@ final class SyncDiagnosticsStore: ObservableObject {
                 var decrypted = try PasswordSyncCodec.decrypt(record, ownerUID: account.uid, masterKey: masterKey)
                 defer { decrypted.passwordData.resetBytes(in: decrypted.passwordData.startIndex..<decrypted.passwordData.endIndex) }
                 cloudPasswordHostIDs.insert(decrypted.hostID)
-                guard var localData = try KeychainStore.passwordData(for: decrypted.hostID) else {
+                guard var localData = try KeychainStore.unifiedPasswordData(for: decrypted.hostID) else {
                     mismatchedCount += 1
                     continue
                 }

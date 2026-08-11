@@ -270,7 +270,7 @@ struct PasswordSyncService: Sendable {
 
         var local: [UUID: LocalPassword] = [:]
         for host in hosts where host.authenticationMethod == .password {
-            guard var data = try KeychainStore.passwordData(for: host.id) else { continue }
+            guard var data = try KeychainStore.unifiedPasswordData(for: host.id) else { continue }
             defer { data.resetBytes(in: data.startIndex..<data.endIndex) }
             let recordID = PasswordSyncCodec.recordID(for: host.id)
             local[recordID] = LocalPassword(
@@ -495,7 +495,7 @@ struct PasswordSyncService: Sendable {
         var verifiedIDs: Set<UUID> = []
         for record in remotePasswords {
             let decrypted = try PasswordSyncCodec.decrypt(record, ownerUID: ownerUID, masterKey: masterKey)
-            guard var localData = try KeychainStore.passwordData(for: decrypted.hostID) else {
+            guard var localData = try KeychainStore.unifiedPasswordData(for: decrypted.hostID) else {
                 throw PasswordSyncError.verificationFailed
             }
             defer { localData.resetBytes(in: localData.startIndex..<localData.endIndex) }
@@ -509,8 +509,10 @@ struct PasswordSyncService: Sendable {
             }
             verifiedIDs.insert(record.id)
         }
-        let localPasswordIDs = Set(hosts.filter { $0.authenticationMethod == .password && KeychainStore.containsPassword(for: $0.id) }
-            .map { PasswordSyncCodec.recordID(for: $0.id) })
+        let localPasswordIDs = Set(hosts.filter {
+            $0.authenticationMethod == .password
+                && KeychainStore.containsUnifiedPassword(for: $0.id)
+        }.map { PasswordSyncCodec.recordID(for: $0.id) })
         guard verifiedIDs == localPasswordIDs else { throw PasswordSyncError.verificationFailed }
         try baselineStore.save(baseline, ownerUID: ownerUID)
         return .completed(uploaded: uploaded, downloaded: downloaded)

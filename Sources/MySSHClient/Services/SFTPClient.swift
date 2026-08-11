@@ -10,7 +10,7 @@ enum SFTPConnectionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingSavedPassword:
-            "這台主機尚未在 Keychain 儲存密碼。請先編輯主機並儲存密碼，再使用 SFTP。"
+            "這台主機尚未在本機加密保管庫儲存密碼。請先編輯主機並儲存密碼，再使用 SFTP。"
         case .unsupportedPassword:
             "目前無法將包含換行或過長的密碼安全交給 OpenSSH。"
         case .failedToStart(let message):

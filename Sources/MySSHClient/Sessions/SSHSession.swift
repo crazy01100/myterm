@@ -252,7 +252,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         do {
             try KeychainStore.save(passwordData: passwordData, for: host.id)
             hasSavedPassword = true
-            notice = "密碼已安全儲存至這台 Mac 的 Keychain。"
+            notice = "密碼已安全儲存至這台 Mac 的加密保管庫。"
         } catch {
             notice = error.localizedDescription
         }

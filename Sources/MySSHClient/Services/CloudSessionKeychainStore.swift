@@ -5,27 +5,35 @@ enum CloudSessionKeychainStore {
     private static let service = "tw.local.MySSHClient.firebase-session"
 
     static func saveRefreshToken(_ token: String, projectID: String) throws {
-        let query = baseQuery(projectID: projectID)
-        let attributes: [CFString: Any] = [
-            kSecValueData: Data(token.utf8),
-            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        let lookupStatus = SecItemCopyMatching(query as CFDictionary, nil)
-        switch lookupStatus {
-        case errSecSuccess:
-            let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-            guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
-        case errSecItemNotFound:
-            var insert = query
-            attributes.forEach { insert[$0.key] = $0.value }
-            let status = SecItemAdd(insert as CFDictionary, nil)
-            guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
-        default:
-            throw KeychainStoreError.operationFailed(lookupStatus)
-        }
+        try LocalSecretVaultStore.save(
+            Data(token.utf8),
+            service: service,
+            account: projectID
+        )
     }
 
     static func refreshToken(projectID: String) throws -> String? {
+        if let data = try LocalSecretVaultStore.data(service: service, account: projectID) {
+            guard let token = String(data: data, encoding: .utf8) else {
+                throw KeychainStoreError.invalidData
+            }
+            return token
+        }
+        guard try LocalSecretVaultStore.shouldImportLegacy(
+            service: service,
+            account: projectID
+        ) else { return nil }
+
+        guard var data = try legacyRefreshTokenData(projectID: projectID) else { return nil }
+        defer { data.resetBytes(in: data.indices) }
+        try LocalSecretVaultStore.save(data, service: service, account: projectID)
+        guard let token = String(data: data, encoding: .utf8) else {
+            throw KeychainStoreError.invalidData
+        }
+        return token
+    }
+
+    private static func legacyRefreshTokenData(projectID: String) throws -> Data? {
         var query = baseQuery(projectID: projectID)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
@@ -33,16 +41,17 @@ enum CloudSessionKeychainStore {
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
-        guard let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
-            throw KeychainStoreError.invalidData
-        }
-        return token
+        guard let data = item as? Data else { throw KeychainStoreError.invalidData }
+        return data
     }
 
     @discardableResult
     static func deleteRefreshToken(projectID: String) throws -> KeychainDeletionResult {
-        let status = SecItemDelete(baseQuery(projectID: projectID) as CFDictionary)
-        return try KeychainStore.deletionResult(for: status)
+        let removedFromVault = try LocalSecretVaultStore.delete(
+            service: service,
+            account: projectID
+        )
+        return removedFromVault ? .removed : .notFound
     }
 
     private static func baseQuery(projectID: String) -> [CFString: Any] {

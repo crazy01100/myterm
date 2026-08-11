@@ -78,6 +78,13 @@ private struct AppRootView: View {
     var body: some View {
         ContentView()
             .task {
+                // Unlock the single local vault root once for this process so
+                // account, sync and host-password access share one prompt.
+                do {
+                    try LocalSecretVaultStore.warmUp()
+                } catch {
+                    NSLog("MyTerm local secret vault warm-up failed: %@", error.localizedDescription)
+                }
                 await cloudAccountStore.restoreIfPossible()
                 automaticMetadataSyncStore.updateAvailability(
                     settings: syncSettingsStore,

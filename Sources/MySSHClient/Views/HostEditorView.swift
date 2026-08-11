@@ -58,7 +58,7 @@ struct HostEditorView: View {
                                 KeychainStore.containsPassword(for: profile.id) ? "輸入新密碼；留空保留原密碼" : "密碼",
                                 text: $password
                             )
-                            Text("密碼只會寫入 macOS Keychain，並綁定預設使用者。")
+                            Text("密碼會由這台 Mac 的加密保管庫保存；保管庫根金鑰存放於 macOS Keychain。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {

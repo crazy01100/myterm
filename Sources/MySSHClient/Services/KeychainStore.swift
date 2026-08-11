@@ -25,37 +25,60 @@ enum KeychainDeletionResult: Equatable {
 }
 
 enum KeychainStore {
-    private static let service = "tw.local.MySSHClient.host-password"
+    static let service = "tw.local.MySSHClient.host-password"
 
     static func save(password: String, for hostID: UUID) throws {
         try save(passwordData: Data(password.utf8), for: hostID)
     }
 
     static func save(passwordData data: Data, for hostID: UUID) throws {
-        let attributes: [CFString: Any] = [
-            kSecValueData: data,
-            kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        ]
-        if let persistentReference = try persistentReference(for: hostID) {
-            let updateStatus = SecItemUpdate(
-                exactQuery(persistentReference) as CFDictionary,
-                attributes as CFDictionary
-            )
-            guard updateStatus == errSecSuccess else {
-                throw KeychainStoreError.operationFailed(updateStatus)
-            }
-            NotificationCenter.default.post(name: .myTermPasswordDidChange, object: hostID)
-            return
-        }
-
-        var insert = baseQuery(hostID)
-        attributes.forEach { insert[$0.key] = $0.value }
-        let addStatus = SecItemAdd(insert as CFDictionary, nil)
-        guard addStatus == errSecSuccess else { throw KeychainStoreError.operationFailed(addStatus) }
+        try LocalSecretVaultStore.save(
+            data,
+            service: service,
+            account: hostID.uuidString
+        )
         NotificationCenter.default.post(name: .myTermPasswordDidChange, object: hostID)
     }
 
     static func passwordData(for hostID: UUID) throws -> Data? {
+        if let data = try unifiedPasswordData(for: hostID) {
+            return data
+        }
+        guard try LocalSecretVaultStore.shouldImportLegacy(
+            service: service,
+            account: hostID.uuidString
+        ) else { return nil }
+
+        guard var data = try legacyPasswordData(for: hostID) else { return nil }
+        defer { data.resetBytes(in: data.indices) }
+        try LocalSecretVaultStore.save(
+            data,
+            service: service,
+            account: hostID.uuidString
+        )
+        guard try unifiedPasswordData(for: hostID) == data else {
+            throw LocalSecretVaultError.verificationFailed
+        }
+        return data
+    }
+
+    /// Background work reads only the unified vault. This prevents automatic
+    /// sync and diagnostics from unlocking every legacy per-host Keychain item.
+    static func unifiedPasswordData(for hostID: UUID) throws -> Data? {
+        try LocalSecretVaultStore.data(
+            service: service,
+            account: hostID.uuidString
+        )
+    }
+
+    static func containsUnifiedPassword(for hostID: UUID) -> Bool {
+        (try? LocalSecretVaultStore.contains(
+            service: service,
+            account: hostID.uuidString
+        )) == true
+    }
+
+    private static func legacyPasswordData(for hostID: UUID) throws -> Data? {
         var query = baseQuery(hostID)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
@@ -68,6 +91,18 @@ enum KeychainStore {
     }
 
     static func containsPassword(for hostID: UUID) -> Bool {
+        if (try? LocalSecretVaultStore.contains(
+            service: service,
+            account: hostID.uuidString
+        )) == true {
+            return true
+        }
+        if (try? LocalSecretVaultStore.shouldImportLegacy(
+            service: service,
+            account: hostID.uuidString
+        )) == false {
+            return false
+        }
         var query = baseQuery(hostID)
         query[kSecMatchLimit] = kSecMatchLimitOne
         return SecItemCopyMatching(query as CFDictionary, nil) == errSecSuccess
@@ -75,10 +110,12 @@ enum KeychainStore {
 
     @discardableResult
     static func deletePassword(for hostID: UUID) throws -> KeychainDeletionResult {
-        guard let persistentReference = try persistentReference(for: hostID) else { return .notFound }
-        let deleteStatus = SecItemDelete(exactQuery(persistentReference) as CFDictionary)
-        let result = try deletionResult(for: deleteStatus)
-        if result == .removed {
+        let removedFromVault = try LocalSecretVaultStore.delete(
+            service: service,
+            account: hostID.uuidString
+        )
+        let result: KeychainDeletionResult = removedFromVault ? .removed : .notFound
+        if removedFromVault {
             NotificationCenter.default.post(name: .myTermPasswordDidChange, object: hostID)
         }
         return result
@@ -101,31 +138,6 @@ enum KeychainStore {
         ]
     }
 
-    private static func persistentReference(for hostID: UUID) throws -> Data? {
-        var lookup = baseQuery(hostID)
-        lookup[kSecReturnPersistentRef] = true
-        lookup[kSecMatchLimit] = kSecMatchLimitOne
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(lookup as CFDictionary, &item)
-        if status == errSecItemNotFound { return nil }
-        if status == errSecInvalidOwnerEdit {
-            throw KeychainStoreError.operationFailed(status)
-        }
-        guard status == errSecSuccess else {
-            throw KeychainStoreError.operationFailed(status)
-        }
-        guard let persistentReference = item as? Data else {
-            throw KeychainStoreError.invalidData
-        }
-        return persistentReference
-    }
-
-    private static func exactQuery(_ persistentReference: Data) -> [CFString: Any] {
-        [
-            kSecClass: kSecClassGenericPassword,
-            kSecValuePersistentRef: persistentReference
-        ]
-    }
 }
 
 extension Notification.Name {

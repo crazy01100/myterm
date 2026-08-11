@@ -10,6 +10,7 @@ swift build -c debug
 crypto_build_dir="$(swift build -c debug --show-bin-path)"
 sodium_headers="$project_dir/.build/checkouts/swift-sodium/Clibsodium.xcframework/macos-arm64_arm64e_x86_64/Headers/Clibsodium"
 swiftc \
+    -D MYTERM_SELF_TESTS \
     -I "$crypto_build_dir/Modules" \
     -Xcc -fmodule-map-file="$sodium_headers/module.modulemap" \
     -Xcc -I \
@@ -20,6 +21,7 @@ swiftc \
     Sources/MySSHClient/Models/FirestoreMetadataSnapshot.swift \
     Sources/MySSHClient/Models/VaultCryptoModels.swift \
     Sources/MySSHClient/Services/AppPaths.swift \
+    Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
     Sources/MySSHClient/Services/KeychainStore.swift \
     Sources/MySSHClient/Services/VaultMasterKeyStore.swift \
     Sources/MySSHClient/Services/VaultCrypto.swift \
@@ -37,4 +39,6 @@ swiftc \
     "$crypto_build_dir"/_Clibsodium.build/*.o \
     "$crypto_build_dir/libsodium.a" \
     -o "$test_dir/VaultCryptoTests"
-"$test_dir/VaultCryptoTests"
+MYTERM_SECRET_VAULT_KEYCHAIN_SERVICE="tw.local.MySSHClient.tests.${MYTERM_SECRET_VAULT_TEST_RUN_ID:-$$}.crypto" \
+MYTERM_SECRET_VAULT_FILE="$test_dir/crypto-secret-vault.json" \
+    "$test_dir/VaultCryptoTests"
