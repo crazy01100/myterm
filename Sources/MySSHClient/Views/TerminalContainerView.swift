@@ -29,6 +29,7 @@ struct TerminalContainerView: NSViewRepresentable {
         terminal.fontSmoothing = true
         terminal.scrollerStyle = .overlay
         applyTheme(to: terminal)
+        context.coordinator.lastAppliedColorScheme = colorScheme
         context.coordinator.installControlDMonitor(for: terminal)
         context.coordinator.installActivationMonitor(for: terminal)
         if session.kind == .ssh {
@@ -93,7 +94,10 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         context.coordinator.onActivate = onActivate
-        applyTheme(to: nsView)
+        if context.coordinator.lastAppliedColorScheme != colorScheme {
+            applyTheme(to: nsView)
+            context.coordinator.lastAppliedColorScheme = colorScheme
+        }
     }
 
     private func applyTheme(to terminal: LocalProcessTerminalView) {
@@ -131,6 +135,7 @@ struct TerminalContainerView: NSViewRepresentable {
         private var closeAfterEOFRequested = false
         var isVisible: Bool
         var isActive = false
+        var lastAppliedColorScheme: ColorScheme?
         @MainActor init(
             session: TerminalSession,
             isVisible: Bool,

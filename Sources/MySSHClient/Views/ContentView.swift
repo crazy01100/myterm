@@ -501,40 +501,17 @@ struct ContentView: View {
 
             GeometryReader { geometry in
                 ZStack {
-                    ForEach(sessionManager.sessions) { session in
-                        let workspace = sessionManager.workspace(containing: session.id)
-                        let isVisible = workspace?.id == sessionManager.selectedWorkspaceID
-                        let frame = terminalFrame(
-                            for: session.id,
-                            workspace: workspace,
-                            in: geometry.size
-                        ) ?? CGRect(origin: .zero, size: geometry.size)
-                        TerminalWorkspaceView(
-                            session: session,
-                            isVisible: isVisible,
-                            isActive: isVisible && workspace?.activeSessionID == session.id,
-                            workspaceIsSplit: workspace?.isSplit == true,
-                            splitAxis: workspace?.splitAxis,
-                            paneIndex: workspace?.sessionIDs.firstIndex(of: session.id),
-                            onActivate: { sessionManager.activate(sessionID: session.id) },
-                            onToggleSplit: {
-                                if let workspace { sessionManager.toggleSplitAxis(for: workspace.id) }
-                            },
-                            onClose: { sessionManager.close(session) }
-                        )
-                        .frame(width: max(frame.width, 1), height: max(frame.height, 1))
-                        .position(x: frame.midX, y: frame.midY)
-                        .opacity(isVisible ? 1 : 0)
-                        .allowsHitTesting(isVisible)
-                    }
-
-                    if let workspace = sessionManager.selectedWorkspace, workspace.isSplit {
-                        WorkspaceSplitDivider(
-                            workspace: workspace,
-                            canvasSize: geometry.size,
-                            onRatioChanged: { sessionManager.setSplitRatio($0, for: workspace.id) }
-                        )
-                    }
+                    TerminalWorkspaceSplitContainer(
+                        sessions: sessionManager.sessions,
+                        selectedWorkspace: sessionManager.selectedWorkspace,
+                        hostStore: hostStore,
+                        onActivate: { sessionManager.activate(sessionID: $0) },
+                        onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
+                        onClose: { sessionManager.close($0) },
+                        onRatioCommitted: { workspaceID, ratio in
+                            sessionManager.setSplitRatio(ratio, for: workspaceID)
+                        }
+                    )
 
                     if case .merge(let targetWorkspaceID, let position) = tabDragProposal,
                        targetWorkspaceID == sessionManager.selectedWorkspaceID {
@@ -724,7 +701,7 @@ private enum WorkspaceTabDragProposal: Equatable {
     )
 }
 
-private enum TerminalWorkspaceLayout {
+enum TerminalWorkspaceLayout {
     static let dividerThickness: CGFloat = 6
     static let dividerHitThickness: CGFloat = 12
     static let terminalHorizontalInset: CGFloat = 12
@@ -1019,94 +996,7 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
     }
 }
 
-private struct WorkspaceSplitDivider: View {
-    let workspace: TerminalWorkspace
-    let canvasSize: CGSize
-    let onRatioChanged: (Double) -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        if let splitAxis = workspace.splitAxis {
-            ZStack {
-                Color.clear
-                Capsule()
-                    .fill(Color.black.opacity(0.68))
-                    .frame(
-                        width: splitAxis == .horizontal ? 3 : 38,
-                        height: splitAxis == .vertical ? 3 : 38
-                    )
-                    .opacity(isHovering ? 1 : 0)
-            }
-                .frame(
-                    width: splitAxis == .horizontal
-                        ? TerminalWorkspaceLayout.dividerHitThickness
-                        : max(canvasSize.width - 24, 1),
-                    height: splitAxis == .vertical
-                        ? TerminalWorkspaceLayout.dividerHitThickness
-                        : max(canvasSize.height - 24, 1)
-                )
-                .contentShape(.rect)
-                .onHover { hovering in
-                    isHovering = hovering
-                    if hovering {
-                        dividerCursor(for: splitAxis).set()
-                    } else {
-                        NSCursor.arrow.set()
-                    }
-                }
-                .gesture(
-                    DragGesture(minimumDistance: 3, coordinateSpace: .named("terminalWorkspaceCanvas"))
-                        .onChanged { value in
-                            let ratio: Double
-                            switch splitAxis {
-                            case .horizontal:
-                                ratio = canvasSize.width > 0
-                                    ? Double(value.location.x / canvasSize.width)
-                                    : 0.5
-                            case .vertical:
-                                ratio = canvasSize.height > 0
-                                    ? Double(value.location.y / canvasSize.height)
-                                    : 0.5
-                            }
-                            onRatioChanged(ratio)
-                        }
-                )
-                .onDisappear {
-                    if isHovering { NSCursor.arrow.set() }
-                }
-                .help(splitAxis == .horizontal ? "拖曳調整左右窗格比例" : "拖曳調整上下窗格比例")
-                .position(dividerPosition(for: splitAxis))
-        }
-    }
-
-    private func dividerCursor(for splitAxis: TerminalWorkspaceSplitAxis) -> NSCursor {
-        switch splitAxis {
-        case .horizontal: .resizeLeftRight
-        case .vertical: .resizeUpDown
-        }
-    }
-
-    private func dividerPosition(for splitAxis: TerminalWorkspaceSplitAxis) -> CGPoint {
-        switch splitAxis {
-        case .horizontal:
-            CGPoint(
-                x: max(canvasSize.width - TerminalWorkspaceLayout.dividerThickness, 0)
-                    * CGFloat(workspace.splitRatio)
-                    + TerminalWorkspaceLayout.dividerThickness / 2,
-                y: canvasSize.height / 2
-            )
-        case .vertical:
-            CGPoint(
-                x: canvasSize.width / 2,
-                y: max(canvasSize.height - TerminalWorkspaceLayout.dividerThickness, 0)
-                    * CGFloat(workspace.splitRatio)
-                    + TerminalWorkspaceLayout.dividerThickness / 2
-            )
-        }
-    }
-}
-
-private struct TerminalWorkspaceView: View {
+struct TerminalWorkspaceView: View {
     @EnvironmentObject private var hostStore: HostStore
     @ObservedObject var session: TerminalSession
     let isVisible: Bool

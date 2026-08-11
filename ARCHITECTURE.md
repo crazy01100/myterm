@@ -31,7 +31,7 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 
 - `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP 與設定畫面。
 - `Sources/MySSHClient/MySSHClientApp.swift`：App 進入點、設定視窗、選單與整體生命週期。
-- SwiftUI 負責狀態與主要版面；AppKit 處理 macOS 視窗、終端機與拖放等原生互動。主視窗提供較大的預設尺寸並保留可縮放能力。
+- SwiftUI 負責狀態、頂部分頁與主要 App 外殼；Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。
 - 主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。
 
 ### 主機與本機資料
@@ -47,6 +47,7 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
 - `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；把分頁拖入前一個工作區的內容區可合併為左右或上下雙窗格，把窗格標題列拖回頂部分頁列則可拆開。合併、拆分、切換方向與調整比例都不重建底層 process。
+- `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
