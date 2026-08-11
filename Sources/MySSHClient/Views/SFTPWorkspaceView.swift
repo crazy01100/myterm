@@ -114,14 +114,14 @@ private struct LocalSFTPFilePane: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("本機").font(.headline)
                 Text(FileManager.default.homeDirectoryForCurrentUser.lastPathComponent)
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
             if store.isLoading { ProgressView().controlSize(.small) }
             Menu {
                 Button("開啟") { openSelected() }.disabled(store.selectedURLs.count != 1)
                 Button("使用其他 App 開啟…") { openSelectedWithApplication() }
-                    .disabled(store.selectedEntries.count != 1 || store.selectedEntries.first?.isDirectory == true)
+                    .disabled(store.selectedEntries.count != 1 || store.selectedEntries.first?.isNavigableDirectory == true)
                 Button("複製到遠端目錄", systemImage: "arrow.right") {
                     remoteStore.upload(localURLs: store.selectedEntries.map(\.url))
                 }
@@ -166,21 +166,10 @@ private struct LocalSFTPFilePane: View {
             Button { store.goForward() } label: { Image(systemName: "chevron.right") }
                 .disabled(!store.canGoForward)
             Divider().frame(height: 18).padding(.horizontal, 3)
-            ScrollView(.horizontal) {
-                HStack(spacing: 4) {
-                    ForEach(localPathComponents, id: \.url) { component in
-                        Button(component.title) { store.navigate(to: component.url) }
-                            .buttonStyle(.plain)
-                            .font(.caption.weight(.medium))
-                        if component.url != localPathComponents.last?.url {
-                            Image(systemName: "chevron.right")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
+            SFTPBreadcrumbTrail(components: localPathComponents) { path in
+                store.navigate(to: URL(fileURLWithPath: path, isDirectory: true))
             }
-            .scrollIndicators(.hidden)
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
         }
         .buttonStyle(.borderless)
@@ -189,15 +178,21 @@ private struct LocalSFTPFilePane: View {
         .background(Color.primary.opacity(0.025))
     }
 
-    private var localPathComponents: [(title: String, url: URL)] {
+    private var localPathComponents: [SFTPBreadcrumbComponent] {
         let names = store.currentURL.standardizedFileURL.path
             .split(separator: "/")
             .map(String.init)
-        var result: [(String, URL)] = [("/", URL(fileURLWithPath: "/", isDirectory: true))]
+        if names.isEmpty {
+            return [SFTPBreadcrumbComponent(title: "/", destination: "/")]
+        }
+        var result: [SFTPBreadcrumbComponent] = []
         var url = URL(fileURLWithPath: "/", isDirectory: true)
         for name in names {
             url.append(path: name, directoryHint: .isDirectory)
-            result.append((name, url.standardizedFileURL))
+            result.append(SFTPBreadcrumbComponent(
+                title: name,
+                destination: url.standardizedFileURL.path
+            ))
         }
         return result
     }
@@ -211,7 +206,7 @@ private struct LocalSFTPFilePane: View {
                 }
             }
         }
-        .onDrop(of: [.data], isTargeted: $isDropTargeted) { providers in
+        .onDrop(of: [SFTPDragAndDrop.remotePayloadType], isTargeted: $isDropTargeted) { providers in
             SFTPDragAndDrop.loadRemote(from: providers) { payload in
                 _ = remoteStore.download(payloads: [payload], to: store.currentURL) {
                     store.reload()
@@ -231,11 +226,18 @@ private struct LocalSFTPFilePane: View {
     }
 
     private func localEntryRow(_ entry: LocalFileEntry) -> some View {
-        LocalFileRow(entry: entry, isSelected: store.selectedURLs.contains(entry.url))
-            .contentShape(.rect)
-            .onTapGesture(count: 2) { openLocalEntry(entry) }
-            .simultaneousGesture(TapGesture().onEnded {
-                store.toggleSelection(entry, extending: NSEvent.modifierFlags.contains(.command))
+        Button {
+            store.toggleSelection(
+                entry,
+                extending: NSEvent.modifierFlags.contains(.command)
+            )
+        } label: {
+            LocalFileRow(entry: entry, isSelected: store.selectedURLs.contains(entry.url))
+                .contentShape(.rect)
+        }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture(count: 2).onEnded {
+                openLocalEntry(entry)
             })
             .contextMenu { localContextMenu(for: entry) }
             .onDrag {
@@ -244,18 +246,18 @@ private struct LocalSFTPFilePane: View {
     }
 
     private func openLocalEntry(_ entry: LocalFileEntry) {
-        if entry.isDirectory { store.open(entry) }
+        if entry.isNavigableDirectory { store.open(entry) }
         else { NSWorkspace.shared.open(entry.url) }
     }
 
     private func openSelected() {
         guard let entry = store.selectedEntries.first else { return }
-        if entry.isDirectory { store.open(entry) }
+        if entry.isNavigableDirectory { store.open(entry) }
         else { NSWorkspace.shared.open(entry.url) }
     }
 
     private func openSelectedWithApplication() {
-        guard let entry = store.selectedEntries.first, !entry.isDirectory,
+        guard let entry = store.selectedEntries.first, !entry.isNavigableDirectory,
               let applicationURL = SFTPApplicationPicker.chooseApplication() else { return }
         SFTPApplicationPicker.open(entry.url, with: applicationURL)
     }
@@ -265,7 +267,7 @@ private struct LocalSFTPFilePane: View {
         let targets = contextEntries(for: entry)
         Button("開啟") {
             guard let target = targets.first else { return }
-            if target.isDirectory {
+            if target.isNavigableDirectory {
                 store.open(target)
             } else {
                 NSWorkspace.shared.open(target.url)
@@ -273,11 +275,11 @@ private struct LocalSFTPFilePane: View {
         }
         .disabled(targets.count != 1)
         Button("使用其他 App 開啟…") {
-            guard let target = targets.first, !target.isDirectory,
+            guard let target = targets.first, !target.isNavigableDirectory,
                   let applicationURL = SFTPApplicationPicker.chooseApplication() else { return }
             SFTPApplicationPicker.open(target.url, with: applicationURL)
         }
-        .disabled(targets.count != 1 || targets.first?.isDirectory == true)
+        .disabled(targets.count != 1 || targets.first?.isNavigableDirectory == true)
         Button("複製到遠端目錄", systemImage: "arrow.right") {
             remoteStore.upload(localURLs: targets.map(\.url))
         }
@@ -330,7 +332,7 @@ private struct RemoteSFTPFilePane: View {
                         .font(.headline)
                     if let host = store.connectedHost {
                         Text("\(store.connectedUsername)@\(host.hostname):\(host.port)")
-                            .font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                            .font(.system(.callout, design: .monospaced)).foregroundStyle(.secondary)
                     }
                     Button("取消") { store.disconnect() }.buttonStyle(.bordered)
                 }
@@ -378,9 +380,17 @@ private struct RemoteSFTPFilePane: View {
                     }
                 }
             }
-            .onDrop(of: [.data], isTargeted: $isDropTargeted) { providers in
-                SFTPDragAndDrop.loadLocal(from: providers) { payload in
+            .onDrop(
+                of: [SFTPDragAndDrop.localPayloadType, .fileURL],
+                isTargeted: $isDropTargeted
+            ) { providers in
+                if SFTPDragAndDrop.loadLocal(from: providers, completion: { payload in
                     _ = store.upload(payloads: [payload], from: localStore)
+                }) {
+                    return true
+                }
+                return SFTPDragAndDrop.loadExternalFileURLs(from: providers) { urls in
+                    store.upload(localURLs: urls)
                 }
             }
             .overlay {
@@ -401,11 +411,18 @@ private struct RemoteSFTPFilePane: View {
     }
 
     private func remoteEntryRow(_ entry: SFTPDirectoryEntry) -> some View {
-        RemoteFileRow(entry: entry, isSelected: store.selectedNames.contains(entry.name))
-            .contentShape(.rect)
-            .onTapGesture(count: 2) { openRemoteEntry(entry) }
-            .simultaneousGesture(TapGesture().onEnded {
-                store.toggleSelection(entry, extending: NSEvent.modifierFlags.contains(.command))
+        Button {
+            store.toggleSelection(
+                entry,
+                extending: NSEvent.modifierFlags.contains(.command)
+            )
+        } label: {
+            RemoteFileRow(entry: entry, isSelected: store.selectedNames.contains(entry.name))
+                .contentShape(.rect)
+        }
+            .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture(count: 2).onEnded {
+                openRemoteEntry(entry)
             })
             .contextMenu { remoteContextMenu(for: entry) }
             .onDrag {
@@ -428,7 +445,7 @@ private struct RemoteSFTPFilePane: View {
                 Text(store.connectedHost?.displayName ?? "SFTP").font(.headline)
                 if let host = store.connectedHost {
                     Text("\(store.connectedUsername)@\(host.hostname)")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -488,18 +505,10 @@ private struct RemoteSFTPFilePane: View {
             Button { store.goToParent() } label: { Image(systemName: "chevron.left") }
                 .disabled(store.currentPath == "/")
             Divider().frame(height: 18).padding(.horizontal, 3)
-            ScrollView(.horizontal) {
-                HStack(spacing: 4) {
-                    ForEach(remotePathComponents, id: \.path) { component in
-                        Button(component.title) { store.goToPathComponent(component.path) }
-                            .buttonStyle(.plain).font(.caption.weight(.medium))
-                        if component.path != remotePathComponents.last?.path {
-                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
-                        }
-                    }
-                }
+            SFTPBreadcrumbTrail(components: remotePathComponents) { path in
+                store.goToPathComponent(path)
             }
-            .scrollIndicators(.hidden)
+            .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
         }
         .buttonStyle(.borderless)
@@ -508,13 +517,13 @@ private struct RemoteSFTPFilePane: View {
         .background(Color.primary.opacity(0.025))
     }
 
-    private var remotePathComponents: [(title: String, path: String)] {
+    private var remotePathComponents: [SFTPBreadcrumbComponent] {
         let names = store.currentPath.split(separator: "/").map(String.init)
-        var result: [(String, String)] = [("/", "/")]
+        var result = [SFTPBreadcrumbComponent(title: "/", destination: "/")]
         var path = ""
         for name in names {
             path += "/\(name)"
-            result.append((name, path))
+            result.append(SFTPBreadcrumbComponent(title: name, destination: path))
         }
         return result
     }
@@ -584,7 +593,10 @@ private struct SFTPHostSelector: View {
     let onConnect: (HostProfile, String) -> Void
     @State private var currentGroupID: HostGroup.ID?
     @State private var searchText = ""
+    @State private var selectedGroupID: HostGroup.ID?
     @State private var selectedHostID: HostProfile.ID?
+    @State private var hoveredGroupID: HostGroup.ID?
+    @State private var hoveredHostID: HostProfile.ID?
     @State private var usernameHost: HostProfile?
 
     var body: some View {
@@ -594,7 +606,7 @@ private struct SFTPHostSelector: View {
                     .foregroundStyle(.tint)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("選擇 SFTP 主機").font(.headline)
-                    Text("連按兩下主機即可連線").font(.caption).foregroundStyle(.secondary)
+                    Text("連按兩下主機即可連線").font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
             }
@@ -605,15 +617,15 @@ private struct SFTPHostSelector: View {
 
             VStack(spacing: 10) {
                 HStack(spacing: 6) {
-                    Button("全部主機") { currentGroupID = nil }
+                    Button("全部主機") { navigate(to: nil) }
                         .buttonStyle(.plain)
-                        .font(.caption.weight(.medium))
+                        .font(.callout.weight(.medium))
                     ForEach(currentGroupID.map(hostStore.groupAncestry(for:)) ?? []) { group in
                         Image(systemName: "chevron.right")
-                            .font(.caption2).foregroundStyle(.tertiary)
-                        Button(group.name) { currentGroupID = group.id }
+                            .font(.caption).foregroundStyle(.tertiary)
+                        Button(group.name) { navigate(to: group.id) }
                             .buttonStyle(.plain)
-                            .font(.caption.weight(.medium))
+                            .font(.callout.weight(.medium))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -628,7 +640,10 @@ private struct SFTPHostSelector: View {
                 LazyVStack(spacing: 7) {
                     if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         ForEach(visibleGroups) { group in
-                            Button { currentGroupID = group.id } label: {
+                            Button {
+                                selectedGroupID = group.id
+                                selectedHostID = nil
+                            } label: {
                                 HStack(spacing: 11) {
                                     Image(systemName: "folder.fill")
                                         .font(.title3).foregroundStyle(.tint)
@@ -637,50 +652,60 @@ private struct SFTPHostSelector: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(group.name).font(.headline)
                                         Text("\(hostStore.hostCount(in: group.id)) 台主機")
-                                            .font(.caption).foregroundStyle(.secondary)
+                                            .font(.callout).foregroundStyle(.secondary)
                                     }
                                     Spacer()
                                     Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                                 }
                                 .padding(10)
-                                .background(Color(nsColor: .controlBackgroundColor), in: .rect(cornerRadius: 9))
+                                .background {
+                                    selectorCardBackground(
+                                        isSelected: selectedGroupID == group.id,
+                                        isHovered: hoveredGroupID == group.id
+                                    )
+                                }
                             }
                             .buttonStyle(.plain)
+                            .onHover { isHovered in
+                                hoveredGroupID = isHovered ? group.id : (hoveredGroupID == group.id ? nil : hoveredGroupID)
+                            }
+                            .simultaneousGesture(TapGesture(count: 2).onEnded { navigate(to: group.id) })
+                            .accessibilityAction(named: "開啟分類") { navigate(to: group.id) }
                         }
                     }
 
                     ForEach(visibleHosts) { host in
-                        Button { selectedHostID = host.id } label: {
+                        Button {
+                            selectedGroupID = nil
+                            selectedHostID = host.id
+                        } label: {
                             HStack(spacing: 11) {
-                                Image(systemName: host.detectedPlatform == nil ? "terminal" : "server.rack")
-                                    .font(.title3)
-                                    .foregroundStyle(host.detectedPlatform == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.white))
-                                    .frame(width: 34, height: 34)
-                                    .background(
-                                        host.detectedPlatform == nil
-                                            ? Color.primary.opacity(0.055)
-                                            : Color.accentColor,
-                                        in: .rect(cornerRadius: 8)
-                                    )
+                                HostPlatformBadge(
+                                    platform: host.detectedPlatform,
+                                    size: 34,
+                                    isSelected: selectedHostID == host.id
+                                )
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(host.displayName).font(.headline).lineLimit(1)
                                     Text(host.addressDescription)
-                                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                        .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                                 }
                                 Spacer()
                             }
                             .padding(10)
                             .background {
-                                RoundedRectangle(cornerRadius: 9)
-                                    .fill(selectedHostID == host.id ? Color.accentColor.opacity(0.13) : Color(nsColor: .controlBackgroundColor))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 9)
-                                            .stroke(selectedHostID == host.id ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: selectedHostID == host.id ? 1.5 : 1)
-                                    }
+                                selectorCardBackground(
+                                    isSelected: selectedHostID == host.id,
+                                    isHovered: hoveredHostID == host.id
+                                )
                             }
                         }
                         .buttonStyle(.plain)
+                        .onHover { isHovered in
+                            hoveredHostID = isHovered ? host.id : (hoveredHostID == host.id ? nil : hoveredHostID)
+                        }
                         .simultaneousGesture(TapGesture(count: 2).onEnded { beginConnection(host) })
+                        .accessibilityAction(named: "連線") { beginConnection(host) }
                     }
                 }
                 .padding(12)
@@ -715,9 +740,34 @@ private struct SFTPHostSelector: View {
     }
 
     private func beginConnection(_ host: HostProfile) {
+        selectedGroupID = nil
         selectedHostID = host.id
         if host.username.isEmpty { usernameHost = host }
         else { onConnect(host, host.username) }
+    }
+
+    private func navigate(to groupID: HostGroup.ID?) {
+        currentGroupID = groupID
+        selectedGroupID = nil
+        selectedHostID = nil
+        hoveredGroupID = nil
+        hoveredHostID = nil
+    }
+
+    private func selectorCardBackground(isSelected: Bool, isHovered: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 9)
+            .fill(
+                isSelected
+                    ? Color.accentColor.opacity(0.13)
+                    : (isHovered ? Color.accentColor.opacity(0.07) : Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(
+                        isSelected ? Color.accentColor : Color.primary.opacity(isHovered ? 0.16 : 0.08),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
+            }
     }
 }
 
@@ -828,10 +878,10 @@ private struct SFTPTransferQueueBar: View {
         VStack(spacing: 6) {
             HStack {
                 Label("傳輸", systemImage: "arrow.left.arrow.right")
-                    .font(.caption.weight(.semibold))
+                    .font(.callout.weight(.semibold))
                 Spacer()
                 Button("清除已完成", action: onClear)
-                    .buttonStyle(.borderless).font(.caption)
+                    .buttonStyle(.borderless).font(.callout)
             }
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
@@ -843,7 +893,7 @@ private struct SFTPTransferQueueBar: View {
                                 Text(item.name).lineLimit(1)
                                 Text(item.state.title).foregroundStyle(.secondary).lineLimit(1)
                             }
-                            .font(.caption2)
+                            .font(.caption)
                             if let progress = item.fractionCompleted,
                                item.state == .transferring {
                                 ProgressView(value: progress).frame(width: 58)
@@ -897,26 +947,50 @@ private enum SFTPApplicationPicker {
 }
 
 private enum SFTPDragAndDrop {
+    static let localPayloadType = UTType(
+        exportedAs: "tw.local.MySSHClient.sftp.local-drag-payload"
+    )
+    static let remotePayloadType = UTType(
+        exportedAs: "tw.local.MySSHClient.sftp.remote-drag-payload"
+    )
+
     static func localProvider(_ payload: SFTPLocalDragPayload) -> NSItemProvider {
-        provider(payload, type: .data)
+        provider(payload, type: localPayloadType)
     }
 
     static func remoteProvider(_ payload: SFTPRemoteDragPayload) -> NSItemProvider {
-        provider(payload, type: .data)
+        provider(payload, type: remotePayloadType)
     }
 
     static func loadLocal(
         from providers: [NSItemProvider],
         completion: @escaping (SFTPLocalDragPayload) -> Void
     ) -> Bool {
-        load(from: providers, type: .data, completion: completion)
+        load(from: providers, type: localPayloadType, completion: completion)
     }
 
     static func loadRemote(
         from providers: [NSItemProvider],
         completion: @escaping (SFTPRemoteDragPayload) -> Void
     ) -> Bool {
-        load(from: providers, type: .data, completion: completion)
+        load(from: providers, type: remotePayloadType, completion: completion)
+    }
+
+    static func loadExternalFileURLs(
+        from providers: [NSItemProvider],
+        completion: @escaping ([URL]) -> Void
+    ) -> Bool {
+        let fileProviders = providers.filter {
+            $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
+        }
+        guard !fileProviders.isEmpty else { return false }
+        loadExternalFileURLs(
+            from: fileProviders,
+            index: 0,
+            collected: [],
+            completion: completion
+        )
+        return true
     }
 
     private static func provider<T: Encodable>(_ payload: T, type: UTType) -> NSItemProvider {
@@ -945,6 +1019,146 @@ private enum SFTPDragAndDrop {
             DispatchQueue.main.async { completion(payload) }
         }
         return true
+    }
+
+    private static func loadExternalFileURLs(
+        from providers: [NSItemProvider],
+        index: Int,
+        collected: [URL],
+        completion: @escaping ([URL]) -> Void
+    ) {
+        guard index < providers.count else {
+            DispatchQueue.main.async {
+                completion(collected.uniquedByStandardizedPath())
+            }
+            return
+        }
+
+        providers[index].loadItem(
+            forTypeIdentifier: UTType.fileURL.identifier,
+            options: nil
+        ) { item, _ in
+            var next = collected
+            if let url = externalFileURL(from: item), url.isFileURL {
+                next.append(url.standardizedFileURL)
+            }
+            loadExternalFileURLs(
+                from: providers,
+                index: index + 1,
+                collected: next,
+                completion: completion
+            )
+        }
+    }
+
+    private static func externalFileURL(from item: NSSecureCoding?) -> URL? {
+        if let url = item as? URL { return url }
+        if let url = item as? NSURL { return url as URL }
+        if let data = item as? Data,
+           let text = String(data: data, encoding: .utf8) {
+            return URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        if let text = item as? NSString {
+            return URL(string: text as String)
+        }
+        return nil
+    }
+}
+
+private extension Array where Element == URL {
+    func uniquedByStandardizedPath() -> [URL] {
+        var paths = Set<String>()
+        return filter { paths.insert($0.standardizedFileURL.path).inserted }
+    }
+}
+
+private struct SFTPBreadcrumbComponent: Identifiable, Hashable {
+    let title: String
+    let destination: String
+
+    var id: String { destination }
+}
+
+private struct SFTPBreadcrumbTrail: View {
+    private enum Item: Identifiable {
+        case component(SFTPBreadcrumbComponent)
+        case omitted([SFTPBreadcrumbComponent])
+
+        var id: String {
+            switch self {
+            case .component(let component):
+                return "component:\(component.destination)"
+            case .omitted(let components):
+                return "omitted:\(components.map(\.destination).joined(separator: "|"))"
+            }
+        }
+    }
+
+    let components: [SFTPBreadcrumbComponent]
+    let onNavigate: (String) -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            intrinsicRow(items: components.map(Item.component))
+            intrinsicRow(items: compactItems(prefixCount: 3, suffixCount: 2))
+            intrinsicRow(items: compactItems(prefixCount: 2, suffixCount: 1))
+            flexibleRow(items: compactItems(prefixCount: 1, suffixCount: 1))
+        }
+    }
+
+    private func compactItems(prefixCount: Int, suffixCount: Int) -> [Item] {
+        guard components.count > prefixCount + suffixCount else {
+            return components.map(Item.component)
+        }
+        let prefix = components.prefix(prefixCount).map(Item.component)
+        let omittedEnd = components.count - suffixCount
+        let omitted = Array(components[prefixCount..<omittedEnd])
+        let suffix = components.suffix(suffixCount).map(Item.component)
+        return prefix + [.omitted(omitted)] + suffix
+    }
+
+    private func intrinsicRow(items: [Item]) -> some View {
+        row(items: items)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func flexibleRow(items: [Item]) -> some View {
+        row(items: items)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func row(items: [Item]) -> some View {
+        HStack(spacing: 4) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 {
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize()
+                }
+                switch item {
+                case .component(let component):
+                    Button(component.title) { onNavigate(component.destination) }
+                        .buttonStyle(.plain)
+                        .font(.callout.weight(.medium))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                case .omitted(let hiddenComponents):
+                    Menu {
+                        ForEach(hiddenComponents) { component in
+                            Button(component.title) { onNavigate(component.destination) }
+                        }
+                    } label: {
+                        Text("…")
+                            .font(.callout.weight(.semibold))
+                            .accessibilityLabel("顯示省略的路徑")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                }
+            }
+        }
+        .clipped()
     }
 }
 
@@ -1017,10 +1231,10 @@ private struct SFTPDragPreview: View {
                 .foregroundStyle(isDirectory ? Color.accentColor : .secondary)
             VStack(alignment: .leading, spacing: 1) {
                 Text(count > 1 ? "\(count) 個項目" : name)
-                    .font(.caption.weight(.semibold))
+                    .font(.callout.weight(.semibold))
                     .lineLimit(1)
                 Text("複製")
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -1057,10 +1271,10 @@ private struct SFTPFileListHeader: View {
             Text("大小").frame(width: 78, alignment: .trailing)
             Text("類型").frame(width: 62, alignment: .leading)
         }
-        .font(.caption.weight(.semibold))
+        .font(.callout.weight(.semibold))
         .foregroundStyle(.secondary)
         .padding(.horizontal, 12)
-        .frame(height: 36)
+        .frame(height: 40)
         .background(Color.primary.opacity(0.035))
     }
 }
@@ -1068,32 +1282,42 @@ private struct SFTPFileListHeader: View {
 private struct LocalFileRow: View {
     let entry: LocalFileEntry
     let isSelected: Bool
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 9) {
-                Image(systemName: entry.isDirectory ? "folder.fill" : (entry.isSymbolicLink ? "arrowshape.turn.up.right.fill" : "doc"))
-                    .foregroundStyle(entry.isDirectory ? Color.accentColor : .secondary)
+                Image(systemName: entry.isSymbolicLink ? "arrowshape.turn.up.right.fill" : (entry.isDirectory ? "folder.fill" : "doc"))
+                    .foregroundStyle(entry.isNavigableDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
-                Text(entry.name).lineLimit(1)
+                Text(entry.name).font(.body).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(SFTPDisplayFormatter.date(entry.modificationDate))
                 .frame(width: 132, alignment: .leading)
-            Text(SFTPDisplayFormatter.size(entry.isDirectory ? nil : entry.size))
+            Text(SFTPDisplayFormatter.size(entry.isNavigableDirectory ? nil : entry.size))
                 .frame(width: 78, alignment: .trailing)
             Text(entry.kindTitle).frame(width: 62, alignment: .leading)
         }
-        .font(.caption)
+        .font(.callout)
         .padding(.horizontal, 12)
-        .frame(height: 36)
-        .background(isSelected ? Color.accentColor.opacity(0.16) : .clear)
+        .frame(height: 42)
+        .background(rowBackground)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.1), value: isHovered)
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return Color.accentColor.opacity(0.16) }
+        if isHovered { return Color.accentColor.opacity(0.07) }
+        return .clear
     }
 }
 
 private struct RemoteFileRow: View {
     let entry: SFTPDirectoryEntry
     let isSelected: Bool
+    @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -1101,7 +1325,7 @@ private struct RemoteFileRow: View {
                 Image(systemName: entry.isDirectory ? "folder.fill" : (entry.attributes.kind == .symbolicLink ? "arrowshape.turn.up.right.fill" : "doc"))
                     .foregroundStyle(entry.isDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
-                Text(entry.name).lineLimit(1)
+                Text(entry.name).font(.body).lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(SFTPDisplayFormatter.date(entry.attributes.modificationTime))
@@ -1110,10 +1334,18 @@ private struct RemoteFileRow: View {
                 .frame(width: 78, alignment: .trailing)
             Text(entry.attributes.kind.title).frame(width: 62, alignment: .leading)
         }
-        .font(.caption)
+        .font(.callout)
         .padding(.horizontal, 12)
-        .frame(height: 36)
-        .background(isSelected ? Color.accentColor.opacity(0.16) : .clear)
+        .frame(height: 42)
+        .background(rowBackground)
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.1), value: isHovered)
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return Color.accentColor.opacity(0.16) }
+        if isHovered { return Color.accentColor.opacity(0.07) }
+        return .clear
     }
 }
 

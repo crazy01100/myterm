@@ -60,7 +60,7 @@ private final class SFTPStderrCollector: @unchecked Sendable {
 
 /// Supplies a Keychain password to OpenSSH through a user-only FIFO. The secret
 /// is never placed in process arguments, environment variables, or a file.
-private final class SFTPPasswordPipe {
+final class SSHPasswordPipe {
     let askPassURL: URL
     let fifoURL: URL
     private let directoryURL: URL
@@ -231,13 +231,13 @@ final class SFTPClient: @unchecked Sendable {
         arguments += ["-T", "-s", destination, "sftp"]
 
         var environment = SSHEnvironmentBuilder.environmentDictionary()
-        var passwordPipe: SFTPPasswordPipe?
+        var passwordPipe: SSHPasswordPipe?
         if host.authenticationMethod == .password {
             guard let data = try KeychainStore.passwordData(for: host.id),
                   let password = String(data: data, encoding: .utf8) else {
                 throw SFTPConnectionError.missingSavedPassword
             }
-            let pipe = try SFTPPasswordPipe(password: password)
+            let pipe = try SSHPasswordPipe(password: password)
             passwordPipe = pipe
             environment["SSH_ASKPASS"] = pipe.askPassURL.path
             environment["SSH_ASKPASS_REQUIRE"] = "force"

@@ -38,9 +38,10 @@ struct MySSHClientApp: App {
                 .environmentObject(automaticMetadataSyncStore)
                 .environmentObject(unifiedSyncSetupStore)
                 .preferredColorScheme(preferredColorScheme)
-                .frame(minWidth: 980, minHeight: 620)
+                .frame(minWidth: 1120, minHeight: 700)
         }
         .windowStyle(.automatic)
+        .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) { }
             CommandGroup(after: .appInfo) {

@@ -19,6 +19,7 @@ struct HostLibraryView: View {
     @EnvironmentObject private var knownHostsStore: KnownHostsStore
     @State private var selection: HostLibrarySelection = .all
     @State private var searchText = ""
+    @State private var selectedGroupCardID: HostGroup.ID?
 
     let onAddHost: (UUID?) -> Void
     let onAddGroup: (UUID?) -> Void
@@ -252,10 +253,16 @@ struct HostLibraryView: View {
                         ForEach(visibleGroups) { group in
                             GroupCard(
                                 group: group,
-                                hostCount: hostStore.hostCount(in: group.id)
-                            ) {
-                                selection = .group(group.id)
-                            }
+                                hostCount: hostStore.hostCount(in: group.id),
+                                isSelected: selectedGroupCardID == group.id,
+                                onSelect: {
+                                    selectedGroupCardID = group.id
+                                    hostStore.selectedHostID = nil
+                                },
+                                onOpen: {
+                                    selection = .group(group.id)
+                                }
+                            )
                             .contextMenu {
                                 Button("開啟分類") { selection = .group(group.id) }
                                 Button("新增子群組") { onAddGroup(group.id) }
@@ -300,6 +307,9 @@ struct HostLibraryView: View {
             .padding(22)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .onChange(of: selection) { _, _ in
+            selectedGroupCardID = nil
+        }
     }
 
     private var gridColumns: [GridItem] {
@@ -322,28 +332,35 @@ struct HostLibraryView: View {
 private struct GroupCard: View {
     let group: HostGroup
     let hostCount: Int
+    let isSelected: Bool
+    let onSelect: () -> Void
     let onOpen: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
-        Button(action: onOpen) {
-            HStack(spacing: 14) {
-                Image(systemName: "folder.fill")
-                    .font(.title2)
-                    .foregroundStyle(.tint)
-                    .frame(width: 42, height: 42)
-                    .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 9))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(group.name).font(.headline).lineLimit(1)
-                    Text("\(hostCount) 台主機").font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        HStack(spacing: 14) {
+            Image(systemName: "folder.fill")
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 42, height: 42)
+                .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(group.name).font(.headline).lineLimit(1)
+                Text("\(hostCount) 台主機").font(.caption).foregroundStyle(.secondary)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 76)
-            .background(cardBackground)
+            Spacer()
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 76)
+        .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
+        .contentShape(.rect)
+        .onTapGesture(count: 2, perform: onOpen)
+        .simultaneousGesture(TapGesture(count: 1).onEnded(onSelect))
+        .onHover { isHovered = $0 }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: "選取", onSelect)
+        .accessibilityAction(named: "開啟分類", onOpen)
     }
 }
 
@@ -352,100 +369,50 @@ private struct HostCard: View {
     let isSelected: Bool
     let onSelect: () -> Void
     let onConnect: () -> Void
+    @State private var isHovered = false
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack(spacing: 14) {
-                PlatformBadge(platform: host.detectedPlatform, isSelected: isSelected)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(host.displayName).font(.headline).lineLimit(1)
-                    Text(host.username.isEmpty ? host.hostname : "\(host.username)@\(host.hostname)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                Spacer()
+        HStack(spacing: 14) {
+            HostPlatformBadge(platform: host.detectedPlatform, isSelected: isSelected)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(host.displayName).font(.headline).lineLimit(1)
+                Text(host.username.isEmpty ? host.hostname : "\(host.username)@\(host.hostname)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 76)
-            .background {
-                RoundedRectangle(cornerRadius: 11)
-                    .fill(isSelected ? Color.accentColor.opacity(0.11) : Color(nsColor: .controlBackgroundColor))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 11)
-                            .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.09), lineWidth: isSelected ? 2 : 1)
-                    }
-            }
+            Spacer()
         }
-        .buttonStyle(HostCardButtonStyle())
-        .simultaneousGesture(TapGesture(count: 2).onEnded(onConnect))
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 76)
+        .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
+        .contentShape(.rect)
+        .onTapGesture(count: 2, perform: onConnect)
+        .simultaneousGesture(TapGesture(count: 1).onEnded(onSelect))
+        .onHover { isHovered = $0 }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(named: "選取", onSelect)
+        .accessibilityAction(named: "連線", onConnect)
     }
 }
 
-private struct PlatformBadge: View {
-    let platform: HostPlatform?
-    let isSelected: Bool
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 10).fill(badgeColor)
-            if let platform {
-                Image(systemName: symbolName(for: platform))
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
-            } else {
-                Image(systemName: "terminal")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
-            }
-        }
-        .frame(width: 42, height: 42)
-        .help(platform?.title ?? "尚未辨識平台")
-    }
-
-    private var badgeColor: Color {
-        guard let platform else { return Color.primary.opacity(0.055) }
-        switch platform {
-        case .ubuntu: return Color(red: 0.91, green: 0.25, blue: 0.10)
-        case .debian: return Color(red: 0.84, green: 0.00, blue: 0.29)
-        case .almaLinux, .rockyLinux: return Color(red: 0.08, green: 0.43, blue: 0.55)
-        case .centOS, .redHat, .fedora: return Color(red: 0.08, green: 0.29, blue: 0.52)
-        case .amazonLinux: return Color(red: 0.95, green: 0.56, blue: 0.08)
-        case .alpine, .openSUSE, .archLinux: return Color(red: 0.05, green: 0.52, blue: 0.68)
-        case .macOS: return Color(red: 0.34, green: 0.36, blue: 0.40)
-        case .freeBSD: return Color(red: 0.78, green: 0.08, blue: 0.08)
-        case .cisco: return Color(red: 0.02, green: 0.68, blue: 0.82)
-        case .juniper: return Color(red: 0.12, green: 0.48, blue: 0.26)
-        case .arista: return Color(red: 0.12, green: 0.36, blue: 0.66)
-        case .openWrt: return Color(red: 0.16, green: 0.43, blue: 0.70)
-        }
-    }
-
-    private func symbolName(for platform: HostPlatform) -> String {
-        switch platform {
-        case .ubuntu, .debian, .almaLinux, .rockyLinux, .centOS, .redHat, .fedora,
-             .amazonLinux, .alpine, .openSUSE, .archLinux, .freeBSD:
-            "server.rack"
-        case .macOS: "apple.logo"
-        case .cisco, .juniper, .arista, .openWrt: "network"
-        }
-    }
-}
-
-private struct HostCardButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .opacity(configuration.isPressed ? 0.86 : 1)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
-    }
-}
-
-private var cardBackground: some View {
+private func cardBackground(isSelected: Bool, isHovered: Bool) -> some View {
     RoundedRectangle(cornerRadius: 11)
-        .fill(Color(nsColor: .controlBackgroundColor))
+        .fill(
+            isSelected
+                ? Color.accentColor.opacity(0.11)
+                : isHovered
+                    ? Color.accentColor.opacity(0.065)
+                    : Color(nsColor: .controlBackgroundColor)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: 11)
-                .stroke(Color.primary.opacity(0.09), lineWidth: 1)
+                .stroke(
+                    isSelected
+                        ? Color.accentColor
+                        : isHovered ? Color.accentColor.opacity(0.38) : Color.primary.opacity(0.09),
+                    lineWidth: isSelected ? 2 : 1
+                )
         }
+        .animation(.easeOut(duration: 0.12), value: isHovered)
 }

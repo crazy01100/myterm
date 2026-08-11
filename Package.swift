@@ -30,6 +30,9 @@ let package = Package(
                 .product(name: "SwiftTerm", package: "SwiftTerm"),
                 .product(name: "Sodium", package: "swift-sodium"),
                 .product(name: "Sparkle", package: "Sparkle")
+            ],
+            resources: [
+                .copy("Resources/PlatformIcons")
             ]
         )
     ],

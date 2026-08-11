@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.1**
+目前準備發布版本：**1.0.2**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -16,10 +16,11 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
 - 主機密碼保存於本機 AES-GCM 加密保管庫；只有一把根金鑰存於 macOS Keychain。密碼不寫入主機資料檔，也不透過剪貼簿填入。
 - 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP。
-- SFTP 上傳、下載、拖放、覆蓋確認、新增資料夾、重新命名、刪除與權限調整。
+- SFTP 上傳、下載、Finder 拖放、覆蓋確認、新增資料夾、重新命名、刪除與權限調整；本機面板可在 App 內進入 OneDrive 等符號連結資料夾。
+- 主機庫與 SFTP 使用一致的滑過、單擊選取及雙擊開啟操作；深層 SFTP 路徑會自動保留關鍵層級並以 `…` 收合中段目錄。
 - MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
 - 可調整或停用的 App 內快捷鍵；已儲存密碼只會在安全的密碼提示階段允許填入。
-- 自動辨識已顯示在終端機中的作業系統或網路設備資訊，並以保守策略顯示平台徽章。
+- 自動辨識終端機輸出中的作業系統或網路設備資訊；尚未辨識的 SSH 主機會使用唯讀背景探測，並以保守策略顯示平台徽章。
 - Sparkle 安全更新，可由「MyTerm → 檢查更新⋯」下載並安裝正式版本。
 
 ## 選用的跨裝置同步
@@ -37,6 +38,8 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - Apple Silicon Mac（arm64）
 - macOS 26 或更新版本
 
+下載並解壓縮後，請先把 `MyTerm.app` 移到「應用程式」資料夾，再從該位置啟動。不要直接從 ZIP、磁碟映像、下載後的暫時位置或唯讀位置執行；macOS App Translocation 或無法替換 App 的位置會阻止 Sparkle 完成更新。
+
 目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；1.0.1 已將所有本機機密收斂至單一加密保管庫，使更新後需要的 Keychain 驗證不會隨主機數量增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
 
 ## 基本使用
@@ -47,7 +50,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 4. 雙擊主機卡片建立 SSH 分頁。第一次看到主機指紋時，請先透過可信管道核對。
 5. 已儲存的 SSH 登入密碼會在第一次登入提示自動送出；`sudo`／`su` 等後續提示可按「填入密碼」或使用設定的快捷鍵。
 6. 「Terminal」開啟位於目前使用者家目錄的本機 zsh；「Serial」連接 `/dev/cu.*` 或 `/dev/tty.*` 裝置。
-7. 「SFTP」開啟本機與遠端雙欄檔案工作區。
+7. 「SFTP」開啟本機與遠端雙欄檔案工作區；單擊選取主機、分類或檔案，雙擊才會進入分類／資料夾或建立連線。
 
 ## 從原始碼建置
 
@@ -57,16 +60,16 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
-./scripts/build-app.sh --version 1.0.1 --build 20260811130726
+./scripts/build-app.sh --version 1.0.2 --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
 產生的 App 位於 `build/MyTerm.app`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-完整正式候選流程會執行安全檢查、295 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
+目前原始碼的完整正式候選流程會執行安全檢查、300 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
 ```sh
 ./scripts/prepare-release-build.sh \
-  --version 1.0.1 \
+  --version 1.0.2 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -82,11 +85,11 @@ cd myterm
 
 更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
-## 已驗證版本
+## 發布候選驗證
 
-MyTerm 1.0.1（Build `20260811130726`）已完成：
+MyTerm 1.0.2 發布候選原始碼已完成 300 項本機自動測試。以下正式更新鏈與兩台 Mac 的人工驗證證據目前來自 1.0.1；1.0.2 必須再通過 GitHub Draft 資產驗證及 App 內人工更新，才會標記為正式完成：
 
-- 295 項本機自動測試，以及既有 Firestore Security Rules 測試。
+- 300 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
 - 兩台 Mac 透過正式更新鏈升級至 1.0.1；重啟、主機、群組、密碼、SSH、SFTP 與同步均維持正常。
 - 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。

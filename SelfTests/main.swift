@@ -82,6 +82,25 @@ do {
 
 do {
     let root = FileManager.default.temporaryDirectory
+        .appending(path: "MyTerm-SFTP-Symlink-\(UUID().uuidString)", directoryHint: .isDirectory)
+    let target = root.appending(path: "OneDrive", directoryHint: .isDirectory)
+    let link = root.appending(path: "OneDrive Link")
+    try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+    defer { try? FileManager.default.removeItem(at: root) }
+
+    let entry = try LocalFileEntry.inspect(link)
+    check(entry.isSymbolicLink, "SFTP local browser recognizes symbolic links")
+    check(entry.isNavigableDirectory,
+          "SFTP local browser treats a symbolic link to a directory as navigable")
+    check(entry.navigableDirectoryURL == target.standardizedFileURL,
+          "SFTP local browser resolves a linked directory inside MyTerm")
+} catch {
+    check(false, "SFTP linked-directory navigation: \(error)")
+}
+
+do {
+    let root = FileManager.default.temporaryDirectory
         .appending(path: "MyTerm-SFTP-Integration-\(UUID().uuidString)", directoryHint: .isDirectory)
     let remoteRoot = root.appending(path: "remote", directoryHint: .isDirectory)
     let sourceRoot = root.appending(path: "source", directoryHint: .isDirectory)
@@ -762,6 +781,19 @@ check(platformDetector.consume(Array("linux-release".utf8)[...]) == .almaLinux,
       "platform detector recognizes AlmaLinux output")
 check(platformDetector.consume(Array("Ubuntu release".utf8)[...]) == nil,
       "platform detector records a platform only once")
+
+var osReleaseDetector = HostPlatformDetector()
+let fedoraOSRelease = """
+NAME="Fedora Linux"
+VERSION="42 (Workstation Edition)"
+ID=fedora
+"""
+check(osReleaseDetector.consume(Array(fedoraOSRelease.utf8)[...]) == .fedora,
+      "platform detector recognizes a background os-release probe")
+
+var macOSPlatformDetector = HostPlatformDetector()
+check(macOSPlatformDetector.consume(Array("Darwin workstation 25.0.0 arm64".utf8)[...]) == .macOS,
+      "platform detector recognizes uname output from macOS")
 
 do {
     var serial = SerialConfiguration()

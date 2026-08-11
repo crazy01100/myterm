@@ -10,8 +10,8 @@ struct HostPlatformDetector {
         if buffer.count > 32_768 { buffer.removeFirst(buffer.count - 32_768) }
 
         let platform: HostPlatform?
-        if containsAny("ubuntu ", "ubuntu linux", "ubuntu release") { platform = .ubuntu }
-        else if containsAny("debian gnu/linux", "debian release") { platform = .debian }
+        if containsAny("ubuntu ", "ubuntu linux", "ubuntu release", "id=ubuntu") { platform = .ubuntu }
+        else if containsAny("debian gnu/linux", "debian release", "id=debian") { platform = .debian }
         else if containsAny("almalinux", "almalinux-release") { platform = .almaLinux }
         else if containsAny("rocky linux", "rocky-release") { platform = .rockyLinux }
         else if containsAny("centos linux", "centos-release") { platform = .centOS }
@@ -21,7 +21,7 @@ struct HostPlatformDetector {
         else if containsAny("alpine linux", "alpine-release") { platform = .alpine }
         else if containsAny("opensuse", "suse linux enterprise") { platform = .openSUSE }
         else if containsAny("arch linux", "archlinux") { platform = .archLinux }
-        else if containsAny("darwin kernel version", "macos ") { platform = .macOS }
+        else if containsAny("darwin kernel version", "darwin ", "macos ") { platform = .macOS }
         else if containsAny("freebsd ", "freebsd/") { platform = .freeBSD }
         else if containsAny("cisco ios", "cisco nx-os", "ios xe software") { platform = .cisco }
         else if containsAny("junos ", "juniper networks") { platform = .juniper }

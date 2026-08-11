@@ -26,6 +26,15 @@ struct TerminalContainerView: NSViewRepresentable {
             terminal.onPlatformDetected = { platform in
                 Task { @MainActor in onPlatformDetected(platform) }
             }
+            if let host = session.host,
+               host.detectedPlatform == nil,
+               let username = session.username {
+                context.coordinator.startPlatformProbe(
+                    host: host,
+                    username: username,
+                    onDetected: onPlatformDetected
+                )
+            }
         }
         terminal.onPasswordPromptStateChanged = { [weak session] isAwaitingPassword in
             Task { @MainActor in session?.setPasswordPromptActive(isAwaitingPassword) }
@@ -92,6 +101,7 @@ struct TerminalContainerView: NSViewRepresentable {
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
         coordinator.removeControlDMonitor()
+        coordinator.cancelPlatformProbe()
         coordinator.session.authenticationDidEnd()
         if nsView.process.running { nsView.process.terminate() }
     }
@@ -100,6 +110,7 @@ struct TerminalContainerView: NSViewRepresentable {
         let session: TerminalSession
         let onCloseAfterUserEOF: () -> Void
         private var controlDMonitor: Any?
+        private var platformProbeTask: Task<Void, Never>?
         private var closeAfterEOFRequested = false
         var isActive = false
         @MainActor init(session: TerminalSession, onCloseAfterUserEOF: @escaping () -> Void) {
@@ -136,6 +147,34 @@ struct TerminalContainerView: NSViewRepresentable {
             }
         }
 
+        func startPlatformProbe(
+            host: HostProfile,
+            username: String,
+            onDetected: @escaping (HostPlatform) -> Void
+        ) {
+            cancelPlatformProbe()
+            platformProbeTask = Task {
+                do {
+                    // Allow the interactive connection to finish host-key and
+                    // authentication setup before the silent read-only probe.
+                    try await Task.sleep(for: .seconds(2))
+                } catch {
+                    return
+                }
+                guard !Task.isCancelled else { return }
+                let platform = await Task.detached(priority: .utility) {
+                    HostPlatformProbe.detect(host: host, username: username)
+                }.value
+                guard !Task.isCancelled, let platform else { return }
+                await MainActor.run { onDetected(platform) }
+            }
+        }
+
+        func cancelPlatformProbe() {
+            platformProbeTask?.cancel()
+            platformProbeTask = nil
+        }
+
         func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) { }
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
             Task { @MainActor [weak session] in
@@ -145,6 +184,7 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) { }
         func processTerminated(source: TerminalView, exitCode: Int32?) {
+            cancelPlatformProbe()
             Task { @MainActor [weak session] in
                 let shouldClose = self.closeAfterEOFRequested
                 session?.state = .disconnected(exitCode)

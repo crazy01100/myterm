@@ -1,0 +1,8 @@
+Platform logo SVGs are sourced from Simple Icons 16.21.0.
+https://github.com/simple-icons/simple-icons
+
+Simple Icons is released under CC0 1.0 Universal.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+The Amazon Linux and Arista badges use local text marks because matching
+Simple Icons assets are not available in the pinned set.

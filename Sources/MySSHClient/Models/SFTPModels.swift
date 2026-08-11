@@ -72,6 +72,7 @@ struct LocalFileEntry: Identifiable, Equatable, Sendable {
     var url: URL
     var isDirectory: Bool
     var isSymbolicLink: Bool
+    var symbolicLinkTargetDirectoryURL: URL?
     var size: UInt64?
     var modificationDate: Date?
     var permissions: UInt32?
@@ -79,9 +80,47 @@ struct LocalFileEntry: Identifiable, Equatable, Sendable {
     var id: URL { url }
     var name: String { url.lastPathComponent }
     var isHidden: Bool { name.hasPrefix(".") }
+    var navigableDirectoryURL: URL? {
+        if let symbolicLinkTargetDirectoryURL { return symbolicLinkTargetDirectoryURL }
+        return isDirectory ? url : nil
+    }
+    var isNavigableDirectory: Bool { navigableDirectoryURL != nil }
     var kindTitle: String {
         if isSymbolicLink { return "連結" }
         return isDirectory ? "資料夾" : "檔案"
+    }
+
+    static func inspect(
+        _ fileURL: URL,
+        fileManager: FileManager = .default
+    ) throws -> LocalFileEntry {
+        let keys: Set<URLResourceKey> = [
+            .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey,
+            .contentModificationDateKey, .isHiddenKey
+        ]
+        let values = try fileURL.resourceValues(forKeys: keys)
+        let isSymbolicLink = values.isSymbolicLink == true
+        let symbolicLinkTargetDirectoryURL: URL?
+        if isSymbolicLink {
+            let resolvedURL = fileURL.resolvingSymlinksInPath().standardizedFileURL
+            let targetValues = try? resolvedURL.resourceValues(forKeys: [.isDirectoryKey])
+            symbolicLinkTargetDirectoryURL = targetValues?.isDirectory == true
+                ? resolvedURL
+                : nil
+        } else {
+            symbolicLinkTargetDirectoryURL = nil
+        }
+        let attributes = try? fileManager.attributesOfItem(atPath: fileURL.path)
+        let permissions = (attributes?[.posixPermissions] as? NSNumber)?.uint32Value
+        return LocalFileEntry(
+            url: fileURL,
+            isDirectory: values.isDirectory == true,
+            isSymbolicLink: isSymbolicLink,
+            symbolicLinkTargetDirectoryURL: symbolicLinkTargetDirectoryURL,
+            size: values.fileSize.map(UInt64.init),
+            modificationDate: values.contentModificationDate,
+            permissions: permissions
+        )
     }
 }
 

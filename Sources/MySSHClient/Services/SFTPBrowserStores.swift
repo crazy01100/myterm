@@ -26,8 +26,8 @@ final class LocalFileBrowserStore: ObservableObject {
     var canGoForward: Bool { !forwardHistory.isEmpty }
 
     func open(_ entry: LocalFileEntry) {
-        guard entry.isDirectory else { return }
-        navigate(to: entry.url)
+        guard let directoryURL = entry.navigableDirectoryURL else { return }
+        navigate(to: directoryURL)
     }
 
     func navigate(to url: URL) {
@@ -150,27 +150,13 @@ final class LocalFileBrowserStore: ObservableObject {
     }
 
     nonisolated private static func loadEntries(at url: URL) throws -> [LocalFileEntry] {
-        let keys: [URLResourceKey] = [
-            .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey,
-            .contentModificationDateKey, .isHiddenKey
-        ]
         return try FileManager.default
-            .contentsOfDirectory(at: url, includingPropertiesForKeys: keys, options: [])
-            .map { fileURL in
-                let values = try fileURL.resourceValues(forKeys: Set(keys))
-                let attributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
-                let permissions = (attributes?[.posixPermissions] as? NSNumber)?.uint32Value
-                return LocalFileEntry(
-                    url: fileURL,
-                    isDirectory: values.isDirectory == true,
-                    isSymbolicLink: values.isSymbolicLink == true,
-                    size: values.fileSize.map(UInt64.init),
-                    modificationDate: values.contentModificationDate,
-                    permissions: permissions
-                )
-            }
+            .contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: [])
+            .map { try LocalFileEntry.inspect($0) }
             .sorted {
-                if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
+                if $0.isNavigableDirectory != $1.isNavigableDirectory {
+                    return $0.isNavigableDirectory
+                }
                 return $0.name.localizedStandardCompare($1.name) == .orderedAscending
             }
     }

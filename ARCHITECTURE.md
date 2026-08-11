@@ -1,6 +1,6 @@
 # MyTerm 系統架構
 
-本文說明 MyTerm 1.0.1 的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
+本文說明 MyTerm 1.0.2 的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
 
 ## 架構總覽
 
@@ -29,9 +29,10 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 
 ### 使用者介面
 
-- `Sources/MySSHClient/Views`：主機庫、編輯器、終端機、Serial、SFTP 與設定畫面。
+- `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP 與設定畫面。
 - `Sources/MySSHClient/MySSHClientApp.swift`：App 進入點、設定視窗、選單與整體生命週期。
-- SwiftUI 負責狀態與主要版面；AppKit 處理 macOS 視窗、終端機與拖放等原生互動。
+- SwiftUI 負責狀態與主要版面；AppKit 處理 macOS 視窗、終端機與拖放等原生互動。主視窗提供較大的預設尺寸並保留可縮放能力。
+- 主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。
 
 ### 主機與本機資料
 
@@ -47,7 +48,9 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
-- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；認證設定沿用相同主機資料與本機加密保管庫邊界。
+- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
+- SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
+- 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫與 SFTP 選擇器共用 SVG 平台徽章。
 
 ## 資料保存位置
 
@@ -97,6 +100,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
+- Sparkle 不要求 App 路徑名稱必須是 `/Applications`，但會拒絕從 App Translocation、唯讀映像、暫時位置或無法替換 App 的位置更新。正式安裝一律先將 `MyTerm.app` 移到「應用程式」資料夾；專案 `build/` 內的 App 只供開發測試。
 - 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 已將分散機密收斂到單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
 
 ## 儲存庫結構
@@ -104,6 +108,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 | 路徑 | 用途 |
 |---|---|
 | `Sources/MySSHClient` | App 原始碼 |
+| `Sources/MySSHClient/Resources/PlatformIcons` | 內建作業系統與設備平台 SVG 徽章 |
 | `SelfTests`、`Tests` | 核心、加密、OAuth 與 Firestore Rules 測試 |
 | `Resources` | App 圖示、Info.plist 與測試資源 |
 | `Config` | 可公開的設定範例與 Sparkle 公鑰 |
@@ -114,7 +119,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 `build/`、SwiftPM 快取、`node_modules/`、本機 Firebase 設定、OAuth secret、使用者匯出資料及內部計劃紀錄均不屬於公開原始碼。
 
-## 1.0.1 已知限制
+## 1.0.2 已知限制
 
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
