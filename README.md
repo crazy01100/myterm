@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.2**
+目前正式版本：**1.0.3**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -94,15 +94,15 @@ cd myterm
 
 ## 發布驗證
 
-MyTerm 1.0.2 已完成 300 項本機自動測試、五項正式發布資產回下載驗證，以及 GitHub Actions → Cloudflare Pages 外部更新站驗證。兩台 Mac 的完整人工更新證據目前來自 1.0.1；1.0.2 的 App 內更新驗收仍待完成：
+MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證，以及 GitHub Actions → Cloudflare Pages 外部更新站驗證。兩台 Mac 的完整人工更新證據目前來自 1.0.1；1.0.3 的 App 內更新驗收仍待完成：
 
-- 300 項本機自動測試，以及既有 Firestore Security Rules 測試。
+- 324 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
 - 兩台 Mac 透過正式更新鏈升級至 1.0.1；重啟、主機、群組、密碼、SSH、SFTP 與同步均維持正常。
 - 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
 - 主機與群組的端對端加密刪除同步，以及套用遠端刪除前的本機備份。
 - 舊版分散 Keychain 項目遷移至單一本機加密保管庫；驗證次數不再隨主機數量增加。
 - Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
-- 1.0.2 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
+- 1.0.3 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
 
 正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。
