@@ -24,83 +24,6 @@ enum KeychainDeletionResult: Equatable {
     case manualCleanupRequired(OSStatus)
 }
 
-/// Repairs Keychain items that were created before MyTerm adopted its stable
-/// release signature. Adding a newer executable with “Always Allow” modifies
-/// the legacy ACL, but does not make that ACL follow future releases. A
-/// release-signed build therefore replaces the access object once with the
-/// standard “trust this calling app” policy, which is represented by the
-/// caller's stable designated requirement.
-enum KeychainAccessPolicy {
-    private static let migratedMarker = Data("MyTerm.StableReleaseACL.v1".utf8)
-
-    private static let isStableReleaseProcess: Bool = {
-        guard let releaseRequirement = Bundle.main.object(
-            forInfoDictionaryKey: "MyTermStableReleaseRequirement"
-        ) as? String,
-              !releaseRequirement.isEmpty else {
-            return false
-        }
-        let flags = SecCSFlags(rawValue: 0)
-        var selfCode: SecCode?
-        guard SecCodeCopySelf(flags, &selfCode) == errSecSuccess,
-              let selfCode else {
-            return false
-        }
-
-        var requirement: SecRequirement?
-        guard SecRequirementCreateWithString(
-            releaseRequirement as CFString,
-            flags,
-            &requirement
-        ) == errSecSuccess,
-              let requirement else {
-            return false
-        }
-        return SecCodeCheckValidity(selfCode, flags, requirement) == errSecSuccess
-    }()
-
-    static func markNewItemIfReleaseSigned(_ attributes: inout [CFString: Any]) {
-        guard isStableReleaseProcess else { return }
-        attributes[kSecAttrGeneric] = migratedMarker
-    }
-
-    static func migrateAfterSuccessfulAccess(
-        query: [CFString: Any],
-        descriptor: String
-    ) {
-        guard isStableReleaseProcess else { return }
-
-        var migratedQuery = query
-        migratedQuery[kSecAttrGeneric] = migratedMarker
-        migratedQuery[kSecMatchLimit] = kSecMatchLimitOne
-        if SecItemCopyMatching(migratedQuery as CFDictionary, nil) == errSecSuccess {
-            return
-        }
-
-        var existenceQuery = query
-        existenceQuery[kSecMatchLimit] = kSecMatchLimitOne
-        guard SecItemCopyMatching(existenceQuery as CFDictionary, nil) == errSecSuccess else {
-            return
-        }
-
-        var access: SecAccess?
-        let accessStatus = SecAccessCreate(descriptor as CFString, nil, &access)
-        guard accessStatus == errSecSuccess, let access else {
-            NSLog("MyTerm Keychain ACL migration could not create access policy: %d", accessStatus)
-            return
-        }
-
-        let attributes: [CFString: Any] = [
-            kSecAttrAccess: access,
-            kSecAttrGeneric: migratedMarker
-        ]
-        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-        if updateStatus != errSecSuccess {
-            NSLog("MyTerm Keychain ACL migration failed: %d", updateStatus)
-        }
-    }
-}
-
 enum KeychainStore {
     private static let service = "tw.local.MySSHClient.host-password"
 
@@ -127,7 +50,6 @@ enum KeychainStore {
 
         var insert = baseQuery(hostID)
         attributes.forEach { insert[$0.key] = $0.value }
-        KeychainAccessPolicy.markNewItemIfReleaseSigned(&insert)
         let addStatus = SecItemAdd(insert as CFDictionary, nil)
         guard addStatus == errSecSuccess else { throw KeychainStoreError.operationFailed(addStatus) }
         NotificationCenter.default.post(name: .myTermPasswordDidChange, object: hostID)
@@ -142,10 +64,6 @@ enum KeychainStore {
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
         guard let data = item as? Data else { throw KeychainStoreError.invalidData }
-        KeychainAccessPolicy.migrateAfterSuccessfulAccess(
-            query: baseQuery(hostID),
-            descriptor: "MyTerm 主機密碼"
-        )
         return data
     }
 

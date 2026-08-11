@@ -18,7 +18,6 @@ enum CloudSessionKeychainStore {
         case errSecItemNotFound:
             var insert = query
             attributes.forEach { insert[$0.key] = $0.value }
-            KeychainAccessPolicy.markNewItemIfReleaseSigned(&insert)
             let status = SecItemAdd(insert as CFDictionary, nil)
             guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
         default:
@@ -37,10 +36,6 @@ enum CloudSessionKeychainStore {
         guard let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
             throw KeychainStoreError.invalidData
         }
-        KeychainAccessPolicy.migrateAfterSuccessfulAccess(
-            query: baseQuery(projectID: projectID),
-            descriptor: "MyTerm Google 登入狀態"
-        )
         return token
     }
 

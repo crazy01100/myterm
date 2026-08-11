@@ -49,7 +49,6 @@ enum VaultMasterKeyStore {
         case errSecItemNotFound:
             var insert = query
             attributes.forEach { insert[$0.key] = $0.value }
-            KeychainAccessPolicy.markNewItemIfReleaseSigned(&insert)
             let status = SecItemAdd(insert as CFDictionary, nil)
             guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
         default:
@@ -66,10 +65,6 @@ enum VaultMasterKeyStore {
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess else { throw KeychainStoreError.operationFailed(status) }
         guard let data = item as? Data else { throw KeychainStoreError.invalidData }
-        KeychainAccessPolicy.migrateAfterSuccessfulAccess(
-            query: baseQuery(ownerUID: ownerUID, version: version),
-            descriptor: "MyTerm 端對端加密主金鑰"
-        )
         return try VaultMasterKey(rawRepresentation: data, version: version)
     }
 
