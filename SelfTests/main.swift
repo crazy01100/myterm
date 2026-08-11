@@ -22,6 +22,142 @@ private func baseHost() -> HostProfile {
     return host
 }
 
+do {
+    let first = UUID()
+    let second = UUID()
+    let third = UUID()
+    var workspaces = TerminalWorkspaceCollection()
+
+    let firstWorkspaceID = workspaces.add(sessionID: first)
+    let secondWorkspaceID = workspaces.add(sessionID: second)
+    let thirdWorkspaceID = workspaces.add(sessionID: third)
+    check(workspaces.workspaces.map(\.sessionIDs) == [[first], [second], [third]],
+          "new terminal sessions create ordered single-pane workspaces")
+    check(workspaces.selectedWorkspaceID == thirdWorkspaceID && workspaces.selectedSessionID == third,
+          "new terminal session selects its workspace")
+
+    _ = workspaces.moveWorkspace(id: thirdWorkspaceID, toInsertionIndex: 0)
+    check(workspaces.workspaces.map(\.id) == [thirdWorkspaceID, firstWorkspaceID, secondWorkspaceID],
+          "terminal workspaces reorder by insertion position")
+    check(workspaces.selectedWorkspaceID == thirdWorkspaceID,
+          "terminal workspace reordering preserves selection")
+
+    let mergedID = try workspaces.merge(
+        sourceWorkspaceID: secondWorkspaceID,
+        targetWorkspaceID: firstWorkspaceID,
+        position: .top
+    )
+    let merged = workspaces.workspace(id: mergedID)
+    check(merged?.sessionIDs == [second, first] && merged?.splitAxis == .vertical,
+          "top drop creates an ordered vertical two-pane workspace")
+    check(merged?.activeSessionID == second,
+          "dragged terminal becomes the active pane after merging")
+
+    do {
+        _ = try workspaces.merge(
+            sourceWorkspaceID: thirdWorkspaceID,
+            targetWorkspaceID: mergedID,
+            position: .right
+        )
+        check(false, "third terminal is rejected by a two-pane workspace")
+    } catch TerminalWorkspaceMutationError.targetAlreadyHasTwoPanes {
+        check(true, "third terminal is rejected by a two-pane workspace")
+    }
+
+    check(workspaces.toggleSplitAxis(for: mergedID),
+          "two-pane workspace can toggle its split axis")
+    check(workspaces.workspace(id: mergedID)?.splitAxis == .horizontal,
+          "vertical workspace toggles to horizontal")
+    _ = workspaces.setSplitRatio(0.9, for: mergedID)
+    check(workspaces.workspace(id: mergedID)?.splitRatio == 0.75,
+          "split ratio is clamped to a usable range")
+
+    check(workspaces.focusOtherPane(in: mergedID),
+          "two-pane workspace can focus its other pane")
+    check(workspaces.workspace(id: mergedID)?.activeSessionID == first,
+          "focus moves to the other terminal pane")
+
+    _ = workspaces.close(sessionID: first)
+    let collapsed = workspaces.workspace(id: mergedID)
+    check(collapsed?.sessionIDs == [second] && collapsed?.splitAxis == nil,
+          "closing one pane collapses the workspace without removing the other session")
+
+    _ = workspaces.selectWorkspace(at: 0)
+    let selectedBeforeAdjacent = workspaces.selectedWorkspaceID
+    _ = workspaces.selectAdjacentWorkspace(offset: 1)
+    check(workspaces.selectedWorkspaceID != selectedBeforeAdjacent,
+          "adjacent workspace selection follows visual order")
+
+    _ = workspaces.close(sessionID: third)
+    _ = workspaces.close(sessionID: second)
+    check(workspaces.workspaces.isEmpty && workspaces.selectedWorkspaceID == nil,
+          "closing the last terminal removes its workspace and clears selection")
+} catch {
+    check(false, "terminal workspace state suite: \(error)")
+}
+
+for (position, expectedAxis, sourceComesFirst) in [
+    (TerminalWorkspaceDropPosition.left, TerminalWorkspaceSplitAxis.horizontal, true),
+    (.right, .horizontal, false),
+    (.top, .vertical, true),
+    (.bottom, .vertical, false),
+] {
+    do {
+        let targetSessionID = UUID()
+        let sourceSessionID = UUID()
+        var directionWorkspaces = TerminalWorkspaceCollection()
+        let targetWorkspaceID = directionWorkspaces.add(sessionID: targetSessionID)
+        let sourceWorkspaceID = directionWorkspaces.add(sessionID: sourceSessionID)
+        let mergedID = try directionWorkspaces.merge(
+            sourceWorkspaceID: sourceWorkspaceID,
+            targetWorkspaceID: targetWorkspaceID,
+            position: position
+        )
+        let expectedSessions = sourceComesFirst
+            ? [sourceSessionID, targetSessionID]
+            : [targetSessionID, sourceSessionID]
+        let merged = directionWorkspaces.workspace(id: mergedID)
+        check(merged?.sessionIDs == expectedSessions && merged?.splitAxis == expectedAxis,
+              "\(position.rawValue) drop creates the expected two-pane order and axis")
+    } catch {
+        check(false, "\(position.rawValue) drop direction suite: \(error)")
+    }
+}
+
+do {
+    let firstPane = UUID()
+    let detachedPane = UUID()
+    var detachableWorkspaces = TerminalWorkspaceCollection()
+    let firstWorkspaceID = detachableWorkspaces.add(sessionID: firstPane)
+    let secondWorkspaceID = detachableWorkspaces.add(sessionID: detachedPane)
+    _ = try detachableWorkspaces.merge(
+        sourceWorkspaceID: secondWorkspaceID,
+        targetWorkspaceID: firstWorkspaceID,
+        position: .right
+    )
+
+    let detachedWorkspaceID = try detachableWorkspaces.detach(
+        sessionID: detachedPane,
+        toInsertionIndex: 0
+    )
+    check(detachableWorkspaces.workspaces.map(\.sessionIDs) == [[detachedPane], [firstPane]],
+          "detaching a pane creates an independent workspace at the requested tab position")
+    check(detachableWorkspaces.workspace(id: firstWorkspaceID)?.splitAxis == nil,
+          "detaching a pane collapses the original workspace to one pane")
+    check(detachableWorkspaces.selectedWorkspaceID == detachedWorkspaceID
+            && detachableWorkspaces.selectedSessionID == detachedPane,
+          "the detached pane becomes the selected workspace")
+
+    do {
+        _ = try detachableWorkspaces.detach(sessionID: firstPane, toInsertionIndex: 0)
+        check(false, "a single-pane workspace cannot be detached again")
+    } catch TerminalWorkspaceMutationError.sourceMustBeSplit {
+        check(true, "a single-pane workspace cannot be detached again")
+    }
+} catch {
+    check(false, "terminal pane detach suite: \(error)")
+}
+
 let initializationPacket = SFTPProtocolCodec.initializationPacket()
 check(initializationPacket == Data([0, 0, 0, 5, 1, 0, 0, 0, 3]),
       "SFTP v3 initialization packet is framed correctly")
@@ -723,6 +859,8 @@ do {
           "saved-password shortcut defaults to Command-P")
     check(store.shortcut(for: .openHosts) == nil,
           "shortcuts can be disabled by default")
+    check(store.shortcut(for: .focusOtherPane) == nil,
+          "focus-other-pane shortcut is available but disabled by default")
 
     let custom = AppShortcutDefinition(
         keyCode: 40,

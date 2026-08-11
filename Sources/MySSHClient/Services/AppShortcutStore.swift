@@ -13,6 +13,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
     case closeTab
     case nextTab
     case previousTab
+    case focusOtherPane
     case tab1
     case tab2
     case tab3
@@ -36,9 +37,10 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .openHosts: "開啟主機首頁"
         case .openLocalTerminal: "開啟本地 Terminal"
         case .openSerial: "開啟 Serial 連線"
-        case .closeTab: "關閉目前分頁"
+        case .closeTab: "關閉目前窗格／分頁"
         case .nextTab: "下一個分頁"
         case .previousTab: "上一個分頁"
+        case .focusOtherPane: "切換至另一個窗格"
         case .tab1: "切換至分頁 1"
         case .tab2: "切換至分頁 2"
         case .tab3: "切換至分頁 3"
@@ -59,7 +61,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
             .terminal
         case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession:
             .session
-        case .closeTab, .nextTab, .previousTab,
+        case .closeTab, .nextTab, .previousTab, .focusOtherPane,
              .tab1, .tab2, .tab3, .tab4, .tab5, .tab6, .tab7, .tab8, .tab9:
             .tabs
         }
@@ -92,6 +94,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .closeTab: .command(keyCode: 13, key: "W")
         case .nextTab: .commandShift(keyCode: 30, key: "]")
         case .previousTab: .commandShift(keyCode: 33, key: "[")
+        case .focusOtherPane: nil
         case .tab1: .command(keyCode: 18, key: "1")
         case .tab2: .command(keyCode: 19, key: "2")
         case .tab3: .command(keyCode: 20, key: "3")

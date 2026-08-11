@@ -12,6 +12,15 @@ struct ContentView: View {
     @State private var deleteCandidate: HostProfile?
     @State private var deleteGroupCandidate: HostGroup?
     @State private var libraryWorkspace: LibraryWorkspace = .hosts
+    @State private var draggedWorkspaceID: TerminalWorkspace.ID?
+    @State private var tabDragOriginalSelectionID: TerminalWorkspace.ID?
+    @State private var tabDragInsertionIndex: Int?
+    @State private var tabDragProposal: WorkspaceTabDragProposal?
+    @State private var workspaceTabFrames: [TerminalWorkspace.ID: CGRect] = [:]
+    @State private var workspaceTabBarFrame: CGRect = .zero
+    @State private var workspaceContentFrame: CGRect = .zero
+    @State private var workspaceMouseDragSource: WorkspaceMouseDragSource?
+    @State private var paneDetachInsertionIndex: Int?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +28,8 @@ struct ContentView: View {
             Divider()
             workspaceContent
         }
+        .coordinateSpace(name: "workspaceRoot")
+        .onPreferenceChange(WorkspaceTabFramePreferenceKey.self) { workspaceTabFrames = $0 }
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
                 .environmentObject(hostStore)
@@ -79,13 +90,19 @@ struct ContentView: View {
         } message: {
             Text(hostStore.lastNotice ?? "")
         }
-        .background {
+        .overlay {
             AppShortcutMonitorView(
                 shortcutStore: shortcutStore,
+                hostStore: hostStore,
                 perform: performShortcut,
-                shouldSuppressManagedDefaults: { sessionManager.selectedSession != nil }
+                shouldSuppressManagedDefaults: { sessionManager.selectedSession != nil },
+                prepareDrag: prepareWorkspaceMouseDrag,
+                beginDrag: beginWorkspaceMouseDrag,
+                changeDrag: updateWorkspaceMouseDrag,
+                endDrag: finishWorkspaceMouseDrag,
+                cancelDrag: cancelWorkspaceMouseDrag
             )
-            .frame(width: 0, height: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -120,37 +137,20 @@ struct ContentView: View {
             Divider().frame(height: 24)
 
             ScrollView(.horizontal) {
-                HStack(spacing: 7) {
-                    ForEach(sessionManager.sessions) { session in
-                        HStack(spacing: 6) {
-                            Button {
-                                sessionManager.selectedSessionID = session.id
-                            } label: {
-                                HStack(spacing: 7) {
-                                    Circle()
-                                        .fill(statusColor(session.state))
-                                        .frame(width: 7, height: 7)
-                                    Image(systemName: sessionSymbol(session.kind))
-                                    Text(session.displayName).lineLimit(1)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            Button {
-                                sessionManager.close(session)
-                            } label: {
-                                Image(systemName: "xmark")
-                                    .font(.caption2.weight(.semibold))
-                                    .padding(3)
-                            }
-                            .buttonStyle(.plain)
-                            .help("關閉工作階段")
+                HStack(spacing: 0) {
+                    ForEach(Array(sessionManager.workspaces.enumerated()), id: \.element.id) { index, workspace in
+                        WorkspaceReorderDropZone(
+                            insertionIndex: index,
+                            isGestureTargeted: activeTabInsertionIndex == index
+                        )
+                        if let session = sessionManager.session(id: workspace.activeSessionID) {
+                            workspaceTab(workspace, activeSession: session)
                         }
-                        .padding(.leading, 10)
-                        .padding(.trailing, 6)
-                        .padding(.vertical, 7)
-                        .background(tabBackground(isSelected: sessionManager.selectedSessionID == session.id))
-                        .clipShape(.rect(cornerRadius: 8))
                     }
+                    WorkspaceReorderDropZone(
+                        insertionIndex: sessionManager.workspaces.count,
+                        isGestureTargeted: activeTabInsertionIndex == sessionManager.workspaces.count
+                    )
                 }
             }
             .scrollIndicators(.hidden)
@@ -159,6 +159,323 @@ struct ContentView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(.bar)
+    }
+
+    private func workspaceTab(
+        _ workspace: TerminalWorkspace,
+        activeSession session: TerminalSession
+    ) -> some View {
+        HStack(spacing: 6) {
+            Button {
+                sessionManager.selectWorkspace(workspace.id)
+            } label: {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(statusColor(session.state))
+                        .frame(width: 7, height: 7)
+                    if workspace.isSplit {
+                        Image(systemName: "rectangle.split.2x1")
+                            .frame(width: 18, height: 18)
+                        Text("Workspace")
+                            .lineLimit(1)
+                    } else {
+                        TerminalSessionIcon(session: session, size: 18)
+                        Text(session.displayName)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            Button {
+                sessionManager.closeActiveSession(in: workspace.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.weight(.semibold))
+                    .padding(3)
+            }
+            .buttonStyle(.plain)
+            .help("關閉工作階段")
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 6)
+        .padding(.vertical, 7)
+        .background(tabBackground(isSelected: sessionManager.selectedWorkspaceID == workspace.id))
+        .clipShape(.rect(cornerRadius: 8))
+        .background {
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: WorkspaceTabFramePreferenceKey.self,
+                    value: [workspace.id: geometry.frame(in: .named("workspaceRoot"))]
+                )
+            }
+        }
+        .opacity(draggedWorkspaceID == workspace.id ? 0.35 : 1)
+        .zIndex(draggedWorkspaceID == workspace.id ? 1 : 0)
+    }
+
+    private func updateWorkspaceTabDrag(
+        workspaceID: TerminalWorkspace.ID,
+        location: CGPoint
+    ) -> WorkspaceDragPresentation? {
+        if draggedWorkspaceID == nil {
+            tabDragOriginalSelectionID = sessionManager.selectedWorkspaceID
+            draggedWorkspaceID = workspaceID
+        }
+
+        let nextProposal: WorkspaceTabDragProposal?
+        if workspaceContentFrame.contains(location),
+           sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
+           let targetWorkspaceID = previousWorkspaceID(before: workspaceID) {
+            if sessionManager.selectedWorkspaceID != targetWorkspaceID {
+                _ = sessionManager.selectWorkspace(targetWorkspaceID)
+            }
+            nextProposal = .merge(
+                targetWorkspaceID: targetWorkspaceID,
+                position: dropPosition(at: location, in: workspaceContentFrame)
+            )
+            if tabDragInsertionIndex != nil { tabDragInsertionIndex = nil }
+        } else if workspaceTabBarFrame.contains(location) {
+            restoreOriginalSelectionDuringTabDrag()
+            let insertionIndex = insertionIndex(for: workspaceID, atX: location.x)
+            nextProposal = insertionIndex.map(WorkspaceTabDragProposal.reorder)
+            if tabDragInsertionIndex != insertionIndex { tabDragInsertionIndex = insertionIndex }
+        } else {
+            restoreOriginalSelectionDuringTabDrag()
+            nextProposal = nil
+            if tabDragInsertionIndex != nil { tabDragInsertionIndex = nil }
+        }
+        if tabDragProposal != nextProposal { tabDragProposal = nextProposal }
+
+        guard let workspace = sessionManager.workspace(id: workspaceID),
+              let session = sessionManager.session(id: workspace.activeSessionID) else { return nil }
+        return WorkspaceDragPresentation(
+            session: session,
+            title: workspace.isSplit ? "Workspace" : session.displayName,
+            isWorkspace: workspace.isSplit,
+            location: location,
+            previewPosition: nextProposal?.mergePosition,
+            previewFrame: workspaceContentFrame
+        )
+    }
+
+    private func finishWorkspaceTabDrag(
+        workspaceID: TerminalWorkspace.ID,
+        location: CGPoint
+    ) {
+        let finalProposal: WorkspaceTabDragProposal?
+        if workspaceContentFrame.contains(location),
+           sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
+           let targetWorkspaceID = previousWorkspaceID(before: workspaceID) {
+            _ = sessionManager.selectWorkspace(targetWorkspaceID)
+            finalProposal = .merge(
+                targetWorkspaceID: targetWorkspaceID,
+                position: dropPosition(at: location, in: workspaceContentFrame)
+            )
+        } else if workspaceTabBarFrame.contains(location),
+                  let insertionIndex = insertionIndex(for: workspaceID, atX: location.x) {
+            finalProposal = .reorder(insertionIndex)
+        } else {
+            finalProposal = tabDragProposal
+        }
+
+        var completedMerge = false
+        switch finalProposal {
+        case .reorder(let insertionIndex):
+            restoreOriginalSelectionDuringTabDrag()
+            _ = sessionManager.moveWorkspace(workspaceID, toInsertionIndex: insertionIndex)
+        case .merge(let targetWorkspaceID, let position):
+            completedMerge = sessionManager.mergeWorkspaces(
+                sourceWorkspaceID: workspaceID,
+                targetWorkspaceID: targetWorkspaceID,
+                position: position
+            )
+        case nil:
+            break
+        }
+        if !completedMerge {
+            restoreOriginalSelectionDuringTabDrag()
+        }
+        draggedWorkspaceID = nil
+        tabDragOriginalSelectionID = nil
+        tabDragInsertionIndex = nil
+        tabDragProposal = nil
+    }
+
+    private func previousWorkspaceID(before workspaceID: TerminalWorkspace.ID) -> TerminalWorkspace.ID? {
+        guard let sourceIndex = sessionManager.workspaces.firstIndex(where: { $0.id == workspaceID }),
+              sourceIndex > 0 else {
+            return nil
+        }
+        return sessionManager.workspaces[sourceIndex - 1].id
+    }
+
+    private func dropPosition(at location: CGPoint, in frame: CGRect) -> TerminalWorkspaceDropPosition {
+        guard frame.width > 0, frame.height > 0 else { return .right }
+        let localX = location.x - frame.minX
+        let localY = location.y - frame.minY
+        let horizontalEdgeDistance = min(localX, frame.width - localX) / frame.width
+        let verticalEdgeDistance = min(localY, frame.height - localY) / frame.height
+        if horizontalEdgeDistance < verticalEdgeDistance {
+            return localX < frame.width / 2 ? .left : .right
+        }
+        return localY < frame.height / 2 ? .top : .bottom
+    }
+
+    private func restoreOriginalSelectionDuringTabDrag() {
+        guard let tabDragOriginalSelectionID else { return }
+        if sessionManager.selectedWorkspaceID != tabDragOriginalSelectionID {
+            _ = sessionManager.selectWorkspace(tabDragOriginalSelectionID)
+        }
+    }
+
+    private func insertionIndex(
+        for workspaceID: TerminalWorkspace.ID,
+        atX xPosition: CGFloat
+    ) -> Int? {
+        guard let sourceIndex = sessionManager.workspaces.firstIndex(where: { $0.id == workspaceID }) else {
+            return nil
+        }
+        let remaining = sessionManager.workspaces.filter { $0.id != workspaceID }
+        var finalIndex = remaining.count
+        for (index, workspace) in remaining.enumerated() {
+            guard let frame = workspaceTabFrames[workspace.id] else { continue }
+            if xPosition < frame.midX {
+                finalIndex = index
+                break
+            }
+        }
+        return finalIndex + (sourceIndex < finalIndex ? 1 : 0)
+    }
+
+    private var activeTabInsertionIndex: Int? {
+        paneDetachInsertionIndex ?? tabDragInsertionIndex
+    }
+
+    private func updatePaneDrag(
+        sessionID: TerminalSession.ID,
+        location: CGPoint
+    ) -> WorkspaceDragPresentation? {
+        guard sessionManager.workspace(containing: sessionID)?.isSplit == true,
+              let session = sessionManager.session(id: sessionID) else { return nil }
+        let nextInsertionIndex = workspaceTabBarFrame.contains(location)
+            ? detachedPaneInsertionIndex(atX: location.x)
+            : nil
+        if paneDetachInsertionIndex != nextInsertionIndex {
+            paneDetachInsertionIndex = nextInsertionIndex
+        }
+        return WorkspaceDragPresentation(
+            session: session,
+            title: session.displayName,
+            isWorkspace: false,
+            location: location,
+            previewPosition: nil,
+            previewFrame: .zero
+        )
+    }
+
+    private func finishPaneDrag(sessionID: TerminalSession.ID, location: CGPoint) {
+        let finalInsertionIndex = workspaceTabBarFrame.contains(location)
+            ? detachedPaneInsertionIndex(atX: location.x)
+            : paneDetachInsertionIndex
+        if let finalInsertionIndex {
+            _ = sessionManager.detachSession(sessionID, toInsertionIndex: finalInsertionIndex)
+        }
+        paneDetachInsertionIndex = nil
+    }
+
+    private func beginWorkspaceMouseDrag(at location: CGPoint) -> Bool {
+        if let workspaceID = sessionManager.workspaces
+            .first(where: { workspaceTabFrames[$0.id]?.contains(location) == true })?.id {
+            workspaceMouseDragSource = .workspace(workspaceID)
+            tabDragOriginalSelectionID = sessionManager.selectedWorkspaceID
+            return true
+        }
+
+        if let workspace = sessionManager.selectedWorkspace, workspace.isSplit,
+           let sessionID = workspace.sessionIDs
+            .first(where: { workspacePaneHeaderFrame(for: $0, in: workspace)?.contains(location) == true }) {
+            workspaceMouseDragSource = .pane(sessionID)
+            return true
+        }
+        workspaceMouseDragSource = nil
+        return false
+    }
+
+    private func prepareWorkspaceMouseDrag(in rootBounds: CGRect) {
+        let contentMinY = max(
+            workspaceTabFrames.values.map(\.maxY).max().map { $0 + 8 } ?? 50,
+            rootBounds.minY
+        )
+        workspaceTabBarFrame = CGRect(
+            x: rootBounds.minX,
+            y: rootBounds.minY,
+            width: rootBounds.width,
+            height: max(contentMinY - rootBounds.minY, 0)
+        )
+        workspaceContentFrame = CGRect(
+            x: rootBounds.minX,
+            y: contentMinY,
+            width: rootBounds.width,
+            height: max(rootBounds.maxY - contentMinY, 0)
+        )
+    }
+
+    private func workspacePaneHeaderFrame(
+        for sessionID: TerminalSession.ID,
+        in workspace: TerminalWorkspace
+    ) -> CGRect? {
+        guard let paneFrame = terminalFrame(
+            for: sessionID,
+            workspace: workspace,
+            in: workspaceContentFrame.size
+        ) else { return nil }
+        return CGRect(
+            x: workspaceContentFrame.minX + paneFrame.minX,
+            y: workspaceContentFrame.minY + paneFrame.minY,
+            width: paneFrame.width,
+            height: min(48, paneFrame.height)
+        )
+    }
+
+    private func updateWorkspaceMouseDrag(at location: CGPoint) -> WorkspaceDragPresentation? {
+        switch workspaceMouseDragSource {
+        case .workspace(let workspaceID):
+            updateWorkspaceTabDrag(workspaceID: workspaceID, location: location)
+        case .pane(let sessionID):
+            updatePaneDrag(sessionID: sessionID, location: location)
+        case nil:
+            nil
+        }
+    }
+
+    private func finishWorkspaceMouseDrag(at location: CGPoint) {
+        switch workspaceMouseDragSource {
+        case .workspace(let workspaceID):
+            finishWorkspaceTabDrag(workspaceID: workspaceID, location: location)
+        case .pane(let sessionID):
+            finishPaneDrag(sessionID: sessionID, location: location)
+        case nil:
+            break
+        }
+        workspaceMouseDragSource = nil
+    }
+
+    private func cancelWorkspaceMouseDrag() {
+        workspaceMouseDragSource = nil
+        restoreOriginalSelectionDuringTabDrag()
+        draggedWorkspaceID = nil
+        tabDragOriginalSelectionID = nil
+        tabDragInsertionIndex = nil
+        tabDragProposal = nil
+        paneDetachInsertionIndex = nil
+    }
+
+    private func detachedPaneInsertionIndex(atX xPosition: CGFloat) -> Int {
+        for (index, workspace) in sessionManager.workspaces.enumerated() {
+            guard let frame = workspaceTabFrames[workspace.id] else { continue }
+            if xPosition < frame.midX { return index }
+        }
+        return sessionManager.workspaces.count
     }
 
     private var workspaceContent: some View {
@@ -188,15 +505,66 @@ struct ContentView: View {
                 .opacity(sessionManager.selectedSessionID == nil && libraryWorkspace == .sftp ? 1 : 0)
                 .allowsHitTesting(sessionManager.selectedSessionID == nil && libraryWorkspace == .sftp)
 
-            ForEach(sessionManager.sessions) { session in
-                TerminalWorkspaceView(
-                    session: session,
-                    isActive: sessionManager.selectedSessionID == session.id,
-                    onClose: { sessionManager.close(session) }
-                )
-                .opacity(sessionManager.selectedSessionID == session.id ? 1 : 0)
-                .allowsHitTesting(sessionManager.selectedSessionID == session.id)
+            GeometryReader { geometry in
+                ZStack {
+                    TerminalWorkspaceSplitContainer(
+                        sessions: sessionManager.sessions,
+                        selectedWorkspace: sessionManager.selectedWorkspace,
+                        hostStore: hostStore,
+                        onActivate: { sessionManager.activate(sessionID: $0) },
+                        onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
+                        onClose: { sessionManager.close($0) },
+                        onRatioCommitted: { workspaceID, ratio in
+                            sessionManager.setSplitRatio(ratio, for: workspaceID)
+                        }
+                    )
+
+                }
+                .coordinateSpace(name: "terminalWorkspaceCanvas")
             }
+            .opacity(sessionManager.selectedWorkspaceID == nil ? 0 : 1)
+            .allowsHitTesting(sessionManager.selectedWorkspaceID != nil)
+        }
+    }
+
+    private func terminalFrame(
+        for sessionID: TerminalSession.ID,
+        workspace: TerminalWorkspace?,
+        in size: CGSize
+    ) -> CGRect? {
+        guard let workspace,
+              let paneIndex = workspace.sessionIDs.firstIndex(of: sessionID) else { return nil }
+        guard workspace.isSplit, let splitAxis = workspace.splitAxis else {
+            return CGRect(origin: .zero, size: size)
+        }
+
+        let dividerThickness = TerminalWorkspaceLayout.dividerThickness
+        let ratio = CGFloat(workspace.splitRatio)
+        switch splitAxis {
+        case .horizontal:
+            let availableWidth = max(size.width - dividerThickness, 0)
+            let firstWidth = availableWidth * ratio
+            if paneIndex == 0 {
+                return CGRect(x: 0, y: 0, width: firstWidth, height: size.height)
+            }
+            return CGRect(
+                x: firstWidth + dividerThickness,
+                y: 0,
+                width: availableWidth - firstWidth,
+                height: size.height
+            )
+        case .vertical:
+            let availableHeight = max(size.height - dividerThickness, 0)
+            let firstHeight = availableHeight * ratio
+            if paneIndex == 0 {
+                return CGRect(x: 0, y: 0, width: size.width, height: firstHeight)
+            }
+            return CGRect(
+                x: 0,
+                y: firstHeight + dividerThickness,
+                width: size.width,
+                height: availableHeight - firstHeight
+            )
         }
     }
 
@@ -224,14 +592,6 @@ struct ContentView: View {
         case .connected: .green
         case .disconnected: .secondary
         case .failed: .red
-        }
-    }
-
-    private func sessionSymbol(_ kind: TerminalSessionKind) -> String {
-        switch kind {
-        case .ssh: "network"
-        case .local: "terminal.fill"
-        case .serial: "cable.connector"
         }
     }
 
@@ -286,6 +646,8 @@ struct ContentView: View {
             return sessionManager.selectAdjacentSession(offset: 1)
         case .previousTab:
             return sessionManager.selectAdjacentSession(offset: -1)
+        case .focusOtherPane:
+            return sessionManager.focusOtherPane()
         case .findTerminal:
             guard let session = sessionManager.selectedSession else { return false }
             session.showTerminalFind()
@@ -300,61 +662,289 @@ struct ContentView: View {
     }
 }
 
+private struct TerminalSessionIcon: View {
+    @EnvironmentObject private var hostStore: HostStore
+    @ObservedObject var session: TerminalSession
+    let size: CGFloat
+
+    var body: some View {
+        switch session.kind {
+        case .ssh:
+            if let platform = currentPlatform {
+                HostPlatformBadge(platform: platform, size: size)
+            } else {
+                Image(systemName: "network")
+                    .frame(width: size, height: size)
+            }
+        case .local:
+            Image(systemName: "terminal.fill")
+                .frame(width: size, height: size)
+        case .serial:
+            Image(systemName: "cable.connector")
+                .frame(width: size, height: size)
+        }
+    }
+
+    private var currentPlatform: HostPlatform? {
+        guard let host = session.host else { return nil }
+        return hostStore.profile(id: host.id)?.detectedPlatform ?? host.detectedPlatform
+    }
+}
+
+private enum WorkspaceTabDragProposal: Equatable {
+    case reorder(Int)
+    case merge(
+        targetWorkspaceID: TerminalWorkspace.ID,
+        position: TerminalWorkspaceDropPosition
+    )
+
+    var mergePosition: TerminalWorkspaceDropPosition? {
+        guard case .merge(_, let position) = self else { return nil }
+        return position
+    }
+}
+
+enum TerminalWorkspaceLayout {
+    static let dividerThickness: CGFloat = 6
+    static let dividerHitThickness: CGFloat = 12
+    static let terminalHorizontalInset: CGFloat = 12
+    static let terminalBottomInset: CGFloat = 12
+    static let terminalHeaderHeight: CGFloat = 48
+    static let focusBorderClearance: CGFloat = 2
+}
+
+private struct WorkspaceSplitDropPreview: View {
+    let position: TerminalWorkspaceDropPosition
+    let isAllowed: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            let terminalFrame = terminalPanelFrame(in: geometry.size)
+            let targetFrame = previewFrame(in: terminalFrame)
+            RoundedRectangle(cornerRadius: 14)
+                .fill(previewColor.opacity(0.30))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(previewColor.opacity(0.85), lineWidth: 2)
+                }
+                .overlay {
+                Image(systemName: previewSymbol)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(previewColor)
+                    .padding(8)
+                    .background(.regularMaterial, in: .circle)
+                }
+                .frame(
+                    width: targetFrame.width,
+                    height: targetFrame.height
+                )
+                .position(x: targetFrame.midX, y: targetFrame.midY)
+        }
+    }
+
+    private var previewColor: Color { isAllowed ? .green : .red }
+
+    private var previewSymbol: String {
+        switch position {
+        case .left: "arrow.left"
+        case .right: "arrow.right"
+        case .top: "arrow.up"
+        case .bottom: "arrow.down"
+        }
+    }
+
+    private func terminalPanelFrame(in size: CGSize) -> CGRect {
+        let clearance = TerminalWorkspaceLayout.focusBorderClearance + 1
+        let horizontalInset = TerminalWorkspaceLayout.terminalHorizontalInset + clearance
+        let topInset = TerminalWorkspaceLayout.terminalHeaderHeight + clearance
+        let bottomInset = TerminalWorkspaceLayout.terminalBottomInset + clearance
+        return CGRect(
+            x: horizontalInset,
+            y: topInset,
+            width: max(size.width - horizontalInset * 2, 0),
+            height: max(size.height - topInset - bottomInset, 0)
+        )
+    }
+
+    private func previewFrame(in frame: CGRect) -> CGRect {
+        switch position {
+        case .left:
+            CGRect(x: frame.minX, y: frame.minY, width: frame.width / 2, height: frame.height)
+        case .right:
+            CGRect(x: frame.midX, y: frame.minY, width: frame.width / 2, height: frame.height)
+        case .top:
+            CGRect(x: frame.minX, y: frame.minY, width: frame.width, height: frame.height / 2)
+        case .bottom:
+            CGRect(x: frame.minX, y: frame.midY, width: frame.width, height: frame.height / 2)
+        }
+    }
+}
+
+private struct WorkspaceDragGhost: View {
+    @ObservedObject var session: TerminalSession
+    let title: String
+    let isWorkspace: Bool
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if isWorkspace {
+                Image(systemName: "rectangle.split.2x1")
+            } else {
+                TerminalSessionIcon(session: session, size: 18)
+            }
+            Text(title)
+                .lineLimit(1)
+        }
+        .font(.callout.weight(.medium))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: .rect(cornerRadius: 9))
+        .overlay {
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(Color.primary.opacity(0.15))
+        }
+        .shadow(color: .black.opacity(0.18), radius: 7, y: 3)
+    }
+}
+
+private struct WorkspaceReorderDropZone: View {
+    let insertionIndex: Int
+    let isGestureTargeted: Bool
+
+    var body: some View {
+        ZStack {
+            Color.clear
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: 3, height: 26)
+                .opacity(isGestureTargeted ? 1 : 0)
+        }
+        .frame(width: 7, height: 34)
+        .contentShape(.rect)
+    }
+}
+
+private struct WorkspaceTabFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [TerminalWorkspace.ID: CGRect] = [:]
+
+    static func reduce(
+        value: inout [TerminalWorkspace.ID: CGRect],
+        nextValue: () -> [TerminalWorkspace.ID: CGRect]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
 private enum LibraryWorkspace {
     case hosts
     case sftp
 }
 
+private enum WorkspaceMouseDragSource {
+    case workspace(TerminalWorkspace.ID)
+    case pane(TerminalSession.ID)
+}
+
+private struct WorkspaceDragPresentation {
+    let session: TerminalSession
+    let title: String
+    let isWorkspace: Bool
+    let location: CGPoint
+    let previewPosition: TerminalWorkspaceDropPosition?
+    let previewFrame: CGRect
+}
+
 private struct AppShortcutMonitorView: NSViewRepresentable {
     @ObservedObject var shortcutStore: AppShortcutStore
+    let hostStore: HostStore
     let perform: (AppShortcutAction) -> Bool
     let shouldSuppressManagedDefaults: () -> Bool
+    let prepareDrag: (CGRect) -> Void
+    let beginDrag: (CGPoint) -> Bool
+    let changeDrag: (CGPoint) -> WorkspaceDragPresentation?
+    let endDrag: (CGPoint) -> Void
+    let cancelDrag: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             shortcutStore: shortcutStore,
+            hostStore: hostStore,
             perform: perform,
-            shouldSuppressManagedDefaults: shouldSuppressManagedDefaults
+            shouldSuppressManagedDefaults: shouldSuppressManagedDefaults,
+            prepareDrag: prepareDrag,
+            beginDrag: beginDrag,
+            changeDrag: changeDrag,
+            endDrag: endDrag,
+            cancelDrag: cancelDrag
         )
     }
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView(frame: .zero)
+    func makeNSView(context: Context) -> WorkspaceMonitorNSView {
+        let view = WorkspaceMonitorNSView(frame: .zero)
         context.coordinator.hostView = view
         context.coordinator.installMonitor()
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {
+    func updateNSView(_ nsView: WorkspaceMonitorNSView, context: Context) {
         context.coordinator.shortcutStore = shortcutStore
+        context.coordinator.hostStore = hostStore
         context.coordinator.perform = perform
         context.coordinator.shouldSuppressManagedDefaults = shouldSuppressManagedDefaults
+        context.coordinator.prepareDrag = prepareDrag
+        context.coordinator.beginDrag = beginDrag
+        context.coordinator.changeDrag = changeDrag
+        context.coordinator.endDrag = endDrag
+        context.coordinator.cancelDrag = cancelDrag
     }
 
-    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+    static func dismantleNSView(_ nsView: WorkspaceMonitorNSView, coordinator: Coordinator) {
         coordinator.removeMonitor()
+        nsView.clearDragPresentation()
     }
 
     final class Coordinator {
         var shortcutStore: AppShortcutStore
+        var hostStore: HostStore
         var perform: (AppShortcutAction) -> Bool
         var shouldSuppressManagedDefaults: () -> Bool
-        weak var hostView: NSView?
-        private var monitor: Any?
+        var prepareDrag: (CGRect) -> Void
+        var beginDrag: (CGPoint) -> Bool
+        var changeDrag: (CGPoint) -> WorkspaceDragPresentation?
+        var endDrag: (CGPoint) -> Void
+        var cancelDrag: () -> Void
+        weak var hostView: WorkspaceMonitorNSView?
+        private var keyMonitor: Any?
+        private var mouseMonitor: Any?
+        private var mouseDownPoint: CGPoint?
+        private var isTrackingDrag = false
+        private var isDragging = false
 
         init(
             shortcutStore: AppShortcutStore,
+            hostStore: HostStore,
             perform: @escaping (AppShortcutAction) -> Bool,
-            shouldSuppressManagedDefaults: @escaping () -> Bool
+            shouldSuppressManagedDefaults: @escaping () -> Bool,
+            prepareDrag: @escaping (CGRect) -> Void,
+            beginDrag: @escaping (CGPoint) -> Bool,
+            changeDrag: @escaping (CGPoint) -> WorkspaceDragPresentation?,
+            endDrag: @escaping (CGPoint) -> Void,
+            cancelDrag: @escaping () -> Void
         ) {
             self.shortcutStore = shortcutStore
+            self.hostStore = hostStore
             self.perform = perform
             self.shouldSuppressManagedDefaults = shouldSuppressManagedDefaults
+            self.prepareDrag = prepareDrag
+            self.beginDrag = beginDrag
+            self.changeDrag = changeDrag
+            self.endDrag = endDrag
+            self.cancelDrag = cancelDrag
         }
 
         func installMonitor() {
             removeMonitor()
-            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self, event.window === self.hostView?.window else { return event }
                 if let action = self.shortcutStore.action(matching: event) {
                     return self.perform(action) ? nil : event
@@ -364,23 +954,155 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                 }
                 return event
             }
+            mouseMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
+            ) { [weak self] event in
+                guard let self, let hostView = self.hostView,
+                      event.window === hostView.window else { return event }
+                let point = hostView.convert(event.locationInWindow, from: nil)
+
+                switch event.type {
+                case .leftMouseDown:
+                    self.prepareDrag(hostView.bounds)
+                    self.mouseDownPoint = point
+                    self.isTrackingDrag = self.beginDrag(point)
+                    self.isDragging = false
+                case .leftMouseDragged:
+                    guard self.isTrackingDrag, let mouseDownPoint = self.mouseDownPoint else { return event }
+                    let deltaX = point.x - mouseDownPoint.x
+                    let deltaY = point.y - mouseDownPoint.y
+                    guard self.isDragging || deltaX * deltaX + deltaY * deltaY >= 16 else { return event }
+                    self.isDragging = true
+                    if let presentation = self.changeDrag(point) {
+                        hostView.showDragPresentation(presentation, hostStore: self.hostStore)
+                    }
+                    return nil
+                case .leftMouseUp:
+                    if self.isTrackingDrag {
+                        if self.isDragging { self.endDrag(point) }
+                        else { self.cancelDrag() }
+                    }
+                    hostView.clearDragPresentation()
+                    self.resetMouseDrag()
+                default:
+                    break
+                }
+                return event
+            }
         }
 
         func removeMonitor() {
-            if let monitor {
-                NSEvent.removeMonitor(monitor)
-                self.monitor = nil
+            if let keyMonitor {
+                NSEvent.removeMonitor(keyMonitor)
+                self.keyMonitor = nil
             }
+            if let mouseMonitor {
+                NSEvent.removeMonitor(mouseMonitor)
+                self.mouseMonitor = nil
+            }
+            hostView?.clearDragPresentation()
+            resetMouseDrag()
+        }
+
+        private func resetMouseDrag() {
+            mouseDownPoint = nil
+            isTrackingDrag = false
+            isDragging = false
         }
 
         deinit { removeMonitor() }
     }
+
+    final class WorkspaceMonitorNSView: NSView {
+        private var ghostHost: NSHostingView<AnyView>?
+        private var previewHost: NSHostingView<AnyView>?
+        private var ghostSessionID: TerminalSession.ID?
+        private var ghostTitle = ""
+        private var ghostIsWorkspace = false
+        private var ghostSize = CGSize.zero
+        private var previewPosition: TerminalWorkspaceDropPosition?
+
+        override var isFlipped: Bool { true }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        func showDragPresentation(_ presentation: WorkspaceDragPresentation, hostStore: HostStore) {
+            let ghostNeedsUpdate = ghostSessionID != presentation.session.id
+                || ghostTitle != presentation.title
+                || ghostIsWorkspace != presentation.isWorkspace
+            if ghostHost == nil {
+                let host = NSHostingView(rootView: AnyView(EmptyView()))
+                host.translatesAutoresizingMaskIntoConstraints = true
+                addSubview(host)
+                ghostHost = host
+            }
+            if ghostNeedsUpdate, let ghostHost {
+                ghostHost.rootView = AnyView(
+                    WorkspaceDragGhost(
+                        session: presentation.session,
+                        title: presentation.title,
+                        isWorkspace: presentation.isWorkspace
+                    )
+                    .environmentObject(hostStore)
+                )
+                ghostSessionID = presentation.session.id
+                ghostTitle = presentation.title
+                ghostIsWorkspace = presentation.isWorkspace
+                ghostHost.layoutSubtreeIfNeeded()
+                ghostSize = ghostHost.fittingSize
+            }
+            if let ghostHost {
+                ghostHost.frame = CGRect(
+                    x: presentation.location.x - ghostSize.width / 2,
+                    y: presentation.location.y - ghostSize.height / 2,
+                    width: ghostSize.width,
+                    height: ghostSize.height
+                )
+                ghostHost.isHidden = false
+            }
+
+            if let position = presentation.previewPosition {
+                if previewHost == nil {
+                    let host = NSHostingView(rootView: AnyView(EmptyView()))
+                    host.translatesAutoresizingMaskIntoConstraints = true
+                    addSubview(host, positioned: .below, relativeTo: ghostHost)
+                    previewHost = host
+                }
+                if previewPosition != position, let previewHost {
+                    previewHost.rootView = AnyView(
+                        WorkspaceSplitDropPreview(position: position, isAllowed: true)
+                    )
+                    previewPosition = position
+                }
+                previewHost?.frame = presentation.previewFrame
+                previewHost?.isHidden = false
+            } else {
+                previewHost?.isHidden = true
+                previewPosition = nil
+            }
+        }
+
+        func clearDragPresentation() {
+            ghostHost?.isHidden = true
+            previewHost?.isHidden = true
+            ghostSessionID = nil
+            ghostTitle = ""
+            ghostIsWorkspace = false
+            ghostSize = .zero
+            previewPosition = nil
+        }
+    }
 }
 
-private struct TerminalWorkspaceView: View {
+struct TerminalWorkspaceView: View {
     @EnvironmentObject private var hostStore: HostStore
     @ObservedObject var session: TerminalSession
+    let isVisible: Bool
     let isActive: Bool
+    let workspaceIsSplit: Bool
+    let splitAxis: TerminalWorkspaceSplitAxis?
+    let paneIndex: Int?
+    let onActivate: () -> Void
+    let onToggleSplit: () -> Void
     let onClose: () -> Void
 
     var body: some View {
@@ -388,10 +1110,13 @@ private struct TerminalWorkspaceView: View {
             Color(nsColor: .windowBackgroundColor)
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
-                    Label(session.detailDescription, systemImage: detailSymbol)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    HStack(spacing: 7) {
+                        TerminalSessionIcon(session: session, size: 18)
+                        Text(session.detailDescription)
+                            .lineLimit(1)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     Spacer()
                     HStack(spacing: 6) {
                         Circle().fill(sessionStatusColor).frame(width: 7, height: 7)
@@ -401,6 +1126,16 @@ private struct TerminalWorkspaceView: View {
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
                     .background(Color.primary.opacity(0.055), in: .capsule)
+                    if workspaceIsSplit {
+                        Button(action: onToggleSplit) {
+                            Image(systemName: splitAxis == .horizontal
+                                  ? "rectangle.split.1x2"
+                                  : "rectangle.split.2x1")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help(splitAxis == .horizontal ? "切換為上下分割" : "切換為左右分割")
+                    }
                     if session.canUseSavedPassword {
                         Button {
                             session.sendSavedPassword()
@@ -422,24 +1157,34 @@ private struct TerminalWorkspaceView: View {
                     .menuStyle(.borderlessButton)
                     .fixedSize()
                 }
+                .contentShape(.rect)
                 .padding(.horizontal, 15)
                 .padding(.vertical, 10)
 
                 TerminalContainerView(
                     session: session,
+                    isVisible: isVisible,
                     isActive: isActive,
                     onCloseAfterUserEOF: onClose,
-                    onPlatformDetected: recordPlatform
+                    onPlatformDetected: recordPlatform,
+                    onActivate: onActivate
                 )
                     .clipShape(.rect(cornerRadius: 13))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 13)
-                            .stroke(Color.primary.opacity(0.10), lineWidth: 1)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, TerminalWorkspaceLayout.terminalHorizontalInset)
+                    .padding(.bottom, TerminalWorkspaceLayout.terminalBottomInset)
             }
         }
+        .clipShape(.rect(cornerRadius: 13))
+        .overlay {
+            RoundedRectangle(cornerRadius: 13)
+                .stroke(
+                    Color.primary.opacity(isActive ? 0.44 : 0.22),
+                    lineWidth: isActive ? 1.25 : 1
+                )
+        }
+        .padding(panelInsets)
+        .contentShape(.rect)
+        .simultaneousGesture(TapGesture().onEnded(onActivate))
         .alert("儲存這個主機的登入密碼？", isPresented: passwordSaveOfferBinding) {
             Button("安全儲存密碼") {
                 session.saveVerifiedPassword()
@@ -449,6 +1194,22 @@ private struct TerminalWorkspaceView: View {
             }
         } message: {
             Text("OpenSSH 已確認剛才輸入的密碼成功登入 \(session.detailDescription)。儲存後，MyTerm 下次可自動登入；密碼會留在這台 Mac 的加密保管庫。")
+        }
+    }
+
+    private var panelInsets: EdgeInsets {
+        guard workspaceIsSplit, let splitAxis, let paneIndex else {
+            return EdgeInsets(top: 4, leading: 12, bottom: 12, trailing: 12)
+        }
+        return switch (splitAxis, paneIndex) {
+        case (.horizontal, 0):
+            EdgeInsets(top: 4, leading: 12, bottom: 12, trailing: 2)
+        case (.horizontal, _):
+            EdgeInsets(top: 4, leading: 2, bottom: 12, trailing: 12)
+        case (.vertical, 0):
+            EdgeInsets(top: 4, leading: 12, bottom: 2, trailing: 12)
+        case (.vertical, _):
+            EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 12)
         }
     }
 
@@ -469,14 +1230,6 @@ private struct TerminalWorkspaceView: View {
         case .connected: .green
         case .disconnected: .secondary
         case .failed: .red
-        }
-    }
-
-    private var detailSymbol: String {
-        switch session.kind {
-        case .ssh: "lock.shield"
-        case .local: "desktopcomputer"
-        case .serial: "cable.connector"
         }
     }
 

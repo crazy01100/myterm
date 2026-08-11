@@ -5,23 +5,33 @@ import SwiftTerm
 struct TerminalContainerView: NSViewRepresentable {
     @ObservedObject var session: TerminalSession
     @Environment(\.colorScheme) private var colorScheme
+    let isVisible: Bool
     let isActive: Bool
     let onCloseAfterUserEOF: () -> Void
     let onPlatformDetected: (HostPlatform) -> Void
+    let onActivate: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(session: session, onCloseAfterUserEOF: onCloseAfterUserEOF)
+        Coordinator(
+            session: session,
+            isVisible: isVisible,
+            onCloseAfterUserEOF: onCloseAfterUserEOF,
+            onActivate: onActivate
+        )
     }
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let terminal = LoginAwareTerminalView(frame: .zero)
+        context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         terminal.processDelegate = context.coordinator
         terminal.font = NSFont(name: "SFMono-Regular", size: 14) ?? NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
         terminal.fontSmoothing = true
         terminal.scrollerStyle = .overlay
         applyTheme(to: terminal)
+        context.coordinator.lastAppliedColorScheme = colorScheme
         context.coordinator.installControlDMonitor(for: terminal)
+        context.coordinator.installActivationMonitor(for: terminal)
         if session.kind == .ssh {
             terminal.onPlatformDetected = { platform in
                 Task { @MainActor in onPlatformDetected(platform) }
@@ -41,6 +51,9 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         terminal.onUserInput = { [weak session] in
             Task { @MainActor in session?.setPasswordPromptActive(false) }
+        }
+        terminal.onActivated = {
+            Task { @MainActor in onActivate() }
         }
         if session.canUseSavedPassword {
             terminal.onLoginPasswordPrompt = { [weak terminal, weak session] in
@@ -78,8 +91,13 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+        context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
-        applyTheme(to: nsView)
+        context.coordinator.onActivate = onActivate
+        if context.coordinator.lastAppliedColorScheme != colorScheme {
+            applyTheme(to: nsView)
+            context.coordinator.lastAppliedColorScheme = colorScheme
+        }
     }
 
     private func applyTheme(to terminal: LocalProcessTerminalView) {
@@ -101,21 +119,57 @@ struct TerminalContainerView: NSViewRepresentable {
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
         coordinator.removeControlDMonitor()
+        coordinator.removeActivationMonitor()
         coordinator.cancelPlatformProbe()
-        coordinator.session.authenticationDidEnd()
+        // Do not mutate the observed TerminalSession while SwiftUI is destroying
+        // its view graph. Explicit closes already clean up through disconnect(),
+        // while natural process exits are handled by processTerminated().
         if nsView.process.running { nsView.process.terminate() }
     }
 
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
         let session: TerminalSession
         let onCloseAfterUserEOF: () -> Void
+        var onActivate: () -> Void
         private var controlDMonitor: Any?
+        private var activationMonitor: Any?
         private var platformProbeTask: Task<Void, Never>?
         private var closeAfterEOFRequested = false
+        var isVisible: Bool
         var isActive = false
-        @MainActor init(session: TerminalSession, onCloseAfterUserEOF: @escaping () -> Void) {
+        var lastAppliedColorScheme: ColorScheme?
+        @MainActor init(
+            session: TerminalSession,
+            isVisible: Bool,
+            onCloseAfterUserEOF: @escaping () -> Void,
+            onActivate: @escaping () -> Void
+        ) {
             self.session = session
+            self.isVisible = isVisible
             self.onCloseAfterUserEOF = onCloseAfterUserEOF
+            self.onActivate = onActivate
+        }
+
+        func installActivationMonitor(for terminal: LocalProcessTerminalView) {
+            removeActivationMonitor()
+            activationMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown]
+            ) { [weak self, weak terminal] event in
+                guard let self, let terminal, event.window === terminal.window else { return event }
+                guard self.isVisible else { return event }
+                let point = terminal.convert(event.locationInWindow, from: nil)
+                guard terminal.bounds.contains(point) else { return event }
+                terminal.window?.makeFirstResponder(terminal)
+                self.onActivate()
+                return event
+            }
+        }
+
+        func removeActivationMonitor() {
+            if let activationMonitor {
+                NSEvent.removeMonitor(activationMonitor)
+                self.activationMonitor = nil
+            }
         }
 
         func installControlDMonitor(for terminal: LocalProcessTerminalView) {
@@ -206,10 +260,22 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onPlatformDetected: ((HostPlatform) -> Void)?
     var onPasswordPromptStateChanged: ((Bool) -> Void)?
     var onUserInput: (() -> Void)?
+    var onActivated: (() -> Void)?
     private var promptDetector = LoginPasswordPromptDetector()
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
     private var platformDetector = HostPlatformDetector()
     private var passwordCapture = LoginPasswordCapture()
+    private var isCoalescingInterruptedOutput = false
+    private var interruptedOutputTail: [UInt8] = []
+    private var interruptedOutputFlushWorkItem: DispatchWorkItem?
+    private var interruptedOutputDeadline: DispatchTime?
+    private let interruptedOutputTailLimit = 16 * 1024
+    private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
+
+    override func mouseDown(with event: NSEvent) {
+        onActivated?()
+        super.mouseDown(with: event)
+    }
 
     func beginCapturingLoginPassword() {
         passwordCapture.begin()
@@ -222,6 +288,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
 
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
         let captureResult = passwordCapture.consume(data)
+        if data.contains(0x03) {
+            beginCoalescingInterruptedOutput()
+        }
         if passwordPromptStateDetector.userDidSendInput() != nil {
             onPasswordPromptStateChanged?(false)
         }
@@ -238,6 +307,19 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     }
 
     override func dataReceived(slice: ArraySlice<UInt8>) {
+        if isCoalescingInterruptedOutput {
+            retainInterruptedOutputTail(slice)
+            if let deadline = interruptedOutputDeadline, DispatchTime.now() >= deadline {
+                flushInterruptedOutputTail()
+            } else {
+                scheduleInterruptedOutputFlush()
+            }
+            return
+        }
+        deliverReceivedData(slice)
+    }
+
+    private func deliverReceivedData(_ slice: ArraySlice<UInt8>) {
         super.dataReceived(slice: slice)
         if let state = passwordPromptStateDetector.consume(slice) {
             onPasswordPromptStateChanged?(state)
@@ -251,5 +333,40 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             promptDetector = LoginPasswordPromptDetector()
             onLoginPasswordPrompt?()
         }
+    }
+
+    private func beginCoalescingInterruptedOutput() {
+        interruptedOutputFlushWorkItem?.cancel()
+        interruptedOutputTail.removeAll(keepingCapacity: true)
+        interruptedOutputDeadline = .now() + .nanoseconds(Int(interruptedOutputMaximumDelay))
+        isCoalescingInterruptedOutput = true
+        scheduleInterruptedOutputFlush()
+    }
+
+    private func retainInterruptedOutputTail(_ slice: ArraySlice<UInt8>) {
+        interruptedOutputTail.append(contentsOf: slice)
+        if interruptedOutputTail.count > interruptedOutputTailLimit {
+            interruptedOutputTail.removeFirst(interruptedOutputTail.count - interruptedOutputTailLimit)
+        }
+    }
+
+    private func scheduleInterruptedOutputFlush() {
+        interruptedOutputFlushWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.flushInterruptedOutputTail()
+        }
+        interruptedOutputFlushWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(50), execute: workItem)
+    }
+
+    private func flushInterruptedOutputTail() {
+        interruptedOutputFlushWorkItem?.cancel()
+        interruptedOutputFlushWorkItem = nil
+        interruptedOutputDeadline = nil
+        isCoalescingInterruptedOutput = false
+        let tail = interruptedOutputTail
+        interruptedOutputTail.removeAll(keepingCapacity: true)
+        guard !tail.isEmpty else { return }
+        deliverReceivedData(tail[...])
     }
 }
