@@ -240,6 +240,10 @@ cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert CFBundleVersion -string "$build_number" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert MyTermBuildDate -string "$build_date" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert SUEnableAutomaticChecks -bool false "$app_dir/Contents/Info.plist"
+if (( require_stable_signing == 1 )); then
+    stable_release_requirement="$(read_trimmed_file "$project_dir/$MYTERM_CODE_SIGN_REQUIREMENT_FILE")"
+    /usr/bin/plutil -insert MyTermStableReleaseRequirement -string "$stable_release_requirement" "$app_dir/Contents/Info.plist"
+fi
 if (( update_lab == 1 )); then
     /usr/bin/plutil -replace CFBundleIdentifier -string "tw.local.MySSHClient.UpdateLab" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -replace CFBundleDisplayName -string "MyTerm 更新實驗室" "$app_dir/Contents/Info.plist"

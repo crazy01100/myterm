@@ -102,6 +102,12 @@ architectures="$(/usr/bin/lipo -archs "$executable")"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "$sparkle_framework"
 if (( require_stable_signing == 1 )); then
     validate_stable_code_signature "$project_dir" "$app_path"
+    expected_release_requirement="$(read_trimmed_file "$project_dir/$MYTERM_CODE_SIGN_REQUIREMENT_FILE")"
+    embedded_release_requirement="$(/usr/bin/plutil -extract MyTermStableReleaseRequirement raw "$plist" 2>/dev/null || true)"
+    [[ "$embedded_release_requirement" == "$expected_release_requirement" ]] || {
+        echo "Stable release requirement is missing from Info.plist or does not match the signing baseline." >&2
+        exit 1
+    }
 fi
 
 sparkle_link="$(/usr/bin/otool -L "$executable" | /usr/bin/awk '/Sparkle\.framework/ {print $1; exit}')"
