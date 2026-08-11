@@ -16,7 +16,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
 - 主機密碼保存於本機 AES-GCM 加密保管庫；只有一把根金鑰存於 macOS Keychain。密碼不寫入主機資料檔，也不透過剪貼簿填入。
 - 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP。
-- SFTP 上傳、下載、Finder 拖放、覆蓋確認、新增資料夾、重新命名、刪除與權限調整；本機面板可在 App 內進入 OneDrive 等符號連結資料夾。
+- SFTP 上傳、下載、覆蓋確認、新增資料夾、重新命名、刪除與權限調整；可從 Finder 把檔案或資料夾拖到右側遠端窗格，上傳至目前遠端目錄；本機面板可在 App 內進入 OneDrive 等符號連結資料夾。
 - 主機庫與 SFTP 使用一致的滑過、單擊選取及雙擊開啟操作；深層 SFTP 路徑會自動保留關鍵層級並以 `…` 收合中段目錄。
 - MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
 - 可調整或停用的 App 內快捷鍵；已儲存密碼只會在安全的密碼提示階段允許填入。
