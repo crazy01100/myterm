@@ -4,36 +4,45 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>MyTerm</title>
         <item>
-            <title>1.0.5</title>
-            <pubDate>Wed, 12 Aug 2026 16:34:43 +0800</pubDate>
-            <sparkle:version>20260812163354</sparkle:version>
-            <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+            <title>1.0.6</title>
+            <pubDate>Wed, 12 Aug 2026 23:22:56 +0800</pubDate>
+            <sparkle:version>20260812232211</sparkle:version>
+            <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.5
+            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.6
 
 ## 修正與改善
 
-- 修復 SFTP 本機與遠端檔案拖放傳輸失效，恢復拖曳上傳、下載與覆蓋確認流程。
-- 在 App 封裝中明確宣告 SFTP 私有拖放資料型別，並新增發布前封裝檢查，避免相同問題再次進入候選版或正式版。
-- 修正第一個 Terminal 分頁向下拖曳時沒有合併目標的情況；第一個分頁現在會使用後一個連線，其餘分頁仍優先使用前一個連線。
+- 修正 Keychain 已儲存舊密碼、主機密碼已在其他地方變更時，成功以新密碼登入後無法更新本機儲存密碼的問題。
+- 已儲存的登入密碼只會自動嘗試一次；若主機拒絕，第二次提示會等待使用者手動輸入，並在 OpenSSH 確認登入成功後詢問是否安全更新密碼。
+- 支援主機要求「目前密碼 → 新密碼 → 再次確認」的強制改密碼流程；只有兩次新密碼一致且伺服器明確回報成功後，才會詢問是否更新本機密碼。
+- 密碼不會被靜默覆寫。使用者必須在確認視窗選擇「安全更新密碼」，MyTerm 才會寫入本機加密保管庫。
+
+## 安全性
+
+- 強制改密碼流程不擷取目前密碼，也不會把 OTP、sudo、孤立的新密碼提示、輸入失敗、不一致或取消內容寫入保管庫。
+- 登入重試候選必須取得 OpenSSH 的密碼驗證成功證據；強制改密碼候選必須取得伺服器明確成功訊息。
+- 暫存密碼使用可清除的記憶體緩衝區，流程結束、失敗或取消時會清除候選內容。
 
 ## 驗證
 
-- 329 項本機自動測試通過。
-- 已在 MyTerm Dev 實際驗證 SFTP 拖放上傳與下載。
-- 已實際驗證第一個與非第一個 Terminal 分頁合併、雙窗格操作及重新拆分。
+- 346 項本機自動測試全數通過。
+- 已在隔離的 MyTerm Dev 核對執行路徑、版本、Build、Bundle ID、development 通道與固定簽章。
+- 已實際驗證舊儲存密碼遭拒後，以新密碼登入並更新本機保管庫。
+- 已實際驗證伺服器強制改密碼完成後，更新本機保管庫並重新使用新密碼。
 
 ## 相容性與限制
 
 - 支援 Apple Silicon 與 macOS 26 或更新版本。
-- 此版本不變更主機、群組、密碼、同步或 Keychain 的資料格式。
+- 此版本不變更主機、群組、同步密文、Keychain 根金鑰或 Firestore 資料格式，不需要資料遷移。
+- 不同伺服器若使用未辨識的非標準密碼變更成功訊息，MyTerm 會採安全失敗，不會自動提出更新。
 - 目前未使用 Apple Developer ID；第一次手動安裝仍可能需要在 macOS 中允許開啟。正式 App 內更新會另外驗證 Sparkle Ed25519 簽章。
 ]]></description>
-            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.5-build-20260812163354-arm64.zip" length="6492921" type="application/octet-stream" sparkle:edSignature="pkD9SC/DqLfdObgAbdhzWKLxxJWB7jTRXNOBrhMOcwpEGNSsY5u2oYEkERJhd0YOtdexgmI+DxHWpdyFNJR4AA=="></enclosure>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.6-build-20260812232211-arm64.zip" length="6503001" type="application/octet-stream" sparkle:edSignature="oTZjSGEiOYJ+XvFO3uLMjBn9lVwwN54nPc5szbXaJoFNsurKFchXSW7cGJbu1j1ow4ROmbW8/vVjaYAbVYySDw=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 2wySfAXw3HZVXP5LOhambZeTMcxnPECLlshH/8qTVAl5hggUGEzAMqlMUwxui58XCw6Sb10CCGq56+fmTiZKBw==
-length: 2218
+edSignature: 21VuDbA/KRu9+iAq3/Dx+MTsfrbYCw+7h+P3Tern1pvERDL7nGJGfqon04ybKXrhQDzn6Wm0Zs/YrfANCzAfAw==
+length: 3204
 -->
