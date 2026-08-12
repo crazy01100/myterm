@@ -4,45 +4,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>MyTerm</title>
         <item>
-            <title>1.0.6</title>
-            <pubDate>Wed, 12 Aug 2026 23:22:56 +0800</pubDate>
-            <sparkle:version>20260812232211</sparkle:version>
-            <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
+            <title>1.0.7</title>
+            <pubDate>Thu, 13 Aug 2026 02:01:28 +0800</pubDate>
+            <sparkle:version>20260813020047</sparkle:version>
+            <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.6
+            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.7
 
-## 修正與改善
+## 新功能
 
-- 修正 Keychain 已儲存舊密碼、主機密碼已在其他地方變更時，成功以新密碼登入後無法更新本機儲存密碼的問題。
-- 已儲存的登入密碼只會自動嘗試一次；若主機拒絕，第二次提示會等待使用者手動輸入，並在 OpenSSH 確認登入成功後詢問是否安全更新密碼。
-- 支援主機要求「目前密碼 → 新密碼 → 再次確認」的強制改密碼流程；只有兩次新密碼一致且伺服器明確回報成功後，才會詢問是否更新本機密碼。
-- 密碼不會被靜默覆寫。使用者必須在確認視窗選擇「安全更新密碼」，MyTerm 才會寫入本機加密保管庫。
+- SSH 連線建立期間會顯示目前階段，連線失敗時可展開查看保留 OpenSSH 原始措辭的錯誤資訊。
+- 失敗畫面可直接重新連線、開啟對應主機設定，或複製經隱私處理的診斷記錄。
 
-## 安全性
+## 隱私與可靠性
 
-- 強制改密碼流程不擷取目前密碼，也不會把 OTP、sudo、孤立的新密碼提示、輸入失敗、不一致或取消內容寫入保管庫。
-- 登入重試候選必須取得 OpenSSH 的密碼驗證成功證據；強制改密碼候選必須取得伺服器明確成功訊息。
-- 暫存密碼使用可清除的記憶體緩衝區，流程結束、失敗或取消時會清除候選內容。
+- OpenSSH verbose debug 只用於內部分類，不會顯示或複製；本機路徑、代理程式與機密資訊會先排除或遮蔽。
+- SSH 驗證成功後立即釋放連線診斷內容；異常退出可能留下的短期診斷檔會在下次啟動時清理，不會同步或長期保存。
+- 快速失敗的連線也會在程序結束前取得最後一份已清理的原始錯誤，避免只看到籠統分類。
+
+## 相容性
+
+- 主機資料、端對端同步格式、Keychain 根金鑰與更新信任鏈均未變更。
+- 支援 Apple Silicon，最低系統版本為 macOS 26。
 
 ## 驗證
 
-- 346 項本機自動測試全數通過。
-- 已在隔離的 MyTerm Dev 核對執行路徑、版本、Build、Bundle ID、development 通道與固定簽章。
-- 已實際驗證舊儲存密碼遭拒後，以新密碼登入並更新本機保管庫。
-- 已實際驗證伺服器強制改密碼完成後，更新本機保管庫並重新使用新密碼。
-
-## 相容性與限制
-
-- 支援 Apple Silicon 與 macOS 26 或更新版本。
-- 此版本不變更主機、群組、同步密文、Keychain 根金鑰或 Firestore 資料格式，不需要資料遷移。
-- 不同伺服器若使用未辨識的非標準密碼變更成功訊息，MyTerm 會採安全失敗，不會自動提出更新。
-- 目前未使用 Apple Developer ID；第一次手動安裝仍可能需要在 macOS 中允許開啟。正式 App 內更新會另外驗證 Sparkle Ed25519 簽章。
+- 425 項本機自動測試全部通過。
+- 已實際驗證拒絕連線、原始錯誤顯示、重新連線、編輯主機、Local Terminal、Serial、SFTP 基本入口，以及 Workspace 左右／上下合併。
 ]]></description>
-            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.6-build-20260812232211-arm64.zip" length="6503001" type="application/octet-stream" sparkle:edSignature="oTZjSGEiOYJ+XvFO3uLMjBn9lVwwN54nPc5szbXaJoFNsurKFchXSW7cGJbu1j1ow4ROmbW8/vVjaYAbVYySDw=="></enclosure>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.7-build-20260813020047-arm64.zip" length="6561990" type="application/octet-stream" sparkle:edSignature="hBW/Lp/mSU3XWzCZ+cv5+tXXRD9Fb8axq+17FlTkbqoTADBI3RC/YuZQLwt7jQADqa0J9iLH1xjUpeMoOsuADw=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 21VuDbA/KRu9+iAq3/Dx+MTsfrbYCw+7h+P3Tern1pvERDL7nGJGfqon04ybKXrhQDzn6Wm0Zs/YrfANCzAfAw==
-length: 3204
+edSignature: ZMrA0Coa8ql3DezXsyzVly9HvykeqqLMitu/Gp1cHwR8fPz8uSnlhh4sblUOmLtB/KEZuFvf1wPAc00Shv5wCg==
+length: 2307
 -->
