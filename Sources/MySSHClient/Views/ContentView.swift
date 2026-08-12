@@ -225,7 +225,7 @@ struct ContentView: View {
         let nextProposal: WorkspaceTabDragProposal?
         if workspaceContentFrame.contains(location),
            sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
-           let targetWorkspaceID = previousWorkspaceID(before: workspaceID) {
+           let targetWorkspaceID = sessionManager.preferredMergeTargetID(for: workspaceID) {
             if sessionManager.selectedWorkspaceID != targetWorkspaceID {
                 _ = sessionManager.selectWorkspace(targetWorkspaceID)
             }
@@ -265,7 +265,7 @@ struct ContentView: View {
         let finalProposal: WorkspaceTabDragProposal?
         if workspaceContentFrame.contains(location),
            sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
-           let targetWorkspaceID = previousWorkspaceID(before: workspaceID) {
+           let targetWorkspaceID = sessionManager.preferredMergeTargetID(for: workspaceID) {
             _ = sessionManager.selectWorkspace(targetWorkspaceID)
             finalProposal = .merge(
                 targetWorkspaceID: targetWorkspaceID,
@@ -299,14 +299,6 @@ struct ContentView: View {
         tabDragOriginalSelectionID = nil
         tabDragInsertionIndex = nil
         tabDragProposal = nil
-    }
-
-    private func previousWorkspaceID(before workspaceID: TerminalWorkspace.ID) -> TerminalWorkspace.ID? {
-        guard let sourceIndex = sessionManager.workspaces.firstIndex(where: { $0.id == workspaceID }),
-              sourceIndex > 0 else {
-            return nil
-        }
-        return sessionManager.workspaces[sourceIndex - 1].id
     }
 
     private func dropPosition(at location: CGPoint, in frame: CGRect) -> TerminalWorkspaceDropPosition {

@@ -145,6 +145,18 @@ struct TerminalWorkspaceCollection: Equatable {
         return true
     }
 
+    func preferredMergeTargetID(for sourceWorkspaceID: TerminalWorkspace.ID) -> TerminalWorkspace.ID? {
+        guard let sourceIndex = workspaces.firstIndex(where: { $0.id == sourceWorkspaceID }) else {
+            return nil
+        }
+        if sourceIndex > 0 {
+            return workspaces[sourceIndex - 1].id
+        }
+        let followingIndex = sourceIndex + 1
+        guard workspaces.indices.contains(followingIndex) else { return nil }
+        return workspaces[followingIndex].id
+    }
+
     @discardableResult
     mutating func moveWorkspace(id: TerminalWorkspace.ID, toInsertionIndex insertionIndex: Int) -> Bool {
         guard let sourceIndex = workspaces.firstIndex(where: { $0.id == id }) else { return false }

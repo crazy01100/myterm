@@ -392,6 +392,10 @@ final class SessionManager: ObservableObject {
         workspaceState.workspace(containing: sessionID)
     }
 
+    func preferredMergeTargetID(for workspaceID: TerminalWorkspace.ID) -> TerminalWorkspace.ID? {
+        workspaceState.preferredMergeTargetID(for: workspaceID)
+    }
+
     func showHostLibrary() {
         workspaceState.showLibrary()
     }

@@ -71,6 +71,26 @@ sparkle_framework="$app_path/Contents/Frameworks/Sparkle.framework"
 }
 /usr/bin/plutil -lint "$plist" >/dev/null
 
+required_sftp_drag_types=(
+    "tw.local.MySSHClient.sftp.local-drag-payload"
+    "tw.local.MySSHClient.sftp.remote-drag-payload"
+)
+for required_type in "${required_sftp_drag_types[@]}"; do
+    type_is_declared=0
+    for index in {0..1}; do
+        identifier="$(/usr/libexec/PlistBuddy -c "Print :UTExportedTypeDeclarations:$index:UTTypeIdentifier" "$plist" 2>/dev/null || true)"
+        conforms_to="$(/usr/libexec/PlistBuddy -c "Print :UTExportedTypeDeclarations:$index:UTTypeConformsTo:0" "$plist" 2>/dev/null || true)"
+        if [[ "$identifier" == "$required_type" && "$conforms_to" == "public.data" ]]; then
+            type_is_declared=1
+            break
+        fi
+    done
+    (( type_is_declared == 1 )) || {
+        echo "Required SFTP drag type is missing from Info.plist or does not conform to public.data: $required_type" >&2
+        exit 1
+    }
+done
+
 sparkle_public_key_file="$project_dir/Config/Release/SparklePublicKey.txt"
 if [[ -f "$sparkle_public_key_file" ]]; then
     expected_sparkle_public_key="$(/usr/bin/tr -d '\r\n' < "$sparkle_public_key_file")"

@@ -41,6 +41,12 @@ do {
           "terminal workspaces reorder by insertion position")
     check(workspaces.selectedWorkspaceID == thirdWorkspaceID,
           "terminal workspace reordering preserves selection")
+    check(workspaces.preferredMergeTargetID(for: thirdWorkspaceID) == firstWorkspaceID,
+          "first terminal workspace falls forward to the following merge target")
+    check(workspaces.preferredMergeTargetID(for: firstWorkspaceID) == thirdWorkspaceID,
+          "middle terminal workspace prefers its previous merge target")
+    check(workspaces.preferredMergeTargetID(for: secondWorkspaceID) == firstWorkspaceID,
+          "last terminal workspace prefers its previous merge target")
 
     let mergedID = try workspaces.merge(
         sourceWorkspaceID: secondWorkspaceID,
@@ -94,6 +100,15 @@ do {
           "closing the last terminal removes its workspace and clears selection")
 } catch {
     check(false, "terminal workspace state suite: \(error)")
+}
+
+do {
+    var singleWorkspace = TerminalWorkspaceCollection()
+    let onlyWorkspaceID = singleWorkspace.add(sessionID: UUID())
+    check(singleWorkspace.preferredMergeTargetID(for: onlyWorkspaceID) == nil,
+          "a lone terminal workspace has no merge target")
+    check(singleWorkspace.preferredMergeTargetID(for: UUID()) == nil,
+          "an unknown terminal workspace has no merge target")
 }
 
 for (position, expectedAxis, sourceComesFirst) in [

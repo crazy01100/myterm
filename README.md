@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.3**
+目前正式版本：**1.0.5**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -17,7 +17,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
 - 主機密碼保存於本機 AES-GCM 加密保管庫；只有一把根金鑰存於 macOS Keychain。密碼不寫入主機資料檔，也不透過剪貼簿填入。
 - 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP；終端機分頁可用滑鼠重新排序，快捷鍵會跟隨畫面順序。
-- 可把終端機分頁往下拖入前一個連線的內容區，依綠色預覽合併為左右或上下雙窗格；每個 Workspace 最多兩個連線，可拖曳分隔線調整比例、個別切換焦點或關閉，也可把窗格標題列拖回頂部分頁列重新拆開。
+- 可把終端機分頁往下拖入相鄰連線的內容區，依綠色預覽合併為左右或上下雙窗格；一般分頁優先與前一個連線合併，第一個分頁則會使用後一個連線。每個 Workspace 最多兩個連線，可拖曳分隔線調整比例、個別切換焦點或關閉，也可把窗格標題列拖回頂部分頁列重新拆開。
 - SFTP 上傳、下載、覆蓋確認、新增資料夾、重新命名、刪除與權限調整；可從 Finder 把檔案或資料夾拖到右側遠端窗格，上傳至目前遠端目錄；本機面板可在 App 內進入 OneDrive 等符號連結資料夾。
 - 主機庫與 SFTP 使用一致的滑過、單擊選取及雙擊開啟操作；深層 SFTP 路徑會自動保留關鍵層級並以 `…` 收合中段目錄。
 - MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
@@ -53,7 +53,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 5. 已儲存的 SSH 登入密碼會在第一次登入提示自動送出；`sudo`／`su` 等後續提示可按「填入密碼」或使用設定的快捷鍵。
 6. 「Terminal」開啟位於目前使用者家目錄的本機 zsh；「Serial」連接 `/dev/cu.*` 或 `/dev/tty.*` 裝置。
 7. 「SFTP」開啟本機與遠端雙欄檔案工作區；單擊選取主機、分類或檔案，雙擊才會進入分類／資料夾或建立連線。
-8. 在頂部分頁列內拖曳終端機分頁可重新排序；把分頁往下拖入內容區時，MyTerm 會顯示前一個連線，並以綠色區域預覽放手後的左、右、上或下雙窗格位置。合併分頁固定顯示為「Workspace」，最多容納兩個連線；可拖曳分隔線調整比例，或把任一窗格的標題列拖回頂部分頁列重新拆開。
+8. 在頂部分頁列內拖曳終端機分頁可重新排序；把分頁往下拖入內容區時，MyTerm 會顯示相鄰的合併目標，並以綠色區域預覽放手後的左、右、上或下雙窗格位置。一般分頁使用前一個連線，第一個分頁改用後一個連線。合併分頁固定顯示為「Workspace」，最多容納兩個連線；可拖曳分隔線調整比例，或把任一窗格的標題列拖回頂部分頁列重新拆開。
 
 ## 從原始碼建置
 
@@ -64,17 +64,17 @@ git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.3-dev.1 \
+  --version 1.0.5-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
 測試 App 固定位於 `build/dev/MyTerm Dev.app`，腳本只會關閉與重啟這個路徑，不會變更 `/Applications/MyTerm.app`。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-目前原始碼的完整正式候選流程會執行安全檢查、324 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
+目前原始碼的完整正式候選流程會執行安全檢查、329 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
 ```sh
 ./scripts/prepare-release-build.sh \
-  --version 1.0.3-rc.1 \
+  --version 1.0.5-rc.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -94,16 +94,17 @@ cd myterm
 
 ## 發布驗證
 
-MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證、GitHub Actions → Cloudflare Pages 外部更新站驗證，以及正式 1.0.2 → 1.0.3 App 內更新驗收。發布後的第二台 Mac 驗收另發現平台圖示的 SwiftPM resource bundle 會退回建置機絕對路徑，造成乾淨環境啟動失敗；修補流程已改由標準 App Resources 載入，並在候選 App、ZIP、GitHub 回下載資產與 Cloudflare 部署前拒絕相同封裝錯誤。修補版正式發布前仍須完成第二台 Mac 更新驗收：
+MyTerm 1.0.4 已完成平台圖示資源封裝修補、第二台 Mac 乾淨候選驗收，以及 GitHub Release → Cloudflare Pages 外部更新站驗證。1.0.5 在此基準上恢復 SFTP 檔案拖放傳輸，並讓第一個 Terminal 分頁也能選取後一個相鄰連線合併；候選與正式發布流程會共同驗證下列項目：
 
-- 324 項本機自動測試，以及既有 Firestore Security Rules 測試。
+- 329 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
 - 兩台 Mac 透過正式更新鏈升級至 1.0.1；重啟、主機、群組、密碼、SSH、SFTP 與同步均維持正常。
 - 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
 - 主機與群組的端對端加密刪除同步，以及套用遠端刪除前的本機備份。
 - 舊版分散 Keychain 項目遷移至單一本機加密保管庫；驗證次數不再隨主機數量增加。
 - Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
-- 1.0.3 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署與外部下載驗證。
-- 正式 App 由 1.0.2 經 Sparkle 更新至 1.0.3；版本、Build、簽章、資料、SSH、SFTP、同步與 Terminal 工作區均正常，Keychain 僅出現一次統一保管庫驗證。
+- SFTP 本機與遠端檔案的拖放上傳／下載，以及封裝內自訂拖放資料型別宣告。
+- 第一個與非第一個 Terminal 分頁的合併、雙窗格拖曳調整與重新拆分。
+- 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署、外部下載驗證，以及正式 1.0.4 → 1.0.5 App 內更新驗收。
 
 正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。

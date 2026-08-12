@@ -1,6 +1,6 @@
 # MyTerm 系統架構
 
-本文說明 MyTerm 1.0.3 正式版的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
+本文說明 MyTerm 1.0.5 正式版的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
 
 ## 架構總覽
 
@@ -46,12 +46,12 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
-- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；把分頁拖入前一個工作區的內容區可合併為左右或上下雙窗格，把窗格標題列拖回頂部分頁列則可拆開。合併、拆分、切換方向與調整比例都不重建底層 process。
+- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
-- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
+- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
 - 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章。
 
@@ -123,7 +123,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 `build/`、SwiftPM 快取、`node_modules/`、本機 Firebase 設定、OAuth secret、使用者匯出資料及內部計劃紀錄均不屬於公開原始碼。
 
-## 1.0.3 已知限制
+## 1.0.5 已知限制
 
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。

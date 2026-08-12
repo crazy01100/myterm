@@ -948,10 +948,12 @@ private enum SFTPApplicationPicker {
 
 private enum SFTPDragAndDrop {
     static let localPayloadType = UTType(
-        exportedAs: "tw.local.MySSHClient.sftp.local-drag-payload"
+        exportedAs: "tw.local.MySSHClient.sftp.local-drag-payload",
+        conformingTo: .data
     )
     static let remotePayloadType = UTType(
-        exportedAs: "tw.local.MySSHClient.sftp.remote-drag-payload"
+        exportedAs: "tw.local.MySSHClient.sftp.remote-drag-payload",
+        conformingTo: .data
     )
 
     static func localProvider(_ payload: SFTPLocalDragPayload) -> NSItemProvider {
