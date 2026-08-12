@@ -103,6 +103,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
+- MyTerm 自有的 SVG 平台圖示由建置腳本放入標準 `Contents/Resources/PlatformIcons`，執行期只從 `Bundle.main` 載入，不使用會嵌入建置機 fallback 路徑的 executable-target `Bundle.module`。候選 App、封裝 ZIP、GitHub 回下載資產與 Cloudflare 部署前會共同驗證圖示內容並拒絕不安全的 MyTerm SwiftPM resource accessor。
 - Sparkle 不要求 App 路徑名稱必須是 `/Applications`，但會拒絕從 App Translocation、唯讀映像、暫時位置或無法替換 App 的位置更新。正式安裝一律先將 `MyTerm.app` 移到「應用程式」資料夾；專案 `build/` 內的 App 只供開發測試。
 - 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 已將分散機密收斂到單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
 

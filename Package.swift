@@ -31,9 +31,7 @@ let package = Package(
                 .product(name: "Sodium", package: "swift-sodium"),
                 .product(name: "Sparkle", package: "Sparkle")
             ],
-            resources: [
-                .copy("Resources/PlatformIcons")
-            ]
+            exclude: ["Resources"]
         )
     ],
     swiftLanguageModes: [.v5]

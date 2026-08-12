@@ -58,6 +58,10 @@ require_ignore "Config/Local/GoogleOAuthClient.json"
 require_ignore "Config/Local/GoogleService-Info.plist"
 require_ignore "Config/Local/MyTermCloudConfig.plist"
 
+if rg -n --glob '*.swift' 'Bundle[.]module' Sources/MySSHClient; then
+    fail "MyTerm App sources must load packaged resources through Bundle.main; Bundle.module can embed a build-machine fallback path"
+fi
+
 for exported_file in Exports/Termius/*(N.); do
     [[ "${exported_file:t}" == "README.md" ]] && continue
     require_ignore "$exported_file"

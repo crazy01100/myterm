@@ -272,6 +272,10 @@ fi
 cd "$project_dir"
 export SWIFTPM_MODULECACHE_OVERRIDE="$scratch_dir/module-cache"
 export CLANG_MODULE_CACHE_PATH="$scratch_dir/clang-cache"
+# Package.swift no longer declares MyTerm-owned SwiftPM resources. Remove the
+# previously generated bundle so an incremental build cannot leak it into a
+# later App through stale scratch output.
+/bin/rm -rf -- "$release_dir/MySSHClient_MySSHClient.bundle"
 swift build -c release --arch arm64 --scratch-path "$scratch_dir"
 
 if [[ -d "$app_dir" ]]; then
@@ -312,6 +316,13 @@ if [[ -n "$sparkle_feed_url" ]]; then
     /usr/bin/plutil -insert SUVerifyUpdateBeforeExtraction -bool true "$app_dir/Contents/Info.plist"
 fi
 cp "$project_dir/Resources/AppIcon.icns" "$app_dir/Contents/Resources/AppIcon.icns"
+platform_icons_source="$project_dir/Sources/MySSHClient/Resources/PlatformIcons"
+platform_icons_destination="$app_dir/Contents/Resources/PlatformIcons"
+[[ -d "$platform_icons_source" ]] || {
+    echo "Platform icon resources are missing: $platform_icons_source" >&2
+    exit 1
+}
+/usr/bin/ditto "$platform_icons_source" "$platform_icons_destination"
 firebase_config="$project_dir/Config/Local/GoogleService-Info.plist"
 if [[ -f "$firebase_config" ]]; then
     /usr/bin/plutil -lint "$firebase_config" >/dev/null
@@ -352,7 +363,13 @@ if (( update_lab == 0 )) && [[ -f "$cloud_config" ]]; then
     done
     chmod 0644 "$runtime_cloud_config"
 fi
-for resource_bundle in "$release_dir"/*.bundle(N); do
+dependency_resource_bundles=(SwiftTerm_SwiftTerm.bundle)
+for resource_bundle_name in "${dependency_resource_bundles[@]}"; do
+    resource_bundle="$release_dir/$resource_bundle_name"
+    [[ -d "$resource_bundle" ]] || {
+        echo "Required dependency resource bundle is missing: $resource_bundle" >&2
+        exit 1
+    }
     cp -R "$resource_bundle" "$app_dir/Contents/Resources/"
 done
 sparkle_framework_candidates=("$scratch_dir"/artifacts/**/Sparkle.framework(N/))

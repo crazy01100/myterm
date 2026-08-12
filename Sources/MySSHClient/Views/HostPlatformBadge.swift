@@ -54,7 +54,7 @@ private enum PlatformIconLibrary {
     static func image(for platform: HostPlatform) -> NSImage? {
         if let cached = cache[platform] { return cached }
         guard let resourceName = platform.iconResourceName,
-              let url = Bundle.module.url(
+              let url = Bundle.main.url(
                   forResource: resourceName,
                   withExtension: "svg",
                   subdirectory: "PlatformIcons"
