@@ -15,6 +15,14 @@ struct MySSHClientApp: App {
     @StateObject private var appUpdaterStore = AppUpdaterStore()
     @AppStorage(AppTheme.storageKey) private var selectedTheme = AppTheme.automatic.rawValue
 
+    init() {
+        do {
+            try AppPaths.removeStaleSSHConnectionLogs()
+        } catch {
+            NSLog("MyTerm stale SSH diagnostic cleanup failed: %@", error.localizedDescription)
+        }
+    }
+
     private var preferredColorScheme: ColorScheme? {
         AppTheme(rawValue: selectedTheme)?.colorScheme
     }

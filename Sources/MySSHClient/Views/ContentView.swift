@@ -506,6 +506,8 @@ struct ContentView: View {
                         onActivate: { sessionManager.activate(sessionID: $0) },
                         onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
                         onClose: { sessionManager.close($0) },
+                        onRetry: { sessionManager.retry($0) },
+                        onEditHost: edit,
                         onRatioCommitted: { workspaceID, ratio in
                             sessionManager.setSplitRatio(ratio, for: workspaceID)
                         }
@@ -1096,6 +1098,10 @@ struct TerminalWorkspaceView: View {
     let onActivate: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
+    let onRetry: () -> Void
+    let onEditHost: () -> Void
+    @State private var showsConnectionPanel = true
+    @State private var showsConnectionLogs = false
 
     var body: some View {
         ZStack {
@@ -1112,7 +1118,7 @@ struct TerminalWorkspaceView: View {
                     Spacer()
                     HStack(spacing: 6) {
                         Circle().fill(sessionStatusColor).frame(width: 7, height: 7)
-                        Text(session.notice ?? session.state.label)
+                        Text(sessionStatusText)
                     }
                     .font(.caption)
                     .padding(.horizontal, 9)
@@ -1127,6 +1133,15 @@ struct TerminalWorkspaceView: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                         .help(splitAxis == .horizontal ? "切換為上下分割" : "切換為左右分割")
+                    }
+                    if session.shouldPresentConnectionExperience && !showsConnectionPanel {
+                        Button {
+                            showsConnectionPanel = true
+                        } label: {
+                            Label("連線狀態", systemImage: "waveform.path.ecg")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                     if session.canUseSavedPassword {
                         Button {
@@ -1153,14 +1168,28 @@ struct TerminalWorkspaceView: View {
                 .padding(.horizontal, 15)
                 .padding(.vertical, 10)
 
-                TerminalContainerView(
-                    session: session,
-                    isVisible: isVisible,
-                    isActive: isActive,
-                    onCloseAfterUserEOF: onClose,
-                    onPlatformDetected: recordPlatform,
-                    onActivate: onActivate
-                )
+                ZStack {
+                    TerminalContainerView(
+                        session: session,
+                        isVisible: isVisible,
+                        isActive: isActive,
+                        onCloseAfterUserEOF: onClose,
+                        onPlatformDetected: recordPlatform,
+                        onActivate: onActivate
+                    )
+
+                    if session.shouldPresentConnectionExperience && showsConnectionPanel {
+                        SSHConnectionExperienceView(
+                            session: session,
+                            showsLogs: $showsConnectionLogs,
+                            onShowTerminal: { showsConnectionPanel = false },
+                            onRetry: onRetry,
+                            onEditHost: onEditHost,
+                            onClose: onClose
+                        )
+                        .transition(.opacity)
+                    }
+                }
                     .clipShape(.rect(cornerRadius: 13))
                     .padding(.horizontal, TerminalWorkspaceLayout.terminalHorizontalInset)
                     .padding(.bottom, TerminalWorkspaceLayout.terminalBottomInset)
@@ -1177,6 +1206,12 @@ struct TerminalWorkspaceView: View {
         .padding(panelInsets)
         .contentShape(.rect)
         .simultaneousGesture(TapGesture().onEnded(onActivate))
+        .onChange(of: session.isPasswordPromptActive) { _, isActive in
+            if isActive { showsConnectionPanel = false }
+        }
+        .onChange(of: session.state) { _, state in
+            if case .failed = state { showsConnectionPanel = true }
+        }
         .alert(passwordSaveOfferTitle, isPresented: passwordSaveOfferBinding) {
             Button(passwordSaveOfferActionTitle) {
                 session.saveVerifiedPassword()
@@ -1247,10 +1282,184 @@ struct TerminalWorkspaceView: View {
         }
     }
 
+    private var sessionStatusText: String {
+        switch session.state {
+        case .connected:
+            session.notice ?? session.state.label
+        case .connecting, .disconnected, .failed:
+            session.state.label
+        }
+    }
+
     private func recordPlatform(_ platform: HostPlatform) {
         guard let hostID = session.host?.id else { return }
         do { try hostStore.recordDetectedPlatform(platform, for: hostID) }
         catch { hostStore.lastError = error.localizedDescription }
+    }
+}
+
+private struct SSHConnectionExperienceView: View {
+    @ObservedObject var session: TerminalSession
+    @Binding var showsLogs: Bool
+    let onShowTerminal: () -> Void
+    let onRetry: () -> Void
+    let onEditHost: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color(nsColor: .controlBackgroundColor)
+
+            ScrollView {
+                VStack(spacing: 22) {
+                    connectionHeader
+                    phaseIndicator
+
+                    if showsLogs {
+                        diagnosticLog
+                    }
+
+                    if let suggestion = session.connectionFailureSuggestion {
+                        Label(suggestion, systemImage: "lightbulb")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(14)
+                            .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 12))
+                    }
+
+                    actionButtons
+                }
+                .frame(maxWidth: 660)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 30)
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var connectionHeader: some View {
+        HStack(spacing: 14) {
+            TerminalSessionIcon(session: session, size: 42)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(session.displayName)
+                    .font(.title3.weight(.semibold))
+                    .lineLimit(1)
+                Text("SSH \(session.detailDescription)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 18)
+            Button(showsLogs ? "隱藏記錄" : "顯示記錄") {
+                withAnimation(.easeInOut(duration: 0.18)) { showsLogs.toggle() }
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var phaseIndicator: some View {
+        HStack(spacing: 14) {
+            if session.connectionPhase == .failed {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.red)
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(session.connectionPhase.title)
+                    .font(.headline)
+                if let failure = session.connectionFailure {
+                    Text(failure.title)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .padding(16)
+        .background(Color.accentColor.opacity(0.09), in: .rect(cornerRadius: 13))
+    }
+
+    private var diagnosticLog: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 11) {
+                Text("連線摘要")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                ForEach(Array(session.connectionEvents.enumerated()), id: \.offset) { _, event in
+                    HStack(alignment: .top, spacing: 9) {
+                        Image(systemName: event.phase == .failed ? "xmark.circle.fill" : "checkmark.circle.fill")
+                            .foregroundStyle(event.phase == .failed ? .red : .secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.phase.title)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text(event.message)
+                                .font(.callout)
+                                .textSelection(.enabled)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("OpenSSH 原始記錄")
+                        .font(.caption.weight(.semibold))
+                    Spacer()
+                    Text("已排除詳細除錯資訊並遮蔽機密")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                if session.displayedConnectionTechnicalLines.isEmpty {
+                    Text("等待 OpenSSH 回傳連線資訊…")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(session.displayedConnectionTechnicalLines.joined(separator: "\n"))
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 13))
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
+            Button("關閉", role: .cancel, action: onClose)
+                .buttonStyle(.bordered)
+
+            Button("查看終端機", action: onShowTerminal)
+                .buttonStyle(.bordered)
+
+            Spacer()
+
+            if session.connectionFailure != nil {
+                Button {
+                    session.copySanitizedConnectionReport()
+                } label: {
+                    Label("複製記錄", systemImage: "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+
+                Button("編輯主機", action: onEditHost)
+                    .buttonStyle(.bordered)
+
+                Button("重新連線", action: onRetry)
+                    .buttonStyle(.borderedProminent)
+            }
+        }
     }
 }
 

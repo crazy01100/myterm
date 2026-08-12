@@ -54,6 +54,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/SyncSettingsStore.swift \
     Sources/MySSHClient/Services/HostPlatformDetector.swift \
     Sources/MySSHClient/Services/HostPlatformProbe.swift \
+    Sources/MySSHClient/Services/SSHConnectionDiagnostics.swift \
     Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
     Sources/MySSHClient/Services/SFTPProtocol.swift \
     Sources/MySSHClient/Services/SFTPClient.swift \

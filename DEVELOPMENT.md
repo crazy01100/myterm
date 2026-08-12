@@ -7,7 +7,7 @@
 | 用途 | 固定位置 | 說明 |
 |---|---|---|
 | 正式版 | `/Applications/MyTerm.app` | 日常使用的穩定版本；開發腳本不會修改或取代它。 |
-| 本機測試版 | `build/dev/MyTerm Dev.app` | 日常功能開發與人工驗證；每次建置都更新這個固定位置。 |
+| 本機測試版 | `build/dev/MyTerm Dev.app` | 日常功能開發與人工驗證；每次建置都更新這個固定位置，並使用獨立 Bundle ID、Application Support 與本機保管庫 Keychain service。 |
 | 候選版 | `build/candidates/MyTerm-<version>-build-<build>/MyTerm.app` | RC／正式發布前的不可混用候選 App。 |
 | 發布資產 | `build/releases/MyTerm-<version>-build-<build>/` | GitHub Draft Release 使用的五個版本化檔案。 |
 

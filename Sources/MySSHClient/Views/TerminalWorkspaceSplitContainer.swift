@@ -8,6 +8,8 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
     let onActivate: (TerminalSession.ID) -> Void
     let onToggleSplit: (TerminalWorkspace.ID) -> Void
     let onClose: (TerminalSession) -> Void
+    let onRetry: (TerminalSession) -> Void
+    let onEditHost: (HostProfile) -> Void
     let onRatioCommitted: (TerminalWorkspace.ID, Double) -> Void
 
     func makeNSView(context: Context) -> TerminalWorkspaceCanvasNSView {
@@ -22,6 +24,8 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
             onActivate: onActivate,
             onToggleSplit: onToggleSplit,
             onClose: onClose,
+            onRetry: onRetry,
+            onEditHost: onEditHost,
             onRatioCommitted: onRatioCommitted
         )
     }
@@ -61,6 +65,8 @@ final class TerminalWorkspaceCanvasNSView: NSView {
         onActivate: @escaping (TerminalSession.ID) -> Void,
         onToggleSplit: @escaping (TerminalWorkspace.ID) -> Void,
         onClose: @escaping (TerminalSession) -> Void,
+        onRetry: @escaping (TerminalSession) -> Void,
+        onEditHost: @escaping (HostProfile) -> Void,
         onRatioCommitted: @escaping (TerminalWorkspace.ID, Double) -> Void
     ) {
         let currentSessionIDs = Set(sessions.map(\.id))
@@ -94,7 +100,11 @@ final class TerminalWorkspaceCanvasNSView: NSView {
                 onToggleSplit: {
                     if let selectedWorkspaceID { onToggleSplit(selectedWorkspaceID) }
                 },
-                onClose: { onClose(session) }
+                onClose: { onClose(session) },
+                onRetry: { onRetry(session) },
+                onEditHost: {
+                    if let host = session.host { onEditHost(host) }
+                }
             )
             if let host = paneHosts[session.id] {
                 if panePresentations[session.id] != presentation {
@@ -143,6 +153,8 @@ private struct TerminalPaneHostingRoot: View {
     let onActivate: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
+    let onRetry: () -> Void
+    let onEditHost: () -> Void
 
     var body: some View {
         TerminalWorkspaceView(
@@ -154,7 +166,9 @@ private struct TerminalPaneHostingRoot: View {
             paneIndex: paneIndex,
             onActivate: onActivate,
             onToggleSplit: onToggleSplit,
-            onClose: onClose
+            onClose: onClose,
+            onRetry: onRetry,
+            onEditHost: onEditHost
         )
         .environmentObject(hostStore)
     }

@@ -42,19 +42,26 @@ final class TerminalSession: ObservableObject, Identifiable {
     let environment: [String]
     let execName: String
     let currentDirectory: String?
-    let authenticationLogURL: URL?
+    let connectionLogURL: URL?
     @Published var state: SessionState = .connecting
     @Published var terminalTitle: String
     @Published var notice: String?
+    @Published private(set) var connectionPhase: SSHConnectionPhase = .preparing
+    @Published private(set) var connectionEvents: [SSHConnectionDiagnosticEvent] = [
+        SSHConnectionDiagnosticEvent(phase: .preparing, message: "正在準備 SSH 連線設定。")
+    ]
+    @Published private(set) var connectionTechnicalLines: [String] = []
+    @Published private(set) var connectionFailure: SSHConnectionFailureKind?
     @Published private(set) var hasSavedPassword = false
     @Published private(set) var isPasswordPromptActive = false
     @Published private(set) var passwordSaveOfferKind: PasswordSaveOfferKind?
     weak var terminalView: LocalProcessTerminalView?
     private var pendingPasswordData: Data?
     private var loginPasswordPromptPolicy = LoginPasswordPromptPolicy()
-    private var authenticationLogOffset = 0
+    private var connectionLogOffset = 0
     private var authenticationLogDetector = SSHAuthenticationLogDetector()
-    private var authenticationMonitorTask: Task<Void, Never>?
+    private var connectionLogParser = SSHConnectionLogParser()
+    private var connectionMonitorTask: Task<Void, Never>?
 
     var displayName: String {
         switch kind {
@@ -87,7 +94,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     var canCapturePasswordForSaving: Bool {
-        canBindPasswordToProfile && authenticationLogURL != nil
+        canBindPasswordToProfile && connectionLogURL != nil
     }
 
     var isOfferingToSavePassword: Bool { passwordSaveOfferKind != nil }
@@ -96,24 +103,70 @@ final class TerminalSession: ObservableObject, Identifiable {
         canUseSavedPassword && isPasswordPromptActive && terminalView != nil
     }
 
+    var shouldPresentConnectionExperience: Bool {
+        guard kind == .ssh else { return false }
+        return switch state {
+        case .connecting, .failed: true
+        case .connected, .disconnected: false
+        }
+    }
+
+    var connectionFailureSuggestion: String? {
+        connectionFailure?.recoverySuggestion
+    }
+
+    var displayedConnectionTechnicalLines: [String] {
+        var lines = connectionTechnicalLines
+        for technicalLine in connectionEvents.compactMap(\.technicalLine)
+        where !lines.contains(technicalLine) {
+            lines.append(technicalLine)
+        }
+        return SSHConnectionLogParser.userFacingTechnicalLines(from: lines)
+    }
+
+    var sanitizedConnectionReport: String {
+        var lines = [
+            "MyTerm SSH 連線診斷",
+            "主機：\(displayName)",
+            "端點：\(detailDescription)"
+        ]
+        lines.append(contentsOf: connectionEvents.map { "[\($0.phase.title)] \($0.message)" })
+        if let connectionFailure {
+            lines.append("建議：\(connectionFailure.recoverySuggestion)")
+        }
+        lines.append("")
+        lines.append("OpenSSH 原始記錄（已排除詳細除錯資訊，並遮蔽本機路徑與機密資訊）：")
+        if displayedConnectionTechnicalLines.isEmpty {
+            lines.append("（本次未取得可安全顯示的 OpenSSH 原始記錄。）")
+        } else {
+            lines.append(contentsOf: displayedConnectionTechnicalLines)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    func copySanitizedConnectionReport() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(sanitizedConnectionReport, forType: .string)
+        notice = "已複製隱私處理後的連線記錄。"
+    }
+
     init(host: HostProfile, username: String) throws {
         let username = try HostProfile.validatedUsername(username)
         let canBindPassword = host.authenticationMethod == .password
             && !host.username.isEmpty
             && username == host.username
         let hasSavedPassword = canBindPassword && KeychainStore.containsPassword(for: host.id)
-        let authenticationLogURL = canBindPassword
-            ? try AppPaths.createAuthenticationLog()
-            : nil
+        let connectionLogURL = try AppPaths.createSSHConnectionLog()
         let arguments: [String]
         do {
             arguments = try SSHArgumentBuilder.arguments(
                 for: host,
                 usernameOverride: username,
-                authenticationLogURL: authenticationLogURL
+                connectionLogURL: connectionLogURL
             )
         } catch {
-            AppPaths.removeAuthenticationLog(authenticationLogURL)
+            AppPaths.removeSSHConnectionLog(connectionLogURL)
             throw error
         }
         kind = .ssh
@@ -125,7 +178,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         environment = SSHEnvironmentBuilder.environment()
         execName = "ssh"
         currentDirectory = nil
-        self.authenticationLogURL = authenticationLogURL
+        self.connectionLogURL = connectionLogURL
         self.hasSavedPassword = hasSavedPassword
         terminalTitle = host.displayName
     }
@@ -140,7 +193,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         environment = LocalTerminalEnvironmentBuilder.environment()
         execName = "zsh"
         currentDirectory = LocalTerminalEnvironmentBuilder.currentDirectory()
-        authenticationLogURL = nil
+        connectionLogURL = nil
         terminalTitle = "本地 Terminal"
     }
 
@@ -156,13 +209,18 @@ final class TerminalSession: ObservableObject, Identifiable {
         environment = LocalTerminalEnvironmentBuilder.environment()
         execName = "screen"
         currentDirectory = nil
-        authenticationLogURL = nil
+        connectionLogURL = nil
         terminalTitle = "Serial"
     }
 
     func attach(terminal: LocalProcessTerminalView) {
         terminalView = terminal
-        state = .connected
+        if kind == .ssh {
+            state = .connecting
+            startConnectionMonitor()
+        } else {
+            state = .connected
+        }
     }
 
     func sendSavedPassword(automatic: Bool = false) {
@@ -201,7 +259,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     func nextLoginPasswordPromptAction() -> LoginPasswordPromptAction? {
         guard canCapturePasswordForSaving else { return nil }
-        startAuthenticationMonitor()
+        startConnectionMonitor()
         return loginPasswordPromptPolicy.nextAction(hasSavedPassword: hasSavedPassword)
     }
 
@@ -247,7 +305,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         guard canCapturePasswordForSaving, !submittedData.isEmpty else { return }
         clearPendingPassword()
         pendingPasswordData = submittedData
-        startAuthenticationMonitor()
+        startConnectionMonitor()
     }
 
     func cancelSubmittedLoginPassword() {
@@ -313,21 +371,21 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     func authenticationDidEnd(preserveVerifiedPasswordOffer: Bool = true) {
-        authenticationMonitorTask?.cancel()
-        authenticationMonitorTask = nil
+        connectionMonitorTask?.cancel()
+        connectionMonitorTask = nil
         if !preserveVerifiedPasswordOffer || passwordSaveOfferKind == nil {
             clearPendingPassword()
             passwordSaveOfferKind = nil
         }
         isPasswordPromptActive = false
-        AppPaths.removeAuthenticationLog(authenticationLogURL)
+        AppPaths.removeSSHConnectionLog(connectionLogURL)
     }
 
-    private func startAuthenticationMonitor() {
-        guard authenticationMonitorTask == nil, authenticationLogURL != nil else { return }
-        authenticationMonitorTask = Task { @MainActor [weak self] in
+    private func startConnectionMonitor() {
+        guard connectionMonitorTask == nil, connectionLogURL != nil else { return }
+        connectionMonitorTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                self?.inspectAuthenticationLog()
+                self?.inspectConnectionLog()
                 do {
                     try await Task.sleep(nanoseconds: 150_000_000)
                 } catch {
@@ -337,22 +395,27 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
     }
 
-    private func inspectAuthenticationLog() {
-        guard let authenticationLogURL,
-              let data = try? Data(contentsOf: authenticationLogURL) else { return }
-        if data.count < authenticationLogOffset {
-            authenticationLogOffset = 0
+    private func inspectConnectionLog() {
+        guard let connectionLogURL,
+              let data = try? Data(contentsOf: connectionLogURL) else { return }
+        if data.count < connectionLogOffset {
+            connectionLogOffset = 0
             authenticationLogDetector = SSHAuthenticationLogDetector()
+            connectionLogParser = SSHConnectionLogParser()
         }
-        guard data.count > authenticationLogOffset else { return }
-        let newBytes = Array(data[authenticationLogOffset...])
-        authenticationLogOffset = data.count
+        guard data.count > connectionLogOffset else { return }
+        let newBytes = Array(data[connectionLogOffset...])
+        connectionLogOffset = data.count
+        applyConnectionUpdate(connectionLogParser.consume(newBytes[...]))
         guard let result = authenticationLogDetector.consume(newBytes[...]) else { return }
 
-        authenticationMonitorTask?.cancel()
-        authenticationMonitorTask = nil
+        connectionMonitorTask?.cancel()
+        connectionMonitorTask = nil
         (terminalView as? LoginAwareTerminalView)?.stopLoginPasswordPromptMonitoring()
-        AppPaths.removeAuthenticationLog(authenticationLogURL)
+        AppPaths.removeSSHConnectionLog(connectionLogURL)
+
+        state = .connected
+        connectionPhase = .connected
 
         switch result {
         case .password:
@@ -370,6 +433,94 @@ final class TerminalSession: ObservableObject, Identifiable {
                 notice = "伺服器使用 keyboard-interactive 驗證；為避免誤存一次性密碼，本次不提供儲存。"
             }
         }
+        clearConnectionDiagnosticsAfterSuccess()
+    }
+
+    private func clearConnectionDiagnosticsAfterSuccess() {
+        connectionEvents.removeAll(keepingCapacity: false)
+        connectionTechnicalLines.removeAll(keepingCapacity: false)
+        connectionFailure = nil
+        connectionLogOffset = 0
+        authenticationLogDetector = SSHAuthenticationLogDetector()
+        connectionLogParser = SSHConnectionLogParser()
+    }
+
+    private func applyConnectionUpdate(_ update: SSHConnectionLogUpdate) {
+        if !update.events.isEmpty {
+            for event in update.events where !connectionEvents.contains(event) {
+                connectionEvents.append(event)
+                if let technicalLine = event.technicalLine,
+                   !connectionTechnicalLines.contains(technicalLine) {
+                    connectionTechnicalLines.append(technicalLine)
+                }
+            }
+            if connectionEvents.count > 200 {
+                connectionEvents.removeFirst(connectionEvents.count - 200)
+            }
+            if let phase = update.events.last?.phase {
+                connectionPhase = phase
+            }
+            trimConnectionTechnicalLines()
+        }
+        if !update.technicalLines.isEmpty {
+            connectionTechnicalLines.append(contentsOf: update.technicalLines)
+            trimConnectionTechnicalLines()
+        }
+        if let failure = update.failure {
+            connectionFailure = failure
+            connectionPhase = .failed
+            state = .failed(failure.title)
+        }
+    }
+
+    private func trimConnectionTechnicalLines() {
+        let maximumLines = 200
+        let maximumBytes = 65_536
+        if connectionTechnicalLines.count > maximumLines {
+            connectionTechnicalLines.removeFirst(connectionTechnicalLines.count - maximumLines)
+        }
+        var byteCount = connectionTechnicalLines.reduce(0) { $0 + $1.utf8.count + 1 }
+        while connectionTechnicalLines.count > 1, byteCount > maximumBytes {
+            byteCount -= connectionTechnicalLines.removeFirst().utf8.count + 1
+        }
+    }
+
+    private func finalizeConnectionTechnicalTranscript() {
+        guard let connectionLogURL,
+              let data = try? Data(contentsOf: connectionLogURL) else { return }
+        let transcript = SSHConnectionLogParser.technicalTranscript(from: data)
+        guard !transcript.isEmpty else { return }
+        connectionTechnicalLines = transcript
+        trimConnectionTechnicalLines()
+    }
+
+    func processDidTerminate(exitCode: Int32?) {
+        guard kind == .ssh else {
+            state = .disconnected(exitCode)
+            authenticationDidEnd()
+            terminalView = nil
+            return
+        }
+
+        inspectConnectionLog()
+        applyConnectionUpdate(connectionLogParser.finish())
+        finalizeConnectionTechnicalTranscript()
+        if state == .connected {
+            state = .disconnected(exitCode)
+        } else {
+            let failure = connectionFailure ?? .unknown
+            connectionFailure = failure
+            connectionPhase = .failed
+            state = .failed(failure.title)
+            let event = SSHConnectionDiagnosticEvent(phase: .failed, message: failure.title)
+            if !connectionEvents.contains(where: {
+                $0.phase == event.phase && $0.message == event.message
+            }) {
+                connectionEvents.append(event)
+            }
+        }
+        authenticationDidEnd()
+        terminalView = nil
     }
 
     private func clearPendingPassword() {
@@ -388,8 +539,8 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     deinit {
-        authenticationMonitorTask?.cancel()
-        AppPaths.removeAuthenticationLog(authenticationLogURL)
+        connectionMonitorTask?.cancel()
+        AppPaths.removeSSHConnectionLog(connectionLogURL)
     }
 }
 
@@ -474,6 +625,31 @@ final class SessionManager: ObservableObject {
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
         return session.id
+    }
+
+    @discardableResult
+    func retry(_ session: TerminalSession) -> Bool {
+        guard session.kind == .ssh,
+              let host = session.host,
+              let username = session.username,
+              let sessionIndex = sessions.firstIndex(where: { $0.id == session.id }) else {
+            lastError = "找不到可以重新連線的 SSH 工作階段。"
+            return false
+        }
+        do {
+            let replacement = try TerminalSession(host: host, username: username)
+            guard workspaceState.replace(sessionID: session.id, with: replacement.id) else {
+                replacement.disconnect()
+                lastError = "無法在目前工作區重新建立 SSH 連線。"
+                return false
+            }
+            session.disconnect()
+            sessions[sessionIndex] = replacement
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
     }
 
     func close(_ session: TerminalSession) {

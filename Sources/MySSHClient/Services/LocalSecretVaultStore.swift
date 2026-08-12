@@ -292,6 +292,12 @@ enum LocalSecretVaultStore {
             return service
         }
 #endif
+        if let configuredService = Bundle.main.object(
+            forInfoDictionaryKey: "MyTermLocalSecretVaultKeychainService"
+        ) as? String {
+            let service = configuredService.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !service.isEmpty { return service }
+        }
         return productionRootKeyService
     }
 

@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.5**
+目前正式版本：**1.0.7**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -15,6 +15,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 多階層群組、搜尋、主機卡片與可選的預設使用者名稱。
 - 密碼、私鑰、SSH Agent／config 驗證，以及系統預設、舊式 RSA 相容與自訂演算法。
 - 使用系統 OpenSSH 與 MyTerm 專用 `known_hosts`，新主機金鑰必須由使用者確認。
+- SSH 連線中可查看繁體中文階段摘要及保留 OpenSSH 原始措辭的錯誤記錄；底層 verbose debug 只用於判斷階段，不會顯示或複製，原始錯誤也會先遮蔽本機路徑與機密資訊。失敗時會分類常見的網路、驗證、主機金鑰、私鑰與演算法問題，並提供重試、編輯主機及複製診斷記錄；成功後即釋放診斷內容，異常退出留下的短期記錄則在下次啟動時清理。
 - 主機密碼保存於本機 AES-GCM 加密保管庫；只有一把根金鑰存於 macOS Keychain。密碼不寫入主機資料檔，也不透過剪貼簿填入。
 - 同一視窗中的 SSH 分頁、本機 zsh、Serial Port 與雙欄 SFTP；終端機分頁可用滑鼠重新排序，快捷鍵會跟隨畫面順序。
 - 可把終端機分頁往下拖入相鄰連線的內容區，依綠色預覽合併為左右或上下雙窗格；一般分頁優先與前一個連線合併，第一個分頁則會使用後一個連線。每個 Workspace 最多兩個連線，可拖曳分隔線調整比例、個別切換焦點或關閉，也可把窗格標題列拖回頂部分頁列重新拆開。
@@ -68,9 +69,9 @@ cd myterm
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-測試 App 固定位於 `build/dev/MyTerm Dev.app`，腳本只會關閉與重啟這個路徑，不會變更 `/Applications/MyTerm.app`。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
+測試 App 固定位於 `build/dev/MyTerm Dev.app`，並使用獨立的 Bundle ID、Application Support 目錄與本機保管庫 Keychain service；腳本只會關閉與重啟這個路徑，不會讀寫或變更 `/Applications/MyTerm.app` 的正式資料。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
 
-目前原始碼的完整正式候選流程會執行安全檢查、346 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
+目前原始碼的完整正式候選流程會執行安全檢查、425 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
 
 ```sh
 ./scripts/prepare-release-build.sh \
@@ -94,9 +95,9 @@ cd myterm
 
 ## 發布驗證
 
-MyTerm 1.0.4 已完成平台圖示資源封裝修補、第二台 Mac 乾淨候選驗收，以及 GitHub Release → Cloudflare Pages 外部更新站驗證。1.0.5 在此基準上恢復 SFTP 檔案拖放傳輸，並讓第一個 Terminal 分頁也能選取後一個相鄰連線合併；候選與正式發布流程會共同驗證下列項目：
+MyTerm 1.0.4 已完成平台圖示資源封裝修補與第二台 Mac 乾淨候選驗收；1.0.5 恢復 SFTP 檔案拖放並補齊第一個 Terminal 分頁的相鄰合併；1.0.6 加入失效登入密碼及伺服器強制改密碼後的安全更新流程；1.0.7 新增 SSH 連線階段、原始錯誤診斷、原位重試及隱私清理。候選與正式發布流程會共同驗證下列項目：
 
-- 346 項本機自動測試，以及既有 Firestore Security Rules 測試。
+- 425 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
 - 兩台 Mac 透過正式更新鏈升級至 1.0.1；重啟、主機、群組、密碼、SSH、SFTP 與同步均維持正常。
 - 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
@@ -105,6 +106,6 @@ MyTerm 1.0.4 已完成平台圖示資源封裝修補、第二台 Mac 乾淨候�
 - Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
 - SFTP 本機與遠端檔案的拖放上傳／下載，以及封裝內自訂拖放資料型別宣告。
 - 第一個與非第一個 Terminal 分頁的合併、雙窗格拖曳調整與重新拆分。
-- 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署、外部下載驗證，以及正式 1.0.4 → 1.0.5 App 內更新驗收。
+- 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署、外部下載驗證，以及正式 App 內更新驗收。
 
 正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。

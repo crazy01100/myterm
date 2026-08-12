@@ -4,7 +4,7 @@ enum SSHArgumentBuilder {
     static func arguments(
         for host: HostProfile,
         usernameOverride: String? = nil,
-        authenticationLogURL: URL? = nil
+        connectionLogURL: URL? = nil
     ) throws -> [String] {
         let host = try host.validated()
         let username = try HostProfile.validatedUsername(usernameOverride ?? host.username)
@@ -60,8 +60,8 @@ enum SSHArgumentBuilder {
             appendOption("Ciphers", value: host.customAlgorithms.ciphers, to: &arguments)
         }
 
-        if let authenticationLogURL {
-            arguments += ["-v", "-E", authenticationLogURL.path]
+        if let connectionLogURL {
+            arguments += ["-v", "-E", connectionLogURL.path]
         }
 
         arguments.append("\(username)@\(host.hostname)")

@@ -1,6 +1,6 @@
 # MyTerm 系統架構
 
-本文說明 MyTerm 1.0.5 正式版的公開系統架構、資料流與安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
+本文說明 MyTerm 1.0.7 的公開系統架構、資料流及安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
 
 ## 架構總覽
 
@@ -46,6 +46,7 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
+- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected；失敗畫面可原位重試或開啟對應主機設定。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
 - `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
@@ -64,9 +65,10 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 | Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |
 | 私鑰檔案與路徑 | 使用者指定的本機位置／本機設定 | 不同步 |
 | MyTerm `known_hosts` | 各台 Mac 的 Application Support | 不同步 |
+| SSH 連線暫存診斷 | Application Support 內權限 `0600` 的短期檔案；成功、失敗或關閉後刪除，異常退出殘留於下次啟動清理 | 不同步 |
 | 匯出檔 | 使用者選擇的位置 | 不由 MyTerm 自動同步 |
 
-App 顯示名稱已改為 MyTerm，但 Bundle ID、Keychain service 與既有 Application Support 識別字保留舊名稱，以維持早期版本升級後的資料與密碼關聯。
+正式 App 顯示名稱已改為 MyTerm，但正式 Bundle ID、Keychain service 與既有 Application Support 識別字保留舊名稱，以維持早期版本升級後的資料與密碼關聯。`MyTerm Dev.app` 則使用獨立 Bundle ID、Application Support 目錄與本機保管庫 Keychain service，開發驗收不得讀寫正式資料。
 
 ## 端對端加密同步
 

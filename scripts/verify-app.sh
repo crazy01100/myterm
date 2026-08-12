@@ -71,6 +71,24 @@ sparkle_framework="$app_path/Contents/Frameworks/Sparkle.framework"
 }
 /usr/bin/plutil -lint "$plist" >/dev/null
 
+if [[ "$app_path" == "$project_dir/build/dev/MyTerm Dev.app" ]]; then
+    development_bundle_id="$(/usr/bin/plutil -extract CFBundleIdentifier raw "$plist")"
+    development_support_directory="$(/usr/bin/plutil -extract MyTermApplicationSupportDirectory raw "$plist")"
+    development_keychain_service="$(/usr/bin/plutil -extract MyTermLocalSecretVaultKeychainService raw "$plist")"
+    [[ "$development_bundle_id" == "tw.local.MySSHClient.Development" ]] || {
+        echo "Development App must use its isolated Bundle ID." >&2
+        exit 1
+    }
+    [[ "$development_support_directory" == "MyTerm Development" ]] || {
+        echo "Development App must use its isolated Application Support directory." >&2
+        exit 1
+    }
+    [[ "$development_keychain_service" == "tw.local.MySSHClient.Development.local-secret-vault-root" ]] || {
+        echo "Development App must use its isolated local-vault Keychain service." >&2
+        exit 1
+    }
+fi
+
 required_sftp_drag_types=(
     "tw.local.MySSHClient.sftp.local-drag-payload"
     "tw.local.MySSHClient.sftp.remote-drag-payload"

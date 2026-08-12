@@ -250,9 +250,7 @@ struct TerminalContainerView: NSViewRepresentable {
             cancelPlatformProbe()
             Task { @MainActor [weak session] in
                 let shouldClose = self.closeAfterEOFRequested
-                session?.state = .disconnected(exitCode)
-                session?.authenticationDidEnd()
-                session?.terminalView = nil
+                session?.processDidTerminate(exitCode: exitCode)
                 if shouldClose { self.onCloseAfterUserEOF() }
             }
         }

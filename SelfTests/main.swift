@@ -173,6 +173,17 @@ do {
     check(false, "terminal pane detach suite: \(error)")
 }
 
+var replacementCollection = TerminalWorkspaceCollection()
+let originalReplacementSessionID = UUID()
+let replacementSessionID = UUID()
+let replacementWorkspaceID = replacementCollection.add(sessionID: originalReplacementSessionID)
+check(replacementCollection.replace(sessionID: originalReplacementSessionID, with: replacementSessionID),
+      "a terminal session can be replaced in place for retry")
+check(replacementCollection.workspace(id: replacementWorkspaceID)?.sessionIDs == [replacementSessionID],
+      "retry preserves the existing workspace and pane position")
+check(replacementCollection.selectedSessionID == replacementSessionID,
+      "retry keeps the replacement terminal active")
+
 let initializationPacket = SFTPProtocolCodec.initializationPacket()
 check(initializationPacket == Data([0, 0, 0, 5, 1, 0, 0, 0, 3]),
       "SFTP v3 initialization packet is framed correctly")
@@ -811,7 +822,7 @@ do {
 
 do {
     let logURL = URL(fileURLWithPath: "/private/tmp/MyTerm-auth-test.log")
-    let arguments = try SSHArgumentBuilder.arguments(for: baseHost(), authenticationLogURL: logURL)
+    let arguments = try SSHArgumentBuilder.arguments(for: baseHost(), connectionLogURL: logURL)
     check(arguments.contains("-v") && arguments.contains("-E") && arguments.contains(logURL.path),
           "password verification can use a private OpenSSH diagnostic log")
     check(arguments.last == "operator@192.0.2.10", "diagnostic options remain before the SSH destination")
@@ -1086,16 +1097,143 @@ let keyboardInteractiveResult = keyboardInteractiveDetector.consume(
 check(keyboardInteractiveResult == .other("keyboard-interactive"),
       "keyboard-interactive success is distinguished from a reusable password")
 
+var connectionLogParser = SSHConnectionLogParser()
+var connectionUpdate = connectionLogParser.consume(
+    Array("debug1: Connecting to example.invalid [192.0.2.10] port 22.\ndebug1: Connection estab".utf8)[...]
+)
+check(connectionUpdate.events.map(\.phase) == [.connecting],
+      "SSH connection diagnostics recognize the initial connection stage")
+check(connectionUpdate.technicalLines.isEmpty,
+      "SSH diagnostics use verbose connection lines internally without exposing them")
+connectionUpdate = connectionLogParser.consume(
+    Array("lished.\ndebug1: Authenticating to example.invalid:22 as 'operator'\nAuthenticated to example.invalid ([192.0.2.10]:22) using \"publickey\".\n".utf8)[...]
+)
+check(connectionUpdate.events.map(\.phase) == [.securing, .authenticating, .connected],
+      "split SSH diagnostics advance through secure authentication stages")
+check(connectionUpdate.authenticatedMethod == "publickey",
+      "SSH diagnostics retain only the successful authentication method")
+check(connectionUpdate.technicalLines == [
+    "Authenticated to example.invalid ([192.0.2.10]:22) using \"publickey\"."
+], "SSH diagnostics keep real non-debug OpenSSH authentication lines")
+check(!connectionUpdate.events.contains { $0.message.contains("192.0.2.10") || $0.message.contains("operator") },
+      "user-visible SSH diagnostic events omit raw infrastructure details")
+
+var privatePathParser = SSHConnectionLogParser()
+let privatePathUpdate = privatePathParser.consume(
+    Array("debug1: Reading configuration data /Users/private/.ssh/config\ndebug1: identity file /Volumes/External/private/id_test type 3\nLoad key \"/Users/private/.ssh/id_test\": invalid format\n".utf8)[...]
+)
+check(privatePathUpdate.technicalLines == [
+    "Load key \"<本機路徑>\": invalid format"
+],
+      "SSH diagnostics omit verbose configuration and identity lines while redacting error paths")
+check(!privatePathUpdate.technicalLines.joined().contains("/Users/private")
+        && !privatePathUpdate.technicalLines.joined().contains("/Volumes/External"),
+      "SSH technical diagnostics never expose full local paths")
+
+let rapidFailureTranscript = SSHConnectionLogParser.technicalTranscript(
+    from: Data("debug1: Connecting to 127.0.0.1 [127.0.0.1] port 1.\ndebug1: connect to address 127.0.0.1 port 1: Connection refused\nssh: connect to host 127.0.0.1 port 1: Connection refused".utf8)
+)
+check(rapidFailureTranscript == [
+    "ssh: connect to host 127.0.0.1 port 1: Connection refused"
+], "rapid SSH failure finalization keeps the real error without verbose debug noise")
+
+let verboseNoiseTranscript = SSHConnectionLogParser.technicalTranscript(
+    from: Data("debug1: OpenSSH_10.2p1, LibreSSL 3.3.6\ndebug1: Reading configuration data /Users/private/.ssh/config\ndebug2: resolving \\\"example.invalid\\\" port 22\ndebug3: expanded UserKnownHostsFile '~/.ssh/known_hosts' -> '/Users/private/.ssh/known_hosts'\nssh: Could not resolve hostname example.invalid: nodename nor servname provided".utf8)
+)
+check(verboseNoiseTranscript == [
+    "ssh: Could not resolve hostname example.invalid: nodename nor servname provided"
+], "user-facing SSH transcript excludes every OpenSSH debug level")
+
+let presentationBoundaryTranscript = SSHConnectionLogParser.userFacingTechnicalLines(from: [
+    "debug1: Connecting to 127.0.0.1 port 1.",
+    "debug2: resolving 127.0.0.1",
+    "debug3: ssh_connect_direct: entering",
+    "ssh: connect to host 127.0.0.1 port 1: Connection refused"
+])
+check(presentationBoundaryTranscript == [
+    "ssh: connect to host 127.0.0.1 port 1: Connection refused"
+], "SSH UI and clipboard presentation boundary rejects verbose lines from every source")
+
+let carriageReturnTranscript = SSHConnectionLogParser.technicalTranscript(
+    from: Data("debug1: OpenSSH_10.2p1, LibreSSL 3.3.6\rdebug1: Connecting to 127.0.0.1 port 1.\rdebug1: connect to address 127.0.0.1 port 1: Connection refused\rssh: connect to host 127.0.0.1 port 1: Connection refused\r".utf8)
+)
+check(carriageReturnTranscript == [
+    "ssh: connect to host 127.0.0.1 port 1: Connection refused"
+], "SSH transcript handles the carriage-return line endings emitted by the macOS OpenSSH log")
+
+let combinedPresentationTranscript = SSHConnectionLogParser.userFacingTechnicalLines(from: [
+    "debug1: OpenSSH_10.2p1\rdebug1: Connecting to 127.0.0.1 port 1.\rssh: connect to host 127.0.0.1 port 1: Connection refused"
+])
+check(combinedPresentationTranscript == [
+    "ssh: connect to host 127.0.0.1 port 1: Connection refused"
+], "SSH presentation boundary separates combined carriage-return records before filtering")
+
+let failureSamples: [(String, SSHConnectionFailureKind)] = [
+    ("ssh: Could not resolve hostname example.invalid: nodename nor servname provided", .addressResolution),
+    ("connect to host 192.0.2.10 port 22: Operation timed out", .timeout),
+    ("connect to host 192.0.2.10 port 2222: Connection refused", .refused),
+    ("ssh: connect to host 192.0.2.10 port 22: No route to host", .unreachable),
+    ("operator@example.invalid: Permission denied (publickey,password).", .authenticationRejected),
+    ("WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!", .hostKeyVerification),
+    ("Unable to negotiate: no matching key exchange method found. Their offer: legacy", .keyExchangeAlgorithm),
+    ("Unable to negotiate: no matching host key type found. Their offer: ssh-rsa", .hostKeyAlgorithm),
+    ("Unable to negotiate: no matching cipher found. Their offer: 3des-cbc", .cipherAlgorithm),
+    ("Load key \"/Users/private/.ssh/id_test\": invalid format", .privateKeyUnavailable),
+    ("sign_and_send_pubkey: signing failed for RSA from agent: agent refused operation", .agentUnavailable),
+    ("Connection closed by 192.0.2.10 port 22", .remoteClosed)
+]
+for (sample, expectedFailure) in failureSamples {
+    var parser = SSHConnectionLogParser()
+    let update = parser.consume(Array("\(sample)\n".utf8)[...])
+    check(update.failure == expectedFailure,
+          "SSH diagnostics classify \(expectedFailure.rawValue)")
+    check(update.events.last?.technicalLine != nil,
+          "SSH failure event carries the same redacted OpenSSH source line")
+    check(!update.events.contains { $0.message.contains("/Users/private") || $0.message.contains("192.0.2.10") },
+          "SSH failure diagnostics do not expose raw paths or addresses")
+    check(!update.technicalLines.isEmpty,
+          "SSH failure diagnostics retain a useful OpenSSH technical line")
+    check(!update.technicalLines.joined().contains("/Users/private"),
+          "SSH failure technical lines redact local paths")
+}
+
 do {
-    let authenticationLog = try AppPaths.createAuthenticationLog()
+    let authenticationLog = try AppPaths.createSSHConnectionLog()
     let attributes = try FileManager.default.attributesOfItem(atPath: authenticationLog.path)
     let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue
     check(permissions == 0o600, "OpenSSH authentication diagnostics use owner-only permissions")
-    AppPaths.removeAuthenticationLog(authenticationLog)
+    AppPaths.removeSSHConnectionLog(authenticationLog)
     check(!FileManager.default.fileExists(atPath: authenticationLog.path),
           "OpenSSH authentication diagnostics are removed after use")
 } catch {
     check(false, "authentication diagnostic file lifecycle: \(error)")
+}
+
+do {
+    let cleanupRoot = FileManager.default.temporaryDirectory
+        .appending(path: "MyTerm-Stale-SSH-Logs-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: cleanupRoot, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: cleanupRoot) }
+
+    let firstStaleLog = cleanupRoot.appending(path: "ssh-connection-\(UUID().uuidString).log")
+    let secondStaleLog = cleanupRoot.appending(path: "ssh-connection-interrupted.log")
+    let unrelatedLog = cleanupRoot.appending(path: "user-kept.log")
+    let similarlyNamedFile = cleanupRoot.appending(path: "ssh-connection-not-a-log.txt")
+    try Data("stale-one".utf8).write(to: firstStaleLog)
+    try Data("stale-two".utf8).write(to: secondStaleLog)
+    try Data("keep-log".utf8).write(to: unrelatedLog)
+    try Data("keep-text".utf8).write(to: similarlyNamedFile)
+
+    let removedCount = try AppPaths.removeStaleSSHConnectionLogs(in: cleanupRoot)
+    check(removedCount == 2, "startup cleanup removes every stale MyTerm SSH diagnostic log")
+    check(!FileManager.default.fileExists(atPath: firstStaleLog.path)
+            && !FileManager.default.fileExists(atPath: secondStaleLog.path),
+          "startup cleanup leaves no matching crash-remnant diagnostic logs")
+    check(FileManager.default.fileExists(atPath: unrelatedLog.path)
+            && FileManager.default.fileExists(atPath: similarlyNamedFile.path),
+          "startup cleanup preserves unrelated files in the diagnostic directory")
+} catch {
+    check(false, "stale SSH diagnostic startup cleanup: \(error)")
 }
 
 let keychainTestID = UUID()

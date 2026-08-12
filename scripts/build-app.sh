@@ -291,8 +291,11 @@ cp "$project_dir/Resources/Info.plist" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert MyTermBuildDate -string "$build_date" "$app_dir/Contents/Info.plist"
 /usr/bin/plutil -insert SUEnableAutomaticChecks -bool false "$app_dir/Contents/Info.plist"
 if [[ "$channel" == "development" ]]; then
+    /usr/bin/plutil -replace CFBundleIdentifier -string "tw.local.MySSHClient.Development" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -replace CFBundleDisplayName -string "MyTerm Dev" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -replace CFBundleName -string "MyTerm Dev" "$app_dir/Contents/Info.plist"
+    /usr/bin/plutil -insert MyTermApplicationSupportDirectory -string "MyTerm Development" "$app_dir/Contents/Info.plist"
+    /usr/bin/plutil -insert MyTermLocalSecretVaultKeychainService -string "tw.local.MySSHClient.Development.local-secret-vault-root" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -insert MyTermDevelopmentMode -bool true "$app_dir/Contents/Info.plist"
 fi
 if (( require_stable_signing == 1 )); then
@@ -304,6 +307,7 @@ if (( update_lab == 1 )); then
     /usr/bin/plutil -replace CFBundleDisplayName -string "MyTerm 更新實驗室" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -replace CFBundleName -string "MyTerm 更新實驗室" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -insert MyTermApplicationSupportDirectory -string "MyTerm Update Lab" "$app_dir/Contents/Info.plist"
+    /usr/bin/plutil -insert MyTermLocalSecretVaultKeychainService -string "tw.local.MySSHClient.UpdateLab.local-secret-vault-root" "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -insert MyTermUpdateLabMode -bool true "$app_dir/Contents/Info.plist"
     /usr/bin/plutil -insert NSAppTransportSecurity -xml '<dict><key>NSAllowsLocalNetworking</key><true/></dict>' "$app_dir/Contents/Info.plist"
 fi
