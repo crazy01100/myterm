@@ -60,6 +60,7 @@ sparkle_framework="$app_path/Contents/Frameworks/Sparkle.framework"
 [[ -d "$app_path" ]] || { echo "App bundle not found: $app_path" >&2; exit 1; }
 [[ -x "$executable" ]] || { echo "Executable missing or not executable: $executable" >&2; exit 1; }
 [[ -d "$sparkle_framework" ]] || { echo "Sparkle.framework is missing: $sparkle_framework" >&2; exit 1; }
+"$project_dir/scripts/verify-packaged-resources.sh" --app "$app_path"
 [[ -x "$sparkle_framework/Versions/Current/Autoupdate" ]] || {
     echo "Sparkle Autoupdate helper is missing or not executable." >&2
     exit 1

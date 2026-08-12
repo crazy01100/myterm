@@ -63,6 +63,7 @@ manifest="$assets_dir/release-manifest.json"
 for required_file in "$archive" "$appcast" "$notes" "$checksums" "$manifest"; do
     [[ -f "$required_file" ]] || { print -u2 -- "缺少發布資產：${required_file:t}"; exit 66; }
 done
+"$project_dir/scripts/verify-packaged-resources.sh" --archive "$archive"
 
 unexpected="$({
     find "$assets_dir" -mindepth 1 -maxdepth 1 -type f \

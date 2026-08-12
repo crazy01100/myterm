@@ -76,6 +76,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 | `scripts/run-dev-app.sh` | 安全建置、驗證及選擇性啟動固定測試 App。 | 否 |
 | `scripts/build-app.sh` | 底層 App 建置工具；依通道限制輸出位置。 | 否 |
 | `scripts/verify-app.sh` | 驗證指定 App 的版本、Build、架構、簽章與更新設定。 | 否 |
+| `scripts/verify-packaged-resources.sh` | 比對 App／ZIP 內的平台圖示，並拒絕會依賴建置機路徑的 MyTerm SwiftPM resource accessor。 | 否 |
 | `scripts/check-release-safety.sh` | 掃描發布設定、機密與不安全產物。 | 否 |
 | `scripts/prepare-release-build.sh` | 執行測試、建立版本化候選 App 並封裝 ZIP。 | 否 |
 | `scripts/package-app.sh` | 把明確指定的候選 App 封裝成版本化 ZIP。 | 否 |
@@ -121,7 +122,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 - `CHECKSUMS.txt`
 - `release-manifest.json`
 
-Draft 必須經人工確認後才能發布。公開 GitHub Release 會觸發 `.github/workflows/deploy-update-site.yml`，再由 GitHub Actions 部署至 Cloudflare Pages。正式更新仍需由既有 App 經 Sparkle 安裝並完成人工驗收，不能以直接覆蓋 `/Applications/MyTerm.app` 代替。
+Draft 必須經人工確認後才能發布。候選 App、封裝後 ZIP 與 GitHub 回下載資產都會執行相同的 App 資源檢查；公開 GitHub Release 觸發 `.github/workflows/deploy-update-site.yml` 後，Cloudflare 部署前還會再次檢查下載 ZIP。正式更新仍需由既有 App 經 Sparkle 安裝並完成人工驗收，不能以直接覆蓋 `/Applications/MyTerm.app` 代替。
 
 ## 簽章與機密
 

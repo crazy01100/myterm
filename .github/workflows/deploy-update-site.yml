@@ -45,6 +45,14 @@ jobs:
             --pattern 'release-notes.html' \
             --pattern 'CHECKSUMS.txt'
 
+      - name: Verify packaged App resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          archives=(build/release-assets/MyTerm-*-arm64.zip)
+          [[ ${#archives[@]} -eq 1 ]]
+          ./scripts/verify-packaged-resources.sh --archive "${archives[0]}"
+
       - name: Prepare and verify static deployment
         shell: bash
         run: |

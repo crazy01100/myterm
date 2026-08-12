@@ -94,7 +94,7 @@ cd myterm
 
 ## 發布驗證
 
-MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證、GitHub Actions → Cloudflare Pages 外部更新站驗證，以及正式 1.0.2 → 1.0.3 App 內更新驗收：
+MyTerm 1.0.3 已完成 324 項本機自動測試、五項正式發布資產回下載驗證、GitHub Actions → Cloudflare Pages 外部更新站驗證，以及正式 1.0.2 → 1.0.3 App 內更新驗收。發布後的第二台 Mac 驗收另發現平台圖示的 SwiftPM resource bundle 會退回建置機絕對路徑，造成乾淨環境啟動失敗；修補流程已改由標準 App Resources 載入，並在候選 App、ZIP、GitHub 回下載資產與 Cloudflare 部署前拒絕相同封裝錯誤。修補版正式發布前仍須完成第二台 Mac 更新驗收：
 
 - 324 項本機自動測試，以及既有 Firestore Security Rules 測試。
 - 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
