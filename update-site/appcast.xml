@@ -1,9 +1,39 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>MyTerm 更新</title>
-    <link>https://mtus.lieniapp.work/</link>
-    <description>MyTerm 尚未正式發布，目前沒有可安裝的更新。</description>
-    <language>zh-TW</language>
-  </channel>
-</rss>
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>MyTerm</title>
+        <item>
+            <title>1.0.5</title>
+            <pubDate>Wed, 12 Aug 2026 16:34:43 +0800</pubDate>
+            <sparkle:version>20260812163354</sparkle:version>
+            <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.5
+
+## 修正與改善
+
+- 修復 SFTP 本機與遠端檔案拖放傳輸失效，恢復拖曳上傳、下載與覆蓋確認流程。
+- 在 App 封裝中明確宣告 SFTP 私有拖放資料型別，並新增發布前封裝檢查，避免相同問題再次進入候選版或正式版。
+- 修正第一個 Terminal 分頁向下拖曳時沒有合併目標的情況；第一個分頁現在會使用後一個連線，其餘分頁仍優先使用前一個連線。
+
+## 驗證
+
+- 329 項本機自動測試通過。
+- 已在 MyTerm Dev 實際驗證 SFTP 拖放上傳與下載。
+- 已實際驗證第一個與非第一個 Terminal 分頁合併、雙窗格操作及重新拆分。
+
+## 相容性與限制
+
+- 支援 Apple Silicon 與 macOS 26 或更新版本。
+- 此版本不變更主機、群組、密碼、同步或 Keychain 的資料格式。
+- 目前未使用 Apple Developer ID；第一次手動安裝仍可能需要在 macOS 中允許開啟。正式 App 內更新會另外驗證 Sparkle Ed25519 簽章。
+]]></description>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.5-build-20260812163354-arm64.zip" length="6492921" type="application/octet-stream" sparkle:edSignature="pkD9SC/DqLfdObgAbdhzWKLxxJWB7jTRXNOBrhMOcwpEGNSsY5u2oYEkERJhd0YOtdexgmI+DxHWpdyFNJR4AA=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: 2wySfAXw3HZVXP5LOhambZeTMcxnPECLlshH/8qTVAl5hggUGEzAMqlMUwxui58XCw6Sb10CCGq56+fmTiZKBw==
+length: 2218
+-->
