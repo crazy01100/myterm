@@ -55,20 +55,20 @@ struct TerminalContainerView: NSViewRepresentable {
         terminal.onActivated = {
             Task { @MainActor in onActivate() }
         }
-        if session.canUseSavedPassword {
+        if session.canCapturePasswordForSaving {
             terminal.onLoginPasswordPrompt = { [weak terminal, weak session] in
-                terminal?.stopLoginPasswordPromptMonitoring()
                 Task { @MainActor in
-                    session?.setPasswordPromptActive(true)
-                    session?.sendSavedPassword(automatic: true)
-                }
-            }
-        } else if session.canCapturePasswordForSaving {
-            terminal.onLoginPasswordPrompt = { [weak terminal, weak session] in
-                terminal?.beginCapturingLoginPassword()
-                Task { @MainActor in
-                    session?.setPasswordPromptActive(true)
-                    _ = session?.prepareForLoginPasswordEntry()
+                    guard let session else { return }
+                    session.setPasswordPromptActive(true)
+                    switch session.nextLoginPasswordPromptAction() {
+                    case .useSavedPassword:
+                        session.sendSavedPassword(automatic: true)
+                    case .captureAttempt:
+                        terminal?.beginCapturingLoginPassword()
+                        _ = session.prepareForLoginPasswordEntry()
+                    case nil:
+                        break
+                    }
                 }
             }
             terminal.onLoginPasswordSubmitted = { [weak session] passwordData in
@@ -76,6 +76,15 @@ struct TerminalContainerView: NSViewRepresentable {
             }
             terminal.onLoginPasswordCaptureCancelled = { [weak session] in
                 Task { @MainActor in session?.cancelSubmittedLoginPassword() }
+            }
+            terminal.onPasswordChangeStarted = { [weak session] in
+                Task { @MainActor in session?.passwordChangeDidStart() }
+            }
+            terminal.onPasswordChangeVerified = { [weak session] passwordData in
+                Task { @MainActor in session?.receiveVerifiedChangedPassword(passwordData) }
+            }
+            terminal.onPasswordChangeRejected = { [weak session] in
+                Task { @MainActor in session?.passwordChangeWasRejected() }
             }
         }
         session.attach(terminal: terminal)
@@ -257,6 +266,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onLoginPasswordPrompt: (() -> Void)?
     var onLoginPasswordSubmitted: ((Data) -> Void)?
     var onLoginPasswordCaptureCancelled: (() -> Void)?
+    var onPasswordChangeStarted: (() -> Void)?
+    var onPasswordChangeVerified: ((Data) -> Void)?
+    var onPasswordChangeRejected: (() -> Void)?
     var onPlatformDetected: ((HostPlatform) -> Void)?
     var onPasswordPromptStateChanged: ((Bool) -> Void)?
     var onUserInput: (() -> Void)?
@@ -265,6 +277,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
     private var platformDetector = HostPlatformDetector()
     private var passwordCapture = LoginPasswordCapture()
+    private var passwordChangeCapture = PasswordChangeCapture()
     private var isCoalescingInterruptedOutput = false
     private var interruptedOutputTail: [UInt8] = []
     private var interruptedOutputFlushWorkItem: DispatchWorkItem?
@@ -275,6 +288,12 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     override func mouseDown(with event: NSEvent) {
         onActivated?()
         super.mouseDown(with: event)
+    }
+
+    deinit {
+        passwordCapture.cancel()
+        passwordChangeCapture.cancel()
+        for index in interruptedOutputTail.indices { interruptedOutputTail[index] = 0 }
     }
 
     func beginCapturingLoginPassword() {
@@ -288,6 +307,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
 
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
         let captureResult = passwordCapture.consume(data)
+        let passwordChangeResult = onPasswordChangeVerified == nil
+            ? PasswordChangeCaptureResult.none
+            : passwordChangeCapture.consumeInput(data)
         if data.contains(0x03) {
             beginCoalescingInterruptedOutput()
         }
@@ -304,6 +326,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         case .cancelled:
             onLoginPasswordCaptureCancelled?()
         }
+        handlePasswordChangeResult(passwordChangeResult)
     }
 
     override func dataReceived(slice: ArraySlice<UInt8>) {
@@ -321,6 +344,16 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
 
     private func deliverReceivedData(_ slice: ArraySlice<UInt8>) {
         super.dataReceived(slice: slice)
+        if onPasswordChangeVerified != nil {
+            let passwordChangeResult = passwordChangeCapture.consumeOutput(slice)
+            if passwordChangeResult == .started {
+                // A forced change may begin before the OpenSSH diagnostic
+                // monitor observes successful authentication. Do not mistake
+                // its "Current password" prompt for another login retry.
+                stopLoginPasswordPromptMonitoring()
+            }
+            handlePasswordChangeResult(passwordChangeResult)
+        }
         if let state = passwordPromptStateDetector.consume(slice) {
             onPasswordPromptStateChanged?(state)
         }
@@ -332,6 +365,22 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         if onLoginPasswordPrompt != nil, promptDetector.consume(slice) {
             promptDetector = LoginPasswordPromptDetector()
             onLoginPasswordPrompt?()
+        }
+    }
+
+    private func handlePasswordChangeResult(_ result: PasswordChangeCaptureResult) {
+        switch result {
+        case .none:
+            break
+        case .started:
+            onPasswordChangeStarted?()
+        case .verified(var passwordData):
+            defer {
+                if !passwordData.isEmpty { passwordData.resetBytes(in: passwordData.indices) }
+            }
+            onPasswordChangeVerified?(passwordData)
+        case .rejected:
+            onPasswordChangeRejected?()
         }
     }
 

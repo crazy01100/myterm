@@ -980,6 +980,15 @@ check(!promptDetector.consume(Array("operator@host's pass".utf8)[...]), "split p
 check(promptDetector.consume(Array("word: ".utf8)[...]), "split password prompt is detected")
 check(!promptDetector.consume(Array("[sudo] password: ".utf8)[...]), "login password auto-fill runs only once")
 
+var savedPasswordPromptPolicy = LoginPasswordPromptPolicy()
+check(savedPasswordPromptPolicy.nextAction(hasSavedPassword: true) == .useSavedPassword,
+      "saved password is attempted automatically once")
+check(savedPasswordPromptPolicy.nextAction(hasSavedPassword: true) == .captureAttempt,
+      "a repeated login prompt captures a replacement attempt")
+var unsavedPasswordPromptPolicy = LoginPasswordPromptPolicy()
+check(unsavedPasswordPromptPolicy.nextAction(hasSavedPassword: false) == .captureAttempt,
+      "an unsaved login prompt captures its first attempt")
+
 var passwordPromptState = PasswordPromptStateDetector()
 check(passwordPromptState.consume(Array("[sudo] pass".utf8)[...]) == nil,
       "manual password gate waits for a complete prompt")
@@ -1018,6 +1027,51 @@ check(controlUResult == .submitted(Data("correct".utf8)),
 passwordCapture.begin()
 check(passwordCapture.consume([0x03][...]) == .cancelled && !passwordCapture.isCapturing,
       "Control-C cancels password retention")
+
+var isolatedNewPassword = PasswordChangeCapture()
+check(isolatedNewPassword.consumeOutput(Array("New password:".utf8)[...]) == .none,
+      "an isolated new-password prompt never captures a secret")
+check(isolatedNewPassword.consumeInput(Array("must-not-capture\n".utf8)[...]) == .none,
+      "unarmed password-change input is ignored")
+
+var passwordChange = PasswordChangeCapture()
+check(passwordChange.consumeOutput(Array("Current pass".utf8)[...]) == .none,
+      "split current-password prompt waits")
+check(passwordChange.consumeOutput(Array("word:".utf8)[...]) == .started,
+      "current-password prompt arms a password-change sequence")
+check(passwordChange.consumeInput(Array("old-password\n".utf8)[...]) == .none,
+      "current password is never captured as the replacement")
+check(passwordChange.consumeOutput(Array("\nNew password:".utf8)[...]) == .none,
+      "new-password prompt starts private capture")
+check(passwordChange.consumeInput(Array("new-secret\n".utf8)[...]) == .none,
+      "new password waits for independent confirmation")
+check(passwordChange.consumeOutput(Array("\nRetype new password:".utf8)[...]) == .none,
+      "confirmation prompt starts a separate capture")
+check(passwordChange.consumeInput(Array("new-secret\n".utf8)[...]) == .none,
+      "matching confirmation waits for server success")
+check(passwordChange.consumeOutput(Array("\npasswd: password updated ".utf8)[...]) == .none,
+      "split password-change success waits")
+check(passwordChange.consumeOutput(Array("successfully\n".utf8)[...]) == .verified(Data("new-secret".utf8)),
+      "verified password change releases only the new password")
+
+var mismatchedPasswordChange = PasswordChangeCapture()
+_ = mismatchedPasswordChange.consumeOutput(Array("Current password:".utf8)[...])
+_ = mismatchedPasswordChange.consumeOutput(Array("\nNew password:".utf8)[...])
+_ = mismatchedPasswordChange.consumeInput(Array("first-secret\n".utf8)[...])
+_ = mismatchedPasswordChange.consumeOutput(Array("\nRetype new password:".utf8)[...])
+check(mismatchedPasswordChange.consumeInput(Array("different-secret\n".utf8)[...]) == .rejected,
+      "mismatched new passwords are never retained")
+check(mismatchedPasswordChange.consumeOutput(Array("password updated successfully".utf8)[...]) == .none,
+      "a rejected password change cannot be revived by later text")
+
+var failedPasswordChange = PasswordChangeCapture()
+_ = failedPasswordChange.consumeOutput(Array("Current password:".utf8)[...])
+_ = failedPasswordChange.consumeOutput(Array("\nNew password:".utf8)[...])
+_ = failedPasswordChange.consumeInput(Array("new-secret\n".utf8)[...])
+_ = failedPasswordChange.consumeOutput(Array("\nConfirm new password:".utf8)[...])
+_ = failedPasswordChange.consumeInput(Array("new-secret\n".utf8)[...])
+check(failedPasswordChange.consumeOutput(Array("\npasswd: password unchanged\n".utf8)[...]) == .rejected,
+      "server rejection clears the candidate password")
 
 var authLogDetector = SSHAuthenticationLogDetector()
 check(authLogDetector.consume(Array("debug1: Authenticated to 192.0.".utf8)[...]) == nil,

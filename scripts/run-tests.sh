@@ -48,6 +48,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/CloudSessionKeychainStore.swift \
     Sources/MySSHClient/Services/LoginPasswordPromptDetector.swift \
     Sources/MySSHClient/Services/SSHLoginPasswordCapture.swift \
+    Sources/MySSHClient/Services/PasswordChangeCapture.swift \
     Sources/MySSHClient/Services/SyncBackend.swift \
     Sources/MySSHClient/Services/SyncMutationJournal.swift \
     Sources/MySSHClient/Services/SyncSettingsStore.swift \

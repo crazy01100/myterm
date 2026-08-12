@@ -24,6 +24,12 @@ enum TerminalSessionKind: Equatable {
     case serial
 }
 
+enum PasswordSaveOfferKind: Equatable {
+    case login
+    case replacementLogin
+    case changedPassword
+}
+
 @MainActor
 final class TerminalSession: ObservableObject, Identifiable {
     let id = UUID()
@@ -42,9 +48,10 @@ final class TerminalSession: ObservableObject, Identifiable {
     @Published var notice: String?
     @Published private(set) var hasSavedPassword = false
     @Published private(set) var isPasswordPromptActive = false
-    @Published private(set) var isOfferingToSavePassword = false
+    @Published private(set) var passwordSaveOfferKind: PasswordSaveOfferKind?
     weak var terminalView: LocalProcessTerminalView?
     private var pendingPasswordData: Data?
+    private var loginPasswordPromptPolicy = LoginPasswordPromptPolicy()
     private var authenticationLogOffset = 0
     private var authenticationLogDetector = SSHAuthenticationLogDetector()
     private var authenticationMonitorTask: Task<Void, Never>?
@@ -80,8 +87,10 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     var canCapturePasswordForSaving: Bool {
-        canBindPasswordToProfile && !hasSavedPassword && authenticationLogURL != nil
+        canBindPasswordToProfile && authenticationLogURL != nil
     }
+
+    var isOfferingToSavePassword: Bool { passwordSaveOfferKind != nil }
 
     var canSafelyUseSavedPassword: Bool {
         canUseSavedPassword && isPasswordPromptActive && terminalView != nil
@@ -93,7 +102,7 @@ final class TerminalSession: ObservableObject, Identifiable {
             && !host.username.isEmpty
             && username == host.username
         let hasSavedPassword = canBindPassword && KeychainStore.containsPassword(for: host.id)
-        let authenticationLogURL = canBindPassword && !hasSavedPassword
+        let authenticationLogURL = canBindPassword
             ? try AppPaths.createAuthenticationLog()
             : nil
         let arguments: [String]
@@ -190,6 +199,12 @@ final class TerminalSession: ObservableObject, Identifiable {
         isPasswordPromptActive = isActive
     }
 
+    func nextLoginPasswordPromptAction() -> LoginPasswordPromptAction? {
+        guard canCapturePasswordForSaving else { return nil }
+        startAuthenticationMonitor()
+        return loginPasswordPromptPolicy.nextAction(hasSavedPassword: hasSavedPassword)
+    }
+
     func copyTerminalSelection() {
         guard let terminalView else { return }
         terminalView.copy(self)
@@ -218,7 +233,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     func prepareForLoginPasswordEntry() -> Bool {
         guard canCapturePasswordForSaving else { return false }
         clearPendingPassword()
-        isOfferingToSavePassword = false
+        passwordSaveOfferKind = nil
         return true
     }
 
@@ -237,38 +252,73 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     func cancelSubmittedLoginPassword() {
         clearPendingPassword()
-        isOfferingToSavePassword = false
+        passwordSaveOfferKind = nil
+    }
+
+    func passwordChangeDidStart() {
+        // An old login password must never remain eligible for saving once the
+        // server has entered a forced password-change sequence.
+        clearPendingPassword()
+        passwordSaveOfferKind = nil
+    }
+
+    func receiveVerifiedChangedPassword(_ verifiedData: Data) {
+        var verifiedData = verifiedData
+        defer {
+            if !verifiedData.isEmpty {
+                verifiedData.resetBytes(in: verifiedData.indices)
+            }
+        }
+        guard canBindPasswordToProfile, !verifiedData.isEmpty else { return }
+        clearPendingPassword()
+        pendingPasswordData = verifiedData
+        passwordSaveOfferKind = .changedPassword
+        notice = "伺服器已確認新密碼生效。"
+    }
+
+    func passwordChangeWasRejected() {
+        guard passwordSaveOfferKind != .changedPassword else { return }
+        notice = "密碼變更尚未成功，MyTerm 沒有更新儲存的密碼。"
     }
 
     func saveVerifiedPassword() {
-        guard isOfferingToSavePassword, let host, var passwordData = pendingPasswordData else { return }
+        guard let offerKind = passwordSaveOfferKind,
+              let host,
+              var passwordData = pendingPasswordData else { return }
         defer {
             if !passwordData.isEmpty {
                 passwordData.resetBytes(in: passwordData.startIndex..<passwordData.endIndex)
             }
             clearPendingPassword()
-            isOfferingToSavePassword = false
+            passwordSaveOfferKind = nil
         }
         do {
             try KeychainStore.save(passwordData: passwordData, for: host.id)
             hasSavedPassword = true
-            notice = "密碼已安全儲存至這台 Mac 的加密保管庫。"
+            notice = offerKind == .login
+                ? "密碼已安全儲存至這台 Mac 的加密保管庫。"
+                : "新的密碼已安全更新至這台 Mac 的加密保管庫。"
         } catch {
             notice = error.localizedDescription
         }
     }
 
     func declineVerifiedPassword() {
+        let offerKind = passwordSaveOfferKind
         clearPendingPassword()
-        isOfferingToSavePassword = false
-        notice = "本次登入密碼未儲存。"
+        passwordSaveOfferKind = nil
+        notice = offerKind == .login
+            ? "本次登入密碼未儲存。"
+            : "新密碼未寫入 MyTerm，本機仍保留原本的儲存密碼。"
     }
 
-    func authenticationDidEnd() {
+    func authenticationDidEnd(preserveVerifiedPasswordOffer: Bool = true) {
         authenticationMonitorTask?.cancel()
         authenticationMonitorTask = nil
-        clearPendingPassword()
-        isOfferingToSavePassword = false
+        if !preserveVerifiedPasswordOffer || passwordSaveOfferKind == nil {
+            clearPendingPassword()
+            passwordSaveOfferKind = nil
+        }
         isPasswordPromptActive = false
         AppPaths.removeAuthenticationLog(authenticationLogURL)
     }
@@ -307,8 +357,10 @@ final class TerminalSession: ObservableObject, Identifiable {
         switch result {
         case .password:
             if pendingPasswordData?.isEmpty == false {
-                isOfferingToSavePassword = true
-                notice = "登入密碼已由 OpenSSH 驗證成功。"
+                passwordSaveOfferKind = hasSavedPassword ? .replacementLogin : .login
+                notice = hasSavedPassword
+                    ? "新的登入密碼已由 OpenSSH 驗證成功。"
+                    : "登入密碼已由 OpenSSH 驗證成功。"
             } else {
                 clearPendingPassword()
             }
@@ -330,7 +382,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     func disconnect() {
         isPasswordPromptActive = false
-        authenticationDidEnd()
+        authenticationDidEnd(preserveVerifiedPasswordOffer: false)
         terminalView?.process.terminate()
         terminalView = nil
     }

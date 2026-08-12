@@ -6,6 +6,26 @@ enum LoginPasswordCaptureResult: Equatable {
     case cancelled
 }
 
+enum LoginPasswordPromptAction: Equatable {
+    case useSavedPassword
+    case captureAttempt
+}
+
+/// A saved password is attempted automatically only once. If OpenSSH asks
+/// again, the stored value was rejected and the user's next submitted attempt
+/// must be captured for independent verification before it can replace it.
+struct LoginPasswordPromptPolicy {
+    private var didAttemptSavedPassword = false
+
+    mutating func nextAction(hasSavedPassword: Bool) -> LoginPasswordPromptAction {
+        guard hasSavedPassword, !didAttemptSavedPassword else {
+            return .captureAttempt
+        }
+        didAttemptSavedPassword = true
+        return .useSavedPassword
+    }
+}
+
 /// Mirrors the small subset of canonical terminal editing that is useful at
 /// an SSH password prompt. The bytes are never rendered or converted to a
 /// String and are cleared as soon as an attempt is submitted or cancelled.

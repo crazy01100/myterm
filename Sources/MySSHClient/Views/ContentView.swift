@@ -1177,15 +1177,15 @@ struct TerminalWorkspaceView: View {
         .padding(panelInsets)
         .contentShape(.rect)
         .simultaneousGesture(TapGesture().onEnded(onActivate))
-        .alert("儲存這個主機的登入密碼？", isPresented: passwordSaveOfferBinding) {
-            Button("安全儲存密碼") {
+        .alert(passwordSaveOfferTitle, isPresented: passwordSaveOfferBinding) {
+            Button(passwordSaveOfferActionTitle) {
                 session.saveVerifiedPassword()
             }
             Button("不要儲存", role: .cancel) {
                 session.declineVerifiedPassword()
             }
         } message: {
-            Text("OpenSSH 已確認剛才輸入的密碼成功登入 \(session.detailDescription)。儲存後，MyTerm 下次可自動登入；密碼會留在這台 Mac 的加密保管庫。")
+            Text(passwordSaveOfferMessage)
         }
     }
 
@@ -1214,6 +1214,28 @@ struct TerminalWorkspaceView: View {
                 }
             }
         )
+    }
+
+    private var passwordSaveOfferTitle: String {
+        session.passwordSaveOfferKind == .login
+            ? "儲存這個主機的登入密碼？"
+            : "更新這個主機的儲存密碼？"
+    }
+
+    private var passwordSaveOfferActionTitle: String {
+        session.passwordSaveOfferKind == .login
+            ? "安全儲存密碼"
+            : "安全更新密碼"
+    }
+
+    private var passwordSaveOfferMessage: String {
+        if session.passwordSaveOfferKind == .changedPassword {
+            return "MyTerm 已確認兩次輸入的新密碼一致，且伺服器已回報密碼變更成功。更新後，下次會使用新密碼登入 \(session.detailDescription)；密碼只會寫入這台 Mac 的加密保管庫。"
+        }
+        if session.passwordSaveOfferKind == .replacementLogin {
+            return "OpenSSH 已確認剛才手動輸入的新密碼成功登入 \(session.detailDescription)。更新後，MyTerm 下次會使用這個密碼自動登入；密碼只會寫入這台 Mac 的加密保管庫。"
+        }
+        return "OpenSSH 已確認剛才輸入的密碼成功登入 \(session.detailDescription)。儲存後，MyTerm 下次可自動登入；密碼會留在這台 Mac 的加密保管庫。"
     }
 
     private var sessionStatusColor: Color {
