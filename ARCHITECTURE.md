@@ -1,6 +1,6 @@
 # MyTerm 系統架構
 
-本文說明 MyTerm 1.0.7 的公開系統架構、資料流及安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
+本文說明 MyTerm 目前的公開系統架構、資料流及安全邊界。實作與部署細節以儲存庫中的程式碼及設定為準。
 
 ## 架構總覽
 
@@ -15,15 +15,23 @@
 │  ├─ App 專用 known_hosts        ├─ Application Support 本機資料    │
 │  └─ Sparkle 更新器              └─ 選用的端對端加密同步             │
 └────────────────────────────────────────────────────────────────────┘
-             │ HTTPS（只有使用者啟用同步後）          │ HTTPS
-             ▼                                       ▼
-  Google OAuth / Firebase Auth             mtus.lieniapp.work
-             │                              Sparkle appcast
-             ▼                                       │
-     Cloud Firestore（只保存密文）          GitHub Release 安裝包
+             ├─ Google 登入（選用） ── HTTPS ──▶ Google OAuth
+             │                                  │
+             │                                  ▼
+             │                         Firebase Authentication
+             │                                  │ Firebase ID token
+             │                                  ▼（僅啟用同步後讀寫）
+             │                         Cloud Firestore（只保存密文）
+             │
+             └─ App 更新 ──────────── HTTPS ──▶ mtus.lieniapp.work
+                                                │ Sparkle appcast
+                                                ▼
+                                      GitHub Release 安裝包
 ```
 
-MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會為主機資料初始化跨裝置同步流程。
+MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 與 Firebase Authentication 建立雲端帳號身分；只有使用者另外啟用同步後，MyTerm 才會使用 Firebase ID token 存取 Cloud Firestore 並初始化主機資料的跨裝置同步流程。
+
+官方 App、純本機原始碼建置與自行建置同步後端的設定邊界，以及 Firebase／Google Cloud 前置作業，見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
 
 ## App 元件
 
@@ -82,6 +90,8 @@ MyTerm 的核心功能不依賴雲端。未登入或未啟用同步時，不會�
 
 Firestore 不保存明文主機內容、同步密語、Master Key 或解密後密碼。復原金鑰是使用者遺失同步密語時的獨立復原途徑，MyTerm 不代為保存其明文。
 
+主機與群組刪除會以帶有 revision、裝置識別與 AES-256-GCM 驗證的 tombstone 傳播；遠端刪除套用前會先建立本機還原備份。
+
 ## SSH 密碼流程
 
 - 已保存的 SSH 登入密碼只在設定帳號一致且第一次登入 `password:` 提示時自動送入 PTY。
@@ -108,7 +118,7 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
 - MyTerm 自有的 SVG 平台圖示由建置腳本放入標準 `Contents/Resources/PlatformIcons`，執行期只從 `Bundle.main` 載入，不使用會嵌入建置機 fallback 路徑的 executable-target `Bundle.module`。候選 App、封裝 ZIP、GitHub 回下載資產與 Cloudflare 部署前會共同驗證圖示內容並拒絕不安全的 MyTerm SwiftPM resource accessor。
 - Sparkle 不要求 App 路徑名稱必須是 `/Applications`，但會拒絕從 App Translocation、唯讀映像、暫時位置或無法替換 App 的位置更新。正式安裝一律先將 `MyTerm.app` 移到「應用程式」資料夾；專案 `build/` 內的 App 只供開發測試。
-- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；1.0.1 已將分散機密收斂到單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
+- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；本機機密集中於單一加密保管庫與單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
 
 ## 儲存庫結構
 
@@ -126,11 +136,10 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 
 `build/`、SwiftPM 快取、`node_modules/`、本機 Firebase 設定、OAuth secret、使用者匯出資料及內部計劃紀錄均不屬於公開原始碼。
 
-## 1.0.5 已知限制
+## 目前限制
 
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
-- 1.0.1 起，主機與群組刪除會以帶有 revision、裝置識別與 AES-256-GCM 驗證的 tombstone 傳播；遠端刪除套用前會建立本機還原備份。
 - `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
 - 跨裝置同步由 App 啟動、回到前景、切換主要功能及定期排程等本機事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。

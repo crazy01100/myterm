@@ -48,5 +48,5 @@
 - `sudo`／`su` 密碼不會自動送出；MyTerm 只在辨識到安全密碼提示時開放按鈕或快捷鍵一鍵填入，讓使用者保留最後確認權。
 - 平台辨識採保守的 best-effort；畫面沒有明確作業系統或網路設備標記時會維持通用圖示。
 - Serial 可能因轉接器中斷、被其他程式占用或 macOS／驅動權限而失敗。目前尚無實體 USB Serial 裝置完成全流程硬體驗證。
-- 跨裝置同步為預設關閉的選用功能。啟用後，主機、群組與密碼只會以逐筆端對端加密密文傳送至 Firebase；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫，保管庫根金鑰為 ThisDeviceOnly Keychain 項目。私鑰檔案、私鑰路徑與 known_hosts 不同步；架構與資料流見 [系統架構](ARCHITECTURE.md)。
-- 1.0.1 起，主機與群組刪除會同步端對端驗證的加密 tombstone。套用遠端刪除前會備份本機清單；遠端主機刪除後再清理該台 Mac 保管庫中的密碼，舊 Keychain 項目權限異常不會阻止清單刪除。
+- 跨裝置同步為預設關閉的選用功能。啟用後，主機、群組與密碼只會以逐筆端對端加密密文傳送至 Firebase；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫，保管庫根金鑰為 ThisDeviceOnly Keychain 項目。私鑰檔案、私鑰路徑與 known_hosts 不同步；架構與資料流見 [系統架構](ARCHITECTURE.md)。自行建置同步後端時必須部署 repository 內的 Security Rules，不得以測試用全開規則代替；完整前置作業見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
+- 主機與群組刪除會同步端對端驗證的加密 tombstone。套用遠端刪除前會備份本機清單；遠端主機刪除後再清理該台 Mac 保管庫中的密碼，舊 Keychain 項目權限異常不會阻止清單刪除。

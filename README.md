@@ -7,6 +7,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
 - [開發與發布指南](DEVELOPMENT.md)
+- [Firebase 自架同步設定](FIREBASE_SETUP.md)
 - [系統架構](ARCHITECTURE.md)
 - [安全設計](SECURITY.md)
 
@@ -36,6 +37,8 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 私鑰檔案、私鑰路徑及 `known_hosts` 永遠只保留在各台 Mac。
 - 可停用同步並繼續以純本機模式使用 App。
 
+安裝官方發布版不需要自行建立 Firebase 專案。只有從原始碼建置並希望使用自己的 Google 登入與同步後端時，才需要依照 [Firebase 自架同步設定](FIREBASE_SETUP.md) 完成前置作業；缺少雲端設定不影響純本機功能。
+
 ## 安裝需求
 
 - Apple Silicon Mac（arm64）
@@ -43,7 +46,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 下載並解壓縮後，請先把 `MyTerm.app` 移到「應用程式」資料夾，再從該位置啟動。不要直接從 ZIP、磁碟映像、下載後的暫時位置或唯讀位置執行；macOS App Translocation 或無法替換 App 的位置會阻止 Sparkle 完成更新。
 
-目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；1.0.1 已將所有本機機密收斂至單一加密保管庫，使更新後需要的 Keychain 驗證不會隨主機數量增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
+目前版本未加入 Apple Developer Program，因此第一次從網站下載後，macOS 仍可能顯示無法驗證開發者；請在「系統設定 → 隱私權與安全性」確認檔案來源後允許開啟一次。零費用自簽憑證沒有 Apple Team ID，無法保證跨版本延續 Keychain 身分；所有本機機密已集中於單一加密保管庫，使更新後需要的 Keychain 驗證不會隨主機數量增加。App 內更新仍會另外驗證 Sparkle Ed25519 簽章。
 
 ## 基本使用
 
@@ -65,21 +68,11 @@ git clone https://github.com/crazy01100/myterm.git
 cd myterm
 ./scripts/run-tests.sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.5-dev.1 \
+  --version 0.0.0-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
 測試 App 固定位於 `build/dev/MyTerm Dev.app`，並使用獨立的 Bundle ID、Application Support 目錄與本機保管庫 Keychain service；腳本只會關閉與重啟這個路徑，不會讀寫或變更 `/Applications/MyTerm.app` 的正式資料。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
-
-目前原始碼的完整正式候選流程會執行安全檢查、425 項測試、arm64 Release 建置、固定發行憑證驗證、封裝與 SHA-256 產生：
-
-```sh
-./scripts/prepare-release-build.sh \
-  --version 1.0.5-rc.1 \
-  --build "$(date '+%Y%m%d%H%M%S')"
-```
-
-發布流程只會先建立私人 GitHub Draft Release，必須人工核對後才公開；公開 Release 會觸發 GitHub Actions，把簽署的更新資訊部署至 Cloudflare Pages。
 
 各建置通道、腳本用途、候選版與發布流程請見 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
@@ -88,24 +81,7 @@ cd myterm
 - 主機清單不包含密碼；所有本機機密共用 AES-GCM 保管庫，其單一根金鑰使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
 - 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
 - MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
-- 1.0.1 起，主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。
+- 主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。
 - `sudo`／`su` 密碼不會自動送出，需在已辨識的安全提示中按按鈕或快捷鍵。
 
 更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。
-
-## 發布驗證
-
-MyTerm 1.0.4 已完成平台圖示資源封裝修補與第二台 Mac 乾淨候選驗收；1.0.5 恢復 SFTP 檔案拖放並補齊第一個 Terminal 分頁的相鄰合併；1.0.6 加入失效登入密碼及伺服器強制改密碼後的安全更新流程；1.0.7 新增 SSH 連線階段、原始錯誤診斷、原位重試及隱私清理。候選與正式發布流程會共同驗證下列項目：
-
-- 425 項本機自動測試，以及既有 Firestore Security Rules 測試。
-- 兩台 Mac 的 Google 登入、同步密語復原、端對端加密主機與密碼同步。
-- 兩台 Mac 透過正式更新鏈升級至 1.0.1；重啟、主機、群組、密碼、SSH、SFTP 與同步均維持正常。
-- 使用另一台 Mac 同步而來的密碼實際建立 SSH 連線。
-- 主機與群組的端對端加密刪除同步，以及套用遠端刪除前的本機備份。
-- 舊版分散 Keychain 項目遷移至單一本機加密保管庫；驗證次數不再隨主機數量增加。
-- Sparkle 下載、Ed25519 驗證、替換、重啟、離線失敗及竄改拒絕測試。
-- SFTP 本機與遠端檔案的拖放上傳／下載，以及封裝內自訂拖放資料型別宣告。
-- 第一個與非第一個 Terminal 分頁的合併、雙窗格拖曳調整與重新拆分。
-- 正式 GitHub Release → GitHub Actions → Cloudflare Pages 自動部署、外部下載驗證，以及正式 App 內更新驗收。
-
-正式更新來源為 <https://mtus.lieniapp.work/appcast.xml>。

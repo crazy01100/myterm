@@ -28,6 +28,7 @@ DerivedData/
 /Config/Local/
 /GoogleService-Info.plist
 /Resources/GoogleService-Info.plist
+/.firebaserc
 /.firebase/
 /.npm-cache/
 /node_modules/

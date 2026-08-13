@@ -24,6 +24,16 @@
 
 Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是一般本機建置的必要原始碼，也不得提交至 Git。
 
+## 雲端功能建置模式
+
+| 目標 | Firebase／OAuth 設定 | 結果 |
+|---|---|---|
+| 一般本機開發 | 不需要 | SSH、Terminal、Serial、SFTP 與本機資料功能可完整使用；Google 登入與同步會顯示尚未設定 |
+| 自行建置並啟用同步 | 使用開發者自己的 Firebase／Google Cloud 專案 | 可驗證 Google 登入、Firestore Rules 與跨裝置端對端加密同步 |
+| 官方發布 | 僅由維護者在安全本機提供正式設定 | 不得從 repository、範例檔或 CI 推導／取得正式設定 |
+
+自架雲端功能的 Firebase Console、Google Desktop OAuth、Firestore、設定產生、Rules 部署與驗收步驟見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。實際設定固定放在被 Git 排除的 `Config/Local/`；公開 repository 只保存無真實值的範例、Rules、Indexes 與安全部署工具。
+
 ## 日常開發流程
 
 先執行自動測試：
@@ -36,7 +46,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.3-dev.1 \
+  --version 0.0.0-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -51,7 +61,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.3-dev.1 \
+  --version 0.0.0-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')" \
   --build-only
 ```
@@ -73,6 +83,8 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 |---|---|---|
 | `scripts/run-tests.sh` | 執行主要回歸測試與加密／同步測試。 | 否 |
 | `scripts/run-crypto-tests.sh` | 單獨執行加密、Vault 與同步測試。 | 否 |
+| `scripts/configure-cloud.sh` | 從本機 Firebase／Desktop OAuth 輸入檔產生 MyTerm 執行期雲端設定。 | 否 |
+| `scripts/deploy-firestore.sh` | 要求明確指定 Firebase Project ID，再部署 Firestore Rules 與 Indexes。 | 是，僅部署指定專案的 Firestore 設定 |
 | `scripts/run-dev-app.sh` | 安全建置、驗證及選擇性啟動固定測試 App。 | 否 |
 | `scripts/build-app.sh` | 底層 App 建置工具；依通道限制輸出位置。 | 否 |
 | `scripts/verify-app.sh` | 驗證指定 App 的版本、Build、架構、簽章與更新設定。 | 否 |
@@ -90,11 +102,11 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ## 候選版與發布流程
 
-建立候選版但不建立 GitHub Release：
+建立候選版但不建立 GitHub Release；先把下列 `X.Y.Z` 換成預計發布的版本：
 
 ```sh
 ./scripts/prepare-release-build.sh \
-  --version 1.0.3-rc.1 \
+  --version X.Y.Z-rc.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -102,9 +114,9 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/release.sh \
-  --version 1.0.3-rc.1 \
+  --version X.Y.Z-rc.1 \
   --build "$(date '+%Y%m%d%H%M%S')" \
-  --notes build/release-notes/1.0.3-rc.1.md
+  --notes build/release-notes/X.Y.Z-rc.1.md
 ```
 
 `release.sh` 的界線如下：
@@ -137,6 +149,7 @@ Draft 必須經人工確認後才能發布。候選 App、封裝後 ZIP 與 GitH
 - code-signing 私鑰、`.p12`、Keychain 匯出或加密備份密碼
 - Sparkle Ed25519 私鑰
 - Google OAuth client secret、Firebase token、Cloudflare token
+- 寫死於範例、`.firebaserc` 或共用 npm script 的正式 Firebase Project ID
 - 同步密語、復原金鑰、主機密碼或真實主機 inventory
 - 本機 `.env`、Firebase 實際設定檔及 `build/` 產物
 
