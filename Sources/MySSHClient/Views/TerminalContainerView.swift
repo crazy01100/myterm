@@ -2,6 +2,19 @@ import AppKit
 import SwiftUI
 import SwiftTerm
 
+enum TerminalCanvasAppearance {
+    static let horizontalContentInset: CGFloat = 8
+    static let verticalContentInset: CGFloat = 4
+
+    static func backgroundColor(for colorScheme: ColorScheme) -> NSColor {
+        if colorScheme == .dark {
+            NSColor(srgbRed: 0.045, green: 0.070, blue: 0.115, alpha: 1)
+        } else {
+            NSColor(srgbRed: 0.955, green: 0.972, blue: 0.985, alpha: 1)
+        }
+    }
+}
+
 struct TerminalContainerView: NSViewRepresentable {
     @ObservedObject var session: TerminalSession
     @Environment(\.colorScheme) private var colorScheme
@@ -28,6 +41,7 @@ struct TerminalContainerView: NSViewRepresentable {
         terminal.font = NSFont(name: "SFMono-Regular", size: 14) ?? NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
         terminal.fontSmoothing = true
         terminal.scrollerStyle = .overlay
+        terminal.hideScrollIndicator()
         applyTheme(to: terminal)
         context.coordinator.lastAppliedColorScheme = colorScheme
         context.coordinator.installControlDMonitor(for: terminal)
@@ -112,17 +126,16 @@ struct TerminalContainerView: NSViewRepresentable {
     private func applyTheme(to terminal: LocalProcessTerminalView) {
         if colorScheme == .dark {
             terminal.nativeForegroundColor = NSColor(srgbRed: 0.88, green: 0.92, blue: 0.97, alpha: 1)
-            terminal.nativeBackgroundColor = NSColor(srgbRed: 0.045, green: 0.070, blue: 0.115, alpha: 1)
             terminal.caretColor = NSColor(srgbRed: 0.35, green: 0.78, blue: 1.0, alpha: 1)
             terminal.selectedTextBackgroundColor = NSColor(srgbRed: 0.16, green: 0.33, blue: 0.52, alpha: 1)
             terminal.selectedTextForegroundColor = .white
         } else {
             terminal.nativeForegroundColor = NSColor(srgbRed: 0.13, green: 0.18, blue: 0.28, alpha: 1)
-            terminal.nativeBackgroundColor = NSColor(srgbRed: 0.955, green: 0.972, blue: 0.985, alpha: 1)
             terminal.caretColor = NSColor(srgbRed: 0.15, green: 0.47, blue: 0.93, alpha: 1)
             terminal.selectedTextBackgroundColor = NSColor(srgbRed: 0.72, green: 0.84, blue: 1.0, alpha: 1)
             terminal.selectedTextForegroundColor = NSColor(srgbRed: 0.07, green: 0.15, blue: 0.25, alpha: 1)
         }
+        terminal.nativeBackgroundColor = TerminalCanvasAppearance.backgroundColor(for: colorScheme)
         terminal.layer?.backgroundColor = terminal.nativeBackgroundColor.cgColor
     }
 
@@ -282,6 +295,13 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private var interruptedOutputDeadline: DispatchTime?
     private let interruptedOutputTailLimit = 16 * 1024
     private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
+
+    func hideScrollIndicator() {
+        subviews
+            .compactMap { $0 as? NSScroller }
+            .forEach { $0.isHidden = true }
+        needsLayout = true
+    }
 
     override func mouseDown(with event: NSEvent) {
         onActivated?()

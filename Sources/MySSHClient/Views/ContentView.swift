@@ -1089,6 +1089,7 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
 
 struct TerminalWorkspaceView: View {
     @EnvironmentObject private var hostStore: HostStore
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var session: TerminalSession
     let isVisible: Bool
     let isActive: Bool
@@ -1169,6 +1170,8 @@ struct TerminalWorkspaceView: View {
                 .padding(.vertical, 10)
 
                 ZStack {
+                    Color(nsColor: TerminalCanvasAppearance.backgroundColor(for: colorScheme))
+
                     TerminalContainerView(
                         session: session,
                         isVisible: isVisible,
@@ -1177,6 +1180,8 @@ struct TerminalWorkspaceView: View {
                         onPlatformDetected: recordPlatform,
                         onActivate: onActivate
                     )
+                    .padding(.horizontal, TerminalCanvasAppearance.horizontalContentInset)
+                    .padding(.vertical, TerminalCanvasAppearance.verticalContentInset)
 
                     if session.shouldPresentConnectionExperience && showsConnectionPanel {
                         SSHConnectionExperienceView(
