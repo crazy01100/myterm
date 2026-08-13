@@ -4,39 +4,39 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>MyTerm</title>
         <item>
-            <title>1.0.7</title>
-            <pubDate>Thu, 13 Aug 2026 02:01:28 +0800</pubDate>
-            <sparkle:version>20260813020047</sparkle:version>
-            <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
+            <title>1.0.8</title>
+            <pubDate>Thu, 13 Aug 2026 15:32:22 +0800</pubDate>
+            <sparkle:version>20260813153121</sparkle:version>
+            <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.7
+            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.8
 
-## 新功能
+## 改善內容
 
-- SSH 連線建立期間會顯示目前階段，連線失敗時可展開查看保留 OpenSSH 原始措辭的錯誤資訊。
-- 失敗畫面可直接重新連線、開啟對應主機設定，或複製經隱私處理的診斷記錄。
+- 調整 Terminal 畫布內容內距，避免第一列第一個字元與圓角邊界產生視覺重疊。
+- 隱藏 Terminal 右側的捲軸指示軌道，保留滑鼠滾輪、觸控板與 scrollback 操作。
+- 單窗格與雙窗格使用一致的背景及內容安全區域。
 
-## 隱私與可靠性
+## 相容性與資料
 
-- OpenSSH verbose debug 只用於內部分類，不會顯示或複製；本機路徑、代理程式與機密資訊會先排除或遮蔽。
-- SSH 驗證成功後立即釋放連線診斷內容；異常退出可能留下的短期診斷檔會在下次啟動時清理，不會同步或長期保存。
-- 快速失敗的連線也會在程序結束前取得最後一份已清理的原始錯誤，避免只看到籠統分類。
-
-## 相容性
-
-- 主機資料、端對端同步格式、Keychain 根金鑰與更新信任鏈均未變更。
-- 支援 Apple Silicon，最低系統版本為 macOS 26。
+- 不改變 SSH、SFTP、PTY、分頁或雙窗格的程序生命週期。
+- 不改變主機、群組、密碼、Keychain、同步資料或 Firestore 格式，無需資料遷移。
 
 ## 驗證
 
-- 425 項本機自動測試全部通過。
-- 已實際驗證拒絕連線、原始錯誤顯示、重新連線、編輯主機、Local Terminal、Serial、SFTP 基本入口，以及 Workspace 左右／上下合併。
+- 425 項自動測試全部通過。
+- 已在 MyTerm Dev 實際建立本機 Terminal、產生 200 行輸出並操作 scrollback，確認文字完整、捲軸軌道隱藏且捲動正常。
+
+## 現有限制
+
+- 目前正式成品僅支援 Apple Silicon 與 macOS 26。
+- 目前未使用 Apple Developer ID 與 Apple 公證；安裝方式與安全界線維持既有說明。
 ]]></description>
-            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.7-build-20260813020047-arm64.zip" length="6561990" type="application/octet-stream" sparkle:edSignature="hBW/Lp/mSU3XWzCZ+cv5+tXXRD9Fb8axq+17FlTkbqoTADBI3RC/YuZQLwt7jQADqa0J9iLH1xjUpeMoOsuADw=="></enclosure>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.8-build-20260813153121-arm64.zip" length="6564574" type="application/octet-stream" sparkle:edSignature="PUPDppFbNM6QoHD0CdTpUn8NM3ldN40I5NugulbB/0lBEG6C6O4TlLedYOnvBjMAjlkKDX3N3Gl9x1QA4sh4Dg=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: ZMrA0Coa8ql3DezXsyzVly9HvykeqqLMitu/Gp1cHwR8fPz8uSnlhh4sblUOmLtB/KEZuFvf1wPAc00Shv5wCg==
-length: 2307
+edSignature: 94oujUm2PHD/pp6rJ0DisjAVDEnl4zWW+UrNGURL3VZ4aPdYA7EbfaMZkZtijwcGDmNjUWrvKcQRrchOnrZ+Aw==
+length: 2107
 -->
