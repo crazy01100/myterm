@@ -8,6 +8,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - [更新說明](https://mtus.lieniapp.work/)
 - [開發與發布指南](DEVELOPMENT.md)
 - [Firebase 自架同步設定](FIREBASE_SETUP.md)
+- [Termius 主機資料遷移](TERMIUS_MIGRATION.md)
 - [系統架構](ARCHITECTURE.md)
 - [安全設計](SECURITY.md)
 
@@ -22,7 +23,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 可把終端機分頁往下拖入相鄰連線的內容區，依綠色預覽合併為左右或上下雙窗格；一般分頁優先與前一個連線合併，第一個分頁則會使用後一個連線。每個 Workspace 最多兩個連線，可拖曳分隔線調整比例、個別切換焦點或關閉，也可把窗格標題列拖回頂部分頁列重新拆開。
 - SFTP 上傳、下載、覆蓋確認、新增資料夾、重新命名、刪除與權限調整；可從 Finder 把檔案或資料夾拖到右側遠端窗格，上傳至目前遠端目錄；本機面板可在 App 內進入 OneDrive 等符號連結資料夾。
 - 主機庫與 SFTP 使用一致的滑過、單擊選取及雙擊開啟操作；深層 SFTP 路徑會自動保留關鍵層級並以 `…` 收合中段目錄。
-- MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出。
+- MyTerm／Termius 主機資料匯入、可選項目預覽與 MyTerm 主機資料匯出；Termius 的資料邊界與選用轉換工具見 [Termius 主機資料遷移](TERMIUS_MIGRATION.md)。
 - 可調整或停用的 App 內快捷鍵；已儲存密碼只會在安全的密碼提示階段允許填入。若第一次自動登入密碼已失效，MyTerm 只會在 OpenSSH 驗證下一次手動輸入成功後詢問取代；強制改密碼則要求兩次新密碼一致且伺服器明確回報成功，才會詢問更新本機保管庫。
 - 自動辨識終端機輸出中的作業系統或網路設備資訊；尚未辨識的 SSH 主機會使用唯讀背景探測，並在主機庫、SFTP、連線分頁與終端機標題使用一致的平台徽章。
 - Sparkle 安全更新，可由「MyTerm → 檢查更新⋯」下載並安裝正式版本。
@@ -80,7 +81,7 @@ cd myterm
 
 - 主機清單不包含密碼；所有本機機密共用 AES-GCM 保管庫，其單一根金鑰使用 `WhenUnlockedThisDeviceOnly` Keychain 項目。
 - 主機匯出檔是明文，可能包含位址、帳號與備註，必須由使用者自行妥善保管。
-- MyTerm 不解密 Termius Vault；Termius 密碼需要重新輸入或依未來的官方匯出方式遷移。
+- MyTerm App 不直接讀取 Termius Vault。Repository 的選用工具只轉換相容的主機／群組中繼資料，不處理密碼或私鑰；完整限制見 [Termius 主機資料遷移](TERMIUS_MIGRATION.md)。
 - 主機／群組刪除會以通過端對端驗證的加密刪除標記同步；套用遠端刪除前會先建立本機還原備份。
 - `sudo`／`su` 密碼不會自動送出，需在已辨識的安全提示中按按鈕或快捷鍵。
 

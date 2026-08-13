@@ -21,8 +21,7 @@ DerivedData/
 *.xcarchive
 
 # Personal migration exports can contain real hostnames, addresses and users.
-/Exports/Termius/*
-!/Exports/Termius/README.md
+/Exports/
 
 # Firebase local configuration and emulator output.
 /Config/Local/

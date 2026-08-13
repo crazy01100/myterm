@@ -47,8 +47,8 @@ require_ignore() {
     # R5 才會初始化 Git；在那之前先確認必要的目錄規則存在。
     if [[ "$candidate_path" == Config/Local/* ]]; then
         /usr/bin/grep -Fqx "/Config/Local/" .gitignore || fail "$candidate_path is not protected by .gitignore"
-    elif [[ "$candidate_path" == Exports/Termius/* ]]; then
-        /usr/bin/grep -Fqx "/Exports/Termius/*" .gitignore || fail "$candidate_path is not protected by .gitignore"
+    elif [[ "$candidate_path" == Exports/* ]]; then
+        /usr/bin/grep -Fqx "/Exports/" .gitignore || fail "$candidate_path is not protected by .gitignore"
     else
         fail "cannot prove that $candidate_path is protected by .gitignore"
     fi
@@ -62,8 +62,7 @@ if rg -n --glob '*.swift' 'Bundle[.]module' Sources/MySSHClient; then
     fail "MyTerm App sources must load packaged resources through Bundle.main; Bundle.module can embed a build-machine fallback path"
 fi
 
-for exported_file in Exports/Termius/*(N.); do
-    [[ "${exported_file:t}" == "README.md" ]] && continue
+for exported_file in Exports/**/*(N.); do
     require_ignore "$exported_file"
 done
 
@@ -90,7 +89,7 @@ else
         -g '!.firebase/**' \
         -g '!firebase-emulator-data/**' \
         -g '!Config/Local/**' \
-        -g '!Exports/Termius/**' \
+        -g '!Exports/**' \
         -g '!*.zip' \
         -g '!*.dmg' \
         -g '!*.pkg' \

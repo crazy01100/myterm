@@ -2,7 +2,7 @@
 
 // Run this script with Termius's Electron runtime:
 // ELECTRON_RUN_AS_NODE=1 /Applications/Termius.app/Contents/MacOS/Termius \
-//   Scripts/TermiusExport/export_decrypted_metadata.js input.json output-directory
+//   scripts/TermiusExport/export_decrypted_metadata.js input.json output-directory
 //
 // The input must already contain host metadata only. This script deliberately
 // has no code for password or private-key fields.
@@ -120,7 +120,7 @@ async function run() {
   const document = {
     format: "myterm-termius-host-export-v1",
     exportedAt,
-    source: "Termius 9.38.2 local vault",
+    source: "Termius local metadata",
     security: {
       containsPasswords: false,
       containsPrivateKeys: false,
