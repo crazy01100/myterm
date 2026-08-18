@@ -4,39 +4,43 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>MyTerm</title>
         <item>
-            <title>1.0.8</title>
-            <pubDate>Thu, 13 Aug 2026 15:32:22 +0800</pubDate>
-            <sparkle:version>20260813153121</sparkle:version>
-            <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
+            <title>1.0.9</title>
+            <pubDate>Wed, 19 Aug 2026 00:59:47 +0800</pubDate>
+            <sparkle:version>20260819005831</sparkle:version>
+            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.8
+            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.9
 
-## 改善內容
+## 新功能
 
-- 調整 Terminal 畫布內容內距，避免第一列第一個字元與圓角邊界產生視覺重疊。
-- 隱藏 Terminal 右側的捲軸指示軌道，保留滑鼠滾輪、觸控板與 scrollback 操作。
-- 單窗格與雙窗格使用一致的背景及內容安全區域。
+- 主機庫會依最近一次成功 SSH 連線時間排序，最近使用的主機優先顯示在左上角；連線失敗、取消或只開啟分頁不會改變順序。
+- 在「所有主機」頁面可直接把主機卡片拖到內容區的分類卡片，核對確認視窗後完成移動。
+- 分類卡片的上緣、中央、下方與左右區域都可作為拖曳目標，並提供低對比的目標提示。
 
-## 相容性與資料
+## 資料與安全
 
-- 不改變 SSH、SFTP、PTY、分頁或雙窗格的程序生命週期。
-- 不改變主機、群組、密碼、Keychain、同步資料或 Firestore 格式，無需資料遷移。
+- 最近連線時間只保存在目前 Mac 的權限限制檔案，內容僅有主機 UUID 與時間，不包含主機名稱、位址、帳號、密碼或連線內容，也不會匯出或同步到 Firebase。
+- 移動分類只更新既有主機的分類與修改時間，保留主機 UUID、密碼、平台辨識及最近連線關聯，不需要資料遷移。
+- 主機分類拖曳只追蹤目前 MyTerm 視窗內、從主機卡片開始的滑鼠操作，不接受其他 App 傳入的拖放資料；放手後仍須由使用者確認才會保存。
 
 ## 驗證
 
-- 425 項自動測試全部通過。
-- 已在 MyTerm Dev 實際建立本機 Terminal、產生 200 行輸出並操作 scrollback，確認文字完整、捲軸軌道隱藏且捲動正常。
+- 440 項本機自動測試全部通過：核心 292 項、同步與加密 148 項。
+- 已在隔離的 MyTerm Dev 實際驗證多台主機會依成功連線先後重新排序，同一端點的不同主機仍各自保有紀錄。
+- 已實際驗證主機可拖到分類卡片的任何位置，確認後正確移動分類並在重啟後保存結果。
 
 ## 現有限制
 
+- 最近使用排序第一版只套用於主機庫，不改變 SFTP 主機選擇器順序。
+- 拖曳目標只限「所有主機」頁面的內容區分類卡片；左側分類列表不是投放區。
 - 目前正式成品僅支援 Apple Silicon 與 macOS 26。
 - 目前未使用 Apple Developer ID 與 Apple 公證；安裝方式與安全界線維持既有說明。
 ]]></description>
-            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.8-build-20260813153121-arm64.zip" length="6564574" type="application/octet-stream" sparkle:edSignature="PUPDppFbNM6QoHD0CdTpUn8NM3ldN40I5NugulbB/0lBEG6C6O4TlLedYOnvBjMAjlkKDX3N3Gl9x1QA4sh4Dg=="></enclosure>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.9-build-20260819005831-arm64.zip" length="6639795" type="application/octet-stream" sparkle:edSignature="oDZUCZXSDl3I+lGGwXYz42hRB4gmMNobx4r46rxz/VXCVHjPOf2WTQeaNIJpQMDBtnRqcMcj2mYkizyFU5h1Dg=="></enclosure>
         </item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 94oujUm2PHD/pp6rJ0DisjAVDEnl4zWW+UrNGURL3VZ4aPdYA7EbfaMZkZtijwcGDmNjUWrvKcQRrchOnrZ+Aw==
-length: 2107
+edSignature: hI9LzMQOZak19RWplE57RMlIJHRYqcySaTk/h8gMtQ5X/IMsZ42wgnq6tcbWHegR3QYmALqjDX13m82gSnZqCg==
+length: 2967
 -->

@@ -2,7 +2,7 @@
 
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.8**
+目前正式版本：**1.0.9**
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
