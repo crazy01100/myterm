@@ -14,6 +14,9 @@ enum AppPaths {
     }()
 
     static var hostsFile: URL { rootDirectory.appending(path: "hosts.json") }
+    static var hostConnectionRecencyFile: URL {
+        rootDirectory.appending(path: "host-connection-recency.json")
+    }
     static var legacyHostsBackupFile: URL { rootDirectory.appending(path: "hosts-v0.1-backup.json") }
     static var preHierarchyBackupFile: URL { rootDirectory.appending(path: "hosts-v0.6-pre-hierarchy-backup.json") }
     static var knownHostsFile: URL { rootDirectory.appending(path: "known_hosts") }

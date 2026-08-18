@@ -89,11 +89,11 @@ if [[ "$app_path" == "$project_dir/build/dev/MyTerm Dev.app" ]]; then
     }
 fi
 
-required_sftp_drag_types=(
+required_drag_types=(
     "tw.local.MySSHClient.sftp.local-drag-payload"
     "tw.local.MySSHClient.sftp.remote-drag-payload"
 )
-for required_type in "${required_sftp_drag_types[@]}"; do
+for required_type in "${required_drag_types[@]}"; do
     type_is_declared=0
     for index in {0..1}; do
         identifier="$(/usr/libexec/PlistBuddy -c "Print :UTExportedTypeDeclarations:$index:UTTypeIdentifier" "$plist" 2>/dev/null || true)"
@@ -104,7 +104,7 @@ for required_type in "${required_sftp_drag_types[@]}"; do
         fi
     done
     (( type_is_declared == 1 )) || {
-        echo "Required SFTP drag type is missing from Info.plist or does not conform to public.data: $required_type" >&2
+        echo "Required drag type is missing from Info.plist or does not conform to public.data: $required_type" >&2
         exit 1
     }
 done

@@ -23,6 +23,181 @@ private func baseHost() -> HostProfile {
 }
 
 do {
+    var alpha = baseHost()
+    alpha.name = "Alpha"
+    var beta = baseHost()
+    beta.name = "Beta"
+    var gamma = baseHost()
+    gamma.name = "Gamma"
+    let canonicalHosts = [alpha, beta, gamma]
+
+    var recency = HostConnectionRecencyIndex()
+    recency.recordSuccessfulConnection(
+        for: alpha.id,
+        at: Date(timeIntervalSince1970: 100)
+    )
+    recency.recordSuccessfulConnection(
+        for: gamma.id,
+        at: Date(timeIntervalSince1970: 200)
+    )
+    check(
+        recency.sortingByMostRecentConnection(
+            canonicalHosts,
+            canonicalHosts: canonicalHosts
+        ).map(\.id) == [gamma.id, alpha.id, beta.id],
+        "recently connected hosts sort newest first before never-connected hosts"
+    )
+
+    var tiedRecency = HostConnectionRecencyIndex()
+    tiedRecency.recordSuccessfulConnection(
+        for: alpha.id,
+        at: Date(timeIntervalSince1970: 300)
+    )
+    tiedRecency.recordSuccessfulConnection(
+        for: beta.id,
+        at: Date(timeIntervalSince1970: 300)
+    )
+    check(
+        tiedRecency.sortingByMostRecentConnection(
+            [beta, alpha, gamma],
+            canonicalHosts: canonicalHosts
+        ).map(\.id) == [alpha.id, beta.id, gamma.id],
+        "equal recency preserves canonical host ordering"
+    )
+
+    let encoder = JSONEncoder()
+    encoder.dateEncodingStrategy = .iso8601
+    let encoded = try encoder.encode(recency)
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    var decoded = try decoder.decode(HostConnectionRecencyIndex.self, from: encoded)
+    check(decoded == recency, "host connection recency survives encoding and decoding")
+
+    decoded.prune(validHostIDs: Set([alpha.id]))
+    check(
+        decoded.lastConnectedAt(for: alpha.id) != nil &&
+            decoded.lastConnectedAt(for: gamma.id) == nil,
+        "host connection recency prunes records for missing hosts"
+    )
+} catch {
+    check(false, "host connection recency tests: \(error)")
+}
+
+do {
+    let sourceGroupID = UUID()
+    let targetGroupID = UUID()
+    var movingHost = baseHost()
+    movingHost.name = "Move Me"
+    movingHost.groupID = sourceGroupID
+    let untouchedHost = baseHost()
+    let movedAt = Date(timeIntervalSince1970: 500)
+
+    let movedHosts = try HostGroupMoveMutation.applying(
+        hostID: movingHost.id,
+        targetGroupID: targetGroupID,
+        validGroupIDs: [sourceGroupID, targetGroupID],
+        to: [movingHost, untouchedHost],
+        at: movedAt
+    )
+    check(movedHosts?[0].groupID == targetGroupID, "host group move replaces the previous group")
+    check(movedHosts?[0].updatedAt == movedAt, "host group move updates the modification time")
+    check(movedHosts?[0].id == movingHost.id, "host group move preserves the host identity")
+    check(movedHosts?[1] == untouchedHost, "host group move leaves other hosts unchanged")
+
+    let sameGroupResult = try HostGroupMoveMutation.applying(
+        hostID: movingHost.id,
+        targetGroupID: sourceGroupID,
+        validGroupIDs: [sourceGroupID, targetGroupID],
+        to: [movingHost],
+        at: movedAt
+    )
+    check(sameGroupResult == nil, "moving a host to its current group is a no-op")
+
+    let ungroupedHosts = try HostGroupMoveMutation.applying(
+        hostID: movingHost.id,
+        targetGroupID: nil,
+        validGroupIDs: [sourceGroupID, targetGroupID],
+        to: [movingHost],
+        at: movedAt
+    )
+    check(ungroupedHosts?[0].groupID == nil, "host group move can return a host to ungrouped")
+
+    do {
+        _ = try HostGroupMoveMutation.applying(
+            hostID: movingHost.id,
+            targetGroupID: UUID(),
+            validGroupIDs: [sourceGroupID, targetGroupID],
+            to: [movingHost]
+        )
+        check(false, "host group move rejects a missing target group")
+    } catch {
+        check(
+            error as? HostGroupMoveError == .missingGroup,
+            "host group move rejects a missing target group"
+        )
+    }
+
+    do {
+        _ = try HostGroupMoveMutation.applying(
+            hostID: UUID(),
+            targetGroupID: targetGroupID,
+            validGroupIDs: [sourceGroupID, targetGroupID],
+            to: [movingHost]
+        )
+        check(false, "host group move rejects a missing host")
+    } catch {
+        check(
+            error as? HostGroupMoveError == .missingHost,
+            "host group move rejects a missing host"
+        )
+    }
+
+    let hostFrame = CGRect(x: 20, y: 140, width: 300, height: 76)
+    check(
+        HostGroupDropHitTesting.hostID(
+            at: CGPoint(x: 170, y: 178),
+            hostFrames: [movingHost.id: hostFrame]
+        ) == movingHost.id,
+        "host card center starts a measured drag"
+    )
+    let groupFrame = CGRect(x: 20, y: 30, width: 300, height: 76)
+    check(
+        HostGroupDropHitTesting.groupID(
+            at: CGPoint(x: 170, y: 68),
+            groupFrames: [targetGroupID: groupFrame],
+            excluding: sourceGroupID
+        ) == targetGroupID,
+        "host group drop hit testing accepts the card center"
+    )
+    check(
+        HostGroupDropHitTesting.groupID(
+            at: CGPoint(x: 170, y: 101),
+            groupFrames: [targetGroupID: groupFrame],
+            excluding: sourceGroupID
+        ) == targetGroupID,
+        "host group drop hit testing accepts the card lower edge"
+    )
+    check(
+        HostGroupDropHitTesting.groupID(
+            at: CGPoint(x: 170, y: 120),
+            groupFrames: [targetGroupID: groupFrame],
+            excluding: sourceGroupID
+        ) == nil,
+        "host group drop hit testing rejects points outside the card"
+    )
+    check(
+        HostGroupDropHitTesting.groupID(
+            at: CGPoint(x: 170, y: 68),
+            groupFrames: [sourceGroupID: groupFrame],
+            excluding: sourceGroupID
+        ) == nil,
+        "host group drop hit testing excludes the current group"
+    )
+} catch {
+    check(false, "host group move tests: \(error)")
+}
+
+do {
     let first = UUID()
     let second = UUID()
     let third = UUID()

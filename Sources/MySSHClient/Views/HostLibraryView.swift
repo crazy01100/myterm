@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum HostLibrarySelection: Hashable {
@@ -7,11 +8,46 @@ enum HostLibrarySelection: Hashable {
     case knownHosts
 }
 
+private struct HostGroupMoveRequest: Identifiable {
+    let id = UUID()
+    let hostID: HostProfile.ID
+    let hostName: String
+    let sourceGroupName: String
+    let targetGroupID: HostGroup.ID?
+    let targetGroupName: String
+}
+
 private struct HostGroupNode: Identifiable {
     let group: HostGroup
     let children: [HostGroupNode]?
 
     var id: HostGroup.ID { group.id }
+}
+
+private enum HostLibraryDragCoordinateSpace {
+    static let name = "host-library-drag"
+}
+
+private struct HostGroupCardFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [HostGroup.ID: CGRect] = [:]
+
+    static func reduce(
+        value: inout [HostGroup.ID: CGRect],
+        nextValue: () -> [HostGroup.ID: CGRect]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+private struct HostCardFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [HostProfile.ID: CGRect] = [:]
+
+    static func reduce(
+        value: inout [HostProfile.ID: CGRect],
+        nextValue: () -> [HostProfile.ID: CGRect]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
 }
 
 struct HostLibraryView: View {
@@ -20,6 +56,12 @@ struct HostLibraryView: View {
     @State private var selection: HostLibrarySelection = .all
     @State private var searchText = ""
     @State private var selectedGroupCardID: HostGroup.ID?
+    @State private var targetedDropGroupID: HostGroup.ID?
+    @State private var pendingHostMove: HostGroupMoveRequest?
+    @State private var groupCardFrames: [HostGroup.ID: CGRect] = [:]
+    @State private var hostCardFrames: [HostProfile.ID: CGRect] = [:]
+    @State private var draggedHostID: HostProfile.ID?
+    @State private var hostDragLocation: CGPoint?
 
     let onAddHost: (UUID?) -> Void
     let onAddGroup: (UUID?) -> Void
@@ -46,13 +88,13 @@ struct HostLibraryView: View {
         case .ungrouped: scopedHosts = hostStore.hosts.filter { $0.groupID == nil }
         case .knownHosts: scopedHosts = []
         }
-        guard !searchText.isEmpty else { return scopedHosts }
-        return scopedHosts.filter {
+        let filteredHosts = searchText.isEmpty ? scopedHosts : scopedHosts.filter {
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
             $0.hostname.localizedCaseInsensitiveContains(searchText) ||
             $0.username.localizedCaseInsensitiveContains(searchText) ||
             hostStore.groupName(for: $0).localizedCaseInsensitiveContains(searchText)
         }
+        return hostStore.hostsByMostRecentConnection(filteredHosts)
     }
 
     private var visibleGroups: [HostGroup] {
@@ -161,6 +203,23 @@ struct HostLibraryView: View {
                 selection = .all
             }
         }
+        .confirmationDialog(
+            "移動主機到其他分類？",
+            isPresented: Binding(
+                get: { pendingHostMove != nil },
+                set: { if !$0 { pendingHostMove = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("移動") { confirmPendingHostMove() }
+            Button("取消", role: .cancel) { pendingHostMove = nil }
+        } message: {
+            if let pendingHostMove {
+                Text(
+                    "將「\(pendingHostMove.hostName)」從「\(pendingHostMove.sourceGroupName)」移動到「\(pendingHostMove.targetGroupName)」。"
+                )
+            }
+        }
     }
 
     private var libraryHeader: some View {
@@ -245,70 +304,117 @@ struct HostLibraryView: View {
     }
 
     private var libraryGrid: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 26) {
-                if !visibleGroups.isEmpty {
-                    cardSectionTitle("分類")
-                    LazyVGrid(columns: gridColumns, spacing: 14) {
-                        ForEach(visibleGroups) { group in
-                            GroupCard(
-                                group: group,
-                                hostCount: hostStore.hostCount(in: group.id),
-                                isSelected: selectedGroupCardID == group.id,
-                                onSelect: {
-                                    selectedGroupCardID = group.id
-                                    hostStore.selectedHostID = nil
-                                },
-                                onOpen: {
-                                    selection = .group(group.id)
+        ZStack(alignment: .topLeading) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 26) {
+                    if !visibleGroups.isEmpty {
+                        cardSectionTitle("分類")
+                        LazyVGrid(columns: gridColumns, spacing: 14) {
+                            ForEach(visibleGroups) { group in
+                                GroupCard(
+                                    group: group,
+                                    hostCount: hostStore.hostCount(in: group.id),
+                                    isSelected: selectedGroupCardID == group.id,
+                                    onSelect: {
+                                        selectedGroupCardID = group.id
+                                        hostStore.selectedHostID = nil
+                                    },
+                                    onOpen: {
+                                        selection = .group(group.id)
+                                    }
+                                )
+                                .contextMenu {
+                                    Button("開啟分類") { selection = .group(group.id) }
+                                    Button("新增子群組") { onAddGroup(group.id) }
+                                    Button("編輯群組") { onRenameGroup(group) }
+                                    Button("刪除群組", role: .destructive) { onDeleteGroup(group) }
                                 }
-                            )
-                            .contextMenu {
-                                Button("開啟分類") { selection = .group(group.id) }
-                                Button("新增子群組") { onAddGroup(group.id) }
-                                Button("編輯群組") { onRenameGroup(group) }
-                                Button("刪除群組", role: .destructive) { onDeleteGroup(group) }
+                                .background {
+                                    GeometryReader { proxy in
+                                        Color.clear.preference(
+                                            key: HostGroupCardFramePreferenceKey.self,
+                                            value: [
+                                                group.id: proxy.frame(
+                                                    in: .named(HostLibraryDragCoordinateSpace.name)
+                                                )
+                                            ]
+                                        )
+                                    }
+                                }
+                                .hostGroupDropHighlight(targetedDropGroupID == group.id)
                             }
                         }
                     }
-                }
 
-                cardSectionTitle("主機")
-                if allFilteredHosts.isEmpty {
-                    ContentUnavailableView {
-                        Label(searchText.isEmpty ? "這個分類還沒有主機" : "找不到主機", systemImage: "server.rack")
-                    } description: {
-                        Text(searchText.isEmpty ? "新增一台主機，或從其他分類移入。" : "請嘗試其他搜尋內容。")
-                    } actions: {
-                        if searchText.isEmpty {
-                            Button("新增主機") { onAddHost(selectedDefaultGroupID) }
-                        }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 260)
-                } else {
-                    LazyVGrid(columns: gridColumns, spacing: 14) {
-                        ForEach(allFilteredHosts) { host in
-                            HostCard(host: host, isSelected: hostStore.selectedHostID == host.id) {
-                                hostStore.selectedHostID = host.id
-                            } onConnect: {
-                                onConnectHost(host)
+                    cardSectionTitle("主機")
+                    if allFilteredHosts.isEmpty {
+                        ContentUnavailableView {
+                            Label(searchText.isEmpty ? "這個分類還沒有主機" : "找不到主機", systemImage: "server.rack")
+                        } description: {
+                            Text(searchText.isEmpty ? "新增一台主機，或從其他分類移入。" : "請嘗試其他搜尋內容。")
+                        } actions: {
+                            if searchText.isEmpty {
+                                Button("新增主機") { onAddHost(selectedDefaultGroupID) }
                             }
-                            .contextMenu {
-                                Button("連線") { onConnectHost(host) }
-                                Button("使用其他帳號連線") { onConnectOtherAccount(host) }
-                                Divider()
-                                Button("編輯") { onEditHost(host) }
-                                Button("刪除", role: .destructive) { onDeleteHost(host) }
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 260)
+                    } else {
+                        LazyVGrid(columns: gridColumns, spacing: 14) {
+                            ForEach(allFilteredHosts) { host in
+                                HostCard(host: host, isSelected: hostStore.selectedHostID == host.id) {
+                                    hostStore.selectedHostID = host.id
+                                } onConnect: {
+                                    onConnectHost(host)
+                                }
+                                .contextMenu {
+                                    Button("連線") { onConnectHost(host) }
+                                    Button("使用其他帳號連線") { onConnectOtherAccount(host) }
+                                    Divider()
+                                    Button("編輯") { onEditHost(host) }
+                                    Button("刪除", role: .destructive) { onDeleteHost(host) }
+                                }
+                                .background {
+                                    GeometryReader { proxy in
+                                        Color.clear.preference(
+                                            key: HostCardFramePreferenceKey.self,
+                                            value: [
+                                                host.id: proxy.frame(
+                                                    in: .named(HostLibraryDragCoordinateSpace.name)
+                                                )
+                                            ]
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                .padding(22)
             }
-            .padding(22)
+
+            HostLibraryDragMonitor(
+                beginDrag: beginHostDrag,
+                changeDrag: changeHostDrag,
+                endDrag: endHostDrag,
+                cancelDrag: resetHostDrag
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if let draggedHostID,
+               let host = hostStore.profile(id: draggedHostID),
+               let hostDragLocation {
+                HostLibraryDragGhost(host: host)
+                    .position(hostDragLocation)
+                    .allowsHitTesting(false)
+            }
         }
+        .coordinateSpace(name: HostLibraryDragCoordinateSpace.name)
+        .onPreferenceChange(HostGroupCardFramePreferenceKey.self) { groupCardFrames = $0 }
+        .onPreferenceChange(HostCardFramePreferenceKey.self) { hostCardFrames = $0 }
         .background(Color(nsColor: .windowBackgroundColor))
         .onChange(of: selection) { _, _ in
             selectedGroupCardID = nil
+            resetHostDrag()
         }
     }
 
@@ -327,6 +433,74 @@ struct HostLibraryView: View {
     private func cardSectionTitle(_ title: String) -> some View {
         Text(title).font(.headline)
     }
+
+    private func prepareHostMove(hostID: HostProfile.ID, to targetGroupID: HostGroup.ID) {
+        guard let host = hostStore.profile(id: hostID) else {
+            hostStore.lastError = HostGroupMoveError.missingHost.localizedDescription
+            return
+        }
+        guard host.groupID != targetGroupID else { return }
+
+        guard hostStore.group(id: targetGroupID) != nil else {
+            hostStore.lastError = HostGroupMoveError.missingGroup.localizedDescription
+            return
+        }
+
+        pendingHostMove = HostGroupMoveRequest(
+            hostID: host.id,
+            hostName: host.displayName,
+            sourceGroupName: hostStore.groupName(for: host),
+            targetGroupID: targetGroupID,
+            targetGroupName: hostStore.groupPath(for: targetGroupID)
+        )
+    }
+
+    private func beginHostDrag(at point: CGPoint) -> HostProfile.ID? {
+        guard selection == .all, pendingHostMove == nil else { return nil }
+        return HostGroupDropHitTesting.hostID(at: point, hostFrames: hostCardFrames)
+    }
+
+    private func changeHostDrag(hostID: HostProfile.ID, location: CGPoint) {
+        guard selection == .all, hostStore.profile(id: hostID) != nil else {
+            resetHostDrag()
+            return
+        }
+        draggedHostID = hostID
+        hostDragLocation = location
+        targetedDropGroupID = targetGroup(at: location, for: hostID)
+    }
+
+    private func endHostDrag(hostID: HostProfile.ID, location: CGPoint) {
+        let targetGroupID = targetGroup(at: location, for: hostID)
+        resetHostDrag()
+        guard let targetGroupID else { return }
+        prepareHostMove(hostID: hostID, to: targetGroupID)
+    }
+
+    private func targetGroup(at point: CGPoint, for hostID: HostProfile.ID) -> HostGroup.ID? {
+        let sourceGroupID = hostStore.profile(id: hostID)?.groupID
+        return HostGroupDropHitTesting.groupID(
+            at: point,
+            groupFrames: groupCardFrames,
+            excluding: sourceGroupID
+        )
+    }
+
+    private func resetHostDrag() {
+        draggedHostID = nil
+        hostDragLocation = nil
+        targetedDropGroupID = nil
+    }
+
+    private func confirmPendingHostMove() {
+        guard let request = pendingHostMove else { return }
+        pendingHostMove = nil
+        do {
+            try hostStore.moveHost(id: request.hostID, to: request.targetGroupID)
+        } catch {
+            hostStore.lastError = error.localizedDescription
+        }
+    }
 }
 
 private struct GroupCard: View {
@@ -338,28 +512,28 @@ private struct GroupCard: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "folder.fill")
-                .font(.title2)
-                .foregroundStyle(.tint)
-                .frame(width: 42, height: 42)
-                .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 9))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(group.name).font(.headline).lineLimit(1)
-                Text("\(hostCount) 台主機").font(.caption).foregroundStyle(.secondary)
+        Button(action: onSelect) {
+            HStack(spacing: 14) {
+                Image(systemName: "folder.fill")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                    .frame(width: 42, height: 42)
+                    .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 9))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(group.name).font(.headline).lineLimit(1)
+                    Text("\(hostCount) 台主機").font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
             }
-            Spacer()
-            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 76)
+            .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
+            .contentShape(.rect)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 76)
-        .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
-        .contentShape(.rect)
-        .onTapGesture(count: 2, perform: onOpen)
-        .simultaneousGesture(TapGesture(count: 1).onEnded(onSelect))
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded(onOpen))
         .onHover { isHovered = $0 }
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: "選取", onSelect)
         .accessibilityAction(named: "開啟分類", onOpen)
     }
 }
@@ -372,26 +546,26 @@ private struct HostCard: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            HostPlatformBadge(platform: host.detectedPlatform, isSelected: isSelected)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(host.displayName).font(.headline).lineLimit(1)
-                Text(host.username.isEmpty ? host.hostname : "\(host.username)@\(host.hostname)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        Button(action: onSelect) {
+            HStack(spacing: 14) {
+                HostPlatformBadge(platform: host.detectedPlatform, isSelected: isSelected)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(host.displayName).font(.headline).lineLimit(1)
+                    Text(host.username.isEmpty ? host.hostname : "\(host.username)@\(host.hostname)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
             }
-            Spacer()
+            .padding(14)
+            .frame(maxWidth: .infinity, minHeight: 76)
+            .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
+            .contentShape(.rect)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 76)
-        .background(cardBackground(isSelected: isSelected, isHovered: isHovered))
-        .contentShape(.rect)
-        .onTapGesture(count: 2, perform: onConnect)
-        .simultaneousGesture(TapGesture(count: 1).onEnded(onSelect))
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded(onConnect))
         .onHover { isHovered = $0 }
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: "選取", onSelect)
         .accessibilityAction(named: "連線", onConnect)
     }
 }
@@ -415,4 +589,60 @@ private func cardBackground(isSelected: Bool, isHovered: Bool) -> some View {
                 )
         }
         .animation(.easeOut(duration: 0.12), value: isHovered)
+}
+
+private extension View {
+    func hostGroupDropHighlight(_ isTargeted: Bool) -> some View {
+        scaleEffect(isTargeted ? 1.008 : 1)
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .fill(Color.primary.opacity(isTargeted ? 0.09 : 0))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 9)
+                            .stroke(
+                                Color.primary.opacity(isTargeted ? 0.42 : 0),
+                                lineWidth: 1.5
+                            )
+                    }
+                    .allowsHitTesting(false)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if isTargeted {
+                    Label("放到此分類", systemImage: "tray.and.arrow.down.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(.regularMaterial, in: .capsule)
+                        .overlay {
+                            Capsule()
+                                .stroke(Color.primary.opacity(0.16), lineWidth: 1)
+                        }
+                        .padding(8)
+                        .allowsHitTesting(false)
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: isTargeted)
+    }
+}
+
+private struct HostLibraryDragGhost: View {
+    let host: HostProfile
+
+    var body: some View {
+        HStack(spacing: 8) {
+            HostPlatformBadge(platform: host.detectedPlatform, size: 26, isSelected: false)
+            Text(host.displayName)
+                .font(.callout.weight(.semibold))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: .rect(cornerRadius: 9))
+        .overlay {
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(Color.primary.opacity(0.16), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.16), radius: 8, y: 3)
+    }
 }

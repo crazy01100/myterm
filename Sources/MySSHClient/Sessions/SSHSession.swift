@@ -62,6 +62,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     private var authenticationLogDetector = SSHAuthenticationLogDetector()
     private var connectionLogParser = SSHConnectionLogParser()
     private var connectionMonitorTask: Task<Void, Never>?
+    private let onConnectionSucceeded: (() -> Void)?
 
     var displayName: String {
         switch kind {
@@ -151,7 +152,11 @@ final class TerminalSession: ObservableObject, Identifiable {
         notice = "已複製隱私處理後的連線記錄。"
     }
 
-    init(host: HostProfile, username: String) throws {
+    init(
+        host: HostProfile,
+        username: String,
+        onConnectionSucceeded: (() -> Void)? = nil
+    ) throws {
         let username = try HostProfile.validatedUsername(username)
         let canBindPassword = host.authenticationMethod == .password
             && !host.username.isEmpty
@@ -180,6 +185,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         currentDirectory = nil
         self.connectionLogURL = connectionLogURL
         self.hasSavedPassword = hasSavedPassword
+        self.onConnectionSucceeded = onConnectionSucceeded
         terminalTitle = host.displayName
     }
 
@@ -194,6 +200,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         execName = "zsh"
         currentDirectory = LocalTerminalEnvironmentBuilder.currentDirectory()
         connectionLogURL = nil
+        onConnectionSucceeded = nil
         terminalTitle = "本地 Terminal"
     }
 
@@ -210,6 +217,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         execName = "screen"
         currentDirectory = nil
         connectionLogURL = nil
+        onConnectionSucceeded = nil
         terminalTitle = "Serial"
     }
 
@@ -434,6 +442,7 @@ final class TerminalSession: ObservableObject, Identifiable {
             }
         }
         clearConnectionDiagnosticsAfterSuccess()
+        onConnectionSucceeded?()
     }
 
     private func clearConnectionDiagnosticsAfterSuccess() {
@@ -549,6 +558,7 @@ final class SessionManager: ObservableObject {
     @Published private(set) var sessions: [TerminalSession] = []
     @Published private var workspaceState = TerminalWorkspaceCollection()
     @Published var lastError: String?
+    var onHostConnectionSucceeded: ((HostProfile.ID) -> Void)?
 
     var workspaces: [TerminalWorkspace] {
         workspaceState.workspaces
@@ -605,7 +615,7 @@ final class SessionManager: ObservableObject {
 
     @discardableResult
     func createSSHSession(to host: HostProfile, username: String) throws -> TerminalSession.ID {
-        let session = try TerminalSession(host: host, username: username)
+        let session = try makeSSHSession(host: host, username: username)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
         return session.id
@@ -637,7 +647,7 @@ final class SessionManager: ObservableObject {
             return false
         }
         do {
-            let replacement = try TerminalSession(host: host, username: username)
+            let replacement = try makeSSHSession(host: host, username: username)
             guard workspaceState.replace(sessionID: session.id, with: replacement.id) else {
                 replacement.disconnect()
                 lastError = "無法在目前工作區重新建立 SSH 連線。"
@@ -656,6 +666,17 @@ final class SessionManager: ObservableObject {
         session.disconnect()
         sessions.removeAll { $0.id == session.id }
         _ = workspaceState.close(sessionID: session.id)
+    }
+
+    private func makeSSHSession(host: HostProfile, username: String) throws -> TerminalSession {
+        let hostID = host.id
+        return try TerminalSession(
+            host: host,
+            username: username,
+            onConnectionSucceeded: { [weak self] in
+                self?.onHostConnectionSucceeded?(hostID)
+            }
+        )
     }
 
     @discardableResult

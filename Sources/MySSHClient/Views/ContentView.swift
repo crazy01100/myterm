@@ -30,6 +30,7 @@ struct ContentView: View {
         }
         .coordinateSpace(name: "workspaceRoot")
         .onPreferenceChange(WorkspaceTabFramePreferenceKey.self) { workspaceTabFrames = $0 }
+        .onAppear(perform: configureHostConnectionRecency)
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
                 .environmentObject(hostStore)
@@ -611,6 +612,18 @@ struct ContentView: View {
 
     private func openSession(for host: HostProfile, username: String) throws {
         try sessionManager.createSSHSession(to: host, username: username)
+    }
+
+    private func configureHostConnectionRecency() {
+        let hostStore = hostStore
+        sessionManager.onHostConnectionSucceeded = { [weak hostStore] hostID in
+            guard let hostStore else { return }
+            do {
+                try hostStore.recordSuccessfulConnection(for: hostID)
+            } catch {
+                NSLog("MyTerm host connection recency save failed: %@", error.localizedDescription)
+            }
+        }
     }
 
     private func performShortcut(_ action: AppShortcutAction) -> Bool {

@@ -31,6 +31,7 @@ struct HostGroupChoice: Identifiable, Hashable {
 final class HostStore: ObservableObject {
     @Published private(set) var hosts: [HostProfile] = []
     @Published private(set) var groups: [HostGroup] = []
+    @Published private var connectionRecency = HostConnectionRecencyIndex()
     @Published var selectedHostID: HostProfile.ID?
     @Published var lastError: String?
     @Published var lastNotice: String?
@@ -39,6 +40,12 @@ final class HostStore: ObservableObject {
         do {
             try AppPaths.prepare()
             try load()
+            do {
+                try loadConnectionRecency()
+            } catch {
+                connectionRecency = HostConnectionRecencyIndex()
+                NSLog("MyTerm host connection recency load failed: %@", error.localizedDescription)
+            }
         } catch {
             lastError = error.localizedDescription
         }
@@ -75,6 +82,7 @@ final class HostStore: ObservableObject {
             selectedHostID = previousSelection
             throw error
         }
+        removeConnectionRecency(for: profile.id)
 
         do {
             let result = try KeychainStore.deletePassword(for: profile.id)
@@ -134,6 +142,48 @@ final class HostStore: ObservableObject {
     func profile(id: UUID?) -> HostProfile? {
         guard let id else { return nil }
         return hosts.first { $0.id == id }
+    }
+
+    func hostsByMostRecentConnection(_ candidates: [HostProfile]) -> [HostProfile] {
+        connectionRecency.sortingByMostRecentConnection(candidates, canonicalHosts: hosts)
+    }
+
+    @discardableResult
+    func moveHost(
+        id hostID: HostProfile.ID,
+        to targetGroupID: HostGroup.ID?
+    ) throws -> Bool {
+        guard let updatedHosts = try HostGroupMoveMutation.applying(
+            hostID: hostID,
+            targetGroupID: targetGroupID,
+            validGroupIDs: Set(groups.map(\.id)),
+            to: hosts
+        ) else {
+            return false
+        }
+
+        let previousHosts = hosts
+        hosts = updatedHosts
+        sortInventory()
+        do {
+            try persist()
+        } catch {
+            hosts = previousHosts
+            throw error
+        }
+        return true
+    }
+
+    func recordSuccessfulConnection(
+        for hostID: HostProfile.ID,
+        at date: Date = .now
+    ) throws {
+        guard hosts.contains(where: { $0.id == hostID }) else { return }
+        var updated = connectionRecency
+        updated.prune(validHostIDs: Set(hosts.map(\.id)))
+        updated.recordSuccessfulConnection(for: hostID, at: date)
+        try persistConnectionRecency(updated)
+        connectionRecency = updated
     }
 
     func group(id: UUID?) -> HostGroup? {
@@ -471,6 +521,49 @@ final class HostStore: ObservableObject {
         let data = try encoder.encode(InventoryDocument(groups: groups, hosts: hosts))
         try data.write(to: AppPaths.hostsFile, options: [.atomic, .completeFileProtection])
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: AppPaths.hostsFile.path)
+    }
+
+    private func loadConnectionRecency() throws {
+        guard FileManager.default.fileExists(atPath: AppPaths.hostConnectionRecencyFile.path) else {
+            return
+        }
+        let data = try Data(contentsOf: AppPaths.hostConnectionRecencyFile)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var loaded = try decoder.decode(HostConnectionRecencyIndex.self, from: data)
+        let original = loaded
+        loaded.prune(validHostIDs: Set(hosts.map(\.id)))
+        connectionRecency = loaded
+        if loaded != original {
+            try persistConnectionRecency(loaded)
+        }
+    }
+
+    private func persistConnectionRecency(_ index: HostConnectionRecencyIndex) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(index)
+        try data.write(
+            to: AppPaths.hostConnectionRecencyFile,
+            options: [.atomic, .completeFileProtection]
+        )
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: AppPaths.hostConnectionRecencyFile.path
+        )
+    }
+
+    private func removeConnectionRecency(for hostID: HostProfile.ID) {
+        guard connectionRecency.lastConnectedAt(for: hostID) != nil else { return }
+        var updated = connectionRecency
+        updated.remove(hostID: hostID)
+        connectionRecency = updated
+        do {
+            try persistConnectionRecency(updated)
+        } catch {
+            NSLog("MyTerm host connection recency cleanup failed: %@", error.localizedDescription)
+        }
     }
 
     private func sortInventory() {
