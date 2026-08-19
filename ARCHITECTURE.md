@@ -44,7 +44,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 ### 主機與本機資料
 
-- `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區以 `HostLibraryDragMonitor` 在目前視窗追蹤主機卡片拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。
+- `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區以 `HostLibraryDragMonitor` 在目前視窗追蹤主機卡片拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。
 - `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。

@@ -197,6 +197,19 @@ do {
     check(false, "host group move tests: \(error)")
 }
 
+check(
+    !HostLibraryDragCleanupReason.monitorReplacement.notifiesSwiftUICancellation,
+    "host drag monitor replacement does not notify SwiftUI cancellation state"
+)
+check(
+    !HostLibraryDragCleanupReason.viewTeardown.notifiesSwiftUICancellation,
+    "host drag monitor teardown does not notify SwiftUI cancellation state"
+)
+check(
+    HostLibraryDragCleanupReason.userCancellation.notifiesSwiftUICancellation,
+    "host drag monitor user cancellation notifies SwiftUI state"
+)
+
 do {
     let first = UUID()
     let second = UUID()

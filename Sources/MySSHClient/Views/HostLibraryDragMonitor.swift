@@ -33,7 +33,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: MonitorView, coordinator: Coordinator) {
-        coordinator.removeMonitor()
+        coordinator.removeMonitor(reason: .viewTeardown)
     }
 
     final class Coordinator {
@@ -61,7 +61,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
         }
 
         func installMonitor() {
-            removeMonitor()
+            removeMonitor(reason: .monitorReplacement)
             mouseMonitor = NSEvent.addLocalMonitorForEvents(
                 matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
             ) { [weak self] event in
@@ -93,10 +93,10 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
                     let consumed = self.isDragging
                     if consumed {
                         self.endDrag(hostID, point)
+                        self.reset()
                     } else {
-                        self.cancelDrag()
+                        self.cancelTrackedDrag()
                     }
-                    self.reset()
                     return consumed ? nil : event
                 default:
                     break
@@ -105,12 +105,22 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
             }
         }
 
-        func removeMonitor() {
+        func removeMonitor(reason: HostLibraryDragCleanupReason) {
             if let mouseMonitor {
                 NSEvent.removeMonitor(mouseMonitor)
                 self.mouseMonitor = nil
             }
-            cancelDrag()
+            clearTracking(reason: reason)
+        }
+
+        func cancelTrackedDrag() {
+            clearTracking(reason: .userCancellation)
+        }
+
+        private func clearTracking(reason: HostLibraryDragCleanupReason) {
+            if reason.notifiesSwiftUICancellation {
+                cancelDrag()
+            }
             reset()
         }
 
@@ -120,7 +130,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
             isDragging = false
         }
 
-        deinit { removeMonitor() }
+        deinit { removeMonitor(reason: .viewTeardown) }
     }
 
     final class MonitorView: NSView {

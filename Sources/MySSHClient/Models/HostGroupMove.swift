@@ -19,6 +19,16 @@ enum HostGroupDropHitTesting {
     }
 }
 
+enum HostLibraryDragCleanupReason {
+    case monitorReplacement
+    case viewTeardown
+    case userCancellation
+
+    var notifiesSwiftUICancellation: Bool {
+        self == .userCancellation
+    }
+}
+
 enum HostGroupMoveError: LocalizedError, Equatable {
     case missingHost
     case missingGroup
