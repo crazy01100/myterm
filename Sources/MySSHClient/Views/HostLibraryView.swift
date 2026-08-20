@@ -6,6 +6,7 @@ enum HostLibrarySelection: Hashable {
     case group(UUID)
     case ungrouped
     case knownHosts
+    case logs
 }
 
 private struct HostGroupMoveRequest: Identifiable {
@@ -15,13 +16,6 @@ private struct HostGroupMoveRequest: Identifiable {
     let sourceGroupName: String
     let targetGroupID: HostGroup.ID?
     let targetGroupName: String
-}
-
-private struct HostGroupNode: Identifiable {
-    let group: HostGroup
-    let children: [HostGroupNode]?
-
-    var id: HostGroup.ID { group.id }
 }
 
 private enum HostLibraryDragCoordinateSpace {
@@ -52,8 +46,7 @@ private struct HostCardFramePreferenceKey: PreferenceKey {
 
 struct HostLibraryView: View {
     @EnvironmentObject private var hostStore: HostStore
-    @EnvironmentObject private var knownHostsStore: KnownHostsStore
-    @State private var selection: HostLibrarySelection = .all
+    @Binding var selection: HostLibrarySelection
     @State private var searchText = ""
     @State private var selectedGroupCardID: HostGroup.ID?
     @State private var targetedDropGroupID: HostGroup.ID?
@@ -86,7 +79,7 @@ struct HostLibraryView: View {
                 scopedHosts = hostStore.hosts.filter { $0.groupID.map(groupIDs.contains) == true }
             }
         case .ungrouped: scopedHosts = hostStore.hosts.filter { $0.groupID == nil }
-        case .knownHosts: scopedHosts = []
+        case .knownHosts, .logs: scopedHosts = []
         }
         let filteredHosts = searchText.isEmpty ? scopedHosts : scopedHosts.filter {
             $0.displayName.localizedCaseInsensitiveContains(searchText) ||
@@ -102,7 +95,7 @@ struct HostLibraryView: View {
         switch selection {
         case .all: baseGroups = hostStore.childGroups(of: nil)
         case .group(let id): baseGroups = hostStore.childGroups(of: id)
-        case .ungrouped, .knownHosts: baseGroups = []
+        case .ungrouped, .knownHosts, .logs: baseGroups = []
         }
         guard !searchText.isEmpty else { return baseGroups }
         return baseGroups.filter { group in
@@ -118,22 +111,13 @@ struct HostLibraryView: View {
         }
     }
 
-    private var groupTree: [HostGroupNode] {
-        func nodes(parentID: HostGroup.ID?) -> [HostGroupNode] {
-            hostStore.childGroups(of: parentID).map { group in
-                let descendants = nodes(parentID: group.id)
-                return HostGroupNode(group: group, children: descendants.isEmpty ? nil : descendants)
-            }
-        }
-        return nodes(parentID: nil)
-    }
-
     private var pageTitle: String {
         switch selection {
         case .all: "所有主機"
         case .group(let id): hostStore.groupPath(for: id)
         case .ungrouped: "未分類"
         case .knownHosts: "Known Hosts"
+        case .logs: "Logs"
         }
     }
 
@@ -150,45 +134,21 @@ struct HostLibraryView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                Section("主機庫") {
-                    sidebarRow(title: "所有主機", systemImage: "square.grid.2x2", count: hostStore.hosts.count)
-                        .tag(HostLibrarySelection.all)
-                }
-                Section("分類") {
-                    OutlineGroup(groupTree, children: \.children) { node in
-                        sidebarRow(
-                            title: node.group.name,
-                            systemImage: "folder",
-                            count: hostStore.hostCount(in: node.id)
-                        )
-                        .tag(HostLibrarySelection.group(node.id))
-                        .contextMenu {
-                            Button("新增子群組") { onAddGroup(node.id) }
-                            Button("編輯群組") { onRenameGroup(node.group) }
-                            Button("刪除群組", role: .destructive) { onDeleteGroup(node.group) }
-                        }
-                    }
-                    sidebarRow(
-                        title: "未分類",
-                        systemImage: "tray",
-                        count: hostStore.hosts.filter { $0.groupID == nil }.count
-                    )
-                    .tag(HostLibrarySelection.ungrouped)
-                }
-                Section("其他") {
-                    sidebarRow(
-                        title: "Known Hosts",
-                        systemImage: "checkmark.shield",
-                        count: knownHostsStore.records.count
-                    )
+                sidebarRow(title: "Known Hosts", systemImage: "checkmark.shield")
                     .tag(HostLibrarySelection.knownHosts)
-                }
+                    .accessibilityLabel("Known Hosts")
+
+                sidebarRow(title: "Logs", systemImage: "clock.arrow.circlepath")
+                    .tag(HostLibrarySelection.logs)
+                    .accessibilityLabel("Logs")
             }
-            .navigationTitle("分類")
+            .navigationTitle("")
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
         } detail: {
             if selection == .knownHosts {
                 KnownHostsView()
+            } else if selection == .logs {
+                ConnectionAuditLogView()
             } else {
                 VStack(spacing: 0) {
                     libraryHeader
@@ -279,12 +239,18 @@ struct HostLibraryView: View {
                 .font(.title2.weight(.semibold))
         } else {
             HStack(spacing: 7) {
+                Button("所有主機") {
+                    selection = .all
+                }
+                .buttonStyle(.link)
+                .font(.title2.weight(.semibold))
+                .lineLimit(1)
+                .help("回到所有主機")
+
                 ForEach(Array(selectedGroupAncestry.enumerated()), id: \.element.id) { index, group in
-                    if index > 0 {
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                     if index == selectedGroupAncestry.count - 1 {
                         Text(group.name)
                             .font(.title2.weight(.semibold))
@@ -422,12 +388,8 @@ struct HostLibraryView: View {
         [GridItem(.adaptive(minimum: 245, maximum: 380), spacing: 14)]
     }
 
-    private func sidebarRow(title: String, systemImage: String, count: Int) -> some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-            Spacer()
-            Text("\(count)").font(.caption).foregroundStyle(.secondary)
-        }
+    private func sidebarRow(title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
     }
 
     private func cardSectionTitle(_ title: String) -> some View {

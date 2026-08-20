@@ -5,6 +5,7 @@ struct MySSHClientApp: App {
     @StateObject private var hostStore = HostStore()
     @StateObject private var knownHostsStore = KnownHostsStore()
     @StateObject private var sessionManager = SessionManager()
+    @StateObject private var connectionAuditStore = ConnectionAuditStore()
     @StateObject private var dataTransferCoordinator = DataTransferCoordinator()
     @StateObject private var shortcutStore = AppShortcutStore()
     @StateObject private var syncSettingsStore = SyncSettingsStore()
@@ -39,6 +40,7 @@ struct MySSHClientApp: App {
                 .environmentObject(hostStore)
                 .environmentObject(knownHostsStore)
                 .environmentObject(sessionManager)
+                .environmentObject(connectionAuditStore)
                 .environmentObject(shortcutStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
@@ -48,7 +50,7 @@ struct MySSHClientApp: App {
                 .preferredColorScheme(preferredColorScheme)
                 .frame(minWidth: 1120, minHeight: 700)
         }
-        .windowStyle(.automatic)
+        .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .newItem) { }

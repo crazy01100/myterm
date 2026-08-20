@@ -32,7 +32,7 @@ enum PasswordSaveOfferKind: Equatable {
 
 @MainActor
 final class TerminalSession: ObservableObject, Identifiable {
-    let id = UUID()
+    let id: UUID
     let kind: TerminalSessionKind
     let host: HostProfile?
     let username: String?
@@ -62,7 +62,13 @@ final class TerminalSession: ObservableObject, Identifiable {
     private var authenticationLogDetector = SSHAuthenticationLogDetector()
     private var connectionLogParser = SSHConnectionLogParser()
     private var connectionMonitorTask: Task<Void, Never>?
+    private var didStartConnectionAudit = false
+    private var didAuthenticate = false
+    private let onConnectionAttemptStarted: (() -> Void)?
     private let onConnectionSucceeded: (() -> Void)?
+    private let onConnectionCompleted: ((Int32?) -> Void)?
+    private let onConnectionFailed: ((Int32?, SSHConnectionFailureKind) -> Void)?
+    private let onConnectionCancelled: (() -> Void)?
 
     var displayName: String {
         switch kind {
@@ -153,9 +159,14 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     init(
+        id: UUID = UUID(),
         host: HostProfile,
         username: String,
-        onConnectionSucceeded: (() -> Void)? = nil
+        onConnectionAttemptStarted: (() -> Void)? = nil,
+        onConnectionSucceeded: (() -> Void)? = nil,
+        onConnectionCompleted: ((Int32?) -> Void)? = nil,
+        onConnectionFailed: ((Int32?, SSHConnectionFailureKind) -> Void)? = nil,
+        onConnectionCancelled: (() -> Void)? = nil
     ) throws {
         let username = try HostProfile.validatedUsername(username)
         let canBindPassword = host.authenticationMethod == .password
@@ -174,6 +185,7 @@ final class TerminalSession: ObservableObject, Identifiable {
             AppPaths.removeSSHConnectionLog(connectionLogURL)
             throw error
         }
+        self.id = id
         kind = .ssh
         self.host = host
         self.username = username
@@ -185,11 +197,16 @@ final class TerminalSession: ObservableObject, Identifiable {
         currentDirectory = nil
         self.connectionLogURL = connectionLogURL
         self.hasSavedPassword = hasSavedPassword
+        self.onConnectionAttemptStarted = onConnectionAttemptStarted
         self.onConnectionSucceeded = onConnectionSucceeded
+        self.onConnectionCompleted = onConnectionCompleted
+        self.onConnectionFailed = onConnectionFailed
+        self.onConnectionCancelled = onConnectionCancelled
         terminalTitle = host.displayName
     }
 
     init(localShell: Void = ()) {
+        id = UUID()
         kind = .local
         host = nil
         username = nil
@@ -200,13 +217,18 @@ final class TerminalSession: ObservableObject, Identifiable {
         execName = "zsh"
         currentDirectory = LocalTerminalEnvironmentBuilder.currentDirectory()
         connectionLogURL = nil
+        onConnectionAttemptStarted = nil
         onConnectionSucceeded = nil
+        onConnectionCompleted = nil
+        onConnectionFailed = nil
+        onConnectionCancelled = nil
         terminalTitle = "本地 Terminal"
     }
 
     init(serial configuration: SerialConfiguration) throws {
         let configuration = try configuration.validated()
         try configuration.prepareDevice()
+        id = UUID()
         kind = .serial
         host = nil
         username = nil
@@ -217,13 +239,21 @@ final class TerminalSession: ObservableObject, Identifiable {
         execName = "screen"
         currentDirectory = nil
         connectionLogURL = nil
+        onConnectionAttemptStarted = nil
         onConnectionSucceeded = nil
+        onConnectionCompleted = nil
+        onConnectionFailed = nil
+        onConnectionCancelled = nil
         terminalTitle = "Serial"
     }
 
     func attach(terminal: LocalProcessTerminalView) {
         terminalView = terminal
         if kind == .ssh {
+            if !didStartConnectionAudit {
+                didStartConnectionAudit = true
+                onConnectionAttemptStarted?()
+            }
             state = .connecting
             startConnectionMonitor()
         } else {
@@ -423,6 +453,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         AppPaths.removeSSHConnectionLog(connectionLogURL)
 
         state = .connected
+        didAuthenticate = true
         connectionPhase = .connected
 
         switch result {
@@ -514,8 +545,9 @@ final class TerminalSession: ObservableObject, Identifiable {
         inspectConnectionLog()
         applyConnectionUpdate(connectionLogParser.finish())
         finalizeConnectionTechnicalTranscript()
-        if state == .connected {
+        if didAuthenticate {
             state = .disconnected(exitCode)
+            onConnectionCompleted?(exitCode)
         } else {
             let failure = connectionFailure ?? .unknown
             connectionFailure = failure
@@ -527,6 +559,7 @@ final class TerminalSession: ObservableObject, Identifiable {
             }) {
                 connectionEvents.append(event)
             }
+            onConnectionFailed?(exitCode, failure)
         }
         authenticationDidEnd()
         terminalView = nil
@@ -541,6 +574,13 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     func disconnect() {
+        if kind == .ssh, didStartConnectionAudit {
+            if didAuthenticate {
+                onConnectionCompleted?(nil)
+            } else {
+                onConnectionCancelled?()
+            }
+        }
         isPasswordPromptActive = false
         authenticationDidEnd(preserveVerifiedPasswordOffer: false)
         terminalView?.process.terminate()
@@ -559,6 +599,7 @@ final class SessionManager: ObservableObject {
     @Published private var workspaceState = TerminalWorkspaceCollection()
     @Published var lastError: String?
     var onHostConnectionSucceeded: ((HostProfile.ID) -> Void)?
+    weak var connectionAuditStore: ConnectionAuditStore?
 
     var workspaces: [TerminalWorkspace] {
         workspaceState.workspaces
@@ -670,11 +711,38 @@ final class SessionManager: ObservableObject {
 
     private func makeSSHSession(host: HostProfile, username: String) throws -> TerminalSession {
         let hostID = host.id
+        let sessionID = UUID()
         return try TerminalSession(
+            id: sessionID,
             host: host,
             username: username,
+            onConnectionAttemptStarted: { [weak self] in
+                self?.connectionAuditStore?.begin(
+                    sessionID: sessionID,
+                    host: host,
+                    username: username
+                )
+            },
             onConnectionSucceeded: { [weak self] in
                 self?.onHostConnectionSucceeded?(hostID)
+                self?.connectionAuditStore?.markConnected(sessionID: sessionID)
+            },
+            onConnectionCompleted: { [weak self] exitCode in
+                self?.connectionAuditStore?.finishCompleted(
+                    sessionID: sessionID,
+                    exitCode: exitCode
+                )
+            },
+            onConnectionFailed: { [weak self] exitCode, failure in
+                self?.connectionAuditStore?.finishFailed(
+                    sessionID: sessionID,
+                    exitCode: exitCode,
+                    failureCode: failure.rawValue,
+                    failureTitle: failure.title
+                )
+            },
+            onConnectionCancelled: { [weak self] in
+                self?.connectionAuditStore?.finishCancelled(sessionID: sessionID)
             }
         )
     }

@@ -31,6 +31,7 @@ trap 'rm -rf "$test_dir"' EXIT
 cd "$project_dir"
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Models/ConnectionAuditRecord.swift \
     Sources/MySSHClient/Models/HostGroupMove.swift \
     Sources/MySSHClient/Models/HostTransferDocument.swift \
     Sources/MySSHClient/Models/InventoryDocument.swift \
@@ -40,6 +41,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/SyncModels.swift \
     Sources/MySSHClient/Models/TerminalWorkspace.swift \
     Sources/MySSHClient/Services/AppPaths.swift \
+    Sources/MySSHClient/Services/ConnectionAuditStore.swift \
     Sources/MySSHClient/Services/AppShortcutStore.swift \
     Sources/MySSHClient/Services/CloudConfiguration.swift \
     Sources/MySSHClient/Services/OAuthSecurity.swift \

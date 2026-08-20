@@ -5,6 +5,7 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
     let sessions: [TerminalSession]
     let selectedWorkspace: TerminalWorkspace?
     let hostStore: HostStore
+    let connectionAuditStore: ConnectionAuditStore
     let onActivate: (TerminalSession.ID) -> Void
     let onToggleSplit: (TerminalWorkspace.ID) -> Void
     let onClose: (TerminalSession) -> Void
@@ -21,6 +22,7 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
             sessions: sessions,
             selectedWorkspace: selectedWorkspace,
             hostStore: hostStore,
+            connectionAuditStore: connectionAuditStore,
             onActivate: onActivate,
             onToggleSplit: onToggleSplit,
             onClose: onClose,
@@ -62,6 +64,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
         sessions: [TerminalSession],
         selectedWorkspace: TerminalWorkspace?,
         hostStore: HostStore,
+        connectionAuditStore: ConnectionAuditStore,
         onActivate: @escaping (TerminalSession.ID) -> Void,
         onToggleSplit: @escaping (TerminalWorkspace.ID) -> Void,
         onClose: @escaping (TerminalSession) -> Void,
@@ -91,6 +94,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
             let root = TerminalPaneHostingRoot(
                 session: session,
                 hostStore: hostStore,
+                connectionAuditStore: connectionAuditStore,
                 isVisible: presentation.isVisible,
                 isActive: presentation.isActive,
                 workspaceIsSplit: presentation.workspaceIsSplit,
@@ -145,6 +149,7 @@ private struct TerminalPanePresentation: Equatable {
 private struct TerminalPaneHostingRoot: View {
     @ObservedObject var session: TerminalSession
     let hostStore: HostStore
+    let connectionAuditStore: ConnectionAuditStore
     let isVisible: Bool
     let isActive: Bool
     let workspaceIsSplit: Bool
@@ -171,6 +176,7 @@ private struct TerminalPaneHostingRoot: View {
             onEditHost: onEditHost
         )
         .environmentObject(hostStore)
+        .environmentObject(connectionAuditStore)
     }
 }
 

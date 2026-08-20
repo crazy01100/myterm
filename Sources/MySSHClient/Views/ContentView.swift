@@ -4,6 +4,7 @@ struct ContentView: View {
     @EnvironmentObject private var hostStore: HostStore
     @EnvironmentObject private var knownHostsStore: KnownHostsStore
     @EnvironmentObject private var sessionManager: SessionManager
+    @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var shortcutStore: AppShortcutStore
     @State private var hostEditorRequest: HostEditorRequest?
     @State private var groupEditorRequest: GroupEditorRequest?
@@ -12,6 +13,7 @@ struct ContentView: View {
     @State private var deleteCandidate: HostProfile?
     @State private var deleteGroupCandidate: HostGroup?
     @State private var libraryWorkspace: LibraryWorkspace = .hosts
+    @State private var hostLibrarySelection: HostLibrarySelection = .all
     @State private var draggedWorkspaceID: TerminalWorkspace.ID?
     @State private var tabDragOriginalSelectionID: TerminalWorkspace.ID?
     @State private var tabDragInsertionIndex: Int?
@@ -23,14 +25,14 @@ struct ContentView: View {
     @State private var paneDetachInsertionIndex: Int?
 
     var body: some View {
-        VStack(spacing: 0) {
-            workspaceTabBar
-            Divider()
-            workspaceContent
+        workspaceContent
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                workspaceTabBar
+            }
+            .sharedBackgroundVisibility(.hidden)
         }
-        .coordinateSpace(name: "workspaceRoot")
-        .onPreferenceChange(WorkspaceTabFramePreferenceKey.self) { workspaceTabFrames = $0 }
-        .onAppear(perform: configureHostConnectionRecency)
+        .onAppear(perform: configureSessionObservers)
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
                 .environmentObject(hostStore)
@@ -111,15 +113,21 @@ struct ContentView: View {
         HStack(spacing: 7) {
             Button {
                 libraryWorkspace = .hosts
+                hostLibrarySelection = .all
                 sessionManager.showHostLibrary()
             } label: {
-                Label("主機", systemImage: "server.rack")
+                HStack(spacing: 7) {
+                    Image(systemName: "server.rack")
+                    Text("主機")
+                }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(tabBackground(isSelected: sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts))
                     .clipShape(.rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("主機")
 
             Divider().frame(height: 24)
 
@@ -127,17 +135,22 @@ struct ContentView: View {
                 libraryWorkspace = .sftp
                 sessionManager.showHostLibrary()
             } label: {
-                Label("SFTP", systemImage: "folder.fill")
+                HStack(spacing: 7) {
+                    Image(systemName: "folder.fill")
+                    Text("SFTP")
+                }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(tabBackground(isSelected: sessionManager.selectedSessionID == nil && libraryWorkspace == .sftp))
                     .clipShape(.rect(cornerRadius: 8))
             }
             .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("SFTP")
 
             Divider().frame(height: 24)
 
-            ScrollView(.horizontal) {
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 0) {
                     ForEach(Array(sessionManager.workspaces.enumerated()), id: \.element.id) { index, workspace in
                         WorkspaceReorderDropZone(
@@ -154,12 +167,11 @@ struct ContentView: View {
                     )
                 }
             }
-            .scrollIndicators(.hidden)
+            .frame(idealWidth: 720, maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(.bar)
+        .padding(.vertical, 4)
     }
 
     private func workspaceTab(
@@ -200,14 +212,14 @@ struct ContentView: View {
         .padding(.leading, 10)
         .padding(.trailing, 6)
         .padding(.vertical, 7)
+        .frame(minWidth: 132, maxWidth: 220, alignment: .leading)
         .background(tabBackground(isSelected: sessionManager.selectedWorkspaceID == workspace.id))
         .clipShape(.rect(cornerRadius: 8))
         .background {
-            GeometryReader { geometry in
-                Color.clear.preference(
-                    key: WorkspaceTabFramePreferenceKey.self,
-                    value: [workspace.id: geometry.frame(in: .named("workspaceRoot"))]
-                )
+            WindowTopLeftFrameReader { frame in
+                if workspaceTabFrames[workspace.id] != frame {
+                    workspaceTabFrames[workspace.id] = frame
+                }
             }
         }
         .opacity(draggedWorkspaceID == workspace.id ? 0.35 : 1)
@@ -395,21 +407,14 @@ struct ContentView: View {
     }
 
     private func prepareWorkspaceMouseDrag(in rootBounds: CGRect) {
-        let contentMinY = max(
-            workspaceTabFrames.values.map(\.maxY).max().map { $0 + 8 } ?? 50,
-            rootBounds.minY
-        )
         workspaceTabBarFrame = CGRect(
             x: rootBounds.minX,
             y: rootBounds.minY,
             width: rootBounds.width,
-            height: max(contentMinY - rootBounds.minY, 0)
-        )
-        workspaceContentFrame = CGRect(
-            x: rootBounds.minX,
-            y: contentMinY,
-            width: rootBounds.width,
-            height: max(rootBounds.maxY - contentMinY, 0)
+            height: max(
+                workspaceTabFrames.values.map(\.maxY).max().map { $0 + 8 } ?? 50,
+                50
+            )
         )
     }
 
@@ -474,6 +479,7 @@ struct ContentView: View {
     private var workspaceContent: some View {
         ZStack {
             HostLibraryView(
+                selection: $hostLibrarySelection,
                 onAddHost: addHost,
                 onAddGroup: { parentID in
                     groupEditorRequest = GroupEditorRequest(group: nil, defaultParentID: parentID)
@@ -494,6 +500,7 @@ struct ContentView: View {
 
             SFTPWorkspaceView {
                 libraryWorkspace = .hosts
+                hostLibrarySelection = .all
             }
                 .opacity(sessionManager.selectedSessionID == nil && libraryWorkspace == .sftp ? 1 : 0)
                 .allowsHitTesting(sessionManager.selectedSessionID == nil && libraryWorkspace == .sftp)
@@ -504,6 +511,7 @@ struct ContentView: View {
                         sessions: sessionManager.sessions,
                         selectedWorkspace: sessionManager.selectedWorkspace,
                         hostStore: hostStore,
+                        connectionAuditStore: connectionAuditStore,
                         onActivate: { sessionManager.activate(sessionID: $0) },
                         onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
                         onClose: { sessionManager.close($0) },
@@ -519,6 +527,13 @@ struct ContentView: View {
             }
             .opacity(sessionManager.selectedWorkspaceID == nil ? 0 : 1)
             .allowsHitTesting(sessionManager.selectedWorkspaceID != nil)
+        }
+        .background {
+            WindowTopLeftFrameReader { frame in
+                if workspaceContentFrame != frame {
+                    workspaceContentFrame = frame
+                }
+            }
         }
     }
 
@@ -614,7 +629,7 @@ struct ContentView: View {
         try sessionManager.createSSHSession(to: host, username: username)
     }
 
-    private func configureHostConnectionRecency() {
+    private func configureSessionObservers() {
         let hostStore = hostStore
         sessionManager.onHostConnectionSucceeded = { [weak hostStore] hostID in
             guard let hostStore else { return }
@@ -624,6 +639,7 @@ struct ContentView: View {
                 NSLog("MyTerm host connection recency save failed: %@", error.localizedDescription)
             }
         }
+        sessionManager.connectionAuditStore = connectionAuditStore
     }
 
     private func performShortcut(_ action: AppShortcutAction) -> Bool {
@@ -642,6 +658,7 @@ struct ContentView: View {
             session.selectAllTerminalContent()
         case .openHosts:
             libraryWorkspace = .hosts
+            hostLibrarySelection = .all
             sessionManager.showHostLibrary()
         case .openLocalTerminal:
             sessionManager.createLocalSession()
@@ -831,14 +848,53 @@ private struct WorkspaceReorderDropZone: View {
     }
 }
 
-private struct WorkspaceTabFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [TerminalWorkspace.ID: CGRect] = [:]
+private struct WindowTopLeftFrameReader: NSViewRepresentable {
+    let onChange: (CGRect) -> Void
 
-    static func reduce(
-        value: inout [TerminalWorkspace.ID: CGRect],
-        nextValue: () -> [TerminalWorkspace.ID: CGRect]
-    ) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    func makeNSView(context: Context) -> FrameReportingNSView {
+        let view = FrameReportingNSView(frame: .zero)
+        view.onChange = onChange
+        return view
+    }
+
+    func updateNSView(_ nsView: FrameReportingNSView, context: Context) {
+        nsView.onChange = onChange
+        nsView.reportFrameIfNeeded()
+    }
+
+    final class FrameReportingNSView: NSView {
+        var onChange: ((CGRect) -> Void)?
+        private var lastReportedFrame = CGRect.null
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            reportFrameIfNeeded()
+        }
+
+        override func layout() {
+            super.layout()
+            reportFrameIfNeeded()
+        }
+
+        func reportFrameIfNeeded() {
+            guard let contentView = window?.contentView else { return }
+            let frameInContent = convert(bounds, to: contentView)
+            let contentBounds = contentView.bounds
+            let topLeftFrame = CGRect(
+                x: frameInContent.minX - contentBounds.minX,
+                y: contentView.isFlipped
+                    ? frameInContent.minY - contentBounds.minY
+                    : contentBounds.maxY - frameInContent.maxY,
+                width: frameInContent.width,
+                height: frameInContent.height
+            )
+            guard topLeftFrame != lastReportedFrame else { return }
+            lastReportedFrame = topLeftFrame
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.lastReportedFrame == topLeftFrame else { return }
+                self.onChange?(topLeftFrame)
+            }
+        }
     }
 }
 
@@ -965,12 +1021,20 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                 matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
             ) { [weak self] event in
                 guard let self, let hostView = self.hostView,
-                      event.window === hostView.window else { return event }
-                let point = hostView.convert(event.locationInWindow, from: nil)
+                      let window = hostView.window,
+                      event.window === window,
+                      let contentView = window.contentView else { return event }
+                let pointInContent = contentView.convert(event.locationInWindow, from: nil)
+                let point = CGPoint(
+                    x: pointInContent.x - contentView.bounds.minX,
+                    y: contentView.isFlipped
+                        ? pointInContent.y - contentView.bounds.minY
+                        : contentView.bounds.maxY - pointInContent.y
+                )
 
                 switch event.type {
                 case .leftMouseDown:
-                    self.prepareDrag(hostView.bounds)
+                    self.prepareDrag(CGRect(origin: .zero, size: contentView.bounds.size))
                     self.mouseDownPoint = point
                     self.isTrackingDrag = self.beginDrag(point)
                     self.isDragging = false
@@ -1058,9 +1122,10 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                 ghostSize = ghostHost.fittingSize
             }
             if let ghostHost {
+                let localLocation = localPoint(fromWindowTopLeft: presentation.location)
                 ghostHost.frame = CGRect(
-                    x: presentation.location.x - ghostSize.width / 2,
-                    y: presentation.location.y - ghostSize.height / 2,
+                    x: localLocation.x - ghostSize.width / 2,
+                    y: localLocation.y - ghostSize.height / 2,
                     width: ghostSize.width,
                     height: ghostSize.height
                 )
@@ -1080,7 +1145,7 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                     )
                     previewPosition = position
                 }
-                previewHost?.frame = presentation.previewFrame
+                previewHost?.frame = localRect(fromWindowTopLeft: presentation.previewFrame)
                 previewHost?.isHidden = false
             } else {
                 previewHost?.isHidden = true
@@ -1097,11 +1162,40 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
             ghostSize = .zero
             previewPosition = nil
         }
+
+        private func localPoint(fromWindowTopLeft point: CGPoint) -> CGPoint {
+            guard let contentView = window?.contentView else { return point }
+            let contentBounds = contentView.bounds
+            let pointInContent = CGPoint(
+                x: point.x + contentBounds.minX,
+                y: contentView.isFlipped
+                    ? point.y + contentBounds.minY
+                    : contentBounds.maxY - point.y
+            )
+            let pointInWindow = contentView.convert(pointInContent, to: nil)
+            return convert(pointInWindow, from: nil)
+        }
+
+        private func localRect(fromWindowTopLeft rect: CGRect) -> CGRect {
+            guard let contentView = window?.contentView else { return rect }
+            let contentBounds = contentView.bounds
+            let rectInContent = CGRect(
+                x: rect.minX + contentBounds.minX,
+                y: contentView.isFlipped
+                    ? rect.minY + contentBounds.minY
+                    : contentBounds.maxY - rect.maxY,
+                width: rect.width,
+                height: rect.height
+            )
+            let rectInWindow = contentView.convert(rectInContent, to: nil)
+            return convert(rectInWindow, from: nil)
+        }
     }
 }
 
 struct TerminalWorkspaceView: View {
     @EnvironmentObject private var hostStore: HostStore
+    @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var session: TerminalSession
     let isVisible: Bool
@@ -1311,6 +1405,7 @@ struct TerminalWorkspaceView: View {
 
     private func recordPlatform(_ platform: HostPlatform) {
         guard let hostID = session.host?.id else { return }
+        connectionAuditStore.recordDetectedPlatform(sessionID: session.id, platform: platform)
         do { try hostStore.recordDetectedPlatform(platform, for: hostID) }
         catch { hostStore.lastError = error.localizedDescription }
     }

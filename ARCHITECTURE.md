@@ -8,7 +8,8 @@
 ┌──────────────────────────── MyTerm.app ────────────────────────────┐
 │ SwiftUI / AppKit                                                   │
 │  ├─ 主機與多階層群組管理       ├─ 設定、匯入／匯出與快捷鍵          │
-│  ├─ SSH / Terminal / Serial    └─ 雙欄 SFTP                        │
+│  ├─ SSH / Terminal / Serial    ├─ 雙欄 SFTP                        │
+│  └─ 本機 SSH 連線稽核 Logs                                       │
 │                                                                    │
 │ 系統服務                                                           │
 │  ├─ /usr/bin/ssh + PTY          ├─ macOS Keychain                  │
@@ -37,10 +38,10 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 ### 使用者介面
 
-- `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP 與設定畫面。
+- `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP、連線稽核 Logs 與設定畫面。
 - `Sources/MySSHClient/MySSHClientApp.swift`：App 進入點、設定視窗、選單與整體生命週期。
-- SwiftUI 負責狀態、頂部分頁與主要 App 外殼；Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。
-- 主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。「所有主機」內容區另允許把主機拖到分類卡片；放手只建立確認請求，確認後才由 `HostStore` 寫入，左側分類列表與群組內頁不接收投放。
+- SwiftUI 負責狀態、macOS 原生 toolbar 中的單一工作區列與主要 App 外殼；隱藏原生文字標題及 toolbar 的共享膠囊背景，但保留系統視窗拖動、縮放與全螢幕行為。工作區分頁與內容畫布分屬 toolbar／content view hierarchy，因此以輕量 AppKit frame reader 將兩者矩形及滑鼠事件統一成視窗左上座標；同一套座標供分頁重排、四向合併預覽及窗格拖回拆分使用，不依賴固定 toolbar 高度。Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。
+- 主機庫左側只保留 Known Hosts 與 Logs 兩個功能入口；所有主機、分類與未分類主機都在右側內容區瀏覽，分類 breadcrumb 固定以可返回根頁面的「所有主機」開頭。主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。「所有主機」內容區另允許把主機拖到分類卡片；放手只建立確認請求，確認後才由 `HostStore` 寫入，群組內頁與左側功能列不接收投放。
 
 ### 主機與本機資料
 
@@ -50,19 +51,20 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
 - `AppShortcutStore` 保存只在 MyTerm 內生效的快捷鍵設定。
 - `TerminalWorkspaceCollection` 保存執行期間的視覺分頁順序、作用中窗格、分割方向與比例；每個工作區的不變條件限制為一或兩個 Terminal session，並負責把雙窗格中的任一 session 拆回獨立分頁及收斂原工作區。
+- `ConnectionAuditStore` 以獨立 versioned 文件保存互動式 SSH 的主機快照、帳號端點、開始／驗證／結束時間與結構化結果。連線開始時已知的平台直接進入快照；若尚未知，該 Terminal Session 後續辨識出的第一個平台可補寫同一筆紀錄，之後不再覆寫，也不會由目前 `HostStore` 動態回填其他歷史紀錄。保存工作在背景序列佇列執行，最多保留 5,000 筆；損壞檔案會先隔離備份，App 仍可從空紀錄啟動。這份資料不併入 `HostStore`、主機匯出或 Firebase 同步。
 
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
 - 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新該主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。失敗畫面可原位重試或開啟對應主機設定。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
-- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process。
+- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它也把 process 開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`，重試會建立新的稽核紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
 - SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
-- 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章。
+- 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
 
 ## 資料保存位置
 
@@ -70,6 +72,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 |---|---|---|
 | 主機與群組 | Application Support 內的權限限制檔案 | 啟用同步時，以密文同步 |
 | 主機最近成功連線時間 | Application Support 內權限 `0600` 的獨立檔案；只含主機 UUID 與時間 | 不同步、不匯出 |
+| SSH 連線稽核 Logs | Application Support 內權限 `0600` 的 `connection-audit-log.json`；包含連線當下的主機與帳號端點快照、時間及結果，最多 5,000 筆 | 不同步、不匯出 |
 | 主機密碼 | AES-GCM 本機保管庫；根金鑰為 `WhenUnlockedThisDeviceOnly` Keychain 項目 | 啟用同步時再端對端加密；目的 Mac 解密後寫入其本機保管庫 |
 | Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |
 | 私鑰檔案與路徑 | 使用者指定的本機位置／本機設定 | 不同步 |
@@ -142,5 +145,6 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
 - `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
+- Logs 第一階段只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。
 - 跨裝置同步由 App 啟動、回到前景、切換主要功能及定期排程等本機事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。

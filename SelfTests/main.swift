@@ -23,6 +23,178 @@ private func baseHost() -> HostProfile {
 }
 
 do {
+    let start = Date(timeIntervalSince1970: 1_000)
+    let connected = Date(timeIntervalSince1970: 1_005)
+    let ended = Date(timeIntervalSince1970: 1_065)
+    let sessionID = UUID()
+    let recordID = UUID()
+    var host = baseHost()
+    host.name = "Audit Snapshot"
+    host.detectedPlatform = .ubuntu
+
+    var audit = ConnectionAuditIndex(maximumRecordCount: 5_000)
+    let firstID = audit.begin(
+        sessionID: sessionID,
+        host: host,
+        username: "other-user",
+        at: start,
+        recordID: recordID
+    )
+    let repeatedID = audit.begin(
+        sessionID: sessionID,
+        host: host,
+        username: "other-user",
+        at: start.addingTimeInterval(1)
+    )
+    check(firstID == recordID && repeatedID == recordID && audit.records.count == 1,
+          "connection audit begin is idempotent for one terminal session")
+    check(
+        audit.records.first?.hostName == "Audit Snapshot" &&
+            audit.records.first?.username == "other-user" &&
+            audit.records.first?.platform == .ubuntu,
+        "connection audit stores an immutable display snapshot without credentials"
+    )
+    check(audit.markConnected(sessionID: sessionID, at: connected),
+          "connection audit records authentication success")
+    check(
+        audit.finish(sessionID: sessionID, status: .completed, at: ended, exitCode: 0),
+        "connection audit completes an authenticated session"
+    )
+    check(
+        !audit.finish(
+            sessionID: sessionID,
+            status: .failed,
+            at: ended.addingTimeInterval(1),
+            failureCode: "unknown",
+            failureTitle: "should not replace"
+        ) && audit.records.first?.status == .completed,
+        "connection audit preserves the first trusted final result"
+    )
+
+    var platformSnapshot = ConnectionAuditIndex()
+    var platformUnknownHost = host
+    platformUnknownHost.detectedPlatform = nil
+    let platformSessionID = UUID()
+    platformSnapshot.begin(
+        sessionID: platformSessionID,
+        host: platformUnknownHost,
+        username: platformUnknownHost.username,
+        at: start
+    )
+    check(
+        platformSnapshot.recordDetectedPlatform(
+            sessionID: platformSessionID,
+            platform: .ubuntu
+        ) && platformSnapshot.records.first?.platform == .ubuntu,
+        "connection audit fills an initially unknown platform from the same session"
+    )
+    _ = platformSnapshot.finish(
+        sessionID: platformSessionID,
+        status: .completed,
+        at: ended
+    )
+    check(
+        !platformSnapshot.recordDetectedPlatform(
+            sessionID: platformSessionID,
+            platform: .debian
+        ) && platformSnapshot.records.first?.platform == .ubuntu,
+        "connection audit preserves the first detected platform snapshot"
+    )
+    let latePlatformSessionID = UUID()
+    platformSnapshot.begin(
+        sessionID: latePlatformSessionID,
+        host: platformUnknownHost,
+        username: platformUnknownHost.username,
+        at: start
+    )
+    _ = platformSnapshot.finish(
+        sessionID: latePlatformSessionID,
+        status: .completed,
+        at: ended
+    )
+    check(
+        platformSnapshot.recordDetectedPlatform(
+            sessionID: latePlatformSessionID,
+            platform: .debian
+        ) && platformSnapshot.records.first(where: { $0.sessionID == latePlatformSessionID })?.platform == .debian,
+        "connection audit accepts a late platform callback for its finalized session"
+    )
+    check(
+        !platformSnapshot.recordDetectedPlatform(
+            sessionID: UUID(),
+            platform: .centOS
+        ) && platformSnapshot.records.filter({ $0.platform != nil }).count == 2,
+        "connection audit never backfills unrelated historical sessions"
+    )
+
+    var interrupted = ConnectionAuditIndex()
+    interrupted.begin(sessionID: UUID(), host: host, username: host.username, at: start)
+    check(interrupted.recoverInterruptedSessions(),
+          "connection audit recovers an unfinished prior app session")
+    check(
+        interrupted.records.first?.status == .interrupted &&
+            interrupted.records.first?.endedAt == nil,
+        "interrupted audit does not invent an end time"
+    )
+
+    var pruned = ConnectionAuditIndex(maximumRecordCount: 2)
+    let ongoingID = UUID()
+    pruned.begin(sessionID: ongoingID, host: host, username: host.username, at: start)
+    let oldID = UUID()
+    pruned.begin(sessionID: oldID, host: host, username: host.username, at: start.addingTimeInterval(1))
+    _ = pruned.finish(sessionID: oldID, status: .completed, at: ended)
+    let newID = UUID()
+    pruned.begin(sessionID: newID, host: host, username: host.username, at: start.addingTimeInterval(2))
+    _ = pruned.finish(sessionID: newID, status: .failed, at: ended)
+    check(
+        pruned.records.count == 2 &&
+            pruned.records.contains(where: { $0.sessionID == ongoingID }) &&
+            !pruned.records.contains(where: { $0.sessionID == oldID }),
+        "connection audit pruning preserves ongoing records and removes the oldest final record"
+    )
+
+    let testDirectory = FileManager.default.temporaryDirectory.appending(
+        path: "MyTerm-connection-audit-tests-\(UUID().uuidString)",
+        directoryHint: .isDirectory
+    )
+    defer { try? FileManager.default.removeItem(at: testDirectory) }
+    let testFile = testDirectory.appending(path: "connection-audit-log.json")
+    let document = ConnectionAuditDocument(records: audit.records)
+    try ConnectionAuditStore.saveDocument(document, to: testFile)
+    let decoded = try ConnectionAuditStore.loadDocument(from: testFile)
+    check(decoded == document, "connection audit document survives secure persistence round trip")
+    let directoryPermissions = try FileManager.default.attributesOfItem(atPath: testDirectory.path)[.posixPermissions] as? NSNumber
+    let filePermissions = try FileManager.default.attributesOfItem(atPath: testFile.path)[.posixPermissions] as? NSNumber
+    check(directoryPermissions?.intValue == 0o700,
+          "connection audit directory uses owner-only permissions")
+    check(filePermissions?.intValue == 0o600,
+          "connection audit file uses owner-only permissions")
+    let persistedText = String(decoding: try Data(contentsOf: testFile), as: UTF8.self).lowercased()
+    check(
+        !persistedText.contains("password") &&
+            !persistedText.contains("privatekey") &&
+            !persistedText.contains("technical") &&
+            !persistedText.contains("terminaloutput"),
+        "connection audit persistence contains no credential or terminal transcript fields"
+    )
+
+    try Data("not-json".utf8).write(to: testFile)
+    do {
+        _ = try ConnectionAuditStore.loadDocument(from: testFile)
+        check(false, "corrupt connection audit is rejected and backed up")
+    } catch {
+        let backups = try FileManager.default.contentsOfDirectory(
+            at: testDirectory,
+            includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix("connection-audit-log-corrupt-") }
+        check(backups.count == 1 && !FileManager.default.fileExists(atPath: testFile.path),
+              "corrupt connection audit is rejected and backed up")
+    }
+} catch {
+    check(false, "connection audit model and persistence tests: \(error)")
+}
+
+do {
     var alpha = baseHost()
     alpha.name = "Alpha"
     var beta = baseHost()
