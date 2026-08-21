@@ -17,7 +17,7 @@
 MyTerm 的雲端流程分成兩層：
 
 1. Google Desktop OAuth 取得 Google ID token，再由 Firebase Authentication 建立 Firebase UID 與 ID token。
-2. 使用者啟用同步後，MyTerm 才以 Firebase ID token 存取 Cloud Firestore。主機、群組與密碼會先在 Mac 上端對端加密，Firestore 只保存密文與必要的版本資訊。
+2. 使用者啟用同步後，MyTerm 才以 Firebase ID token 存取 Cloud Firestore。主機、群組、密碼與已結束的 Logs 會先在 Mac 上端對端加密，Firestore 只保存密文與必要的版本資訊。
 
 真正的資料存取邊界是 Firebase Authentication、專案內的 [Firestore Security Rules](firestore.rules) 與 MyTerm 的端對端加密；OAuth Client ID、Desktop Client Secret 與 Firebase Web API Key 會隨桌面 App 發布，不能視為伺服器端秘密。即使如此，本專案仍禁止把實際設定檔提交至 Git，避免專案識別與操作資料被誤用。
 
@@ -59,9 +59,10 @@ MyTerm 使用以下資料路徑：
 ```text
 users/<Firebase UID>/vaultKeys/current
 users/<Firebase UID>/vault/<record UUID>
+users/<Firebase UID>/connectionLogs/<record UUID>
 ```
 
-Repository 內的 Rules 只允許已登入使用者存取自己的 UID 路徑，並限制文件欄位、大小、revision 與密文格式。不要以測試用的全開規則取代它。
+Repository 內的 Rules 只允許已登入使用者存取自己的 UID 路徑，並限制文件欄位、大小、revision 與密文格式。`connectionLogs` 是建立後不可更新的加密最終紀錄；刪除權限只供 App 執行固定 30 天到期整理，Logs 介面不提供人工刪除。不要以測試用的全開規則取代它。
 
 參考：[建立與管理 Cloud Firestore database](https://firebase.google.com/docs/firestore/manage-databases)
 
@@ -173,11 +174,13 @@ test -f "build/dev/MyTerm Dev.app/Contents/Resources/MyTermCloudConfig.plist"
 
 1. Google 登入成功，顯示正確帳號，重新啟動 App 後可安全還原登入狀態。
 2. 未啟用同步前，既有本機主機與密碼不會自動上傳。
-3. 啟用同步時可建立同步密語與復原金鑰，Firestore 只出現目前 UID 下的密文文件。
-4. 第二台 Mac 以相同 Google 帳號與同步密語復原後，能取得主機、群組與密碼並實際建立 SSH 連線。
+3. 啟用同步時可建立同步密語與復原金鑰，Firestore 只出現目前 UID 下的密文文件；`connectionLogs` 不含明文主機、帳號、位址、來源裝置、時間或結果。
+4. 第二台 Mac 以相同 Google 帳號與同步密語復原後，能取得主機、群組、密碼與已結束 Logs，並實際建立 SSH 連線。
 5. 不同 Firebase UID 無法讀寫另一個 UID 的 `users/<UID>/...` 路徑。
 6. 主機或群組刪除以加密 tombstone 傳播，目的 Mac 套用遠端刪除前會建立本機備份。
-7. 停用同步後，本機 SSH、Terminal、Serial 與 SFTP 仍可正常使用。
+7. A 裝置的 SSH 仍在連線時，B 裝置看不到該筆進行中 Logs；A 完成、失敗或取消後，B 才取得一次含來源裝置名稱的最終紀錄。
+8. 超過 30 天的 Logs 不會由離線裝置重新上傳，且到期密文會在下一次同步時整理。
+9. 停用同步後，本機 SSH、Terminal、Serial、SFTP 與本機 Logs 仍可正常使用。
 
 ## 常見問題
 

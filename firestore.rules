@@ -66,6 +66,27 @@ service cloud.firestore {
         && request.resource.data.revision == resource.data.revision + 1;
     }
 
+    function isValidEncryptedConnectionAuditRecord() {
+      return request.resource.data.keys().hasOnly([
+          'recordType',
+          'ciphertext',
+          'nonce',
+          'authenticationTag',
+          'keyVersion',
+          'formatVersion'
+        ])
+        && request.resource.data.recordType == 'connectionAudit'
+        && request.resource.data.ciphertext is bytes
+        && request.resource.data.ciphertext.size() > 0
+        && request.resource.data.ciphertext.size() <= 65536
+        && request.resource.data.nonce is bytes
+        && request.resource.data.nonce.size() == 12
+        && request.resource.data.authenticationTag is bytes
+        && request.resource.data.authenticationTag.size() == 16
+        && request.resource.data.keyVersion == 1
+        && request.resource.data.formatVersion == 1;
+    }
+
     // Master Key 只以端對端加密封套保存；不開放 list 與 delete。
     match /users/{userId}/vaultKeys/{documentId} {
       allow get: if documentId == 'current' && isOwner(userId);
@@ -84,6 +105,16 @@ service cloud.firestore {
       allow update: if documentId.size() == 36
         && isOwner(userId)
         && isValidEncryptedMetadataUpdate();
+    }
+
+    // 連線稽核只保存逐筆 AEAD 密文。文件建立後不可更新；delete
+    // 只供 App 的 30 天到期整理使用，產品介面不提供手動刪除入口。
+    match /users/{userId}/connectionLogs/{documentId} {
+      allow get, list: if isOwner(userId);
+      allow create: if documentId.size() == 36
+        && isOwner(userId)
+        && isValidEncryptedConnectionAuditRecord();
+      allow delete: if isOwner(userId);
     }
 
     match /{document=**} {

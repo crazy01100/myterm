@@ -24,6 +24,8 @@ struct ConnectionAuditRecord: Identifiable, Codable, Equatable {
     let port: Int
     let username: String
     let connectionProtocol: String
+    var sourceDeviceID: UUID?
+    var sourceDeviceName: String?
     var platform: HostPlatform?
     let startedAt: Date
     var connectedAt: Date?
@@ -41,6 +43,8 @@ struct ConnectionAuditRecord: Identifiable, Codable, Equatable {
         hostname: String,
         port: Int,
         username: String,
+        sourceDeviceID: UUID? = nil,
+        sourceDeviceName: String? = nil,
         platform: HostPlatform?,
         startedAt: Date
     ) {
@@ -52,6 +56,8 @@ struct ConnectionAuditRecord: Identifiable, Codable, Equatable {
         self.port = port
         self.username = username
         connectionProtocol = "ssh"
+        self.sourceDeviceID = sourceDeviceID
+        self.sourceDeviceName = sourceDeviceName
         self.platform = platform
         self.startedAt = startedAt
         status = .connecting
@@ -60,6 +66,10 @@ struct ConnectionAuditRecord: Identifiable, Codable, Equatable {
     var duration: TimeInterval? {
         guard status != .interrupted else { return nil }
         return (endedAt ?? Date()).timeIntervalSince(startedAt)
+    }
+
+    var retentionReferenceDate: Date {
+        status == .interrupted ? startedAt : (endedAt ?? startedAt)
     }
 }
 
@@ -93,6 +103,8 @@ struct ConnectionAuditIndex {
         host: HostProfile,
         username: String,
         at date: Date,
+        sourceDeviceID: UUID? = nil,
+        sourceDeviceName: String? = nil,
         recordID: UUID = UUID()
     ) -> UUID {
         if let existing = records.first(where: { $0.sessionID == sessionID }) {
@@ -106,6 +118,8 @@ struct ConnectionAuditIndex {
             hostname: host.hostname,
             port: host.port,
             username: username,
+            sourceDeviceID: sourceDeviceID,
+            sourceDeviceName: sourceDeviceName,
             platform: host.detectedPlatform,
             startedAt: date
         )
@@ -169,17 +183,42 @@ struct ConnectionAuditIndex {
     }
 
     @discardableResult
-    mutating func remove(recordID: UUID) -> Bool {
-        let oldCount = records.count
-        records.removeAll { $0.id == recordID }
-        return records.count != oldCount
+    mutating func backfillSourceDevice(id: UUID, name: String) -> Bool {
+        var changed = false
+        for index in records.indices {
+            if records[index].sourceDeviceID == nil {
+                records[index].sourceDeviceID = id
+                changed = true
+            }
+            if records[index].sourceDeviceName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false {
+                records[index].sourceDeviceName = name
+                changed = true
+            }
+        }
+        return changed
     }
 
     @discardableResult
-    mutating func removeAll() -> Bool {
-        guard !records.isEmpty else { return false }
-        records.removeAll(keepingCapacity: false)
+    mutating func mergeFinalized(_ incoming: [ConnectionAuditRecord]) -> Bool {
+        let existingIDs = Set(records.map(\.id))
+        let additions = incoming.filter { !$0.status.isOngoing && !existingIDs.contains($0.id) }
+        guard !additions.isEmpty else { return false }
+        records.append(contentsOf: additions)
+        pruneIfNeeded()
         return true
+    }
+
+    @discardableResult
+    mutating func pruneExpired(before cutoff: Date) -> Bool {
+        let oldCount = records.count
+        records.removeAll {
+            !$0.status.isOngoing && $0.retentionReferenceDate < cutoff
+        }
+        return records.count != oldCount
+    }
+
+    func record(sessionID: UUID) -> ConnectionAuditRecord? {
+        records.first { $0.sessionID == sessionID }
     }
 
     private mutating func pruneIfNeeded() {

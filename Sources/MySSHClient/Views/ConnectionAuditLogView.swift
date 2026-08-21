@@ -4,7 +4,6 @@ struct ConnectionAuditLogView: View {
     @EnvironmentObject private var store: ConnectionAuditStore
     @State private var searchText = ""
     @State private var filter: ConnectionAuditFilter = .all
-    @State private var showingClearConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,18 +19,6 @@ struct ConnectionAuditLogView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .confirmationDialog(
-            "清除全部連線紀錄？",
-            isPresented: $showingClearConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("清除全部記錄", role: .destructive) {
-                store.removeAll()
-            }
-            Button("取消", role: .cancel) { }
-        } message: {
-            Text("這只會刪除本機連線稽核記錄，不會刪除主機、密碼或目前工作階段。此操作無法復原。")
-        }
     }
 
     private var toolbar: some View {
@@ -39,12 +26,12 @@ struct ConnectionAuditLogView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Logs")
                     .font(.title2.bold())
-                Text("\(store.records.count) 筆互動式 SSH 連線記錄")
+                Text("\(store.records.count) 筆互動式 SSH 連線記錄 · 保留 30 天")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            TextField("搜尋主機、帳號或位址", text: $searchText)
+            TextField("搜尋主機、帳號、位址或裝置", text: $searchText)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 300)
             Picker("結果", selection: $filter) {
@@ -54,38 +41,39 @@ struct ConnectionAuditLogView: View {
             }
             .pickerStyle(.menu)
             .frame(width: 145)
-            Button("清除全部", role: .destructive) {
-                showingClearConfirmation = true
-            }
-            .disabled(store.records.isEmpty)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
     }
 
     private var recordList: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 20) {
-                Text("時間")
-                    .frame(width: 230, alignment: .leading)
-                Text("主機與連線")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("結果")
-                    .frame(width: 180, alignment: .leading)
-            }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 10)
-            .background(Color.primary.opacity(0.035))
+        GeometryReader { proxy in
+            let layout = ConnectionAuditColumnLayout(containerWidth: proxy.size.width)
 
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(filteredRecords) { record in
-                        ConnectionAuditRow(record: record) {
-                            store.remove(recordID: record.id)
+            VStack(spacing: 0) {
+                HStack(spacing: layout.spacing) {
+                    Text("時間")
+                        .frame(width: layout.timeWidth, alignment: .leading)
+                    Text("主機與連線")
+                        .frame(width: layout.hostWidth, alignment: .leading)
+                    Text("來源裝置")
+                        .frame(width: layout.deviceWidth, alignment: .leading)
+                    Text("結果")
+                        .frame(width: layout.resultWidth, alignment: .leading)
+                    Spacer(minLength: 0)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
+                .background(Color.primary.opacity(0.035))
+
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(filteredRecords) { record in
+                            ConnectionAuditRow(record: record, layout: layout)
+                            Divider().padding(.leading, 24)
                         }
-                        Divider().padding(.leading, 24)
                     }
                 }
             }
@@ -127,13 +115,13 @@ struct ConnectionAuditLogView: View {
     }
 
     private func searchableText(for record: ConnectionAuditRecord) -> String {
-        "\(record.hostName) \(record.username) \(record.hostname) \(record.port)"
+        "\(record.hostName) \(record.username) \(record.hostname) \(record.port) \(record.sourceDeviceName ?? "")"
     }
 }
 
 private struct ConnectionAuditRow: View {
     let record: ConnectionAuditRecord
-    let onDelete: () -> Void
+    let layout: ConnectionAuditColumnLayout
 
     var body: some View {
         Group {
@@ -145,15 +133,12 @@ private struct ConnectionAuditRow: View {
                 content(now: record.endedAt ?? record.startedAt)
             }
         }
-        .contextMenu {
-            Button("刪除此筆記錄", role: .destructive, action: onDelete)
-        }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityDescription)
     }
 
     private func content(now: Date) -> some View {
-        HStack(spacing: 20) {
+        HStack(spacing: layout.spacing) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(record.startedAt.formatted(
                     .dateTime.year().month(.abbreviated).day()
@@ -167,7 +152,7 @@ private struct ConnectionAuditRow: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.tertiary)
             }
-            .frame(width: 230, alignment: .leading)
+            .frame(width: layout.timeWidth, alignment: .leading)
 
             HStack(spacing: 12) {
                 platformBadge
@@ -182,7 +167,17 @@ private struct ConnectionAuditRow: View {
                         .textSelection(.enabled)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: layout.hostWidth, alignment: .leading)
+
+            HStack(spacing: 8) {
+                Image(systemName: "laptopcomputer")
+                    .frame(width: 18)
+                Text(record.sourceDeviceName ?? "舊版未記錄")
+                    .lineLimit(1)
+            }
+            .font(.callout.weight(.medium))
+            .frame(width: layout.deviceWidth, alignment: .leading)
+            .help(record.sourceDeviceName ?? "舊版未記錄")
 
             VStack(alignment: .leading, spacing: 4) {
                 Label(statusTitle, systemImage: statusIcon)
@@ -195,7 +190,9 @@ private struct ConnectionAuditRow: View {
                         .lineLimit(2)
                 }
             }
-            .frame(width: 180, alignment: .leading)
+            .frame(width: layout.resultWidth, alignment: .leading)
+
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 14)
@@ -282,7 +279,38 @@ private struct ConnectionAuditRow: View {
     }
 
     private var accessibilityDescription: String {
-        "\(record.hostName)，SSH \(record.username) at \(record.hostname) port \(record.port)，\(statusTitle)，開始時間 \(record.startedAt.formatted())"
+        "\(record.hostName)，SSH \(record.username) at \(record.hostname) port \(record.port)，來源裝置 \(record.sourceDeviceName ?? "未知")，\(statusTitle)，開始時間 \(record.startedAt.formatted())"
+    }
+}
+
+private struct ConnectionAuditColumnLayout {
+    let timeWidth: CGFloat
+    let hostWidth: CGFloat
+    let deviceWidth: CGFloat
+    let resultWidth: CGFloat
+    let spacing: CGFloat = 14
+
+    init(containerWidth: CGFloat) {
+        let horizontalPadding: CGFloat = 48
+        let totalSpacing = spacing * 3
+        let availableWidth = max(containerWidth - horizontalPadding - totalSpacing, 0)
+        let minimumTotalWidth: CGFloat = 750
+        let maximumTotalWidth: CGFloat = 1_370
+        let progress = min(max(
+            (availableWidth - minimumTotalWidth) / (maximumTotalWidth - minimumTotalWidth),
+            0
+        ), 1)
+        let compression = min(max(availableWidth / minimumTotalWidth, 0.72), 1)
+
+        func width(minimum: CGFloat, maximum: CGFloat) -> CGFloat {
+            let responsiveWidth = minimum + ((maximum - minimum) * progress)
+            return progress == 0 ? minimum * compression : responsiveWidth
+        }
+
+        timeWidth = width(minimum: 180, maximum: 210)
+        hostWidth = width(minimum: 230, maximum: 520)
+        deviceWidth = width(minimum: 200, maximum: 460)
+        resultWidth = width(minimum: 140, maximum: 180)
     }
 }
 

@@ -25,12 +25,14 @@ final class CloudAccountStore: ObservableObject {
 
     private let client: GoogleFirebaseAuthClient?
     private let configuration: CloudConfiguration?
+    private let legacySessionImportPolicy: CloudSessionLegacyImportPolicy
     private var currentIDToken: String?
     private var currentTokenExpiresAt: Date?
     private var signInTask: Task<Void, Never>?
     private var didAttemptRestore = false
 
     init(bundle: Bundle = .main) {
+        legacySessionImportPolicy = .current(bundle: bundle)
         do {
             let configuration = try CloudConfiguration.load(bundle: bundle)
             self.configuration = configuration
@@ -48,8 +50,13 @@ final class CloudAccountStore: ObservableObject {
         didAttemptRestore = true
         guard let client, let configuration else { return }
         do {
+            try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
+                projectID: configuration.firebaseProjectID,
+                legacyImportPolicy: legacySessionImportPolicy
+            )
             guard let refreshToken = try CloudSessionKeychainStore.refreshToken(
-                projectID: configuration.firebaseProjectID
+                projectID: configuration.firebaseProjectID,
+                legacyImportPolicy: legacySessionImportPolicy
             ) else {
                 state = .signedOut
                 return
@@ -145,7 +152,8 @@ final class CloudAccountStore: ObservableObject {
             return currentIDToken
         }
         guard let refreshToken = try CloudSessionKeychainStore.refreshToken(
-            projectID: configuration.firebaseProjectID
+            projectID: configuration.firebaseProjectID,
+            legacyImportPolicy: legacySessionImportPolicy
         ) else {
             throw CloudAccountStoreError.notSignedIn
         }

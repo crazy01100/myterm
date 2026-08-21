@@ -9,7 +9,7 @@
 │ SwiftUI / AppKit                                                   │
 │  ├─ 主機與多階層群組管理       ├─ 設定、匯入／匯出與快捷鍵          │
 │  ├─ SSH / Terminal / Serial    ├─ 雙欄 SFTP                        │
-│  └─ 本機 SSH 連線稽核 Logs                                       │
+│  └─ SSH 連線稽核 Logs（本機優先、可選加密同步）                   │
 │                                                                    │
 │ 系統服務                                                           │
 │  ├─ /usr/bin/ssh + PTY          ├─ macOS Keychain                  │
@@ -30,7 +30,7 @@
                                       GitHub Release 安裝包
 ```
 
-MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 與 Firebase Authentication 建立雲端帳號身分；只有使用者另外啟用同步後，MyTerm 才會使用 Firebase ID token 存取 Cloud Firestore 並初始化主機資料的跨裝置同步流程。
+MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 與 Firebase Authentication 建立雲端帳號身分；只有使用者另外啟用同步後，MyTerm 才會使用 Firebase ID token 存取 Cloud Firestore，並初始化主機資料與已結束 Logs 的跨裝置同步流程。
 
 官方 App、純本機原始碼建置與自行建置同步後端的設定邊界，以及 Firebase／Google Cloud 前置作業，見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
 
@@ -46,12 +46,13 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 ### 主機與本機資料
 
 - `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區以 `HostLibraryDragMonitor` 在目前視窗追蹤主機卡片拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。
-- `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。
+- `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。正式、development 與 update-lab 通道使用不同保管庫根金鑰；只有 production 可執行早期正式 session 的相容遷移，隔離通道不讀取 production 的舊 refresh token。
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
 - `AppShortcutStore` 保存只在 MyTerm 內生效的快捷鍵設定。
 - `TerminalWorkspaceCollection` 保存執行期間的視覺分頁順序、作用中窗格、分割方向與比例；每個工作區的不變條件限制為一或兩個 Terminal session，並負責把雙窗格中的任一 session 拆回獨立分頁及收斂原工作區。
-- `ConnectionAuditStore` 以獨立 versioned 文件保存互動式 SSH 的主機快照、帳號端點、開始／驗證／結束時間與結構化結果。連線開始時已知的平台直接進入快照；若尚未知，該 Terminal Session 後續辨識出的第一個平台可補寫同一筆紀錄，之後不再覆寫，也不會由目前 `HostStore` 動態回填其他歷史紀錄。保存工作在背景序列佇列執行，最多保留 5,000 筆；損壞檔案會先隔離備份，App 仍可從空紀錄啟動。這份資料不併入 `HostStore`、主機匯出或 Firebase 同步。
+- `ConnectionAuditStore` 以獨立 versioned 文件保存互動式 SSH 的主機快照、帳號端點、來源裝置快照、開始／驗證／結束時間與結構化結果。連線開始時已知的平台直接進入快照；若尚未知，該 Terminal Session 後續辨識出的第一個平台可補寫同一筆紀錄，之後不再覆寫，也不會由目前 `HostStore` 動態回填其他歷史紀錄。保存工作在背景序列佇列執行，最多保留 30 天與 5,000 筆；損壞檔案會先隔離備份，App 仍可從空紀錄啟動。這份資料不併入 `HostStore` 或主機匯出。
+- `AutomaticConnectionAuditSyncStore` 在啟用既有同步且 Master Key 可用時，獨立協調 Logs 的下載、去重、加密上傳與到期整理。進行中的連線只留在來源裝置；完成、失敗、取消或啟動恢復為未完整結束後，才將不可變的最終紀錄交給 `ConnectionAuditSyncCodec` 加密並透過 `FirestoreConnectionAuditBackend` 寫入專用集合。網路工作不位於 PTY、鍵盤或終端輸出路徑。
 
 ### 連線與終端機
 
@@ -72,7 +73,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 |---|---|---|
 | 主機與群組 | Application Support 內的權限限制檔案 | 啟用同步時，以密文同步 |
 | 主機最近成功連線時間 | Application Support 內權限 `0600` 的獨立檔案；只含主機 UUID 與時間 | 不同步、不匯出 |
-| SSH 連線稽核 Logs | Application Support 內權限 `0600` 的 `connection-audit-log.json`；包含連線當下的主機與帳號端點快照、時間及結果，最多 5,000 筆 | 不同步、不匯出 |
+| SSH 連線稽核 Logs | Application Support 內權限 `0600` 的 `connection-audit-log.json`；包含連線當下的主機、帳號端點、來源裝置、時間及結果，最多 30 天與 5,000 筆 | 啟用同步時，只把已結束紀錄以密文同步；不匯出 |
 | 主機密碼 | AES-GCM 本機保管庫；根金鑰為 `WhenUnlockedThisDeviceOnly` Keychain 項目 | 啟用同步時再端對端加密；目的 Mac 解密後寫入其本機保管庫 |
 | Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |
 | 私鑰檔案與路徑 | 使用者指定的本機位置／本機設定 | 不同步 |
@@ -80,7 +81,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 | SSH 連線暫存診斷 | Application Support 內權限 `0600` 的短期檔案；成功、失敗或關閉後刪除，異常退出殘留於下次啟動清理 | 不同步 |
 | 匯出檔 | 使用者選擇的位置 | 不由 MyTerm 自動同步 |
 
-正式 App 顯示名稱已改為 MyTerm，但正式 Bundle ID、Keychain service 與既有 Application Support 識別字保留舊名稱，以維持早期版本升級後的資料與密碼關聯。`MyTerm Dev.app` 則使用獨立 Bundle ID、Application Support 目錄與本機保管庫 Keychain service，開發驗收不得讀寫正式資料。
+正式 App 顯示名稱已改為 MyTerm，但正式 Bundle ID、Keychain service 與既有 Application Support 識別字保留舊名稱，以維持早期版本升級後的資料與密碼關聯。`MyTerm Dev.app` 則使用獨立 Bundle ID、Application Support 目錄與本機保管庫 Keychain service，開發驗收不得讀寫正式資料或繼承正式 Google session；若舊版 Dev 曾誤匯入正式 session，新版會在隔離通道內執行一次清理，之後 Dev 自行建立的登入可正常保留。
 
 ## 端對端加密同步
 
@@ -88,13 +89,16 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 1. 使用者以 Google Desktop OAuth 登入；PKCE、state、nonce 與只監聽 `127.0.0.1` 的暫時回呼降低授權碼攔截風險。
 2. 使用者輸入同步密語。MyTerm 以 Argon2id 派生保護金鑰，用來解開或建立 Master Key 封套。
-3. 每筆主機、群組與密碼資料使用 AES-256-GCM 加密，並帶有格式與 revision 資訊。
+3. 每筆主機、群組、密碼與已結束 Logs 資料使用 AES-256-GCM 加密；Logs 的主機、帳號、位址、來源裝置、時間與結果都位於密文內。
 4. Firebase Authentication 限制帳號身分；Firestore Security Rules 只允許目前 UID 存取符合格式的密文路徑。
 5. 另一台 Mac 使用相同帳號與同步密語解開 Master Key，再將密碼寫入該台 Mac 的本機加密保管庫。
+6. 主機、群組及分類關聯以加密 metadata revision 同步；「立即同步」只觸發目前裝置的上傳與拉取。其他 Mac 於自行同步、回到前景或前景定期事件時拉取，不使用跨裝置 UI 即時推播。
 
-Firestore 不保存明文主機內容、同步密語、Master Key 或解密後密碼。復原金鑰是使用者遺失同步密語時的獨立復原途徑，MyTerm 不代為保存其明文。
+Firestore 不保存明文主機內容、Logs 內容、來源裝置名稱、同步密語、Master Key 或解密後密碼。復原金鑰是使用者遺失同步密語時的獨立復原途徑，MyTerm 不代為保存其明文。
 
 主機與群組刪除會以帶有 revision、裝置識別與 AES-256-GCM 驗證的 tombstone 傳播；遠端刪除套用前會先建立本機還原備份。
+
+Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件，不沿用主機 metadata snapshot 或 tombstone。每次同步先取 Firestore HTTP 回應的伺服器時間，排除超過 30 天的本機資料，再上傳尚未存在的最終紀錄並整理過期密文；因此離線裝置重新上線也不能復活到期紀錄。介面不提供單筆刪除或清除全部，雲端刪除權限只供這項固定期限整理使用。
 
 ## SSH 密碼流程
 
@@ -145,6 +149,6 @@ Firestore 不保存明文主機內容、同步密語、Master Key 或解密後�
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
 - `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
-- Logs 第一階段只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。
+- Logs 只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。跨裝置只同步已結束紀錄，不顯示其他裝置的連線中狀態或即時計時。
 - 跨裝置同步由 App 啟動、回到前景、切換主要功能及定期排程等本機事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。

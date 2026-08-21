@@ -33,11 +33,14 @@ do {
     host.detectedPlatform = .ubuntu
 
     var audit = ConnectionAuditIndex(maximumRecordCount: 5_000)
+    let sourceDeviceID = UUID()
     let firstID = audit.begin(
         sessionID: sessionID,
         host: host,
         username: "other-user",
         at: start,
+        sourceDeviceID: sourceDeviceID,
+        sourceDeviceName: "Test Mac",
         recordID: recordID
     )
     let repeatedID = audit.begin(
@@ -51,8 +54,10 @@ do {
     check(
         audit.records.first?.hostName == "Audit Snapshot" &&
             audit.records.first?.username == "other-user" &&
+            audit.records.first?.sourceDeviceID == sourceDeviceID &&
+            audit.records.first?.sourceDeviceName == "Test Mac" &&
             audit.records.first?.platform == .ubuntu,
-        "connection audit stores an immutable display snapshot without credentials"
+        "connection audit stores immutable host and source-device snapshots without credentials"
     )
     check(audit.markConnected(sessionID: sessionID, at: connected),
           "connection audit records authentication success")
@@ -151,6 +156,38 @@ do {
             pruned.records.contains(where: { $0.sessionID == ongoingID }) &&
             !pruned.records.contains(where: { $0.sessionID == oldID }),
         "connection audit pruning preserves ongoing records and removes the oldest final record"
+    )
+
+    var retention = ConnectionAuditIndex(maximumRecordCount: 10)
+    let expiredID = UUID()
+    retention.begin(sessionID: expiredID, host: host, username: host.username, at: start)
+    _ = retention.finish(sessionID: expiredID, status: .completed, at: ended)
+    let retainedID = UUID()
+    retention.begin(
+        sessionID: retainedID,
+        host: host,
+        username: host.username,
+        at: ended.addingTimeInterval(10)
+    )
+    _ = retention.finish(
+        sessionID: retainedID,
+        status: .failed,
+        at: ended.addingTimeInterval(20)
+    )
+    let retentionOngoingID = UUID()
+    retention.begin(sessionID: retentionOngoingID, host: host, username: host.username, at: start)
+    check(
+        retention.pruneExpired(before: ended.addingTimeInterval(1)) &&
+            !retention.records.contains(where: { $0.sessionID == expiredID }) &&
+            retention.records.contains(where: { $0.sessionID == retainedID }) &&
+            retention.records.contains(where: { $0.sessionID == retentionOngoingID }),
+        "connection audit 30-day pruning removes only finalized records before the cutoff"
+    )
+
+    var migrated = ConnectionAuditIndex(records: audit.records)
+    check(
+        !migrated.backfillSourceDevice(id: UUID(), name: "Other Mac"),
+        "connection audit device migration never overwrites an existing source snapshot"
     )
 
     let testDirectory = FileManager.default.temporaryDirectory.appending(
@@ -1622,15 +1659,107 @@ do {
 
 let cloudKeychainTestProject = "myterm-unit-test-\(UUID().uuidString)"
 do {
+    let isolatedDefaultsSuite = "tw.local.MySSHClient.tests.cloud-session.\(UUID().uuidString)"
+    guard let isolatedDefaults = UserDefaults(suiteName: isolatedDefaultsSuite) else {
+        throw KeychainStoreError.invalidData
+    }
+    defer { isolatedDefaults.removePersistentDomain(forName: isolatedDefaultsSuite) }
+    check(
+        CloudSessionLegacyImportPolicy.resolve(
+            developmentMode: false,
+            updateLabMode: false
+        ) == .productionCompatible,
+        "production channel retains one-time legacy Firebase session migration"
+    )
+    check(
+        CloudSessionLegacyImportPolicy.resolve(
+            developmentMode: true,
+            updateLabMode: false
+        ) == .isolatedChannel,
+        "development channel refuses the production legacy Firebase session"
+    )
+    check(
+        CloudSessionLegacyImportPolicy.resolve(
+            developmentMode: false,
+            updateLabMode: true
+        ) == .isolatedChannel,
+        "update lab refuses the production legacy Firebase session"
+    )
     try CloudSessionKeychainStore.saveRefreshToken(
         "firebase-refresh-token-test",
         projectID: cloudKeychainTestProject
     )
-    let stored = try CloudSessionKeychainStore.refreshToken(projectID: cloudKeychainTestProject)
-    check(stored == "firebase-refresh-token-test", "Firebase refresh token uses its own Keychain service")
+    let stored = try CloudSessionKeychainStore.refreshToken(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel
+    )
+    check(
+        stored == "firebase-refresh-token-test",
+        "an isolated channel still restores a session already saved in its own vault"
+    )
+    let didResetIsolatedSession = try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel,
+        defaults: isolatedDefaults
+    )
+    check(
+        didResetIsolatedSession,
+        "an isolated channel removes the previously imported session exactly once"
+    )
+    let resetToken = try CloudSessionKeychainStore.refreshToken(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel
+    )
+    check(resetToken == nil, "the one-time isolated-channel reset leaves development signed out")
+    try CloudSessionKeychainStore.saveRefreshToken(
+        "development-owned-refresh-token",
+        projectID: cloudKeychainTestProject
+    )
+    let didRepeatIsolatedReset = try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel,
+        defaults: isolatedDefaults
+    )
+    check(
+        !didRepeatIsolatedReset,
+        "the isolated-channel reset does not repeat after its migration marker is saved"
+    )
+    let developmentOwnedToken = try CloudSessionKeychainStore.refreshToken(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel
+    )
+    check(
+        developmentOwnedToken == "development-owned-refresh-token",
+        "a later development login survives rebuilds after the one-time reset"
+    )
+    let productionDefaultsSuite = "tw.local.MySSHClient.tests.production-session.\(UUID().uuidString)"
+    guard let productionDefaults = UserDefaults(suiteName: productionDefaultsSuite) else {
+        throw KeychainStoreError.invalidData
+    }
+    defer { productionDefaults.removePersistentDomain(forName: productionDefaultsSuite) }
+    let didResetProductionSession = try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .productionCompatible,
+        defaults: productionDefaults
+    )
+    check(
+        !didResetProductionSession,
+        "production never runs the development session reset"
+    )
+    let productionCompatibleToken = try CloudSessionKeychainStore.refreshToken(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .productionCompatible
+    )
+    check(
+        productionCompatibleToken == "development-owned-refresh-token",
+        "the development isolation migration does not delete a production-compatible session"
+    )
     _ = try CloudSessionKeychainStore.deleteRefreshToken(projectID: cloudKeychainTestProject)
-    let deleted = try CloudSessionKeychainStore.refreshToken(projectID: cloudKeychainTestProject)
-    check(deleted == nil, "Firebase refresh token test item is deleted")
+    let deleted = try CloudSessionKeychainStore.refreshToken(
+        projectID: cloudKeychainTestProject,
+        legacyImportPolicy: .isolatedChannel
+    )
+    check(deleted == nil, "an isolated-channel Firebase refresh token is deleted without legacy fallback")
 } catch {
     _ = try? CloudSessionKeychainStore.deleteRefreshToken(projectID: cloudKeychainTestProject)
     check(false, "Firebase refresh token Keychain operations: \(error)")

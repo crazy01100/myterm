@@ -1010,6 +1010,97 @@ do {
     )
     check(convergedPlan.unchangedCount == 2 && convergedPlan.conflictCount == 0, "downloaded merge converges to the cloud without a false conflict")
 
+    let movedTargetGroup = HostGroup(
+        id: UUID(uuidString: "70000000-0000-0000-0000-000000000004")!,
+        name: "Datacenter",
+        parentID: nil,
+        createdAt: fixedDate
+    )
+    let groupMoveInitialRecords = try MetadataSyncInitialUploadPlanner.makeRecords(
+        groups: [group, movedTargetGroup],
+        hosts: [host],
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        deviceID: firstDeviceID
+    )
+    let secondMetadataDeviceID = UUID(uuidString: "70000000-8000-9000-a000-b00000000055")!
+    let groupMoveBaselineA = try MetadataSyncBaselinePlanner.makeBaseline(
+        localGroups: [group, movedTargetGroup],
+        localHosts: [host],
+        remoteRecords: groupMoveInitialRecords,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        deviceID: firstDeviceID,
+        createdAt: fixedDate
+    )
+    let groupMoveBaselineB = try MetadataSyncBaselinePlanner.makeBaseline(
+        localGroups: [group, movedTargetGroup],
+        localHosts: [host],
+        remoteRecords: groupMoveInitialRecords,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        deviceID: secondMetadataDeviceID,
+        createdAt: fixedDate
+    )
+    var hostMovedOnDeviceA = host
+    hostMovedOnDeviceA.groupID = movedTargetGroup.id
+    hostMovedOnDeviceA.updatedAt = fixedDate.addingTimeInterval(180)
+    let deviceAGroupMovePlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: [group, movedTargetGroup],
+        localHosts: [hostMovedOnDeviceA],
+        remoteRecords: groupMoveInitialRecords,
+        baseline: groupMoveBaselineA,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate.addingTimeInterval(180)
+    )
+    check(deviceAGroupMovePlan.uploadCount == 1 && deviceAGroupMovePlan.conflictCount == 0, "device A group move produces one guarded host upload")
+
+    let movedHostCloudRecord = try MetadataSyncCodec.encrypt(
+        host: hostMovedOnDeviceA,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        revision: 2,
+        modifiedByDeviceID: firstDeviceID,
+        nonce: Data(repeating: 0x5B, count: 12)
+    )
+    let groupMoveRemoteRecords = groupMoveInitialRecords.filter { $0.recordType == .group } + [movedHostCloudRecord]
+    let deviceBGroupMovePlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: [group, movedTargetGroup],
+        localHosts: [host],
+        remoteRecords: groupMoveRemoteRecords,
+        baseline: groupMoveBaselineB,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate.addingTimeInterval(181)
+    )
+    check(deviceBGroupMovePlan.downloadCount == 1 && deviceBGroupMovePlan.conflictCount == 0, "device B recognizes device A group move as one safe download")
+
+    let deviceBGroupMoveMerge = try MetadataManualDownloadPlanner.makeResult(
+        localGroups: [group, movedTargetGroup],
+        localHosts: [host],
+        remoteRecords: groupMoveRemoteRecords,
+        baseline: groupMoveBaselineB,
+        plan: deviceBGroupMovePlan,
+        ownerUID: metadataOwner,
+        masterKey: masterKey
+    )
+    check(deviceBGroupMoveMerge.document.hosts.count == 1, "device B group move merge does not duplicate the host")
+    check(deviceBGroupMoveMerge.document.hosts.first?.id == host.id, "device B group move merge preserves the host identity")
+    check(deviceBGroupMoveMerge.document.hosts.first?.groupID == movedTargetGroup.id, "device B applies the group selected on device A")
+    check(deviceBGroupMoveMerge.document.hosts.first?.privateKeyPath == host.privateKeyPath, "device B group move merge preserves its device-local private-key path")
+    check(deviceBGroupMoveMerge.document.groups.count == 2, "device B group move merge does not duplicate groups")
+    let deviceBGroupMoveConvergedPlan = try MetadataManualSyncPlanner.makePlan(
+        localGroups: deviceBGroupMoveMerge.document.groups,
+        localHosts: deviceBGroupMoveMerge.document.hosts,
+        remoteRecords: deviceBGroupMoveMerge.remoteRecords,
+        baseline: deviceBGroupMoveMerge.baseline,
+        ownerUID: metadataOwner,
+        masterKey: masterKey,
+        generatedAt: fixedDate.addingTimeInterval(182)
+    )
+    check(deviceBGroupMoveConvergedPlan.unchangedCount == 3 && deviceBGroupMoveConvergedPlan.conflictCount == 0, "both devices converge after syncing a host group move")
+
     let remoteDeletion = try MetadataSyncCodec.tombstone(
         recordID: host.id,
         recordType: .host,
@@ -1262,6 +1353,112 @@ do {
           "password sync baseline never stores plaintext password bytes")
 } catch {
     check(false, "encrypted password sync suite: \(error)")
+}
+
+do {
+    let ownerUID = "audit-owner"
+    let masterKey = try VaultMasterKey.generate()
+    let sourceDeviceID = UUID()
+    let recordID = UUID()
+    let sessionID = UUID()
+    let hostID = UUID()
+    let startedAt = Date(timeIntervalSince1970: 1_700_000_000)
+    let endedAt = startedAt.addingTimeInterval(42)
+    var record = ConnectionAuditRecord(
+        id: recordID,
+        sessionID: sessionID,
+        hostID: hostID,
+        hostName: "Encrypted Audit Host",
+        hostname: "192.0.2.55",
+        port: 22,
+        username: "audit-user",
+        sourceDeviceID: sourceDeviceID,
+        sourceDeviceName: "Audit Test Mac",
+        platform: .ubuntu,
+        startedAt: startedAt
+    )
+    record.connectedAt = startedAt.addingTimeInterval(2)
+    record.endedAt = endedAt
+    record.status = .completed
+    record.exitCode = 0
+
+    let encrypted = try ConnectionAuditSyncCodec.encrypt(
+        record,
+        ownerUID: ownerUID,
+        masterKey: masterKey
+    )
+    checkThrowing("connection audit payload survives end-to-end encryption") {
+        try ConnectionAuditSyncCodec.decrypt(
+            encrypted,
+            ownerUID: ownerUID,
+            masterKey: masterKey
+        ) == record
+    }
+    let encryptedJSON = String(decoding: try JSONEncoder().encode(encrypted), as: UTF8.self)
+    check(
+        !encryptedJSON.contains(record.hostName) &&
+            !encryptedJSON.contains(record.hostname) &&
+            !encryptedJSON.contains(record.username) &&
+            !encryptedJSON.contains(record.sourceDeviceName!),
+        "connection audit cloud record exposes no host, account, address, or device-name plaintext"
+    )
+
+    var ongoing = record
+    ongoing.status = .connected
+    ongoing.endedAt = nil
+    do {
+        _ = try ConnectionAuditSyncCodec.encrypt(
+            ongoing,
+            ownerUID: ownerUID,
+            masterKey: masterKey
+        )
+        check(false, "ongoing connection audit is never eligible for cloud encryption")
+    } catch let error as ConnectionAuditSyncCodecError {
+        check(error == .invalidRecord, "ongoing connection audit is never eligible for cloud encryption")
+    }
+
+    let backend = FirestoreConnectionAuditBackend(projectID: "demo-myterm")
+    let createRequest = try backend.createRequest(
+        encrypted,
+        ownerUID: ownerUID,
+        idToken: "id-token"
+    )
+    check(
+        createRequest.httpMethod == "PATCH" &&
+            createRequest.url?.absoluteString.contains("/users/audit-owner/connectionLogs/") == true &&
+            createRequest.url?.absoluteString.contains("currentDocument.exists=false") == true,
+        "connection audit backend uses an owner-scoped create-only document"
+    )
+    let requestBody = String(decoding: createRequest.httpBody ?? Data(), as: UTF8.self)
+    check(
+        !requestBody.contains(record.hostName) &&
+            !requestBody.contains(record.hostname) &&
+            !requestBody.contains(record.username) &&
+            !requestBody.contains(record.sourceDeviceName!),
+        "connection audit Firestore request contains only ciphertext metadata"
+    )
+    let listRequest = try backend.listRequest(
+        ownerUID: ownerUID,
+        idToken: "id-token",
+        pageToken: "opaque-token"
+    )
+    check(
+        listRequest.httpMethod == "GET" &&
+            listRequest.url?.absoluteString.contains("pageSize=100") == true &&
+            listRequest.url?.absoluteString.contains("pageToken=opaque-token") == true,
+        "connection audit backend uses bounded pagination"
+    )
+
+    var responseObject = try JSONSerialization.jsonObject(
+        with: createRequest.httpBody ?? Data()
+    ) as! [String: Any]
+    responseObject["name"] = "projects/demo-myterm/databases/(default)/documents/users/\(ownerUID)/connectionLogs/\(recordID.uuidString.lowercased())"
+    let responseData = try JSONSerialization.data(withJSONObject: responseObject)
+    checkThrowing("connection audit Firestore document decodes to the same encrypted record") {
+        try backend.decodeRecord(responseData) == encrypted
+    }
+} catch {
+    check(false, "encrypted connection audit sync suite: \(error)")
 }
 
 LocalSecretVaultStore.resetForTesting()

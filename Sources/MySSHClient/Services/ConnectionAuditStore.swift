@@ -4,12 +4,18 @@ import Foundation
 
 @MainActor
 final class ConnectionAuditStore: ObservableObject {
+    static let retentionInterval: TimeInterval = 30 * 24 * 60 * 60
+
     @Published private(set) var records: [ConnectionAuditRecord]
     @Published private(set) var lastError: String?
+    @Published private(set) var synchronizationRevision: UInt64 = 0
 
     private var index: ConnectionAuditIndex
     private let fileURL: URL
     private let now: () -> Date
+    private let sourceDeviceID: UUID
+    private let sourceDeviceName: String
+    private var lastRetentionMaintenanceAt: Date?
     private let persistenceQueue = DispatchQueue(
         label: "tw.local.MyTerm.connection-audit-persistence",
         qos: .utility
@@ -19,10 +25,18 @@ final class ConnectionAuditStore: ObservableObject {
     init(
         fileURL: URL = AppPaths.connectionAuditLogFile,
         maximumRecordCount: Int = 5_000,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        sourceDeviceID: UUID? = nil,
+        sourceDeviceName: String? = nil
     ) {
         self.fileURL = fileURL
         self.now = now
+        self.sourceDeviceID = sourceDeviceID
+            ?? (try? SyncDeviceIdentityStore().loadOrCreate())
+            ?? UUID()
+        let fallbackName = ProcessInfo.processInfo.hostName
+        let proposedName = sourceDeviceName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.sourceDeviceName = String((proposedName?.isEmpty == false ? proposedName! : fallbackName).prefix(128))
         lastError = nil
         do {
             let document = try Self.loadDocument(from: fileURL)
@@ -31,9 +45,19 @@ final class ConnectionAuditStore: ObservableObject {
                 maximumRecordCount: maximumRecordCount
             )
             let recovered = loadedIndex.recoverInterruptedSessions()
+            let backfilled = loadedIndex.backfillSourceDevice(
+                id: self.sourceDeviceID,
+                name: self.sourceDeviceName
+            )
+            let currentDate = now()
+            let pruned = loadedIndex.pruneExpired(
+                before: currentDate.addingTimeInterval(-Self.retentionInterval)
+            )
             index = loadedIndex
             records = loadedIndex.newestFirst
-            if recovered {
+            lastRetentionMaintenanceAt = currentDate
+            if recovered || backfilled || pruned {
+                if recovered { synchronizationRevision &+= 1 }
                 enqueuePersistence()
             }
         } catch {
@@ -61,7 +85,14 @@ final class ConnectionAuditStore: ObservableObject {
     }
 
     func begin(sessionID: UUID, host: HostProfile, username: String) {
-        index.begin(sessionID: sessionID, host: host, username: username, at: now())
+        index.begin(
+            sessionID: sessionID,
+            host: host,
+            username: username,
+            at: now(),
+            sourceDeviceID: sourceDeviceID,
+            sourceDeviceName: sourceDeviceName
+        )
         publishAndPersist()
     }
 
@@ -71,8 +102,9 @@ final class ConnectionAuditStore: ObservableObject {
     }
 
     func recordDetectedPlatform(sessionID: UUID, platform: HostPlatform) {
+        let finalized = index.record(sessionID: sessionID)?.status.isOngoing == false
         guard index.recordDetectedPlatform(sessionID: sessionID, platform: platform) else { return }
-        publishAndPersist()
+        publishAndPersist(finalizedChange: finalized)
     }
 
     func finishCompleted(sessionID: UUID, exitCode: Int32?) {
@@ -82,7 +114,7 @@ final class ConnectionAuditStore: ObservableObject {
             at: now(),
             exitCode: exitCode
         ) else { return }
-        publishAndPersist()
+        publishAndPersist(finalizedChange: true)
     }
 
     func finishFailed(
@@ -99,26 +131,51 @@ final class ConnectionAuditStore: ObservableObject {
             failureCode: failureCode,
             failureTitle: failureTitle
         ) else { return }
-        publishAndPersist()
+        publishAndPersist(finalizedChange: true)
     }
 
     func finishCancelled(sessionID: UUID) {
         guard index.finish(sessionID: sessionID, status: .cancelled, at: now()) else { return }
+        publishAndPersist(finalizedChange: true)
+    }
+
+    func performRetentionMaintenance(
+        referenceDate: Date? = nil,
+        force: Bool = false
+    ) {
+        let referenceDate = referenceDate ?? now()
+        if !force,
+           let lastRetentionMaintenanceAt,
+           referenceDate.timeIntervalSince(lastRetentionMaintenanceAt) < 24 * 60 * 60 {
+            return
+        }
+        lastRetentionMaintenanceAt = referenceDate
+        guard index.pruneExpired(
+            before: referenceDate.addingTimeInterval(-Self.retentionInterval)
+        ) else { return }
         publishAndPersist()
     }
 
-    func remove(recordID: UUID) {
-        guard index.remove(recordID: recordID) else { return }
+    func finalizedRecordsForSync(referenceDate: Date) -> [ConnectionAuditRecord] {
+        performRetentionMaintenance(referenceDate: referenceDate, force: true)
+        return index.newestFirst.filter { !$0.status.isOngoing }
+    }
+
+    func mergeFinalizedFromSync(
+        _ incoming: [ConnectionAuditRecord],
+        referenceDate: Date
+    ) {
+        let cutoff = referenceDate.addingTimeInterval(-Self.retentionInterval)
+        let retained = incoming.filter {
+            !$0.status.isOngoing && $0.retentionReferenceDate >= cutoff
+        }
+        guard index.mergeFinalized(retained) else { return }
         publishAndPersist()
     }
 
-    func removeAll() {
-        guard index.removeAll() else { return }
-        publishAndPersist()
-    }
-
-    private func publishAndPersist() {
+    private func publishAndPersist(finalizedChange: Bool = false) {
         records = index.newestFirst
+        if finalizedChange { synchronizationRevision &+= 1 }
         enqueuePersistence()
     }
 

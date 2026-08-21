@@ -4,7 +4,7 @@
 
 ## 環境與產物隔離
 
-| 用途 | 固定位置 | 說明 |
+| 用途 | checkout 內固定輸出 | 說明 |
 |---|---|---|
 | 正式版 | `/Applications/MyTerm.app` | 日常使用的穩定版本；開發腳本不會修改或取代它。 |
 | 本機測試版 | `build/dev/MyTerm Dev.app` | 日常功能開發與人工驗證；每次建置都更新這個固定位置，並使用獨立 Bundle ID、Application Support 與本機保管庫 Keychain service。 |
@@ -14,6 +14,10 @@
 不得建立或使用 `build/MyTerm.app`。這個無版本、無通道的路徑容易讓已執行的舊 App 與磁碟上的新 App 混淆，因此建置與驗證腳本都會拒絕它。
 
 `build/` 內所有 App、ZIP、測試結果與發布資產都可由原始碼重建，已由 Git 排除。
+
+上述位置是原始碼 checkout 內的建置與自動驗證規則，不是 App 執行時的硬編碼依賴。將已驗證的 `MyTerm Dev.app` 交給另一台 Mac 人工測試時，可放在任一穩定、可寫入的本機資料夾；建議放在 `~/Applications/MyTerm Dev.app`，不必建立 `Documents/MySSHClient/build/dev/` 專案目錄。測試資料隔離來自 App 內的開發 Bundle ID、Application Support 目錄與 Keychain service，而不是 `.app` 所在位置。外部測試仍應記錄實際路徑並核對版本、Build、Bundle ID 與簽章，且不得覆蓋 `/Applications/MyTerm.app`。
+
+Google 登入也必須按建置通道隔離。Dev／Update Lab 不得查詢或匯入正式版早期 Keychain session；第一次執行具隔離修正的版本時，只會清除該測試通道自身過去可能誤匯入的 refresh token，正式版 session 不受影響。完成這次一次性清理後，測試者在 Dev 主動登入的帳號會保留於 Dev 自己的保管庫，後續重建同通道 App 不會重複登出。
 
 ## 開發需求
 
@@ -68,7 +72,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 純文件、註解或操作說明修改不需要建立或啟動測試 App；確認連結、腳本語法與 Git diff 即可。
 
-功能驗證完成後，再提交並推送原始碼。不要把 `build/dev/MyTerm Dev.app` 搬到「應用程式」資料夾，也不要用測試版覆蓋正式版。
+功能驗證完成後，再提交並推送原始碼。在主要開發 Mac 不要把 `build/dev/MyTerm Dev.app` 搬到系統的 `/Applications`，也不要用測試版覆蓋正式版；這不限制外部測試 Mac 使用前述建議的使用者目錄 `~/Applications/MyTerm Dev.app`。
 
 ## 建置與發布腳本
 
@@ -165,7 +169,7 @@ Draft 必須經人工確認後才能發布。候選 App、封裝後 ZIP 與 GitH
 
 ### 畫面仍是舊版本
 
-不要只看 Dock 圖示或磁碟上的 App。先確認實際執行檔路徑、版本與 Build。日常測試的正確執行檔是：
+不要只看 Dock 圖示或磁碟上的 App。先確認實際執行檔路徑、版本與 Build。主要開發 checkout 日常測試的正確執行檔是：
 
 ```text
 build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient

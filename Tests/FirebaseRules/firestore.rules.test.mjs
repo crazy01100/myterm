@@ -151,6 +151,36 @@ test("加密紀錄只能從 revision 1 建立並逐次加一", async () => {
   await setDoc(target, validMetadataRecord("host", true, 3));
 });
 
+test("連線稽核密文只能由自己的 UID 建立與讀取，且建立後不可更新", async () => {
+  const database = testEnvironment.authenticatedContext("alice").firestore();
+  const own = doc(database, "users/alice/connectionLogs/50000000-2000-3000-4000-500000000001");
+  const other = doc(database, "users/bob/connectionLogs/50000000-2000-3000-4000-500000000002");
+
+  await assertSucceeds(setDoc(own, validConnectionAuditRecord()));
+  await assertSucceeds(getDoc(own));
+  await assertSucceeds(getDocs(collection(database, "users/alice/connectionLogs")));
+  await assertFails(updateDoc(own, validConnectionAuditRecord(
+    Bytes.fromUint8Array(new Uint8Array([4, 5, 6])),
+  )));
+  await assertFails(setDoc(other, validConnectionAuditRecord()));
+  await assertFails(getDoc(other));
+});
+
+test("連線稽核只接受固定欄位密文，刪除權限只供到期整理", async () => {
+  const database = testEnvironment.authenticatedContext("alice").firestore();
+  const target = doc(database, "users/alice/connectionLogs/60000000-2000-3000-4000-500000000001");
+
+  await assertFails(setDoc(target, { ...validConnectionAuditRecord(), hostname: "must-not-be-plaintext" }));
+  await assertFails(setDoc(target, { ...validConnectionAuditRecord(), recordType: "host" }));
+  await assertFails(setDoc(target, validConnectionAuditRecord(Bytes.fromUint8Array(new Uint8Array()))));
+  await assertFails(setDoc(target, {
+    ...validConnectionAuditRecord(),
+    nonce: Bytes.fromUint8Array(new Uint8Array(11)),
+  }));
+  await setDoc(target, validConnectionAuditRecord());
+  await assertSucceeds(deleteDoc(target));
+});
+
 function validMetadataRecord(recordType, deleted = false, revision = 1) {
   return {
     recordType,
@@ -163,5 +193,18 @@ function validMetadataRecord(recordType, deleted = false, revision = 1) {
     modifiedAt: Timestamp.fromMillis(1_700_000_000_000),
     modifiedByDeviceID: "90000000-8000-7000-6000-500000000001",
     deleted,
+  };
+}
+
+function validConnectionAuditRecord(
+  ciphertext = Bytes.fromUint8Array(new Uint8Array([1, 2, 3])),
+) {
+  return {
+    recordType: "connectionAudit",
+    ciphertext,
+    nonce: Bytes.fromUint8Array(new Uint8Array(12)),
+    authenticationTag: Bytes.fromUint8Array(new Uint8Array(16)),
+    keyVersion: 1,
+    formatVersion: 1,
   };
 }

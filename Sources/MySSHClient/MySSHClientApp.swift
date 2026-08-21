@@ -6,6 +6,7 @@ struct MySSHClientApp: App {
     @StateObject private var knownHostsStore = KnownHostsStore()
     @StateObject private var sessionManager = SessionManager()
     @StateObject private var connectionAuditStore = ConnectionAuditStore()
+    @StateObject private var automaticConnectionAuditSyncStore = AutomaticConnectionAuditSyncStore()
     @StateObject private var dataTransferCoordinator = DataTransferCoordinator()
     @StateObject private var shortcutStore = AppShortcutStore()
     @StateObject private var syncSettingsStore = SyncSettingsStore()
@@ -32,15 +33,18 @@ struct MySSHClientApp: App {
         WindowGroup("MyTerm") {
             AppRootView(
                 hostStore: hostStore,
+                connectionAuditStore: connectionAuditStore,
                 syncSettingsStore: syncSettingsStore,
                 cloudAccountStore: cloudAccountStore,
                 vaultSetupStore: vaultSetupStore,
-                automaticMetadataSyncStore: automaticMetadataSyncStore
+                automaticMetadataSyncStore: automaticMetadataSyncStore,
+                automaticConnectionAuditSyncStore: automaticConnectionAuditSyncStore
             )
                 .environmentObject(hostStore)
                 .environmentObject(knownHostsStore)
                 .environmentObject(sessionManager)
                 .environmentObject(connectionAuditStore)
+                .environmentObject(automaticConnectionAuditSyncStore)
                 .environmentObject(shortcutStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
@@ -72,6 +76,8 @@ struct MySSHClientApp: App {
                 .environmentObject(cloudAccountStore)
                 .environmentObject(vaultSetupStore)
                 .environmentObject(automaticMetadataSyncStore)
+                .environmentObject(connectionAuditStore)
+                .environmentObject(automaticConnectionAuditSyncStore)
                 .environmentObject(unifiedSyncSetupStore)
                 .preferredColorScheme(preferredColorScheme)
         }
@@ -80,10 +86,12 @@ struct MySSHClientApp: App {
 
 private struct AppRootView: View {
     @ObservedObject var hostStore: HostStore
+    @ObservedObject var connectionAuditStore: ConnectionAuditStore
     @ObservedObject var syncSettingsStore: SyncSettingsStore
     @ObservedObject var cloudAccountStore: CloudAccountStore
     @ObservedObject var vaultSetupStore: VaultSetupStore
     @ObservedObject var automaticMetadataSyncStore: AutomaticMetadataSyncStore
+    @ObservedObject var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -138,12 +146,28 @@ private struct AppRootView: View {
                     vaultSetupStore: vaultSetupStore
                 )
             }
+            .onChange(of: connectionAuditStore.synchronizationRevision) { _, _ in
+                automaticConnectionAuditSyncStore.request(
+                    trigger: .localFinalized,
+                    auditStore: connectionAuditStore,
+                    settings: syncSettingsStore,
+                    accountStore: cloudAccountStore,
+                    vaultSetupStore: vaultSetupStore
+                )
+            }
             .onChange(of: syncSettingsStore.metadataSyncEnabled) { _, enabled in
                 if enabled { requestSync(.manual) }
                 else {
                     automaticMetadataSyncStore.updateAvailability(
                         settings: syncSettingsStore,
                         accountStore: cloudAccountStore
+                    )
+                    automaticConnectionAuditSyncStore.request(
+                        trigger: .foreground,
+                        auditStore: connectionAuditStore,
+                        settings: syncSettingsStore,
+                        accountStore: cloudAccountStore,
+                        vaultSetupStore: vaultSetupStore
                     )
                 }
             }
@@ -197,6 +221,25 @@ private struct AppRootView: View {
             accountStore: cloudAccountStore,
             vaultSetupStore: vaultSetupStore
         )
+        automaticConnectionAuditSyncStore.request(
+            trigger: auditTrigger(for: trigger),
+            auditStore: connectionAuditStore,
+            settings: syncSettingsStore,
+            accountStore: cloudAccountStore,
+            vaultSetupStore: vaultSetupStore
+        )
+    }
+
+    private func auditTrigger(
+        for trigger: AutomaticMetadataSyncTrigger
+    ) -> AutomaticConnectionAuditSyncTrigger {
+        switch trigger {
+        case .launch: .launch
+        case .foreground, .confirmedRecentOverwrite: .foreground
+        case .periodic: .periodic
+        case .localChange: .localFinalized
+        case .manual: .manual
+        }
     }
 }
 

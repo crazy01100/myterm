@@ -41,6 +41,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/SyncModels.swift \
     Sources/MySSHClient/Models/TerminalWorkspace.swift \
     Sources/MySSHClient/Services/AppPaths.swift \
+    Sources/MySSHClient/Services/SyncDeviceIdentityStore.swift \
     Sources/MySSHClient/Services/ConnectionAuditStore.swift \
     Sources/MySSHClient/Services/AppShortcutStore.swift \
     Sources/MySSHClient/Services/CloudConfiguration.swift \

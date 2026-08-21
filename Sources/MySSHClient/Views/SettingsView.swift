@@ -68,6 +68,8 @@ struct SettingsView: View {
     @EnvironmentObject private var cloudAccountStore: CloudAccountStore
     @EnvironmentObject private var vaultSetupStore: VaultSetupStore
     @EnvironmentObject private var automaticMetadataSyncStore: AutomaticMetadataSyncStore
+    @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
+    @EnvironmentObject private var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
     @EnvironmentObject private var unifiedSyncSetupStore: UnifiedSyncSetupStore
     @StateObject private var metadataSyncPreviewStore = MetadataSyncPreviewStore()
     @StateObject private var syncDiagnosticsStore = SyncDiagnosticsStore()
@@ -312,7 +314,7 @@ struct SettingsView: View {
             }
 
             Section("跨裝置同步") {
-                Toggle("同步主機、群組與密碼", isOn: Binding(
+                Toggle("同步主機、群組、密碼與連線紀錄", isOn: Binding(
                     get: { syncSettingsStore.metadataSyncEnabled },
                     set: { enabled in
                         if enabled {
@@ -343,6 +345,11 @@ struct SettingsView: View {
                         Text(lastMetadataSyncDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                        Text("Logs：\(automaticConnectionAuditSyncStore.status.message)")
+                            .font(.caption)
+                            .foregroundStyle(
+                                automaticConnectionAuditSyncStore.status.isError ? .orange : .secondary
+                            )
                     }
                 } icon: {
                     Image(systemName: automaticMetadataSyncStore.status.isError
@@ -359,10 +366,17 @@ struct SettingsView: View {
                         accountStore: cloudAccountStore,
                         vaultSetupStore: vaultSetupStore
                     )
+                    automaticConnectionAuditSyncStore.request(
+                        trigger: .manual,
+                        auditStore: connectionAuditStore,
+                        settings: syncSettingsStore,
+                        accountStore: cloudAccountStore,
+                        vaultSetupStore: vaultSetupStore
+                    )
                 }
                 .disabled(!syncSettingsStore.metadataSyncEnabled)
 
-                Label("同步採端對端加密；雲端同步服務無法看到主機名稱、IP、帳號、備註或密碼。私鑰檔案與 known_hosts 不會同步。", systemImage: "lock.shield")
+                Label("同步採端對端加密；雲端同步服務無法看到主機名稱、IP、帳號、裝置名稱、連線紀錄、備註或密碼。私鑰檔案與 known_hosts 不會同步。", systemImage: "lock.shield")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -986,7 +1000,7 @@ struct SettingsView: View {
                     .foregroundStyle(.green)
             }
             Text(syncSettingsStore.metadataSyncEnabled
-                ? "登入完成；主機、群組與密碼同步已啟用。"
+                ? "登入完成；主機、群組、密碼與已結束連線紀錄同步已啟用。"
                 : "登入完成；尚未啟用跨裝置同步。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1703,7 +1717,7 @@ private struct UnifiedSyncActivationView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("啟用跨裝置同步")
                     .font(.title2.weight(.semibold))
-                Text("主機、群組與密碼會一起同步；私鑰檔案與 known_hosts 保留在本機。")
+                Text("主機、群組、密碼與已結束連線紀錄會一起同步；私鑰檔案與 known_hosts 保留在本機。")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

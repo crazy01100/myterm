@@ -41,6 +41,7 @@ swiftc \
     -Xcc "$sodium_headers" \
     Sources/MySSHClient/Models/SyncModels.swift \
     Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Models/ConnectionAuditRecord.swift \
     Sources/MySSHClient/Models/InventoryDocument.swift \
     Sources/MySSHClient/Models/FirestoreMetadataSnapshot.swift \
     Sources/MySSHClient/Models/VaultCryptoModels.swift \
@@ -53,6 +54,8 @@ swiftc \
     Sources/MySSHClient/Services/FirestoreVaultBackend.swift \
     Sources/MySSHClient/Services/MetadataSyncCodec.swift \
     Sources/MySSHClient/Services/FirestoreMetadataBackend.swift \
+    Sources/MySSHClient/Services/ConnectionAuditSyncCodec.swift \
+    Sources/MySSHClient/Services/FirestoreConnectionAuditBackend.swift \
     Sources/MySSHClient/Services/PasswordSync.swift \
     Sources/MySSHClient/Services/SyncDeviceIdentityStore.swift \
     Sources/MySSHClient/Services/MetadataSyncBaselineStore.swift \
