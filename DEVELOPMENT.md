@@ -13,7 +13,7 @@
 
 不得建立或使用 `build/MyTerm.app`。這個無版本、無通道的路徑容易讓已執行的舊 App 與磁碟上的新 App 混淆，因此建置與驗證腳本都會拒絕它。
 
-`build/` 內所有 App、ZIP、測試結果與發布資產都可由原始碼重建，已由 Git 排除。
+`build/` 內所有 App、ZIP、測試結果與發布資產都可由原始碼重建，已由 Git 排除。它是開發與發布進行期間的暫存工作區，不是正式成品的長期本機備份；正式版完成 GitHub Release、Cloudflare 部署、App 內更新及人工功能驗收後，以 GitHub Release 的五項資產為權威保存來源並清除整個 `build/`，下次開發再由腳本建立。
 
 上述位置是原始碼 checkout 內的建置與自動驗證規則，不是 App 執行時的硬編碼依賴。將已驗證的 `MyTerm Dev.app` 交給另一台 Mac 人工測試時，可放在任一穩定、可寫入的本機資料夾；建議放在 `~/Applications/MyTerm Dev.app`，不必建立 `Documents/MySSHClient/build/dev/` 專案目錄。測試資料隔離來自 App 內的開發 Bundle ID、Application Support 目錄與 Keychain service，而不是 `.app` 所在位置。外部測試仍應記錄實際路徑並核對版本、Build、Bundle ID 與簽章，且不得覆蓋 `/Applications/MyTerm.app`。
 
@@ -99,6 +99,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 | `scripts/prepare-release-assets.sh` | 建立 appcast、更新說明、checksum 與 manifest。 | 否 |
 | `scripts/verify-release-assets.sh` | 驗證 GitHub／Cloudflare 使用的五個發布資產。 | 否 |
 | `scripts/release.sh` | 執行完整發布準備，最多只建立 GitHub Draft Release。 | 僅建立草稿 |
+| `scripts/cleanup-build-artifacts.sh` | 正式版完整驗收後，重新下載並驗證 GitHub 五項資產、確認沒有 App 從 `build/` 執行，再清除本機建置暫存。預設只預覽，必須加 `--apply`。 | 否 |
 | `scripts/prepare-pages-deployment.sh` | 從已發布資產準備 Cloudflare Pages 靜態內容。 | 否 |
 | `scripts/verify-public-update-site.sh` | 從外部驗證正式 appcast、下載檔與安全標頭。 | 否 |
 
@@ -139,6 +140,17 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 - `release-manifest.json`
 
 Draft 必須經人工確認後才能發布。候選 App、封裝後 ZIP 與 GitHub 回下載資產都會執行相同的 App 資源檢查；公開 GitHub Release 觸發 `.github/workflows/deploy-update-site.yml` 後，Cloudflare 部署前還會再次檢查下載 ZIP。正式更新仍需由既有 App 經 Sparkle 安裝並完成人工驗收，不能以直接覆蓋 `/Applications/MyTerm.app` 代替。
+
+人工驗收全部完成、對應功能／發布計劃準備結案後，執行：
+
+```sh
+./scripts/cleanup-build-artifacts.sh \
+  --version X.Y.Z \
+  --build <build> \
+  --apply
+```
+
+清理工具只接受正式版本，並要求該版本是 GitHub 最新的非 Draft、非 prerelease Release；它會把五項資產下載到系統暫存目錄重新執行完整驗證，且在無法列舉程序或仍有 App 從專案 `build/` 執行時拒絕刪除。清理目標只有整個 `build/`，不包含 `/Applications/MyTerm.app`、Application Support、Keychain、`Config/Local/`、簽章／復原材料或 SwiftPM 相依快取。
 
 ## 簽章與機密
 
