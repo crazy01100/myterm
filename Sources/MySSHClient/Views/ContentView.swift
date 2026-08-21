@@ -14,6 +14,8 @@ struct ContentView: View {
     @State private var deleteGroupCandidate: HostGroup?
     @State private var libraryWorkspace: LibraryWorkspace = .hosts
     @State private var hostLibrarySelection: HostLibrarySelection = .all
+    @State private var hostLibraryColumnVisibility: NavigationSplitViewVisibility = .detailOnly
+    @State private var isSidebarToggleHovered = false
     @State private var draggedWorkspaceID: TerminalWorkspace.ID?
     @State private var tabDragOriginalSelectionID: TerminalWorkspace.ID?
     @State private var tabDragInsertionIndex: Int?
@@ -27,11 +29,19 @@ struct ContentView: View {
     var body: some View {
         workspaceContent
         .toolbar {
+            ToolbarItem(placement: .navigation) {
+                sidebarToggleButton
+            }
+            .sharedBackgroundVisibility(.hidden)
+
             ToolbarItem(placement: .automatic) {
                 workspaceTabBar
             }
             .sharedBackgroundVisibility(.hidden)
         }
+        .toolbarBackground(AppVisualTheme.chromeBackground, for: .windowToolbar)
+        .toolbarBackground(.visible, for: .windowToolbar)
+        .toolbarColorScheme(.dark, for: .windowToolbar)
         .onAppear(perform: configureSessionObservers)
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
@@ -109,6 +119,37 @@ struct ContentView: View {
         }
     }
 
+    private var sidebarToggleButton: some View {
+        Button {
+            hostLibraryColumnVisibility = isHostLibrarySidebarVisible ? .detailOnly : .all
+        } label: {
+            Image(systemName: "sidebar.left")
+                .font(.system(size: 15, weight: .semibold))
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(AppVisualTheme.chromeForeground)
+                .frame(width: 34, height: 30)
+                .background(
+                    isSidebarToggleHovered
+                        ? AppVisualTheme.chromeSelectedSurface
+                        : AppVisualTheme.chromeSubtleSurface
+                )
+                .clipShape(.rect(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(AppVisualTheme.chromeSecondary.opacity(0.42), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .contentShape(.rect)
+        .onHover { isSidebarToggleHovered = $0 }
+        .help(isHostLibrarySidebarVisible ? "隱藏側邊欄" : "顯示側邊欄")
+        .accessibilityLabel(isHostLibrarySidebarVisible ? "隱藏側邊欄" : "顯示側邊欄")
+    }
+
+    private var isHostLibrarySidebarVisible: Bool {
+        hostLibraryColumnVisibility != .detailOnly
+    }
+
     private var workspaceTabBar: some View {
         HStack(spacing: 7) {
             Button {
@@ -172,6 +213,7 @@ struct ContentView: View {
 
         }
         .padding(.vertical, 4)
+        .foregroundStyle(AppVisualTheme.chromeForeground)
     }
 
     private func workspaceTab(
@@ -480,6 +522,7 @@ struct ContentView: View {
         ZStack {
             HostLibraryView(
                 selection: $hostLibrarySelection,
+                columnVisibility: $hostLibraryColumnVisibility,
                 onAddHost: addHost,
                 onAddGroup: { parentID in
                     groupEditorRequest = GroupEditorRequest(group: nil, defaultParentID: parentID)
@@ -593,7 +636,9 @@ struct ContentView: View {
     }
 
     private func tabBackground(isSelected: Bool) -> some ShapeStyle {
-        isSelected ? AnyShapeStyle(Color.accentColor.opacity(0.18)) : AnyShapeStyle(Color.primary.opacity(0.055))
+        isSelected
+            ? AnyShapeStyle(AppVisualTheme.chromeSelectedSurface)
+            : AnyShapeStyle(AppVisualTheme.chromeSubtleSurface)
     }
 
     private func statusColor(_ state: SessionState) -> Color {
@@ -822,10 +867,10 @@ private struct WorkspaceDragGhost: View {
         .font(.callout.weight(.medium))
         .padding(.horizontal, 13)
         .padding(.vertical, 8)
-        .background(.regularMaterial, in: .rect(cornerRadius: 9))
+        .background(AppVisualTheme.raisedSurface, in: .rect(cornerRadius: 9))
         .overlay {
             RoundedRectangle(cornerRadius: 9)
-                .stroke(Color.primary.opacity(0.15))
+                .stroke(AppVisualTheme.separator)
         }
         .shadow(color: .black.opacity(0.18), radius: 7, y: 3)
     }
@@ -1213,7 +1258,7 @@ struct TerminalWorkspaceView: View {
 
     var body: some View {
         ZStack {
-            Color(nsColor: .windowBackgroundColor)
+            AppVisualTheme.contentBackground
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     HStack(spacing: 7) {
@@ -1231,7 +1276,7 @@ struct TerminalWorkspaceView: View {
                     .font(.caption)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
-                    .background(Color.primary.opacity(0.055), in: .capsule)
+                    .background(AppVisualTheme.subtleSurface, in: .capsule)
                     if workspaceIsSplit {
                         Button(action: onToggleSplit) {
                             Image(systemName: splitAxis == .horizontal
@@ -1275,6 +1320,7 @@ struct TerminalWorkspaceView: View {
                 .contentShape(.rect)
                 .padding(.horizontal, 15)
                 .padding(.vertical, 10)
+                .background(AppVisualTheme.raisedSurface)
 
                 ZStack {
                     Color(nsColor: TerminalCanvasAppearance.backgroundColor(for: colorScheme))
@@ -1311,7 +1357,7 @@ struct TerminalWorkspaceView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 13)
                 .stroke(
-                    Color.primary.opacity(isActive ? 0.44 : 0.22),
+                    isActive ? AppVisualTheme.activeOutline : AppVisualTheme.inactiveOutline,
                     lineWidth: isActive ? 1.25 : 1
                 )
         }
@@ -1421,7 +1467,7 @@ private struct SSHConnectionExperienceView: View {
 
     var body: some View {
         ZStack {
-            Color(nsColor: .controlBackgroundColor)
+            AppVisualTheme.raisedSurface
 
             ScrollView {
                 VStack(spacing: 22) {
@@ -1438,7 +1484,7 @@ private struct SSHConnectionExperienceView: View {
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(14)
-                            .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 12))
+                            .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 12))
                     }
 
                     actionButtons
@@ -1493,7 +1539,7 @@ private struct SSHConnectionExperienceView: View {
             Spacer()
         }
         .padding(16)
-        .background(Color.accentColor.opacity(0.09), in: .rect(cornerRadius: 13))
+        .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 13))
     }
 
     private var diagnosticLog: some View {
@@ -1544,7 +1590,7 @@ private struct SSHConnectionExperienceView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 13))
+        .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 13))
     }
 
     @ViewBuilder

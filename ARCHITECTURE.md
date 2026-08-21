@@ -39,7 +39,9 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 ### 使用者介面
 
 - `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP、連線稽核 Logs 與設定畫面。
+- `Sources/MySSHClient/Views/AppVisualTheme.swift`：主視窗 chrome、側欄、內容底、卡片、選取、滑過與邊界的集中式語意色彩來源；每個角色都有成對的淺色／深色值，需要跨 SwiftUI／AppKit 邊界時由同一來源提供 `Color` 與 `NSColor`，避免不同畫面各自硬編碼而漂移。
 - `Sources/MySSHClient/MySSHClientApp.swift`：App 進入點、設定視窗、選單與整體生命週期。
+- App 外觀以深海軍藍框架、霧藍內容層與抬升卡片建立一致層級，沿用既有「自動、淺色、深色」偏好，不新增每台主機的獨立主題。Terminal canvas／ANSI、平台 Logo，以及成功、警告、錯誤與取消狀態保留各自的專用色彩與文字／圖示語意，不由通用色票覆蓋。
 - SwiftUI 負責狀態、macOS 原生 toolbar 中的單一工作區列與主要 App 外殼；隱藏原生文字標題及 toolbar 的共享膠囊背景，但保留系統視窗拖動、縮放與全螢幕行為。工作區分頁與內容畫布分屬 toolbar／content view hierarchy，因此以輕量 AppKit frame reader 將兩者矩形及滑鼠事件統一成視窗左上座標；同一套座標供分頁重排、四向合併預覽及窗格拖回拆分使用，不依賴固定 toolbar 高度。Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。
 - 主機庫左側只保留 Known Hosts 與 Logs 兩個功能入口；所有主機、分類與未分類主機都在右側內容區瀏覽，分類 breadcrumb 固定以可返回根頁面的「所有主機」開頭。主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。「所有主機」內容區另允許把主機拖到分類卡片；放手只建立確認請求，確認後才由 `HostStore` 寫入，群組內頁與左側功能列不接收投放。
 

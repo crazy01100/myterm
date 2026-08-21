@@ -71,9 +71,9 @@ struct SettingsView: View {
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
     @EnvironmentObject private var unifiedSyncSetupStore: UnifiedSyncSetupStore
+    @EnvironmentObject private var appearanceStore: AppAppearanceStore
     @StateObject private var metadataSyncPreviewStore = MetadataSyncPreviewStore()
     @StateObject private var syncDiagnosticsStore = SyncDiagnosticsStore()
-    @AppStorage(AppTheme.storageKey) private var selectedTheme = AppTheme.automatic.rawValue
     @State private var selectedTab: SettingsTab = .appearance
     @State private var showingImporter = false
     @State private var showingExporter = false
@@ -118,6 +118,7 @@ struct SettingsView: View {
         }
         .padding(14)
         .frame(width: 720, height: 590)
+        .background(AppVisualTheme.contentBackground)
         .fileImporter(
             isPresented: $showingImporter,
             allowedContentTypes: [.json],
@@ -398,6 +399,8 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppVisualTheme.contentBackground)
         .formStyle(.grouped)
         .task {
             await cloudAccountStore.restoreIfPossible()
@@ -1026,7 +1029,10 @@ struct SettingsView: View {
     private var appearanceView: some View {
         Form {
             Section("外觀") {
-                Picker("Theme", selection: $selectedTheme) {
+                Picker("Theme", selection: Binding(
+                    get: { appearanceStore.selectedTheme.rawValue },
+                    set: { appearanceStore.selectTheme(rawValue: $0) }
+                )) {
                     ForEach(AppTheme.allCases) { theme in
                         Text(theme.title).tag(theme.rawValue)
                     }
@@ -1038,6 +1044,8 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppVisualTheme.contentBackground)
         .formStyle(.grouped)
     }
 
@@ -1064,6 +1072,8 @@ struct SettingsView: View {
                 Text("點擊快捷鍵即可錄製新的組合；按 Delete 可停用。重複與必要的 macOS 快捷鍵會被阻止。")
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppVisualTheme.contentBackground)
         .formStyle(.grouped)
     }
 
@@ -1153,6 +1163,8 @@ struct SettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(AppVisualTheme.contentBackground)
         .formStyle(.grouped)
     }
 
@@ -1459,7 +1471,7 @@ private struct MetadataSyncPreviewDetailView: View {
                                 .font(.caption2)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(.quaternary, in: Capsule())
+                                .background(AppVisualTheme.subtleSurface, in: Capsule())
                         }
                         Text("\(item.disposition.title) · \(item.detail)")
                             .font(.caption)
@@ -1498,7 +1510,7 @@ private struct MetadataSyncPreviewDetailView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 10))
+        .background(AppVisualTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 10))
     }
 
     private func color(for disposition: MetadataSyncPreviewDisposition) -> Color {
@@ -1599,7 +1611,7 @@ private struct SyncDiagnosticsView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 14))
+            .background(AppVisualTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 14))
 
             HStack {
                 Label("檢測只會讀取並驗證同步狀態，不會上傳、套用、刪除或覆蓋主機與密碼。讀取 Keychain 時，macOS 可能要求確認。", systemImage: "lock.shield")
@@ -1790,7 +1802,7 @@ private struct UnifiedSyncActivationView: View {
                         .textSelection(.enabled)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 10))
+                        .background(AppVisualTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 10))
                     Toggle("我已確認復原金鑰保存完整。", isOn: $recoveryKeySaved)
                         .toggleStyle(.checkbox)
                     Text("復原金鑰只顯示這一次，不會自動複製或上傳。")
@@ -2059,7 +2071,7 @@ private struct RecoveryKeyView: View {
                 .textSelection(.enabled)
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
+                .background(AppVisualTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 12))
                 .accessibilityLabel("MyTerm 復原金鑰")
 
             Label("請保存至離線或你信任的位置。MyTerm 不會自動把它放進剪貼簿或任何雲端服務。", systemImage: "exclamationmark.shield")
@@ -2109,7 +2121,7 @@ private struct ShortcutRecorderView: View {
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .padding(.horizontal, 22)
                 .padding(.vertical, 12)
-                .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 10))
+                .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 10))
 
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
@@ -2359,7 +2371,7 @@ private struct ImportPreviewView: View {
             }
             .frame(height: 165)
             .padding(.horizontal, 10)
-            .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 10))
+            .background(AppVisualTheme.subtleSurface, in: RoundedRectangle(cornerRadius: 10))
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(.secondary.opacity(0.2), lineWidth: 1)

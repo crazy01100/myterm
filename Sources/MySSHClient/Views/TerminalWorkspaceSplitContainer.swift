@@ -303,7 +303,7 @@ private final class TerminalWorkspaceNativeSplitView: NSSplitView, NSSplitViewDe
     }
 
     override func drawDivider(in rect: NSRect) {
-        NSColor.windowBackgroundColor.setFill()
+        AppVisualTheme.contentBackgroundNSColor.setFill()
         rect.fill()
         guard hoveredDivider == 0 else { return }
         let handleRect: NSRect
@@ -312,7 +312,7 @@ private final class TerminalWorkspaceNativeSplitView: NSSplitView, NSSplitViewDe
         } else {
             handleRect = NSRect(x: rect.midX - 19, y: rect.midY - 1.5, width: 38, height: 3)
         }
-        NSColor.black.withAlphaComponent(0.68).setFill()
+        AppVisualTheme.dividerHandleNSColor.withAlphaComponent(0.82).setFill()
         NSBezierPath(roundedRect: handleRect, xRadius: 1.5, yRadius: 1.5).fill()
     }
 

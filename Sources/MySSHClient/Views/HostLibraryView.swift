@@ -47,8 +47,10 @@ private struct HostCardFramePreferenceKey: PreferenceKey {
 struct HostLibraryView: View {
     @EnvironmentObject private var hostStore: HostStore
     @Binding var selection: HostLibrarySelection
+    @Binding var columnVisibility: NavigationSplitViewVisibility
     @State private var searchText = ""
     @State private var selectedGroupCardID: HostGroup.ID?
+    @State private var hoveredSidebarSelection: HostLibrarySelection?
     @State private var targetedDropGroupID: HostGroup.ID?
     @State private var pendingHostMove: HostGroupMoveRequest?
     @State private var groupCardFrames: [HostGroup.ID: CGRect] = [:]
@@ -132,17 +134,24 @@ struct HostLibraryView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
-            List(selection: $selection) {
-                sidebarRow(title: "Known Hosts", systemImage: "checkmark.shield")
-                    .tag(HostLibrarySelection.knownHosts)
-                    .accessibilityLabel("Known Hosts")
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            List {
+                sidebarRow(
+                    title: "Known Hosts",
+                    systemImage: "checkmark.shield",
+                    destination: .knownHosts
+                )
 
-                sidebarRow(title: "Logs", systemImage: "clock.arrow.circlepath")
-                    .tag(HostLibrarySelection.logs)
-                    .accessibilityLabel("Logs")
+                sidebarRow(
+                    title: "Logs",
+                    systemImage: "clock.arrow.circlepath",
+                    destination: .logs
+                )
             }
             .navigationTitle("")
+            .scrollContentBackground(.hidden)
+            .background(AppVisualTheme.sidebarBackground)
+            .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
         } detail: {
             if selection == .knownHosts {
@@ -155,8 +164,10 @@ struct HostLibraryView: View {
                     Divider()
                     libraryGrid
                 }
+                .background(AppVisualTheme.contentBackground)
             }
         }
+        .tint(AppVisualTheme.accent)
         .onChange(of: hostStore.groups) { _, groups in
             guard case .group(let selectedID) = selection else { return }
             if !groups.contains(where: { $0.id == selectedID }) {
@@ -199,7 +210,7 @@ struct HostLibraryView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 8))
+            .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 8))
 
             Menu {
                 Button("新增主機", systemImage: "plus.rectangle.on.folder") {
@@ -229,7 +240,7 @@ struct HostLibraryView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(.bar)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     @ViewBuilder
@@ -377,7 +388,7 @@ struct HostLibraryView: View {
         .coordinateSpace(name: HostLibraryDragCoordinateSpace.name)
         .onPreferenceChange(HostGroupCardFramePreferenceKey.self) { groupCardFrames = $0 }
         .onPreferenceChange(HostCardFramePreferenceKey.self) { hostCardFrames = $0 }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(AppVisualTheme.contentBackground)
         .onChange(of: selection) { _, _ in
             selectedGroupCardID = nil
             resetHostDrag()
@@ -388,8 +399,56 @@ struct HostLibraryView: View {
         [GridItem(.adaptive(minimum: 245, maximum: 380), spacing: 14)]
     }
 
-    private func sidebarRow(title: String, systemImage: String) -> some View {
-        Label(title, systemImage: systemImage)
+    private func sidebarRow(
+        title: String,
+        systemImage: String,
+        destination: HostLibrarySelection
+    ) -> some View {
+        let isSelected = selection == destination
+        let isHovered = hoveredSidebarSelection == destination
+
+        return Button {
+            selection = destination
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(isSelected ? AppVisualTheme.accent : AppVisualTheme.primaryText)
+                    .frame(width: 21)
+                Text(title)
+                    .foregroundStyle(AppVisualTheme.primaryText)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .contentShape(.rect)
+            .background(
+                isSelected
+                    ? AppVisualTheme.selectedSurface
+                    : isHovered ? AppVisualTheme.hoverSurface : Color.clear,
+                in: .rect(cornerRadius: 9)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9)
+                    .stroke(
+                        isSelected ? AppVisualTheme.accent.opacity(0.38) : Color.clear,
+                        lineWidth: 1
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(.init(top: 3, leading: 10, bottom: 3, trailing: 10))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .onHover { isHovering in
+            if isHovering {
+                hoveredSidebarSelection = destination
+            } else if hoveredSidebarSelection == destination {
+                hoveredSidebarSelection = nil
+            }
+        }
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func cardSectionTitle(_ title: String) -> some View {
@@ -480,7 +539,7 @@ private struct GroupCard: View {
                     .font(.title2)
                     .foregroundStyle(.tint)
                     .frame(width: 42, height: 42)
-                    .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 9))
+                    .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(group.name).font(.headline).lineLimit(1)
                     Text("\(hostCount) 台主機").font(.caption).foregroundStyle(.secondary)
@@ -536,17 +595,17 @@ private func cardBackground(isSelected: Bool, isHovered: Bool) -> some View {
     RoundedRectangle(cornerRadius: 11)
         .fill(
             isSelected
-                ? Color.accentColor.opacity(0.11)
+                ? AppVisualTheme.selectedSurface
                 : isHovered
-                    ? Color.accentColor.opacity(0.065)
-                    : Color(nsColor: .controlBackgroundColor)
+                    ? AppVisualTheme.hoverSurface
+                    : AppVisualTheme.raisedSurface
         )
         .overlay {
             RoundedRectangle(cornerRadius: 11)
                 .stroke(
                     isSelected
-                        ? Color.accentColor
-                        : isHovered ? Color.accentColor.opacity(0.38) : Color.primary.opacity(0.09),
+                        ? AppVisualTheme.accent
+                        : isHovered ? AppVisualTheme.accent.opacity(0.48) : AppVisualTheme.inactiveOutline,
                     lineWidth: isSelected ? 2 : 1
                 )
         }
@@ -558,11 +617,11 @@ private extension View {
         scaleEffect(isTargeted ? 1.008 : 1)
             .overlay {
                 RoundedRectangle(cornerRadius: 9)
-                    .fill(Color.primary.opacity(isTargeted ? 0.09 : 0))
+                    .fill(AppVisualTheme.selectedSurface.opacity(isTargeted ? 0.82 : 0))
                     .overlay {
                         RoundedRectangle(cornerRadius: 9)
                             .stroke(
-                                Color.primary.opacity(isTargeted ? 0.42 : 0),
+                                AppVisualTheme.accent.opacity(isTargeted ? 0.68 : 0),
                                 lineWidth: 1.5
                             )
                     }
@@ -575,10 +634,10 @@ private extension View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 5)
-                        .background(.regularMaterial, in: .capsule)
+                        .background(AppVisualTheme.raisedSurface, in: .capsule)
                         .overlay {
                             Capsule()
-                                .stroke(Color.primary.opacity(0.16), lineWidth: 1)
+                                .stroke(AppVisualTheme.separator, lineWidth: 1)
                         }
                         .padding(8)
                         .allowsHitTesting(false)
@@ -600,10 +659,10 @@ private struct HostLibraryDragGhost: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.regularMaterial, in: .rect(cornerRadius: 9))
+        .background(AppVisualTheme.raisedSurface, in: .rect(cornerRadius: 9))
         .overlay {
             RoundedRectangle(cornerRadius: 9)
-                .stroke(Color.primary.opacity(0.16), lineWidth: 1)
+                .stroke(AppVisualTheme.separator, lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.16), radius: 8, y: 3)
     }

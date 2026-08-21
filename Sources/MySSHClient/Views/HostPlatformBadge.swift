@@ -43,7 +43,7 @@ struct HostPlatformBadge: View {
     }
 
     private var badgeColor: Color {
-        guard let platform else { return Color.primary.opacity(0.055) }
+        guard let platform else { return AppVisualTheme.subtleSurface }
         return platform.badgeColor
     }
 }

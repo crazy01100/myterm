@@ -15,7 +15,7 @@ struct MySSHClientApp: App {
     @StateObject private var automaticMetadataSyncStore = AutomaticMetadataSyncStore()
     @StateObject private var unifiedSyncSetupStore = UnifiedSyncSetupStore()
     @StateObject private var appUpdaterStore = AppUpdaterStore()
-    @AppStorage(AppTheme.storageKey) private var selectedTheme = AppTheme.automatic.rawValue
+    @StateObject private var appearanceStore = AppAppearanceStore()
 
     init() {
         do {
@@ -23,10 +23,6 @@ struct MySSHClientApp: App {
         } catch {
             NSLog("MyTerm stale SSH diagnostic cleanup failed: %@", error.localizedDescription)
         }
-    }
-
-    private var preferredColorScheme: ColorScheme? {
-        AppTheme(rawValue: selectedTheme)?.colorScheme
     }
 
     var body: some Scene {
@@ -51,7 +47,9 @@ struct MySSHClientApp: App {
                 .environmentObject(vaultSetupStore)
                 .environmentObject(automaticMetadataSyncStore)
                 .environmentObject(unifiedSyncSetupStore)
-                .preferredColorScheme(preferredColorScheme)
+                .environmentObject(appearanceStore)
+                .preferredColorScheme(appearanceStore.effectiveColorScheme)
+                .tint(AppVisualTheme.accent)
                 .frame(minWidth: 1120, minHeight: 700)
         }
         .windowStyle(.hiddenTitleBar)
@@ -79,8 +77,57 @@ struct MySSHClientApp: App {
                 .environmentObject(connectionAuditStore)
                 .environmentObject(automaticConnectionAuditSyncStore)
                 .environmentObject(unifiedSyncSetupStore)
-                .preferredColorScheme(preferredColorScheme)
+                .environmentObject(appearanceStore)
+                .preferredColorScheme(appearanceStore.effectiveColorScheme)
+                .tint(AppVisualTheme.accent)
+                .background(AppVisualTheme.contentBackground)
         }
+    }
+}
+
+@MainActor
+final class AppAppearanceStore: ObservableObject {
+    @Published private(set) var selectedTheme: AppTheme
+    @Published private(set) var effectiveColorScheme: ColorScheme
+
+    private let defaults: UserDefaults
+    private var applicationAppearanceObservation: NSKeyValueObservation?
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        let storedTheme = defaults.string(forKey: AppTheme.storageKey)
+            .flatMap(AppTheme.init(rawValue:)) ?? .automatic
+        selectedTheme = storedTheme
+        effectiveColorScheme = storedTheme.colorScheme ?? Self.systemColorScheme()
+
+        applicationAppearanceObservation = NSApplication.shared.observe(
+            \.effectiveAppearance,
+            options: [.new]
+        ) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                self?.refreshForSystemAppearanceChange()
+            }
+        }
+    }
+
+    func selectTheme(rawValue: String) {
+        guard let theme = AppTheme(rawValue: rawValue) else { return }
+        defaults.set(theme.rawValue, forKey: AppTheme.storageKey)
+        selectedTheme = theme
+        effectiveColorScheme = theme.colorScheme ?? Self.systemColorScheme()
+    }
+
+    private func refreshForSystemAppearanceChange() {
+        guard selectedTheme == .automatic else { return }
+        let updatedScheme = Self.systemColorScheme()
+        guard updatedScheme != effectiveColorScheme else { return }
+        effectiveColorScheme = updatedScheme
+    }
+
+    private static func systemColorScheme() -> ColorScheme {
+        NSApplication.shared.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? .dark
+            : .light
     }
 }
 

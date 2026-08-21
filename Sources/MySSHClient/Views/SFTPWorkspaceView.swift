@@ -17,7 +17,7 @@ struct SFTPWorkspaceView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(AppVisualTheme.contentBackground)
         .alert("本機檔案操作失敗", isPresented: localErrorBinding) {
             Button("好") { localStore.errorMessage = nil }
         } message: {
@@ -79,6 +79,7 @@ private struct LocalSFTPFilePane: View {
             Divider()
             fileList
         }
+        .background(AppVisualTheme.contentBackground)
         .sheet(item: $renameEntry) { entry in
             SFTPTextInputSheet(title: "重新命名", label: "新名稱", initialValue: entry.name) {
                 try store.rename(entry, to: $0)
@@ -110,7 +111,7 @@ private struct LocalSFTPFilePane: View {
             Image(systemName: "laptopcomputer")
                 .foregroundStyle(.tint)
                 .frame(width: 30, height: 30)
-                .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 7))
+                .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 7))
             VStack(alignment: .leading, spacing: 1) {
                 Text("本機").font(.headline)
                 Text(FileManager.default.homeDirectoryForCurrentUser.lastPathComponent)
@@ -156,7 +157,7 @@ private struct LocalSFTPFilePane: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 58)
-        .background(.bar)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     private var localPathBar: some View {
@@ -175,7 +176,7 @@ private struct LocalSFTPFilePane: View {
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
         .frame(height: 44)
-        .background(Color.primary.opacity(0.025))
+        .background(AppVisualTheme.subtleSurface)
     }
 
     private var localPathComponents: [SFTPBreadcrumbComponent] {
@@ -341,6 +342,7 @@ private struct RemoteSFTPFilePane: View {
                 remoteFileBrowser
             }
         }
+        .background(AppVisualTheme.contentBackground)
         .sheet(item: $renameEntry) { entry in
             SFTPTextInputSheet(title: "重新命名遠端項目", label: "新名稱", initialValue: entry.name) {
                 store.rename(entry, to: $0)
@@ -440,7 +442,7 @@ private struct RemoteSFTPFilePane: View {
             Image(systemName: "network")
                 .foregroundStyle(.tint)
                 .frame(width: 30, height: 30)
-                .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 7))
+                .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 7))
             VStack(alignment: .leading, spacing: 1) {
                 Text(store.connectedHost?.displayName ?? "SFTP").font(.headline)
                 if let host = store.connectedHost {
@@ -497,7 +499,7 @@ private struct RemoteSFTPFilePane: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 58)
-        .background(.bar)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     private var remotePathBar: some View {
@@ -514,7 +516,7 @@ private struct RemoteSFTPFilePane: View {
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
         .frame(height: 44)
-        .background(Color.primary.opacity(0.025))
+        .background(AppVisualTheme.subtleSurface)
     }
 
     private var remotePathComponents: [SFTPBreadcrumbComponent] {
@@ -612,7 +614,7 @@ private struct SFTPHostSelector: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 58)
-            .background(.bar)
+            .background(AppVisualTheme.raisedSurface)
             Divider()
 
             VStack(spacing: 10) {
@@ -648,7 +650,7 @@ private struct SFTPHostSelector: View {
                                     Image(systemName: "folder.fill")
                                         .font(.title3).foregroundStyle(.tint)
                                         .frame(width: 34, height: 34)
-                                        .background(Color.accentColor.opacity(0.10), in: .rect(cornerRadius: 8))
+                                        .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 8))
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(group.name).font(.headline)
                                         Text("\(hostStore.hostCount(in: group.id)) 台主機")
@@ -716,6 +718,7 @@ private struct SFTPHostSelector: View {
                 }
             }
         }
+        .background(AppVisualTheme.contentBackground)
         .sheet(item: $usernameHost) { host in
             ConnectionUsernameView(host: host, initialUsername: "") { username in
                 onConnect(host, username)
@@ -758,13 +761,15 @@ private struct SFTPHostSelector: View {
         RoundedRectangle(cornerRadius: 9)
             .fill(
                 isSelected
-                    ? Color.accentColor.opacity(0.13)
-                    : (isHovered ? Color.accentColor.opacity(0.07) : Color(nsColor: .controlBackgroundColor))
+                    ? AppVisualTheme.selectedSurface
+                    : (isHovered ? AppVisualTheme.hoverSurface : AppVisualTheme.raisedSurface)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 9)
                     .stroke(
-                        isSelected ? Color.accentColor : Color.primary.opacity(isHovered ? 0.16 : 0.08),
+                        isSelected
+                            ? AppVisualTheme.accent
+                            : (isHovered ? AppVisualTheme.accent.opacity(0.45) : AppVisualTheme.inactiveOutline),
                         lineWidth: isSelected ? 1.5 : 1
                     )
             }
@@ -903,7 +908,7 @@ private struct SFTPTransferQueueBar: View {
                         }
                         .padding(.horizontal, 9)
                         .padding(.vertical, 6)
-                        .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 7))
+                        .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 7))
                         .frame(maxWidth: 250)
                     }
                 }
@@ -911,7 +916,7 @@ private struct SFTPTransferQueueBar: View {
             .scrollIndicators(.hidden)
         }
         .padding(9)
-        .background(.bar)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     private func transferColor(_ state: SFTPTransferState) -> Color {
@@ -1196,7 +1201,7 @@ private struct SFTPOverwriteConfirmationSheet: View {
             .font(.callout)
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary.opacity(0.045), in: .rect(cornerRadius: 9))
+            .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 9))
 
             Text("選擇覆蓋會永久取代目標位置的同名檔案或資料夾；其他沒有衝突的項目也會繼續傳輸。")
                 .font(.callout)
@@ -1242,7 +1247,7 @@ private struct SFTPDragPreview: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(.regularMaterial, in: .rect(cornerRadius: 9))
+        .background(AppVisualTheme.raisedSurface, in: .rect(cornerRadius: 9))
     }
 }
 
@@ -1258,9 +1263,9 @@ private struct SFTPDropTargetOverlay: View {
                     .font(.headline)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
-                    .background(.regularMaterial, in: .capsule)
+                    .background(AppVisualTheme.raisedSurface, in: .capsule)
             }
-            .background(Color.accentColor.opacity(0.06))
+            .background(AppVisualTheme.selectedSurface.opacity(0.72))
             .allowsHitTesting(false)
     }
 }
@@ -1277,7 +1282,7 @@ private struct SFTPFileListHeader: View {
         .foregroundStyle(.secondary)
         .padding(.horizontal, 12)
         .frame(height: 40)
-        .background(Color.primary.opacity(0.035))
+        .background(AppVisualTheme.subtleSurface)
     }
 }
 
@@ -1310,9 +1315,9 @@ private struct LocalFileRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return Color.accentColor.opacity(0.16) }
-        if isHovered { return Color.accentColor.opacity(0.07) }
-        return .clear
+        if isSelected { return AppVisualTheme.selectedSurface }
+        if isHovered { return AppVisualTheme.hoverSurface }
+        return AppVisualTheme.raisedSurface
     }
 }
 
@@ -1345,9 +1350,9 @@ private struct RemoteFileRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return Color.accentColor.opacity(0.16) }
-        if isHovered { return Color.accentColor.opacity(0.07) }
-        return .clear
+        if isSelected { return AppVisualTheme.selectedSurface }
+        if isHovered { return AppVisualTheme.hoverSurface }
+        return AppVisualTheme.raisedSurface
     }
 }
 

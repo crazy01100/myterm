@@ -18,7 +18,7 @@ struct ConnectionAuditLogView: View {
                 recordList
             }
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(AppVisualTheme.contentBackground)
     }
 
     private var toolbar: some View {
@@ -44,6 +44,7 @@ struct ConnectionAuditLogView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 16)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     private var recordList: some View {
@@ -66,7 +67,7 @@ struct ConnectionAuditLogView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 10)
-                .background(Color.primary.opacity(0.035))
+                .background(AppVisualTheme.subtleSurface)
 
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -196,6 +197,7 @@ private struct ConnectionAuditRow: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 14)
+        .background(AppVisualTheme.raisedSurface)
         .contentShape(.rect)
     }
 
@@ -208,7 +210,7 @@ private struct ConnectionAuditRow: View {
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
                 .frame(width: 42, height: 42)
-                .background(Color.primary.opacity(0.06), in: .rect(cornerRadius: 9))
+                .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 9))
         }
     }
 

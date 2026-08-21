@@ -20,6 +20,7 @@ struct KnownHostsView: View {
             Divider()
             content
         }
+        .background(AppVisualTheme.contentBackground)
     }
 
     private var header: some View {
@@ -37,7 +38,7 @@ struct KnownHostsView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(Color.primary.opacity(0.055), in: .rect(cornerRadius: 8))
+            .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 8))
 
             Button {
                 do { try knownHostsStore.syncFromSystem() }
@@ -51,7 +52,7 @@ struct KnownHostsView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(.bar)
+        .background(AppVisualTheme.raisedSurface)
     }
 
     @ViewBuilder
@@ -83,7 +84,7 @@ struct KnownHostsView: View {
                             Text(record.displayHost).font(.headline)
                             if let marker = record.marker {
                                 Text(marker).font(.caption2).padding(.horizontal, 5).padding(.vertical, 2)
-                                    .background(Color.primary.opacity(0.07), in: .capsule)
+                                    .background(AppVisualTheme.subtleSurface, in: .capsule)
                             }
                         }
                         Text("\(record.keyType)  ·  \(record.fingerprint)")
@@ -94,8 +95,11 @@ struct KnownHostsView: View {
                     Spacer()
                 }
                 .padding(.vertical, 5)
+                .listRowBackground(AppVisualTheme.raisedSurface)
             }
             .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .background(AppVisualTheme.contentBackground)
         }
     }
 

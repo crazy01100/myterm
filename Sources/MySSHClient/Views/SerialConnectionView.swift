@@ -16,7 +16,7 @@ struct SerialConnectionView: View {
                     .font(.title2)
                     .foregroundStyle(.tint)
                     .frame(width: 46, height: 46)
-                    .background(Color.accentColor.opacity(0.12), in: .rect(cornerRadius: 11))
+                    .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 11))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Serial Port").font(.title2.weight(.semibold))
                     Text("使用 macOS 內建 screen 連接本機序列裝置").font(.caption).foregroundStyle(.secondary)
@@ -49,6 +49,8 @@ struct SerialConnectionView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(AppVisualTheme.contentBackground)
             .formStyle(.grouped)
 
             HStack {
@@ -64,6 +66,7 @@ struct SerialConnectionView: View {
         }
         .padding(24)
         .frame(width: 570, height: showAdvanced ? 500 : 340)
+        .background(AppVisualTheme.contentBackground)
         .animation(.easeInOut(duration: 0.18), value: showAdvanced)
         .onAppear(perform: reloadPorts)
         .alert("無法連線 Serial Port", isPresented: Binding(
