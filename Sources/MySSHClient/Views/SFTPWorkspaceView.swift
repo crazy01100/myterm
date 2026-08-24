@@ -91,7 +91,12 @@ private struct LocalSFTPFilePane: View {
             }
         }
         .sheet(item: $permissionEntry) { entry in
-            SFTPPermissionSheet(name: entry.name, initialPermissions: entry.permissions ?? 0o644) {
+            SFTPPermissionSheet(
+                name: entry.name,
+                path: entry.url.path,
+                kind: entry.kind,
+                initialPermissions: entry.permissions
+            ) {
                 try store.setPermissions($0, for: entry)
             }
         }
@@ -354,7 +359,12 @@ private struct RemoteSFTPFilePane: View {
             }
         }
         .sheet(item: $permissionEntry) { entry in
-            SFTPPermissionSheet(name: entry.name, initialPermissions: entry.attributes.permissions ?? 0o644) {
+            SFTPPermissionSheet(
+                name: entry.name,
+                path: remoteItemPath(for: entry),
+                kind: entry.attributes.kind,
+                initialPermissions: entry.attributes.permissions
+            ) {
                 store.setPermissions($0, for: entry)
             }
         }
@@ -528,6 +538,11 @@ private struct RemoteSFTPFilePane: View {
             result.append(SFTPBreadcrumbComponent(title: name, destination: path))
         }
         return result
+    }
+
+    private func remoteItemPath(for entry: SFTPDirectoryEntry) -> String {
+        let basePath = store.currentPath == "/" ? "" : store.currentPath
+        return "\(basePath)/\(entry.name)"
     }
 
     private func openRemote(_ entry: SFTPDirectoryEntry, withApplication: Bool) {
@@ -826,48 +841,279 @@ private struct SFTPTextInputSheet: View {
 private struct SFTPPermissionSheet: View {
     @Environment(\.dismiss) private var dismiss
     let name: String
+    let path: String
+    let kind: SFTPFileKind
     let onSubmit: (UInt32) throws -> Void
-    @State private var value: String
+    @State private var mode: SFTPPermissionMode?
+    @State private var octalValue: String
     @State private var errorMessage: String?
+    @State private var showingAdvanced = false
 
-    init(name: String, initialPermissions: UInt32, onSubmit: @escaping (UInt32) throws -> Void) {
+    init(
+        name: String,
+        path: String,
+        kind: SFTPFileKind,
+        initialPermissions: UInt32?,
+        onSubmit: @escaping (UInt32) throws -> Void
+    ) {
         self.name = name
+        self.path = path
+        self.kind = kind
         self.onSubmit = onSubmit
-        _value = State(initialValue: String(initialPermissions & 0o7777, radix: 8))
+        let initialMode = initialPermissions.map(SFTPPermissionMode.init)
+        _mode = State(initialValue: initialMode)
+        _octalValue = State(initialValue: initialMode?.octalString ?? "")
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("編輯權限").font(.title2.weight(.semibold))
-            Text(name).font(.headline).lineLimit(1)
-            TextField("例如 644 或 755", text: $value)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-            Text("請輸入三或四位八進位權限；例如檔案常用 644，資料夾常用 755。")
-                .font(.caption).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 20) {
+            Text("編輯權限")
+                .font(.title2.weight(.semibold))
+
+            targetHeader
+
+            if mode == nil {
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("無法取得目前權限")
+                            .font(.headline)
+                        Text("請重新整理目錄或重新連線後再試，MyTerm 不會用預設值覆蓋未知權限。")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 10))
+            } else {
+                permissionMatrix
+                octalEditor
+                advancedPermissions
+            }
+
             if let errorMessage {
                 Text(errorMessage).font(.callout).foregroundStyle(.red)
             }
+
             HStack {
                 Spacer()
                 Button("取消") { dismiss() }
-                Button("套用") { submit() }.keyboardShortcut(.defaultAction)
+                Button("套用權限") { submit() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(mode == nil || !isOctalValid)
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 620)
+        .background(AppVisualTheme.contentBackground)
+    }
+
+    private var targetHeader: some View {
+        HStack(spacing: 14) {
+            Image(systemName: targetSystemImage)
+                .font(.title2)
+                .foregroundStyle(.tint)
+                .frame(width: 42, height: 42)
+                .background(AppVisualTheme.selectedSurface, in: .rect(cornerRadius: 9))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name)
+                    .font(.headline)
+                    .lineLimit(1)
+                Text(path)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+
+            Spacer(minLength: 12)
+
+            if let mode {
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(mode.symbolicString(kind: kind))
+                    Text(mode.paddedOctalString)
+                }
+                .font(.system(.callout, design: .monospaced).weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 8))
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("目前權限 \(mode.symbolicString(kind: kind))，八進位 \(mode.paddedOctalString)")
+            }
+        }
+    }
+
+    private var permissionMatrix: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("存取權限")
+                .font(.headline)
+
+            Grid(alignment: .leading, horizontalSpacing: 26, verticalSpacing: 12) {
+                GridRow {
+                    Text("身分")
+                    Text("讀取")
+                    Text("寫入")
+                    Text("執行")
+                }
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+                Divider()
+                    .gridCellColumns(4)
+
+                ForEach(SFTPPermissionMode.AccessClass.allCases) { accessClass in
+                    GridRow {
+                        Text(accessClass.title)
+                            .frame(width: 150, alignment: .leading)
+                        accessToggle(accessClass, .read)
+                        accessToggle(accessClass, .write)
+                        accessToggle(accessClass, .execute)
+                    }
+                }
+            }
+
+            if kind == .directory {
+                Label("資料夾的「執行」代表可以進入或穿越該目錄。", systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(AppVisualTheme.raisedSurface, in: .rect(cornerRadius: 10))
+    }
+
+    private var octalEditor: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("八進位權限")
+                    .font(.headline)
+                Text("可輸入三或四位數字，例如 644、755 或 4755。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            TextField("例如 644", text: octalBinding)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(.body, design: .monospaced))
+                .frame(width: 120)
+                .accessibilityLabel("八進位權限")
+        }
+    }
+
+    private var advancedPermissions: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    showingAdvanced.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(showingAdvanced ? 90 : 0))
+                    Text("進階權限")
+                        .font(.headline)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("進階權限")
+            .accessibilityValue(showingAdvanced ? "已展開" : "已收合")
+            .accessibilityHint(showingAdvanced ? "按下以收合" : "按下以展開")
+
+            if showingAdvanced {
+                HStack(spacing: 24) {
+                    ForEach(SFTPPermissionMode.SpecialRight.allCases) { specialRight in
+                        Toggle(specialRight.title, isOn: specialBinding(specialRight))
+                            .toggleStyle(.checkbox)
+                    }
+                }
+                .padding(.top, 10)
+            }
+        }
+    }
+
+    private func accessToggle(
+        _ accessClass: SFTPPermissionMode.AccessClass,
+        _ right: SFTPPermissionMode.AccessRight
+    ) -> some View {
+        Toggle("", isOn: accessBinding(accessClass, right))
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .help("\(accessClass.title)－\(right.title)")
+            .accessibilityLabel("\(accessClass.title)\(right.title)權限")
+    }
+
+    private func accessBinding(
+        _ accessClass: SFTPPermissionMode.AccessClass,
+        _ right: SFTPPermissionMode.AccessRight
+    ) -> Binding<Bool> {
+        Binding(
+            get: { mode?.contains(right, for: accessClass) == true },
+            set: { enabled in
+                guard var updatedMode = mode else { return }
+                updatedMode.set(right, for: accessClass, enabled: enabled)
+                updateMode(updatedMode)
+            }
+        )
+    }
+
+    private func specialBinding(_ specialRight: SFTPPermissionMode.SpecialRight) -> Binding<Bool> {
+        Binding(
+            get: { mode?.contains(specialRight) == true },
+            set: { enabled in
+                guard var updatedMode = mode else { return }
+                updatedMode.set(specialRight, enabled: enabled)
+                updateMode(updatedMode)
+            }
+        )
+    }
+
+    private var octalBinding: Binding<String> {
+        Binding(
+            get: { octalValue },
+            set: { newValue in
+                octalValue = newValue
+                if let parsedMode = SFTPPermissionMode(octalString: newValue) {
+                    mode = parsedMode
+                    errorMessage = nil
+                } else {
+                    errorMessage = "請輸入 000 到 7777 之間的三或四位八進位權限。"
+                }
+            }
+        )
+    }
+
+    private var isOctalValid: Bool {
+        SFTPPermissionMode(octalString: octalValue) != nil
+    }
+
+    private var targetSystemImage: String {
+        switch kind {
+        case .directory: "folder.fill"
+        case .symbolicLink: "arrowshape.turn.up.right.fill"
+        case .regularFile, .other: "doc"
+        }
+    }
+
+    private func updateMode(_ updatedMode: SFTPPermissionMode) {
+        mode = updatedMode
+        octalValue = updatedMode.octalString
+        errorMessage = nil
     }
 
     private func submit() {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard (3...4).contains(trimmed.count),
-              trimmed.allSatisfy({ ("0"..."7").contains(String($0)) }),
-              let permissions = UInt32(trimmed, radix: 8), permissions <= 0o7777 else {
-            errorMessage = "請輸入 000 到 7777 之間的八進位權限。"
+        guard let submittedMode = SFTPPermissionMode(octalString: octalValue) else {
+            errorMessage = "請輸入 000 到 7777 之間的三或四位八進位權限。"
             return
         }
         do {
-            try onSubmit(permissions)
+            try onSubmit(submittedMode.rawValue)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -1297,7 +1543,13 @@ private struct LocalFileRow: View {
                 Image(systemName: entry.isSymbolicLink ? "arrowshape.turn.up.right.fill" : (entry.isDirectory ? "folder.fill" : "doc"))
                     .foregroundStyle(entry.isNavigableDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
-                Text(entry.name).font(.body).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.name).font(.body).lineLimit(1)
+                    Text(permissionDisplayText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(SFTPDisplayFormatter.date(entry.modificationDate))
@@ -1308,10 +1560,30 @@ private struct LocalFileRow: View {
         }
         .font(.callout)
         .padding(.horizontal, 12)
-        .frame(height: 42)
+        .frame(height: 54)
         .background(rowBackground)
+        .help(permissionHelpText)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.name)，\(entry.kindTitle)，\(permissionAccessibilityText)")
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.1), value: isHovered)
+    }
+
+    private var permissionDisplayText: String {
+        guard let permissions = entry.permissions else { return "權限未知" }
+        return SFTPPermissionMode(permissions).symbolicString(kind: entry.kind)
+    }
+
+    private var permissionHelpText: String {
+        guard let permissions = entry.permissions else { return "權限未知" }
+        let mode = SFTPPermissionMode(permissions)
+        return "權限：\(mode.symbolicString(kind: entry.kind))（\(mode.octalString)）"
+    }
+
+    private var permissionAccessibilityText: String {
+        guard let permissions = entry.permissions else { return "權限未知" }
+        let mode = SFTPPermissionMode(permissions)
+        return "權限 \(mode.symbolicString(kind: entry.kind))，八進位 \(mode.octalString)"
     }
 
     private var rowBackground: Color {
@@ -1332,7 +1604,13 @@ private struct RemoteFileRow: View {
                 Image(systemName: entry.isDirectory ? "folder.fill" : (entry.attributes.kind == .symbolicLink ? "arrowshape.turn.up.right.fill" : "doc"))
                     .foregroundStyle(entry.isDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
-                Text(entry.name).font(.body).lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.name).font(.body).lineLimit(1)
+                    Text(permissionDisplayText)
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Text(SFTPDisplayFormatter.date(entry.attributes.modificationTime))
@@ -1343,10 +1621,30 @@ private struct RemoteFileRow: View {
         }
         .font(.callout)
         .padding(.horizontal, 12)
-        .frame(height: 42)
+        .frame(height: 54)
         .background(rowBackground)
+        .help(permissionHelpText)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.name)，\(entry.attributes.kind.title)，\(permissionAccessibilityText)")
         .onHover { isHovered = $0 }
         .animation(.easeOut(duration: 0.1), value: isHovered)
+    }
+
+    private var permissionDisplayText: String {
+        guard let permissions = entry.attributes.permissions else { return "權限未知" }
+        return SFTPPermissionMode(permissions).symbolicString(kind: entry.attributes.kind)
+    }
+
+    private var permissionHelpText: String {
+        guard let permissions = entry.attributes.permissions else { return "權限未知" }
+        let mode = SFTPPermissionMode(permissions)
+        return "權限：\(mode.symbolicString(kind: entry.attributes.kind))（\(mode.octalString)）"
+    }
+
+    private var permissionAccessibilityText: String {
+        guard let permissions = entry.attributes.permissions else { return "權限未知" }
+        let mode = SFTPPermissionMode(permissions)
+        return "權限 \(mode.symbolicString(kind: entry.attributes.kind))，八進位 \(mode.octalString)"
     }
 
     private var rowBackground: Color {

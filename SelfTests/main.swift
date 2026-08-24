@@ -585,6 +585,38 @@ let initializationPacket = SFTPProtocolCodec.initializationPacket()
 check(initializationPacket == Data([0, 0, 0, 5, 1, 0, 0, 0, 3]),
       "SFTP v3 initialization packet is framed correctly")
 
+let regularPermissions = SFTPPermissionMode(0o100644)
+check(regularPermissions.octalString == "644" && regularPermissions.paddedOctalString == "0644",
+      "SFTP permission mode masks file type bits and formats octal values")
+check(regularPermissions.symbolicString(kind: .regularFile) == "-rw-r--r--",
+      "SFTP regular-file permissions use symbolic notation")
+check(SFTPPermissionMode(0o755).symbolicString(kind: .directory) == "drwxr-xr-x",
+      "SFTP directory permissions use a directory prefix")
+check(SFTPPermissionMode(0o755).symbolicString(kind: .symbolicLink) == "lrwxr-xr-x",
+      "SFTP symbolic-link permissions use a link prefix")
+check(SFTPPermissionMode(0o4755).symbolicString(kind: .regularFile) == "-rwsr-xr-x",
+      "SFTP permission notation preserves setuid")
+check(SFTPPermissionMode(0o2644).symbolicString(kind: .regularFile) == "-rw-r-Sr--",
+      "SFTP permission notation distinguishes setgid without execute")
+check(SFTPPermissionMode(0o1777).symbolicString(kind: .directory) == "drwxrwxrwt",
+      "SFTP permission notation preserves sticky directories")
+check(SFTPPermissionMode(0o1766).symbolicString(kind: .directory) == "drwxrw-rwT",
+      "SFTP permission notation distinguishes sticky without execute")
+check(SFTPPermissionMode(octalString: "755")?.rawValue == 0o755 &&
+      SFTPPermissionMode(octalString: "0755")?.rawValue == 0o755 &&
+      SFTPPermissionMode(octalString: "888") == nil,
+      "SFTP octal permission input accepts only three or four valid digits")
+
+var editedPermissions = SFTPPermissionMode(0o644)
+editedPermissions.set(.execute, for: .owner, enabled: true)
+check(editedPermissions.rawValue == 0o744 &&
+      editedPermissions.symbolicString(kind: .regularFile) == "-rwxr--r--",
+      "SFTP permission access matrix updates the matching octal bit")
+editedPermissions.set(.setUserID, enabled: true)
+editedPermissions.set(.write, for: .others, enabled: true)
+check(editedPermissions.rawValue == 0o4746 && editedPermissions.contains(.setUserID),
+      "SFTP permission editing preserves special bits while changing access rights")
+
 do {
     var payload = SFTPPacketWriter()
     payload.append(SFTPPacketType.name)

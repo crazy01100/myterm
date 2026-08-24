@@ -65,7 +65,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
-- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
+- SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機 FileManager attributes 與遠端 SFTP v3 attributes 已取得的 POSIX permissions 會交由共用 `SFTPPermissionMode` 格式化成 symbolic／八進位權限，列表不會為每個項目增加額外 `stat` 或 SFTP request。視覺化權限矩陣與八進位輸入使用同一狀態，最後仍透過既有本機／遠端 chmod 流程套用，成功後重新載入實際 attributes，未知權限不套用預設值。本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
 - 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
 

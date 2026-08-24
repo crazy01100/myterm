@@ -37,6 +37,142 @@ enum SFTPFileKind: String, Sendable {
         case .other: "其他"
         }
     }
+
+    var permissionTypeCharacter: Character {
+        switch self {
+        case .directory: "d"
+        case .regularFile: "-"
+        case .symbolicLink: "l"
+        case .other: "?"
+        }
+    }
+}
+
+struct SFTPPermissionMode: Equatable, Sendable {
+    enum AccessClass: Int, CaseIterable, Identifiable, Sendable {
+        case owner = 6
+        case group = 3
+        case others = 0
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .owner: "擁有者"
+            case .group: "群組"
+            case .others: "其他人"
+            }
+        }
+    }
+
+    enum AccessRight: UInt32, CaseIterable, Identifiable, Sendable {
+        case read = 0o4
+        case write = 0o2
+        case execute = 0o1
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .read: "讀取"
+            case .write: "寫入"
+            case .execute: "執行"
+            }
+        }
+    }
+
+    enum SpecialRight: UInt32, CaseIterable, Identifiable, Sendable {
+        case setUserID = 0o4000
+        case setGroupID = 0o2000
+        case sticky = 0o1000
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .setUserID: "setuid"
+            case .setGroupID: "setgid"
+            case .sticky: "sticky"
+            }
+        }
+    }
+
+    private(set) var rawValue: UInt32
+
+    init(_ permissions: UInt32) {
+        rawValue = permissions & 0o7777
+    }
+
+    init?(octalString: String) {
+        let trimmed = octalString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (3...4).contains(trimmed.count),
+              trimmed.allSatisfy({ ("0"..."7").contains(String($0)) }),
+              let value = UInt32(trimmed, radix: 8), value <= 0o7777 else {
+            return nil
+        }
+        self.init(value)
+    }
+
+    var octalString: String {
+        String(rawValue, radix: 8)
+    }
+
+    var paddedOctalString: String {
+        String(format: "%04o", Int(rawValue))
+    }
+
+    func contains(_ right: AccessRight, for accessClass: AccessClass) -> Bool {
+        rawValue & bit(for: right, accessClass: accessClass) != 0
+    }
+
+    mutating func set(_ right: AccessRight, for accessClass: AccessClass, enabled: Bool) {
+        let targetBit = bit(for: right, accessClass: accessClass)
+        if enabled {
+            rawValue |= targetBit
+        } else {
+            rawValue &= ~targetBit
+        }
+    }
+
+    func contains(_ specialRight: SpecialRight) -> Bool {
+        rawValue & specialRight.rawValue != 0
+    }
+
+    mutating func set(_ specialRight: SpecialRight, enabled: Bool) {
+        if enabled {
+            rawValue |= specialRight.rawValue
+        } else {
+            rawValue &= ~specialRight.rawValue
+        }
+    }
+
+    func symbolicString(kind: SFTPFileKind) -> String {
+        var result = String(kind.permissionTypeCharacter)
+        for accessClass in AccessClass.allCases {
+            result.append(contains(.read, for: accessClass) ? "r" : "-")
+            result.append(contains(.write, for: accessClass) ? "w" : "-")
+            result.append(executeCharacter(for: accessClass))
+        }
+        return result
+    }
+
+    private func bit(for right: AccessRight, accessClass: AccessClass) -> UInt32 {
+        right.rawValue << UInt32(accessClass.rawValue)
+    }
+
+    private func executeCharacter(for accessClass: AccessClass) -> Character {
+        let isExecutable = contains(.execute, for: accessClass)
+        switch accessClass {
+        case .owner where contains(.setUserID):
+            return isExecutable ? "s" : "S"
+        case .group where contains(.setGroupID):
+            return isExecutable ? "s" : "S"
+        case .others where contains(.sticky):
+            return isExecutable ? "t" : "T"
+        default:
+            return isExecutable ? "x" : "-"
+        }
+    }
 }
 
 struct SFTPFileAttributes: Equatable, Sendable {
@@ -85,10 +221,11 @@ struct LocalFileEntry: Identifiable, Equatable, Sendable {
         return isDirectory ? url : nil
     }
     var isNavigableDirectory: Bool { navigableDirectoryURL != nil }
-    var kindTitle: String {
-        if isSymbolicLink { return "連結" }
-        return isDirectory ? "資料夾" : "檔案"
+    var kind: SFTPFileKind {
+        if isSymbolicLink { return .symbolicLink }
+        return isDirectory ? .directory : .regularFile
     }
+    var kindTitle: String { kind.title }
 
     static func inspect(
         _ fileURL: URL,
