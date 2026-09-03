@@ -75,6 +75,32 @@ do {
         ) && audit.records.first?.status == .completed,
         "connection audit preserves the first trusted final result"
     )
+    let reconnectRecordID = UUID()
+    let reconnectStart = ended.addingTimeInterval(10)
+    let reconnectID = audit.begin(
+        sessionID: sessionID,
+        host: host,
+        username: "other-user",
+        at: reconnectStart,
+        sourceDeviceID: sourceDeviceID,
+        sourceDeviceName: "Test Mac",
+        recordID: reconnectRecordID
+    )
+    check(
+        reconnectID == reconnectRecordID && audit.records.count == 2,
+        "connection audit creates a distinct record when the same pane reconnects"
+    )
+    check(
+        audit.markConnected(sessionID: sessionID, at: reconnectStart.addingTimeInterval(1)) &&
+            audit.finish(
+                sessionID: sessionID,
+                status: .completed,
+                at: reconnectStart.addingTimeInterval(5),
+                exitCode: 0
+            ) &&
+            audit.records.filter({ $0.sessionID == sessionID && $0.status == .completed }).count == 2,
+        "connection audit updates only the newest ongoing reconnect attempt"
+    )
 
     var platformSnapshot = ConnectionAuditIndex()
     var platformUnknownHost = host
@@ -130,6 +156,34 @@ do {
             platform: .centOS
         ) && platformSnapshot.records.filter({ $0.platform != nil }).count == 2,
         "connection audit never backfills unrelated historical sessions"
+    )
+    let reusedPlatformSessionID = UUID()
+    platformSnapshot.begin(
+        sessionID: reusedPlatformSessionID,
+        host: platformUnknownHost,
+        username: platformUnknownHost.username,
+        at: start
+    )
+    _ = platformSnapshot.finish(
+        sessionID: reusedPlatformSessionID,
+        status: .completed,
+        at: ended
+    )
+    platformSnapshot.begin(
+        sessionID: reusedPlatformSessionID,
+        host: platformUnknownHost,
+        username: platformUnknownHost.username,
+        at: ended.addingTimeInterval(1)
+    )
+    check(
+        platformSnapshot.recordDetectedPlatform(
+            sessionID: reusedPlatformSessionID,
+            platform: .ubuntu
+        ) &&
+            platformSnapshot.records.filter({ $0.sessionID == reusedPlatformSessionID }).count == 2 &&
+            platformSnapshot.records.filter({ $0.sessionID == reusedPlatformSessionID }).first?.platform == nil &&
+            platformSnapshot.records.filter({ $0.sessionID == reusedPlatformSessionID }).last?.platform == .ubuntu,
+        "connection audit applies platform detection only to the newest reconnect attempt"
     )
 
     var interrupted = ConnectionAuditIndex()
@@ -570,16 +624,54 @@ do {
     check(false, "terminal pane detach suite: \(error)")
 }
 
-var replacementCollection = TerminalWorkspaceCollection()
-let originalReplacementSessionID = UUID()
-let replacementSessionID = UUID()
-let replacementWorkspaceID = replacementCollection.add(sessionID: originalReplacementSessionID)
-check(replacementCollection.replace(sessionID: originalReplacementSessionID, with: replacementSessionID),
-      "a terminal session can be replaced in place for retry")
-check(replacementCollection.workspace(id: replacementWorkspaceID)?.sessionIDs == [replacementSessionID],
-      "retry preserves the existing workspace and pane position")
-check(replacementCollection.selectedSessionID == replacementSessionID,
-      "retry keeps the replacement terminal active")
+check(
+    TerminalReconnectPolicy.canReconnect(
+        kind: .ssh,
+        state: .disconnected(255),
+        processIsRunning: false
+    ),
+    "a stopped disconnected SSH session can reconnect in place"
+)
+check(
+    TerminalReconnectPolicy.canReconnect(
+        kind: .ssh,
+        state: .failed("連線失敗"),
+        processIsRunning: false
+    ),
+    "a stopped failed SSH session can retry in place"
+)
+check(
+    !TerminalReconnectPolicy.canReconnect(
+        kind: .ssh,
+        state: .connected,
+        processIsRunning: true
+    ) &&
+        !TerminalReconnectPolicy.canReconnect(
+            kind: .local,
+            state: .disconnected(nil),
+            processIsRunning: false
+        ),
+    "connected SSH and non-SSH sessions never reinterpret Return as reconnect"
+)
+check(
+    TerminalReconnectPolicy.isReturnInput([0x0D][...]) &&
+        TerminalReconnectPolicy.isReturnInput([0x0A][...]) &&
+        !TerminalReconnectPolicy.isReturnInput([0x20][...]) &&
+        !TerminalReconnectPolicy.isReturnInput([0x0D, 0x0A][...]),
+    "only a single Return or newline byte triggers reconnect"
+)
+let normalReconnectReset = TerminalReconnectPresentationPolicy.resetModes(isAlternateBuffer: false)
+let alternateReconnectReset = TerminalReconnectPresentationPolicy.resetModes(isAlternateBuffer: true)
+check(
+    !String(decoding: normalReconnectReset, as: UTF8.self).contains("?1049l") &&
+        String(decoding: alternateReconnectReset, as: UTF8.self).contains("?1049l"),
+    "reconnect exits the alternate buffer without restoring a stale normal-buffer cursor"
+)
+check(
+    TerminalReconnectPresentationPolicy.bottomRow(for: 24) == 23 &&
+        TerminalReconnectPresentationPolicy.bottomRow(for: 0) == 0,
+    "reconnect output starts at the terminal bottom row"
+)
 
 let initializationPacket = SFTPProtocolCodec.initializationPacket()
 check(initializationPacket == Data([0, 0, 0, 5, 1, 0, 0, 0, 3]),

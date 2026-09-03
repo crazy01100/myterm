@@ -23,6 +23,7 @@ struct TerminalContainerView: NSViewRepresentable {
     let onCloseAfterUserEOF: () -> Void
     let onPlatformDetected: (HostPlatform) -> Void
     let onActivate: () -> Void
+    let onRetry: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
@@ -68,6 +69,12 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         terminal.onActivated = {
             Task { @MainActor in onActivate() }
+        }
+        terminal.shouldReconnectOnReturn = { [weak session] in
+            session?.canReconnectOnReturn == true
+        }
+        terminal.onReconnectRequested = {
+            Task { @MainActor in onRetry() }
         }
         if session.canCapturePasswordForSaving {
             terminal.onLoginPasswordPrompt = { [weak terminal, weak session] in
@@ -284,6 +291,8 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onPasswordPromptStateChanged: ((Bool) -> Void)?
     var onUserInput: (() -> Void)?
     var onActivated: (() -> Void)?
+    var shouldReconnectOnReturn: (() -> Bool)?
+    var onReconnectRequested: (() -> Void)?
     private var promptDetector = LoginPasswordPromptDetector()
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
     private var platformDetector = HostPlatformDetector()
@@ -295,6 +304,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private var interruptedOutputDeadline: DispatchTime?
     private let interruptedOutputTailLimit = 16 * 1024
     private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
+    private var isLoginPasswordPromptMonitoringEnabled = true
 
     func hideScrollIndicator() {
         subviews
@@ -319,11 +329,57 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     }
 
     func stopLoginPasswordPromptMonitoring() {
-        onLoginPasswordPrompt = nil
+        isLoginPasswordPromptMonitoringEnabled = false
         passwordCapture.cancel()
     }
 
+    func prepareForSSHReconnect() {
+        passwordCapture.cancel()
+        passwordChangeCapture.cancel()
+        promptDetector = LoginPasswordPromptDetector()
+        passwordPromptStateDetector = PasswordPromptStateDetector()
+        platformDetector = HostPlatformDetector()
+        passwordCapture = LoginPasswordCapture()
+        passwordChangeCapture = PasswordChangeCapture()
+        isLoginPasswordPromptMonitoringEnabled = true
+        interruptedOutputFlushWorkItem?.cancel()
+        interruptedOutputFlushWorkItem = nil
+        interruptedOutputDeadline = nil
+        isCoalescingInterruptedOutput = false
+        for index in interruptedOutputTail.indices { interruptedOutputTail[index] = 0 }
+        interruptedOutputTail.removeAll(keepingCapacity: true)
+
+        // A remote TUI may disappear before it can restore terminal modes.
+        // Disable common mouse/paste modes without clearing retained scrollback.
+        // DECRST 1049 also restores a saved cursor, so only send it while the
+        // alternate buffer is actually active; sending it on the normal buffer
+        // can move reconnect output into an old position in the scrollback.
+        let resetModes = TerminalReconnectPresentationPolicy.resetModes(
+            isAlternateBuffer: terminal.isCurrentBufferAlternate
+        )
+        super.dataReceived(slice: resetModes[...])
+        terminal.softReset()
+
+        // Start the replacement shell after all retained content. Moving the
+        // cursor to the last row and writing the reconnect message causes a
+        // normal scroll, preserving the previous session above it.
+        terminal.buffer.x = 0
+        terminal.buffer.y = TerminalReconnectPresentationPolicy.bottomRow(for: terminal.rows)
+        scrollTo(row: Int.max, notifyAccessibility: false)
+    }
+
+    func displayLocalMessage(_ message: String) {
+        let bytes = Array("\r\n\(message)\r\n".utf8)
+        super.dataReceived(slice: bytes[...])
+    }
+
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        if !process.running,
+           TerminalReconnectPolicy.isReturnInput(data),
+           shouldReconnectOnReturn?() == true {
+            onReconnectRequested?()
+            return
+        }
         let captureResult = passwordCapture.consume(data)
         let passwordChangeResult = onPasswordChangeVerified == nil
             ? PasswordChangeCaptureResult.none
@@ -380,7 +436,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             onPlatformDetected = nil
             callback?(platform)
         }
-        if onLoginPasswordPrompt != nil, promptDetector.consume(slice) {
+        if isLoginPasswordPromptMonitoringEnabled,
+           onLoginPasswordPrompt != nil,
+           promptDetector.consume(slice) {
             promptDetector = LoginPasswordPromptDetector()
             onLoginPasswordPrompt?()
         }

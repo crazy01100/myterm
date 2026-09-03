@@ -1331,7 +1331,8 @@ struct TerminalWorkspaceView: View {
                         isActive: isActive,
                         onCloseAfterUserEOF: onClose,
                         onPlatformDetected: recordPlatform,
-                        onActivate: onActivate
+                        onActivate: onActivate,
+                        onRetry: onRetry
                     )
                     .padding(.horizontal, TerminalCanvasAppearance.horizontalContentInset)
                     .padding(.vertical, TerminalCanvasAppearance.verticalContentInset)

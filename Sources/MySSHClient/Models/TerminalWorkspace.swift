@@ -105,19 +105,6 @@ struct TerminalWorkspaceCollection: Equatable {
     }
 
     @discardableResult
-    mutating func replace(sessionID: UUID, with replacementSessionID: UUID) -> Bool {
-        guard let workspaceIndex = workspaces.firstIndex(where: { $0.contains(sessionID: sessionID) }),
-              let sessionIndex = workspaces[workspaceIndex].sessionIDs.firstIndex(of: sessionID) else {
-            return false
-        }
-        workspaces[workspaceIndex].sessionIDs[sessionIndex] = replacementSessionID
-        if workspaces[workspaceIndex].activeSessionID == sessionID {
-            workspaces[workspaceIndex].activeSessionID = replacementSessionID
-        }
-        return true
-    }
-
-    @discardableResult
     mutating func selectWorkspace(id: TerminalWorkspace.ID?) -> Bool {
         guard let id else {
             selectedWorkspaceID = nil

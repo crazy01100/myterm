@@ -107,7 +107,9 @@ struct ConnectionAuditIndex {
         sourceDeviceName: String? = nil,
         recordID: UUID = UUID()
     ) -> UUID {
-        if let existing = records.first(where: { $0.sessionID == sessionID }) {
+        if let existing = records.last(where: {
+            $0.sessionID == sessionID && $0.status.isOngoing
+        }) {
             return existing.id
         }
         let record = ConnectionAuditRecord(
@@ -130,8 +132,9 @@ struct ConnectionAuditIndex {
 
     @discardableResult
     mutating func markConnected(sessionID: UUID, at date: Date) -> Bool {
-        guard let index = records.firstIndex(where: { $0.sessionID == sessionID }),
-              records[index].status.isOngoing else { return false }
+        guard let index = records.indices.last(where: {
+            records[$0].sessionID == sessionID && records[$0].status.isOngoing
+        }) else { return false }
         if records[index].connectedAt == nil {
             records[index].connectedAt = date
         }
@@ -144,8 +147,9 @@ struct ConnectionAuditIndex {
         sessionID: UUID,
         platform: HostPlatform
     ) -> Bool {
-        guard let index = records.firstIndex(where: { $0.sessionID == sessionID }),
-              records[index].platform == nil else { return false }
+        guard let index = records.indices.last(where: {
+            records[$0].sessionID == sessionID
+        }), records[index].platform == nil else { return false }
         records[index].platform = platform
         return true
     }
@@ -160,8 +164,9 @@ struct ConnectionAuditIndex {
         failureTitle: String? = nil
     ) -> Bool {
         guard !status.isOngoing,
-              let index = records.firstIndex(where: { $0.sessionID == sessionID }),
-              records[index].status.isOngoing else { return false }
+              let index = records.indices.last(where: {
+                  records[$0].sessionID == sessionID && records[$0].status.isOngoing
+              }) else { return false }
         records[index].status = status
         records[index].endedAt = status == .interrupted ? nil : date
         records[index].exitCode = exitCode
@@ -218,7 +223,7 @@ struct ConnectionAuditIndex {
     }
 
     func record(sessionID: UUID) -> ConnectionAuditRecord? {
-        records.first { $0.sessionID == sessionID }
+        records.last { $0.sessionID == sessionID }
     }
 
     private mutating func pruneIfNeeded() {

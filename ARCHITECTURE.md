@@ -59,8 +59,8 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
-- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新該主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。失敗畫面可原位重試或開啟對應主機設定。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
-- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它也把 process 開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`，重試會建立新的稽核紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
+- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新該主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、短期診斷檔、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
+- `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它也把每次 process attempt 的開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`。同一窗格原位重連會沿用 pane session ID，但 `ConnectionAuditIndex` 只把進行中的同 ID attempt 視為冪等；上一筆已最終化後的重連會建立新的 record UUID，因此 Logs 與加密同步仍是逐次連線紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。

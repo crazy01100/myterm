@@ -2,28 +2,6 @@ import AppKit
 import Foundation
 import SwiftTerm
 
-enum SessionState: Equatable {
-    case connecting
-    case connected
-    case disconnected(Int32?)
-    case failed(String)
-
-    var label: String {
-        switch self {
-        case .connecting: "連線中"
-        case .connected: "已連線"
-        case .disconnected(let code): code.map { "已中斷（\($0)）" } ?? "已中斷"
-        case .failed(let message): message
-        }
-    }
-}
-
-enum TerminalSessionKind: Equatable {
-    case ssh
-    case local
-    case serial
-}
-
 enum PasswordSaveOfferKind: Equatable {
     case login
     case replacementLogin
@@ -38,11 +16,11 @@ final class TerminalSession: ObservableObject, Identifiable {
     let username: String?
     let serialConfiguration: SerialConfiguration?
     let executable: String
-    let arguments: [String]
+    private(set) var arguments: [String]
     let environment: [String]
     let execName: String
     let currentDirectory: String?
-    let connectionLogURL: URL?
+    private(set) var connectionLogURL: URL?
     @Published var state: SessionState = .connecting
     @Published var terminalTitle: String
     @Published var notice: String?
@@ -108,6 +86,14 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     var canSafelyUseSavedPassword: Bool {
         canUseSavedPassword && isPasswordPromptActive && terminalView != nil
+    }
+
+    var canReconnectOnReturn: Bool {
+        TerminalReconnectPolicy.canReconnect(
+            kind: kind,
+            state: state,
+            processIsRunning: terminalView?.process.running == true
+        ) && terminalView != nil
     }
 
     var shouldPresentConnectionExperience: Bool {
@@ -259,6 +245,68 @@ final class TerminalSession: ObservableObject, Identifiable {
         } else {
             state = .connected
         }
+    }
+
+    func reconnectInPlace() throws {
+        guard kind == .ssh,
+              let host,
+              let username,
+              let terminal = terminalView,
+              TerminalReconnectPolicy.canReconnect(
+                kind: kind,
+                state: state,
+                processIsRunning: terminal.process.running
+              ) else {
+            throw TerminalReconnectError.unavailable
+        }
+
+        authenticationDidEnd(preserveVerifiedPasswordOffer: false)
+        let nextLogURL = try AppPaths.createSSHConnectionLog()
+        let nextArguments: [String]
+        do {
+            nextArguments = try SSHArgumentBuilder.arguments(
+                for: host,
+                usernameOverride: username,
+                connectionLogURL: nextLogURL
+            )
+        } catch {
+            AppPaths.removeSSHConnectionLog(nextLogURL)
+            throw error
+        }
+
+        connectionLogURL = nextLogURL
+        arguments = nextArguments
+        connectionLogOffset = 0
+        authenticationLogDetector = SSHAuthenticationLogDetector()
+        connectionLogParser = SSHConnectionLogParser()
+        loginPasswordPromptPolicy = LoginPasswordPromptPolicy()
+        didStartConnectionAudit = false
+        didAuthenticate = false
+        connectionPhase = .preparing
+        connectionEvents = [
+            SSHConnectionDiagnosticEvent(phase: .preparing, message: "正在重新建立 SSH 連線。")
+        ]
+        connectionTechnicalLines = []
+        connectionFailure = nil
+        pendingPasswordData = nil
+        passwordSaveOfferKind = nil
+        isPasswordPromptActive = false
+        hasSavedPassword = canBindPasswordToProfile && KeychainStore.containsPassword(for: host.id)
+        notice = "正在重新連線…"
+
+        if let terminal = terminal as? LoginAwareTerminalView {
+            terminal.prepareForSSHReconnect()
+            terminal.displayLocalMessage("[MyTerm] 正在重新連線…")
+        }
+        attach(terminal: terminal)
+        terminal.startProcess(
+            executable: executable,
+            args: arguments,
+            environment: environment,
+            execName: execName,
+            currentDirectory: currentDirectory
+        )
+        terminal.window?.makeFirstResponder(terminal)
     }
 
     func sendSavedPassword(automatic: Bool = false) {
@@ -545,9 +593,11 @@ final class TerminalSession: ObservableObject, Identifiable {
         inspectConnectionLog()
         applyConnectionUpdate(connectionLogParser.finish())
         finalizeConnectionTechnicalTranscript()
+        let reconnectMessage: String
         if didAuthenticate {
             state = .disconnected(exitCode)
             onConnectionCompleted?(exitCode)
+            reconnectMessage = "[MyTerm] 連線已中斷；恢復網路後按 Enter 重新連線。"
         } else {
             let failure = connectionFailure ?? .unknown
             connectionFailure = failure
@@ -560,9 +610,10 @@ final class TerminalSession: ObservableObject, Identifiable {
                 connectionEvents.append(event)
             }
             onConnectionFailed?(exitCode, failure)
+            reconnectMessage = "[MyTerm] 連線失敗；按 Enter 重新連線。"
         }
         authenticationDidEnd()
-        terminalView = nil
+        (terminalView as? LoginAwareTerminalView)?.displayLocalMessage(reconnectMessage)
     }
 
     private func clearPendingPassword() {
@@ -583,13 +634,23 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
         isPasswordPromptActive = false
         authenticationDidEnd(preserveVerifiedPasswordOffer: false)
-        terminalView?.process.terminate()
+        if terminalView?.process.running == true {
+            terminalView?.process.terminate()
+        }
         terminalView = nil
     }
 
     deinit {
         connectionMonitorTask?.cancel()
         AppPaths.removeSSHConnectionLog(connectionLogURL)
+    }
+}
+
+enum TerminalReconnectError: LocalizedError {
+    case unavailable
+
+    var errorDescription: String? {
+        "目前的 SSH 工作階段尚未進入可重新連線狀態。"
     }
 }
 
@@ -680,25 +741,17 @@ final class SessionManager: ObservableObject {
 
     @discardableResult
     func retry(_ session: TerminalSession) -> Bool {
-        guard session.kind == .ssh,
-              let host = session.host,
-              let username = session.username,
-              let sessionIndex = sessions.firstIndex(where: { $0.id == session.id }) else {
+        guard sessions.contains(where: { $0.id == session.id }) else {
             lastError = "找不到可以重新連線的 SSH 工作階段。"
             return false
         }
         do {
-            let replacement = try makeSSHSession(host: host, username: username)
-            guard workspaceState.replace(sessionID: session.id, with: replacement.id) else {
-                replacement.disconnect()
-                lastError = "無法在目前工作區重新建立 SSH 連線。"
-                return false
-            }
-            session.disconnect()
-            sessions[sessionIndex] = replacement
+            try session.reconnectInPlace()
+            lastError = nil
             return true
         } catch {
             lastError = error.localizedDescription
+            session.notice = error.localizedDescription
             return false
         }
     }
