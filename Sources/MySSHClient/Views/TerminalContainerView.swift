@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 import SwiftTerm
 
@@ -36,6 +37,7 @@ struct TerminalContainerView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let terminal = LoginAwareTerminalView(frame: .zero)
+        terminal.useSteadyCaret()
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         terminal.processDelegate = context.coordinator
@@ -47,6 +49,7 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.lastAppliedColorScheme = colorScheme
         context.coordinator.installControlDMonitor(for: terminal)
         context.coordinator.installActivationMonitor(for: terminal)
+        context.coordinator.installTextCursorMonitor(for: terminal)
         if session.kind == .ssh {
             terminal.onPlatformDetected = { platform in
                 Task { @MainActor in onPlatformDetected(platform) }
@@ -149,6 +152,7 @@ struct TerminalContainerView: NSViewRepresentable {
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
         coordinator.removeControlDMonitor()
         coordinator.removeActivationMonitor()
+        coordinator.removeTextCursorMonitor()
         coordinator.cancelPlatformProbe()
         // Do not mutate the observed TerminalSession while SwiftUI is destroying
         // its view graph. Explicit closes already clean up through disconnect(),
@@ -162,6 +166,8 @@ struct TerminalContainerView: NSViewRepresentable {
         var onActivate: () -> Void
         private var controlDMonitor: Any?
         private var activationMonitor: Any?
+        private var textCursorMonitor: Any?
+        private var isCursorHiddenForTerminalScroll = false
         private var platformProbeTask: Task<Void, Never>?
         private var closeAfterEOFRequested = false
         var isVisible: Bool
@@ -199,6 +205,72 @@ struct TerminalContainerView: NSViewRepresentable {
                 NSEvent.removeMonitor(activationMonitor)
                 self.activationMonitor = nil
             }
+        }
+
+        func installTextCursorMonitor(for terminal: LoginAwareTerminalView) {
+            removeTextCursorMonitor()
+            textCursorMonitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.mouseMoved, .cursorUpdate, .scrollWheel]
+            ) { [weak self, weak terminal] event in
+                guard let self, let terminal, event.window === terminal.window else { return event }
+                guard self.isVisible else { return event }
+                let point = terminal.convert(event.locationInWindow, from: nil)
+                guard terminal.bounds.contains(point) else { return event }
+
+                if event.type == .scrollWheel {
+                    // AppKit can repeatedly restore the arrow while a hosted
+                    // terminal processes wheel events. Avoid visible pointer
+                    // oscillation by hiding it during scrolling; the system
+                    // reveals it on real pointer movement, where this monitor
+                    // immediately restores the I-beam.
+                    if !self.isCursorHiddenForTerminalScroll {
+                        NSCursor.setHiddenUntilMouseMoves(true)
+                        self.isCursorHiddenForTerminalScroll = true
+                    }
+                    // SwiftTerm turns wheel input into Up/Down key presses in an
+                    // alternate buffer when the remote app has not enabled mouse
+                    // reporting. Its public send path marks every generated arrow
+                    // as interactive keyboard input, which forces each Vim reply
+                    // to render immediately for 150 ms. Consume only that fallback
+                    // case and pace the same arrows at one step per display frame,
+                    // while intermediate showcmd/caret frames coalesce.
+                    return terminal.consumeAlternateBufferScroll(event) ? nil : event
+                }
+
+                if event.type == .cursorUpdate,
+                   self.isCursorHiddenForTerminalScroll {
+                    // A cursor update can be emitted while a wheel gesture is
+                    // still in progress. Keep the pointer hidden until a real
+                    // mouse-moved event reveals it instead of re-registering
+                    // I-beam and arrow images for every scroll frame.
+                    return nil
+                }
+
+                if event.type == .mouseMoved {
+                    self.isCursorHiddenForTerminalScroll = false
+                }
+
+                // Setting the same cursor for every mouse-moved event is not
+                // free on macOS: accessibility cursor styling may regenerate
+                // and register its image each time. Reassert it only after
+                // another view or the system has actually changed the cursor.
+                if NSCursor.current != NSCursor.iBeam {
+                    NSCursor.iBeam.set()
+                }
+                // The hosted terminal hierarchy would otherwise process the
+                // same cursor-update event afterward and restore the arrow.
+                // Mouse movement still passes through; only this semantic
+                // cursor update is satisfied here.
+                return event.type == .cursorUpdate ? nil : event
+            }
+        }
+
+        func removeTextCursorMonitor() {
+            if let textCursorMonitor {
+                NSEvent.removeMonitor(textCursorMonitor)
+                self.textCursorMonitor = nil
+            }
+            isCursorHiddenForTerminalScroll = false
         }
 
         func installControlDMonitor(for terminal: LocalProcessTerminalView) {
@@ -302,6 +374,28 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private var interruptedOutputTail: [UInt8] = []
     private var interruptedOutputFlushWorkItem: DispatchWorkItem?
     private var interruptedOutputDeadline: DispatchTime?
+    private var pendingMouseWheelInput: [UInt8] = []
+    private var pendingMouseWheelFlush: DispatchWorkItem?
+    private var alternateBufferScrollAccumulator: CGFloat = 0
+    private var pendingAlternateBufferScrollSteps = 0
+    private var pendingScrollResponse: [UInt8] = []
+    private final class ScrollFrameDisplayLinkTarget: NSObject {
+        weak var owner: LoginAwareTerminalView?
+
+        init(owner: LoginAwareTerminalView) {
+            self.owner = owner
+        }
+
+        @objc func displayLinkDidFire(_ displayLink: CADisplayLink) {
+            owner?.processScrollFrame(displayLink)
+        }
+    }
+
+    private lazy var scrollFrameDisplayLinkTarget = ScrollFrameDisplayLinkTarget(owner: self)
+    private var scrollFrameDisplayLink: CADisplayLink?
+    private var scrollResponseDeadline: DispatchTime?
+    private var pendingCaretVisibility: Bool?
+    private var pendingCaretVisibilityFlush: DispatchWorkItem?
     private let interruptedOutputTailLimit = 16 * 1024
     private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
     private var isLoginPasswordPromptMonitoringEnabled = true
@@ -318,7 +412,23 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         super.mouseDown(with: event)
     }
 
+    override func linefeed(source: Terminal) {
+        let remoteMouseReportingActive = allowMouseReporting && source.mouseMode != .off
+        guard TerminalSelectionInteractionPolicy.shouldClearLocalSelectionOnLinefeed(
+            remoteMouseReportingActive: remoteMouseReportingActive
+        ) else {
+            // Ordinary shell output must not erase a manual selection. When a
+            // TUI explicitly owns the mouse, keep SwiftTerm's native behavior
+            // so clicks, drags and scrolling remain coherent.
+            return
+        }
+        super.linefeed(source: source)
+    }
+
     deinit {
+        pendingMouseWheelFlush?.cancel()
+        scrollFrameDisplayLink?.invalidate()
+        pendingCaretVisibilityFlush?.cancel()
         passwordCapture.cancel()
         passwordChangeCapture.cancel()
         for index in interruptedOutputTail.indices { interruptedOutputTail[index] = 0 }
@@ -328,12 +438,69 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         passwordCapture.begin()
     }
 
+    func useSteadyCaret() {
+        terminal.setCursorStyle(.steadyBlock)
+    }
+
+    override func cursorStyleChanged(source: Terminal, newStyle: CursorStyle) {
+        let steadyStyle: CursorStyle
+        switch newStyle {
+        case .blinkBlock:
+            steadyStyle = .steadyBlock
+        case .blinkUnderline:
+            steadyStyle = .steadyUnderline
+        case .blinkBar:
+            steadyStyle = .steadyBar
+        case .steadyBlock, .steadyUnderline, .steadyBar:
+            steadyStyle = newStyle
+        }
+        super.cursorStyleChanged(source: source, newStyle: steadyStyle)
+    }
+
+    override func showCursor(source: Terminal) {
+        scheduleCaretVisibility(true, source: source)
+    }
+
+    override func hideCursor(source: Terminal) {
+        scheduleCaretVisibility(false, source: source)
+    }
+
+    private func scheduleCaretVisibility(_ isVisible: Bool, source: Terminal) {
+        pendingCaretVisibility = isVisible
+        guard pendingCaretVisibilityFlush == nil else { return }
+        let workItem = DispatchWorkItem { [weak self, weak source] in
+            guard let source else { return }
+            self?.applyPendingCaretVisibility(source: source)
+        }
+        pendingCaretVisibilityFlush = workItem
+        DispatchQueue.main.async(execute: workItem)
+    }
+
+    private func applyPendingCaretVisibility(source: Terminal) {
+        guard let isVisible = pendingCaretVisibility else { return }
+        pendingCaretVisibility = nil
+        pendingCaretVisibilityFlush = nil
+        if isVisible {
+            super.showCursor(source: source)
+        } else {
+            super.hideCursor(source: source)
+        }
+    }
+
     func stopLoginPasswordPromptMonitoring() {
         isLoginPasswordPromptMonitoringEnabled = false
         passwordCapture.cancel()
     }
 
     func prepareForSSHReconnect() {
+        flushScrollResponse()
+        scrollResponseDeadline = nil
+        pendingMouseWheelFlush?.cancel()
+        pendingMouseWheelFlush = nil
+        pendingMouseWheelInput.removeAll(keepingCapacity: true)
+        alternateBufferScrollAccumulator = 0
+        pendingAlternateBufferScrollSteps = 0
+        updateScrollFrameDisplayLinkState()
         passwordCapture.cancel()
         passwordChangeCapture.cancel()
         promptDetector = LoginPasswordPromptDetector()
@@ -391,7 +558,13 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             onPasswordPromptStateChanged?(false)
         }
         onUserInput?()
-        super.send(source: source, data: data)
+        let inputBytes = Array(data)
+        if TerminalMouseWheelReportPolicy.isMouseWheelReport(inputBytes) {
+            enqueueMouseWheelInput(inputBytes)
+        } else {
+            flushMouseWheelInput()
+            super.send(source: source, data: data)
+        }
         switch captureResult {
         case .none:
             break
@@ -401,6 +574,124 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             onLoginPasswordCaptureCancelled?()
         }
         handlePasswordChangeResult(passwordChangeResult)
+    }
+
+    private func enqueueMouseWheelInput(_ bytes: [UInt8]) {
+        pendingMouseWheelInput.append(contentsOf: bytes)
+        guard pendingMouseWheelFlush == nil else { return }
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.flushMouseWheelInput()
+        }
+        pendingMouseWheelFlush = workItem
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + TerminalMouseWheelReportPolicy.coalescingDelay,
+            execute: workItem
+        )
+    }
+
+    func consumeAlternateBufferScroll(_ event: NSEvent) -> Bool {
+        guard event.scrollingDeltaY != 0,
+              terminal.isCurrentBufferAlternate,
+              !(allowMouseReporting && terminal.mouseMode != .off) else {
+            return false
+        }
+
+        let rowCount = max(1, terminal.rows)
+        let estimatedCellHeight = max(1, bounds.height / CGFloat(rowCount))
+        let lines: Int
+        if event.hasPreciseScrollingDeltas {
+            alternateBufferScrollAccumulator += event.scrollingDeltaY
+            lines = Int(alternateBufferScrollAccumulator / estimatedCellHeight)
+            alternateBufferScrollAccumulator -= CGFloat(lines) * estimatedCellHeight
+        } else {
+            alternateBufferScrollAccumulator = 0
+            let rounded = Int(event.scrollingDeltaY.rounded())
+            lines = rounded != 0 ? rounded : (event.scrollingDeltaY > 0 ? 1 : -1)
+        }
+
+        guard lines != 0 else { return true }
+        pendingAlternateBufferScrollSteps = TerminalMouseWheelReportPolicy.accumulatePacedScrollSteps(
+            current: pendingAlternateBufferScrollSteps,
+            adding: lines
+        )
+        activateScrollFrameDisplayLink()
+        return true
+    }
+
+    private func beginCoalescingScrollResponse() {
+        scrollResponseDeadline = .now() + TerminalMouseWheelReportPolicy.responseCoalescingWindow
+    }
+
+    private func shouldCoalesceScrollResponse() -> Bool {
+        guard let scrollResponseDeadline else { return false }
+        return DispatchTime.now() < scrollResponseDeadline
+    }
+
+    private func enqueueScrollResponse(_ slice: ArraySlice<UInt8>) {
+        pendingScrollResponse.append(contentsOf: slice)
+        if pendingScrollResponse.count >= TerminalMouseWheelReportPolicy.responseBufferLimit {
+            flushScrollResponse()
+            return
+        }
+        activateScrollFrameDisplayLink()
+    }
+
+    private func activateScrollFrameDisplayLink() {
+        if scrollFrameDisplayLink == nil {
+            let displayLink = displayLink(
+                target: scrollFrameDisplayLinkTarget,
+                selector: #selector(ScrollFrameDisplayLinkTarget.displayLinkDidFire(_:))
+            )
+            displayLink.isPaused = true
+            displayLink.add(to: .main, forMode: .common)
+            scrollFrameDisplayLink = displayLink
+        }
+        scrollFrameDisplayLink?.isPaused = false
+    }
+
+    fileprivate func processScrollFrame(_ displayLink: CADisplayLink) {
+        deliverPendingScrollResponse()
+
+        let paced = TerminalMouseWheelReportPolicy.consumePacedScrollStep(
+            pendingAlternateBufferScrollSteps
+        )
+        pendingAlternateBufferScrollSteps = paced.remaining
+        if paced.step != 0 {
+            beginCoalescingScrollResponse()
+            let sequence = TerminalMouseWheelReportPolicy.alternateBufferArrowSequence(
+                scrollingUp: paced.step > 0,
+                applicationCursor: terminal.applicationCursor
+            )
+            process.send(data: sequence[...])
+        }
+
+        updateScrollFrameDisplayLinkState()
+    }
+
+    private func flushScrollResponse() {
+        deliverPendingScrollResponse()
+        updateScrollFrameDisplayLinkState()
+    }
+
+    private func deliverPendingScrollResponse() {
+        guard !pendingScrollResponse.isEmpty else { return }
+        let bytes = pendingScrollResponse
+        pendingScrollResponse.removeAll(keepingCapacity: true)
+        deliverReceivedData(bytes[...])
+    }
+
+    private func updateScrollFrameDisplayLinkState() {
+        scrollFrameDisplayLink?.isPaused = pendingAlternateBufferScrollSteps == 0 &&
+            pendingScrollResponse.isEmpty
+    }
+
+    private func flushMouseWheelInput() {
+        pendingMouseWheelFlush?.cancel()
+        pendingMouseWheelFlush = nil
+        guard !pendingMouseWheelInput.isEmpty else { return }
+        let bytes = pendingMouseWheelInput
+        pendingMouseWheelInput.removeAll(keepingCapacity: true)
+        process.send(data: bytes[...])
     }
 
     override func dataReceived(slice: ArraySlice<UInt8>) {
@@ -413,6 +704,12 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
             }
             return
         }
+        if shouldCoalesceScrollResponse() {
+            enqueueScrollResponse(slice)
+            return
+        }
+        flushScrollResponse()
+        scrollResponseDeadline = nil
         deliverReceivedData(slice)
     }
 

@@ -4,6 +4,7 @@ import SwiftUI
 /// Tracks host-card drags at the window-event boundary so category targeting
 /// is based on measured card rectangles, independent of SwiftUI drop routing.
 struct HostLibraryDragMonitor: NSViewRepresentable {
+    let isEnabled: Bool
     let beginDrag: (CGPoint) -> HostProfile.ID?
     let changeDrag: (HostProfile.ID, CGPoint) -> Void
     let endDrag: (HostProfile.ID, CGPoint) -> Void
@@ -11,6 +12,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
+            isEnabled: isEnabled,
             beginDrag: beginDrag,
             changeDrag: changeDrag,
             endDrag: endDrag,
@@ -26,6 +28,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: MonitorView, context: Context) {
+        context.coordinator.setEnabled(isEnabled)
         context.coordinator.beginDrag = beginDrag
         context.coordinator.changeDrag = changeDrag
         context.coordinator.endDrag = endDrag
@@ -37,6 +40,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
     }
 
     final class Coordinator {
+        private(set) var isEnabled: Bool
         var beginDrag: (CGPoint) -> HostProfile.ID?
         var changeDrag: (HostProfile.ID, CGPoint) -> Void
         var endDrag: (HostProfile.ID, CGPoint) -> Void
@@ -49,11 +53,13 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
         private var isDragging = false
 
         init(
+            isEnabled: Bool,
             beginDrag: @escaping (CGPoint) -> HostProfile.ID?,
             changeDrag: @escaping (HostProfile.ID, CGPoint) -> Void,
             endDrag: @escaping (HostProfile.ID, CGPoint) -> Void,
             cancelDrag: @escaping () -> Void
         ) {
+            self.isEnabled = isEnabled
             self.beginDrag = beginDrag
             self.changeDrag = changeDrag
             self.endDrag = endDrag
@@ -67,6 +73,10 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
             ) { [weak self] event in
                 guard let self, let hostView = self.hostView,
                       event.window === hostView.window else { return event }
+                guard self.isEnabled else {
+                    self.reset()
+                    return event
+                }
                 let point = hostView.convert(event.locationInWindow, from: nil)
 
                 switch event.type {
@@ -102,6 +112,17 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
                     break
                 }
                 return event
+            }
+        }
+
+        func setEnabled(_ isEnabled: Bool) {
+            guard self.isEnabled != isEnabled else { return }
+            self.isEnabled = isEnabled
+            if !isEnabled {
+                // HostLibraryView remains mounted behind terminal workspaces
+                // to preserve navigation state. Drop all measured-card drag
+                // state without notifying SwiftUI when it becomes invisible.
+                reset()
             }
         }
 

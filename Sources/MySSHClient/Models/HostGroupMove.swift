@@ -29,6 +29,16 @@ enum HostLibraryDragCleanupReason {
     }
 }
 
+enum HostLibraryDragActivationPolicy {
+    static func canBegin(
+        isHostLibraryVisible: Bool,
+        isAllHostsSelection: Bool,
+        hasPendingMove: Bool
+    ) -> Bool {
+        isHostLibraryVisible && isAllHostsSelection && !hasPendingMove
+    }
+}
+
 enum HostGroupMoveError: LocalizedError, Equatable {
     case missingHost
     case missingGroup

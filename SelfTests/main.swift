@@ -472,6 +472,30 @@ check(
     HostLibraryDragCleanupReason.userCancellation.notifiesSwiftUICancellation,
     "host drag monitor user cancellation notifies SwiftUI state"
 )
+check(
+    HostLibraryDragActivationPolicy.canBegin(
+        isHostLibraryVisible: true,
+        isAllHostsSelection: true,
+        hasPendingMove: false
+    ),
+    "host drag monitoring is available only on the visible all-hosts page"
+)
+check(
+    !HostLibraryDragActivationPolicy.canBegin(
+        isHostLibraryVisible: false,
+        isAllHostsSelection: true,
+        hasPendingMove: false
+    ) && !HostLibraryDragActivationPolicy.canBegin(
+        isHostLibraryVisible: true,
+        isAllHostsSelection: false,
+        hasPendingMove: false
+    ) && !HostLibraryDragActivationPolicy.canBegin(
+        isHostLibraryVisible: true,
+        isAllHostsSelection: true,
+        hasPendingMove: true
+    ),
+    "hidden, scoped, and confirmation-blocked host pages never begin host drags"
+)
 
 do {
     let first = UUID()
@@ -673,6 +697,58 @@ check(
     "reconnect output starts at the terminal bottom row"
 )
 
+check(
+    !TerminalSelectionInteractionPolicy.shouldClearLocalSelectionOnLinefeed(
+        remoteMouseReportingActive: false
+    ) && TerminalSelectionInteractionPolicy.shouldClearLocalSelectionOnLinefeed(
+        remoteMouseReportingActive: true
+    ),
+    "streaming shell output preserves selection while an active remote TUI keeps native mouse behavior"
+)
+check(
+    TerminalMouseWheelReportPolicy.isMouseWheelReport([0x1B, 0x5B, 0x4D, 0x60, 0x21, 0x21]) &&
+        TerminalMouseWheelReportPolicy.isMouseWheelReport(Array("\u{1B}[<65;10;20M".utf8)) &&
+        TerminalMouseWheelReportPolicy.isMouseWheelReport(Array("\u{1B}[97;10;20M".utf8)),
+    "terminal mouse-wheel policy recognizes X10, SGR, and URxvt wheel reports"
+)
+check(
+    !TerminalMouseWheelReportPolicy.isMouseWheelReport(Array("\u{1B}[A".utf8)) &&
+        !TerminalMouseWheelReportPolicy.isMouseWheelReport(Array("\u{1B}[<0;10;20M".utf8)),
+    "terminal mouse-wheel policy excludes arrow keys and mouse clicks"
+)
+check(
+    TerminalMouseWheelReportPolicy.alternateBufferArrowSequence(
+        scrollingUp: true,
+        applicationCursor: false
+    ) == Array("\u{1B}[A".utf8) &&
+        TerminalMouseWheelReportPolicy.alternateBufferArrowSequence(
+            scrollingUp: false,
+            applicationCursor: true
+        ) == Array("\u{1B}OB".utf8),
+    "alternate-buffer wheel fallback preserves normal and application cursor encoding"
+)
+let cappedPacedScroll = TerminalMouseWheelReportPolicy.accumulatePacedScrollSteps(
+    current: 20,
+    adding: 20
+)
+let reversedPacedScroll = TerminalMouseWheelReportPolicy.accumulatePacedScrollSteps(
+    current: 8,
+    adding: -3
+)
+check(
+    cappedPacedScroll == TerminalMouseWheelReportPolicy.pacedScrollBacklogLimit &&
+        reversedPacedScroll == 5,
+    "alternate-buffer wheel pacing caps backlog and cancels pending steps on reversal"
+)
+let pacedForward = TerminalMouseWheelReportPolicy.consumePacedScrollStep(3)
+let pacedBackward = TerminalMouseWheelReportPolicy.consumePacedScrollStep(-2)
+let pacedIdle = TerminalMouseWheelReportPolicy.consumePacedScrollStep(0)
+check(
+    pacedForward.step == 1 && pacedForward.remaining == 2 &&
+        pacedBackward.step == -1 && pacedBackward.remaining == -1 &&
+        pacedIdle.step == 0 && pacedIdle.remaining == 0,
+    "alternate-buffer wheel pacing emits at most one signed step per display frame"
+)
 let initializationPacket = SFTPProtocolCodec.initializationPacket()
 check(initializationPacket == Data([0, 0, 0, 5, 1, 0, 0, 0, 3]),
       "SFTP v3 initialization packet is framed correctly")

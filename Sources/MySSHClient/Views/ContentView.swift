@@ -523,6 +523,7 @@ struct ContentView: View {
             HostLibraryView(
                 selection: $hostLibrarySelection,
                 columnVisibility: $hostLibraryColumnVisibility,
+                isActive: sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts,
                 onAddHost: addHost,
                 onAddGroup: { parentID in
                     groupEditorRequest = GroupEditorRequest(group: nil, defaultParentID: parentID)

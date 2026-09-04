@@ -58,6 +58,7 @@ struct HostLibraryView: View {
     @State private var draggedHostID: HostProfile.ID?
     @State private var hostDragLocation: CGPoint?
 
+    let isActive: Bool
     let onAddHost: (UUID?) -> Void
     let onAddGroup: (UUID?) -> Void
     let onEditHost: (HostProfile) -> Void
@@ -370,6 +371,7 @@ struct HostLibraryView: View {
             }
 
             HostLibraryDragMonitor(
+                isEnabled: isActive,
                 beginDrag: beginHostDrag,
                 changeDrag: changeHostDrag,
                 endDrag: endHostDrag,
@@ -477,7 +479,11 @@ struct HostLibraryView: View {
     }
 
     private func beginHostDrag(at point: CGPoint) -> HostProfile.ID? {
-        guard selection == .all, pendingHostMove == nil else { return nil }
+        guard HostLibraryDragActivationPolicy.canBegin(
+            isHostLibraryVisible: isActive,
+            isAllHostsSelection: selection == .all,
+            hasPendingMove: pendingHostMove != nil
+        ) else { return nil }
         return HostGroupDropHitTesting.hostID(at: point, hostFrames: hostCardFrames)
     }
 

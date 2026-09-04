@@ -47,7 +47,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 ### 主機與本機資料
 
-- `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區以 `HostLibraryDragMonitor` 在目前視窗追蹤主機卡片拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。
+- `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區只在目前可見、未進入分類且沒有待確認搬移時啟用 `HostLibraryDragMonitor`；主機頁被 Terminal 等功能遮住、切入分類或開啟確認時會停止追蹤，避免不可見卡片攔截其他畫面的拖曳。啟用時 monitor 在目前視窗追蹤由主機卡片開始的拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。
 - `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。正式、development 與 update-lab 通道使用不同保管庫根金鑰；只有 production 可執行早期正式 session 的相容遷移，隔離通道不讀取 production 的舊 refresh token。
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
@@ -62,6 +62,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新該主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、短期診斷檔、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
 - `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它也把每次 process attempt 的開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`。同一窗格原位重連會沿用 pane session ID，但 `ConnectionAuditIndex` 只把進行中的同 ID attempt 視為冪等；上一筆已最終化後的重連會建立新的 record UUID，因此 Logs 與加密同步仍是逐次連線紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。
+- `TerminalContainerView`／`LoginAwareTerminalView` 保留 SwiftTerm 的原生 terminal buffer 與 TUI mouse reporting：遠端滑鼠模式關閉時，一般及持續輸出不會清除使用者已建立的本機 selection；Vim、tmux 等程式啟用 mouse reporting 後，普通點擊、拖曳與滾輪仍完整送往遠端，Shift＋拖曳沿用 SwiftTerm 的本機選取。終端內容區使用 I-beam，滾動期間暫時隱藏系統指標以避免箭頭／I-beam 交替；文字 caret 以 steady 形狀顯示，遠端同一批 hide/show 只套用最後可見狀態。預設 Vim 未啟用 mouse reporting 時的 alternate-buffer 滾輪 fallback 以 display link 逐幀傳送方向步驟並合併中間回應；實體鍵盤、一般 shell scrollback 與已啟用的遠端滑鼠回報不經此路徑。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
