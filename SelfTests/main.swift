@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Security
 
@@ -496,6 +497,45 @@ check(
     ),
     "hidden, scoped, and confirmation-blocked host pages never begin host drags"
 )
+
+MainActor.assumeIsolated {
+    let splitView = NSSplitView(frame: NSRect(x: 0, y: 0, width: 1_000, height: 600))
+    splitView.isVertical = true
+    let delegateProxy = TerminalWorkspaceSplitDelegateProxy()
+    delegateProxy.install(on: splitView)
+    check(
+        (splitView.delegate as AnyObject?) === delegateProxy &&
+            (splitView.delegate as AnyObject?) !== splitView,
+        "terminal workspace split view uses a distinct delegate proxy"
+    )
+
+    let splitExtent = splitView.bounds.width - splitView.dividerThickness
+    let minimum = delegateProxy.splitView(
+        splitView,
+        constrainMinCoordinate: 0,
+        ofSubviewAt: 0
+    )
+    let maximum = delegateProxy.splitView(
+        splitView,
+        constrainMaxCoordinate: splitView.bounds.width,
+        ofSubviewAt: 0
+    )
+    check(
+        abs(minimum - splitExtent * 0.25) < 0.001 &&
+            abs(maximum - splitExtent * 0.75) < 0.001,
+        "terminal workspace delegate proxy preserves 25-to-75 percent divider constraints"
+    )
+
+    let sidebarSelector = NSSelectorFromString("toggleSidebar:")
+    let startedAt = CFAbsoluteTimeGetCurrent()
+    for _ in 0..<10_000 {
+        _ = splitView.responds(to: sidebarSelector)
+    }
+    check(
+        CFAbsoluteTimeGetCurrent() - startedAt < 2,
+        "toggle-sidebar action lookup completes without split-view delegate recursion"
+    )
+}
 
 do {
     let first = UUID()

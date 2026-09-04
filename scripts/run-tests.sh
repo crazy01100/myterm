@@ -64,6 +64,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
     Sources/MySSHClient/Services/SFTPProtocol.swift \
     Sources/MySSHClient/Services/SFTPClient.swift \
+    Sources/MySSHClient/Views/TerminalWorkspaceSplitDelegate.swift \
     SelfTests/main.swift \
     -o "$test_dir/MySSHClientSelfTests"
 MYTERM_SECRET_VAULT_KEYCHAIN_SERVICE="tw.local.MySSHClient.tests.$$.core" \

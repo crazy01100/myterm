@@ -181,7 +181,8 @@ private struct TerminalPaneHostingRoot: View {
 }
 
 @MainActor
-private final class TerminalWorkspaceNativeSplitView: NSSplitView, NSSplitViewDelegate {
+private final class TerminalWorkspaceNativeSplitView: NSSplitView {
+    private let splitViewDelegateProxy = TerminalWorkspaceSplitDelegateProxy()
     private var visibleSessionIDs: [TerminalSession.ID] = []
     private var workspaceID: TerminalWorkspace.ID?
     private var modelRatio = 0.5
@@ -193,7 +194,7 @@ private final class TerminalWorkspaceNativeSplitView: NSSplitView, NSSplitViewDe
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         dividerStyle = .thin
-        delegate = self
+        splitViewDelegateProxy.install(on: self)
         autoresizesSubviews = true
     }
 
@@ -314,22 +315,6 @@ private final class TerminalWorkspaceNativeSplitView: NSSplitView, NSSplitViewDe
         }
         AppVisualTheme.dividerHandleNSColor.withAlphaComponent(0.82).setFill()
         NSBezierPath(roundedRect: handleRect, xRadius: 1.5, yRadius: 1.5).fill()
-    }
-
-    func splitView(
-        _ splitView: NSSplitView,
-        constrainMinCoordinate proposedMinimumPosition: CGFloat,
-        ofSubviewAt dividerIndex: Int
-    ) -> CGFloat {
-        max(proposedMinimumPosition, splitExtent * 0.25)
-    }
-
-    func splitView(
-        _ splitView: NSSplitView,
-        constrainMaxCoordinate proposedMaximumPosition: CGFloat,
-        ofSubviewAt dividerIndex: Int
-    ) -> CGFloat {
-        min(proposedMaximumPosition, splitExtent * 0.75)
     }
 
     private var splitExtent: CGFloat {
