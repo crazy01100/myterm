@@ -24,6 +24,7 @@ struct TerminalContainerView: NSViewRepresentable {
     let onCloseAfterUserEOF: () -> Void
     let onPlatformDetected: (HostPlatform) -> Void
     let onActivate: () -> Void
+    let onOutputActivity: () -> Void
     let onRetry: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -31,7 +32,8 @@ struct TerminalContainerView: NSViewRepresentable {
             session: session,
             isVisible: isVisible,
             onCloseAfterUserEOF: onCloseAfterUserEOF,
-            onActivate: onActivate
+            onActivate: onActivate,
+            onOutputActivity: onOutputActivity
         )
     }
 
@@ -72,6 +74,12 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         terminal.onActivated = {
             Task { @MainActor in onActivate() }
+        }
+        terminal.onOutputActivity = { [weak coordinator = context.coordinator] in
+            // SwiftTerm's LocalProcess delivers renderer updates on its main
+            // queue. Keep this callback synchronous so a fast producer cannot
+            // enqueue one MainActor task per output chunk.
+            coordinator?.onOutputActivity()
         }
         terminal.shouldReconnectOnReturn = { [weak session] in
             session?.canReconnectOnReturn == true
@@ -127,6 +135,7 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         context.coordinator.onActivate = onActivate
+        context.coordinator.onOutputActivity = onOutputActivity
         if context.coordinator.lastAppliedColorScheme != colorScheme {
             applyTheme(to: nsView)
             context.coordinator.lastAppliedColorScheme = colorScheme
@@ -164,6 +173,7 @@ struct TerminalContainerView: NSViewRepresentable {
         let session: TerminalSession
         let onCloseAfterUserEOF: () -> Void
         var onActivate: () -> Void
+        var onOutputActivity: () -> Void
         private var controlDMonitor: Any?
         private var activationMonitor: Any?
         private var textCursorMonitor: Any?
@@ -177,12 +187,14 @@ struct TerminalContainerView: NSViewRepresentable {
             session: TerminalSession,
             isVisible: Bool,
             onCloseAfterUserEOF: @escaping () -> Void,
-            onActivate: @escaping () -> Void
+            onActivate: @escaping () -> Void,
+            onOutputActivity: @escaping () -> Void
         ) {
             self.session = session
             self.isVisible = isVisible
             self.onCloseAfterUserEOF = onCloseAfterUserEOF
             self.onActivate = onActivate
+            self.onOutputActivity = onOutputActivity
         }
 
         func installActivationMonitor(for terminal: LocalProcessTerminalView) {
@@ -363,6 +375,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onPasswordPromptStateChanged: ((Bool) -> Void)?
     var onUserInput: (() -> Void)?
     var onActivated: (() -> Void)?
+    var onOutputActivity: (() -> Void)?
     var shouldReconnectOnReturn: (() -> Bool)?
     var onReconnectRequested: (() -> Void)?
     private var promptDetector = LoginPasswordPromptDetector()
@@ -715,6 +728,9 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
 
     private func deliverReceivedData(_ slice: ArraySlice<UInt8>) {
         super.dataReceived(slice: slice)
+        if !slice.isEmpty {
+            onOutputActivity?()
+        }
         if onPasswordChangeVerified != nil {
             let passwordChangeResult = passwordChangeCapture.consumeOutput(slice)
             if passwordChangeResult == .started {

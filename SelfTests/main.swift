@@ -537,6 +537,99 @@ MainActor.assumeIsolated {
     )
 }
 
+check(
+    TerminalConnectionIndicator(state: .connecting) == .connecting &&
+        TerminalConnectionIndicator(state: .connected) == .connected &&
+        TerminalConnectionIndicator(state: .disconnected(nil)) == .disconnected &&
+        TerminalConnectionIndicator(state: .failed("test")) == .failed,
+    "terminal tab status presentation preserves every connection-state semantic"
+)
+
+do {
+    let first = UUID()
+    let second = UUID()
+    let third = UUID()
+    let other = UUID()
+    var registry = TerminalSessionPresentationNameRegistry()
+
+    registry.register(sessionID: first, baseName: "Local Terminal")
+    check(
+        registry.presentationName(sessionID: first, baseName: "Local Terminal") == "Local Terminal",
+        "a single terminal session keeps its base presentation name"
+    )
+
+    registry.register(sessionID: second, baseName: "Local Terminal")
+    registry.register(sessionID: third, baseName: "Local Terminal")
+    registry.register(sessionID: other, baseName: "Remote")
+    check(
+        registry.presentationName(sessionID: first, baseName: "Local Terminal") == "Local Terminal (1)" &&
+            registry.presentationName(sessionID: second, baseName: "Local Terminal") == "Local Terminal (2)" &&
+            registry.presentationName(sessionID: third, baseName: "Local Terminal") == "Local Terminal (3)",
+        "duplicate terminal sessions receive stable creation-order suffixes"
+    )
+    check(
+        registry.presentationName(sessionID: other, baseName: "Remote") == "Remote",
+        "terminal presentation numbering is isolated by base name"
+    )
+
+    registry.remove(sessionID: second)
+    check(
+        registry.presentationName(sessionID: first, baseName: "Local Terminal") == "Local Terminal (1)" &&
+            registry.presentationName(sessionID: third, baseName: "Local Terminal") == "Local Terminal (3)",
+        "closing a duplicate does not renumber other visible terminal sessions"
+    )
+
+    registry.remove(sessionID: first)
+    check(
+        registry.presentationName(sessionID: third, baseName: "Local Terminal") == "Local Terminal",
+        "a remaining lone terminal session hides its ordinal"
+    )
+
+    let replacement = UUID()
+    registry.register(sessionID: replacement, baseName: "Local Terminal")
+    check(
+        registry.presentationName(sessionID: third, baseName: "Local Terminal") == "Local Terminal (1)" &&
+            registry.presentationName(sessionID: replacement, baseName: "Local Terminal") == "Local Terminal (2)",
+        "a previously hidden lone ordinal restarts cleanly when another duplicate opens"
+    )
+}
+
+do {
+    let visible = UUID()
+    let background = UUID()
+    let secondBackground = UUID()
+    var activity = TerminalOutputActivityIndex()
+
+    check(
+        !activity.recordOutput(sessionID: visible, isWorkspaceVisible: true) &&
+            activity.unreadSessionIDs.isEmpty,
+        "terminal output from a visible workspace never creates unread activity"
+    )
+    check(
+        activity.recordOutput(sessionID: background, isWorkspaceVisible: false) &&
+            !activity.recordOutput(sessionID: background, isWorkspaceVisible: false) &&
+            activity.unreadSessionIDs == [background],
+        "background terminal output publishes only the first unread transition"
+    )
+    _ = activity.recordOutput(sessionID: secondBackground, isWorkspaceVisible: false)
+    check(
+        activity.containsUnread(in: [visible, secondBackground]) &&
+            activity.containsUnread(in: [background]) &&
+            !activity.containsUnread(in: [visible]),
+        "terminal workspace activity aggregates unread child sessions"
+    )
+    check(
+        activity.markViewed(sessionIDs: [background]) &&
+            !activity.unreadSessionIDs.contains(background) &&
+            activity.unreadSessionIDs.contains(secondBackground),
+        "viewing a terminal workspace clears only its child activity"
+    )
+    check(
+        activity.remove(sessionID: secondBackground) && activity.unreadSessionIDs.isEmpty,
+        "closing a terminal removes its unread activity"
+    )
+}
+
 do {
     let first = UUID()
     let second = UUID()

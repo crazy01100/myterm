@@ -658,7 +658,10 @@ enum TerminalReconnectError: LocalizedError {
 final class SessionManager: ObservableObject {
     @Published private(set) var sessions: [TerminalSession] = []
     @Published private var workspaceState = TerminalWorkspaceCollection()
+    @Published private(set) var unreadOutputSessionIDs: Set<TerminalSession.ID> = []
     @Published var lastError: String?
+    private var presentationNameRegistry = TerminalSessionPresentationNameRegistry()
+    private var outputActivityIndex = TerminalOutputActivityIndex()
     var onHostConnectionSucceeded: ((HostProfile.ID) -> Void)?
     weak var connectionAuditStore: ConnectionAuditStore?
 
@@ -668,14 +671,20 @@ final class SessionManager: ObservableObject {
 
     var selectedWorkspaceID: TerminalWorkspace.ID? {
         get { workspaceState.selectedWorkspaceID }
-        set { _ = workspaceState.selectWorkspace(id: newValue) }
+        set {
+            if let newValue {
+                _ = selectWorkspace(newValue)
+            } else {
+                workspaceState.showLibrary()
+            }
+        }
     }
 
     var selectedSessionID: TerminalSession.ID? {
         get { workspaceState.selectedSessionID }
         set {
             if let newValue {
-                _ = workspaceState.activate(sessionID: newValue)
+                _ = activate(sessionID: newValue)
             } else {
                 workspaceState.showLibrary()
             }
@@ -693,6 +702,17 @@ final class SessionManager: ObservableObject {
     func session(id: TerminalSession.ID?) -> TerminalSession? {
         guard let id else { return nil }
         return sessions.first { $0.id == id }
+    }
+
+    func presentationName(for session: TerminalSession) -> String {
+        presentationNameRegistry.presentationName(
+            sessionID: session.id,
+            baseName: session.displayName
+        )
+    }
+
+    func hasUnreadOutput(in workspace: TerminalWorkspace) -> Bool {
+        outputActivityIndex.containsUnread(in: workspace.sessionIDs)
     }
 
     func workspace(id: TerminalWorkspace.ID?) -> TerminalWorkspace? {
@@ -718,6 +738,7 @@ final class SessionManager: ObservableObject {
     @discardableResult
     func createSSHSession(to host: HostProfile, username: String) throws -> TerminalSession.ID {
         let session = try makeSSHSession(host: host, username: username)
+        presentationNameRegistry.register(sessionID: session.id, baseName: session.displayName)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
         return session.id
@@ -726,6 +747,7 @@ final class SessionManager: ObservableObject {
     @discardableResult
     func createLocalSession() -> TerminalSession.ID {
         let session = TerminalSession()
+        presentationNameRegistry.register(sessionID: session.id, baseName: session.displayName)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
         return session.id
@@ -734,6 +756,7 @@ final class SessionManager: ObservableObject {
     @discardableResult
     func createSerialSession(configuration: SerialConfiguration) throws -> TerminalSession.ID {
         let session = try TerminalSession(serial: configuration)
+        presentationNameRegistry.register(sessionID: session.id, baseName: session.displayName)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
         return session.id
@@ -758,8 +781,13 @@ final class SessionManager: ObservableObject {
 
     func close(_ session: TerminalSession) {
         session.disconnect()
+        presentationNameRegistry.remove(sessionID: session.id)
+        if outputActivityIndex.remove(sessionID: session.id) {
+            publishOutputActivitySnapshot()
+        }
         sessions.removeAll { $0.id == session.id }
         _ = workspaceState.close(sessionID: session.id)
+        markSelectedWorkspaceViewed()
     }
 
     private func makeSSHSession(host: HostProfile, username: String) throws -> TerminalSession {
@@ -815,21 +843,32 @@ final class SessionManager: ObservableObject {
     }
 
     func selectSession(at index: Int) -> Bool {
-        workspaceState.selectWorkspace(at: index)
+        let didSelect = workspaceState.selectWorkspace(at: index)
+        if didSelect { markSelectedWorkspaceViewed() }
+        return didSelect
     }
 
     func selectAdjacentSession(offset: Int) -> Bool {
-        workspaceState.selectAdjacentWorkspace(offset: offset)
+        let didSelect = workspaceState.selectAdjacentWorkspace(offset: offset)
+        if didSelect { markSelectedWorkspaceViewed() }
+        return didSelect
     }
 
     @discardableResult
-    func selectWorkspace(_ workspaceID: TerminalWorkspace.ID) -> Bool {
-        workspaceState.selectWorkspace(id: workspaceID)
+    func selectWorkspace(
+        _ workspaceID: TerminalWorkspace.ID,
+        marksOutputViewed: Bool = true
+    ) -> Bool {
+        let didSelect = workspaceState.selectWorkspace(id: workspaceID)
+        if didSelect && marksOutputViewed { markSelectedWorkspaceViewed() }
+        return didSelect
     }
 
     @discardableResult
     func activate(sessionID: TerminalSession.ID) -> Bool {
-        workspaceState.activate(sessionID: sessionID)
+        let didActivate = workspaceState.activate(sessionID: sessionID)
+        if didActivate { markSelectedWorkspaceViewed() }
+        return didActivate
     }
 
     @discardableResult
@@ -849,6 +888,7 @@ final class SessionManager: ObservableObject {
                 targetWorkspaceID: targetWorkspaceID,
                 position: position
             )
+            markSelectedWorkspaceViewed()
             return true
         } catch {
             lastError = error.localizedDescription
@@ -860,6 +900,7 @@ final class SessionManager: ObservableObject {
     func detachSession(_ sessionID: TerminalSession.ID, toInsertionIndex index: Int) -> Bool {
         do {
             try workspaceState.detach(sessionID: sessionID, toInsertionIndex: index)
+            markSelectedWorkspaceViewed()
             return true
         } catch {
             lastError = error.localizedDescription
@@ -884,6 +925,34 @@ final class SessionManager: ObservableObject {
 
     @discardableResult
     func focusOtherPane() -> Bool {
-        workspaceState.focusOtherPane()
+        let didFocus = workspaceState.focusOtherPane()
+        if didFocus { markSelectedWorkspaceViewed() }
+        return didFocus
+    }
+
+    func recordOutputActivity(for sessionID: TerminalSession.ID) {
+        guard let workspace = workspaceState.workspace(containing: sessionID),
+              workspace.id != selectedWorkspaceID,
+              !unreadOutputSessionIDs.contains(sessionID) else { return }
+        if outputActivityIndex.recordOutput(
+            sessionID: sessionID,
+            isWorkspaceVisible: false
+        ) {
+            publishOutputActivitySnapshot()
+        }
+    }
+
+    private func markSelectedWorkspaceViewed() {
+        guard let sessionIDs = selectedWorkspace?.sessionIDs else { return }
+        if outputActivityIndex.markViewed(sessionIDs: sessionIDs) {
+            publishOutputActivitySnapshot()
+        }
+    }
+
+    private func publishOutputActivitySnapshot() {
+        let snapshot = outputActivityIndex.unreadSessionIDs
+        if unreadOutputSessionIDs != snapshot {
+            unreadOutputSessionIDs = snapshot
+        }
     }
 }

@@ -3,10 +3,12 @@ import SwiftUI
 
 struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
     let sessions: [TerminalSession]
+    let presentationNames: [TerminalSession.ID: String]
     let selectedWorkspace: TerminalWorkspace?
     let hostStore: HostStore
     let connectionAuditStore: ConnectionAuditStore
     let onActivate: (TerminalSession.ID) -> Void
+    let onOutputActivity: (TerminalSession.ID) -> Void
     let onToggleSplit: (TerminalWorkspace.ID) -> Void
     let onClose: (TerminalSession) -> Void
     let onRetry: (TerminalSession) -> Void
@@ -20,10 +22,12 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
     func updateNSView(_ nsView: TerminalWorkspaceCanvasNSView, context: Context) {
         nsView.update(
             sessions: sessions,
+            presentationNames: presentationNames,
             selectedWorkspace: selectedWorkspace,
             hostStore: hostStore,
             connectionAuditStore: connectionAuditStore,
             onActivate: onActivate,
+            onOutputActivity: onOutputActivity,
             onToggleSplit: onToggleSplit,
             onClose: onClose,
             onRetry: onRetry,
@@ -62,10 +66,12 @@ final class TerminalWorkspaceCanvasNSView: NSView {
 
     func update(
         sessions: [TerminalSession],
+        presentationNames: [TerminalSession.ID: String],
         selectedWorkspace: TerminalWorkspace?,
         hostStore: HostStore,
         connectionAuditStore: ConnectionAuditStore,
         onActivate: @escaping (TerminalSession.ID) -> Void,
+        onOutputActivity: @escaping (TerminalSession.ID) -> Void,
         onToggleSplit: @escaping (TerminalWorkspace.ID) -> Void,
         onClose: @escaping (TerminalSession) -> Void,
         onRetry: @escaping (TerminalSession) -> Void,
@@ -84,6 +90,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
             let paneIndex = selectedWorkspace?.sessionIDs.firstIndex(of: session.id)
             let isVisible = paneIndex != nil
             let presentation = TerminalPanePresentation(
+                presentationName: presentationNames[session.id] ?? session.displayName,
                 isVisible: isVisible,
                 isActive: isVisible && selectedWorkspace?.activeSessionID == session.id,
                 workspaceIsSplit: selectedWorkspace?.isSplit == true && isVisible,
@@ -93,6 +100,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
             )
             let root = TerminalPaneHostingRoot(
                 session: session,
+                presentationName: presentation.presentationName,
                 hostStore: hostStore,
                 connectionAuditStore: connectionAuditStore,
                 isVisible: presentation.isVisible,
@@ -101,6 +109,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
                 splitAxis: presentation.splitAxis,
                 paneIndex: presentation.paneIndex,
                 onActivate: { onActivate(session.id) },
+                onOutputActivity: { onOutputActivity(session.id) },
                 onToggleSplit: {
                     if let selectedWorkspaceID { onToggleSplit(selectedWorkspaceID) }
                 },
@@ -138,6 +147,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
 }
 
 private struct TerminalPanePresentation: Equatable {
+    let presentationName: String
     let isVisible: Bool
     let isActive: Bool
     let workspaceIsSplit: Bool
@@ -148,6 +158,7 @@ private struct TerminalPanePresentation: Equatable {
 
 private struct TerminalPaneHostingRoot: View {
     @ObservedObject var session: TerminalSession
+    let presentationName: String
     let hostStore: HostStore
     let connectionAuditStore: ConnectionAuditStore
     let isVisible: Bool
@@ -156,6 +167,7 @@ private struct TerminalPaneHostingRoot: View {
     let splitAxis: TerminalWorkspaceSplitAxis?
     let paneIndex: Int?
     let onActivate: () -> Void
+    let onOutputActivity: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
     let onRetry: () -> Void
@@ -164,12 +176,14 @@ private struct TerminalPaneHostingRoot: View {
     var body: some View {
         TerminalWorkspaceView(
             session: session,
+            presentationName: presentationName,
             isVisible: isVisible,
             isActive: isActive,
             workspaceIsSplit: workspaceIsSplit,
             splitAxis: splitAxis,
             paneIndex: paneIndex,
             onActivate: onActivate,
+            onOutputActivity: onOutputActivity,
             onToggleSplit: onToggleSplit,
             onClose: onClose,
             onRetry: onRetry,

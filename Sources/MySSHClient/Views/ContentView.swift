@@ -220,25 +220,17 @@ struct ContentView: View {
         _ workspace: TerminalWorkspace,
         activeSession session: TerminalSession
     ) -> some View {
-        HStack(spacing: 6) {
+        let presentationName = sessionManager.presentationName(for: session)
+        return HStack(spacing: 6) {
             Button {
                 sessionManager.selectWorkspace(workspace.id)
             } label: {
-                HStack(spacing: 7) {
-                    Circle()
-                        .fill(statusColor(session.state))
-                        .frame(width: 7, height: 7)
-                    if workspace.isSplit {
-                        Image(systemName: "rectangle.split.2x1")
-                            .frame(width: 18, height: 18)
-                        Text("Workspace")
-                            .lineLimit(1)
-                    } else {
-                        TerminalSessionIcon(session: session, size: 18)
-                        Text(session.displayName)
-                            .lineLimit(1)
-                    }
-                }
+                TerminalWorkspaceTabLabel(
+                    session: session,
+                    presentationName: presentationName,
+                    isSplit: workspace.isSplit,
+                    hasUnreadOutput: sessionManager.hasUnreadOutput(in: workspace)
+                )
             }
             .buttonStyle(.plain)
             Button {
@@ -282,7 +274,7 @@ struct ContentView: View {
            sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
            let targetWorkspaceID = sessionManager.preferredMergeTargetID(for: workspaceID) {
             if sessionManager.selectedWorkspaceID != targetWorkspaceID {
-                _ = sessionManager.selectWorkspace(targetWorkspaceID)
+                _ = sessionManager.selectWorkspace(targetWorkspaceID, marksOutputViewed: false)
             }
             nextProposal = .merge(
                 targetWorkspaceID: targetWorkspaceID,
@@ -305,7 +297,7 @@ struct ContentView: View {
               let session = sessionManager.session(id: workspace.activeSessionID) else { return nil }
         return WorkspaceDragPresentation(
             session: session,
-            title: workspace.isSplit ? "Workspace" : session.displayName,
+            title: workspace.isSplit ? "Workspace" : sessionManager.presentationName(for: session),
             isWorkspace: workspace.isSplit,
             location: location,
             previewPosition: nextProposal?.mergePosition,
@@ -321,7 +313,7 @@ struct ContentView: View {
         if workspaceContentFrame.contains(location),
            sessionManager.workspace(id: workspaceID)?.sessionIDs.count == 1,
            let targetWorkspaceID = sessionManager.preferredMergeTargetID(for: workspaceID) {
-            _ = sessionManager.selectWorkspace(targetWorkspaceID)
+            _ = sessionManager.selectWorkspace(targetWorkspaceID, marksOutputViewed: false)
             finalProposal = .merge(
                 targetWorkspaceID: targetWorkspaceID,
                 position: dropPosition(at: location, in: workspaceContentFrame)
@@ -412,7 +404,7 @@ struct ContentView: View {
         }
         return WorkspaceDragPresentation(
             session: session,
-            title: session.displayName,
+            title: sessionManager.presentationName(for: session),
             isWorkspace: false,
             location: location,
             previewPosition: nil,
@@ -553,10 +545,16 @@ struct ContentView: View {
                 ZStack {
                     TerminalWorkspaceSplitContainer(
                         sessions: sessionManager.sessions,
+                        presentationNames: Dictionary(
+                            uniqueKeysWithValues: sessionManager.sessions.map {
+                                ($0.id, sessionManager.presentationName(for: $0))
+                            }
+                        ),
                         selectedWorkspace: sessionManager.selectedWorkspace,
                         hostStore: hostStore,
                         connectionAuditStore: connectionAuditStore,
                         onActivate: { sessionManager.activate(sessionID: $0) },
+                        onOutputActivity: { sessionManager.recordOutputActivity(for: $0) },
                         onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
                         onClose: { sessionManager.close($0) },
                         onRetry: { sessionManager.retry($0) },
@@ -642,15 +640,6 @@ struct ContentView: View {
             : AnyShapeStyle(AppVisualTheme.chromeSubtleSurface)
     }
 
-    private func statusColor(_ state: SessionState) -> Color {
-        switch state {
-        case .connecting: .yellow
-        case .connected: .green
-        case .disconnected: .secondary
-        case .failed: .red
-        }
-    }
-
     private func addHost(defaultGroupID: UUID?) {
         hostEditorRequest = HostEditorRequest(profile: nil, defaultGroupID: defaultGroupID)
     }
@@ -729,6 +718,66 @@ struct ContentView: View {
             return sessionManager.selectSession(at: index)
         }
         return true
+    }
+}
+
+private struct TerminalWorkspaceTabLabel: View {
+    @ObservedObject var session: TerminalSession
+    let presentationName: String
+    let isSplit: Bool
+    let hasUnreadOutput: Bool
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 7, height: 7)
+                .accessibilityLabel(session.state.label)
+            if isSplit {
+                Image(systemName: "rectangle.split.2x1")
+                    .frame(width: 18, height: 18)
+                Text("Workspace")
+                    .lineLimit(1)
+            } else {
+                TerminalSessionIcon(session: session, size: 18)
+                Text(presentationName)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            if hasUnreadOutput {
+                TerminalOutputActivityIndicator()
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        switch TerminalConnectionIndicator(state: session.state) {
+        case .connecting: .yellow
+        case .connected: .green
+        case .disconnected: .secondary
+        case .failed: .red
+        }
+    }
+}
+
+private struct TerminalOutputActivityIndicator: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var scale: CGFloat = 1
+
+    var body: some View {
+        Circle()
+            .fill(AppVisualTheme.accent)
+            .frame(width: 7, height: 7)
+            .scaleEffect(scale)
+            .shadow(color: AppVisualTheme.accent.opacity(0.45), radius: 2)
+            .accessibilityLabel("有新輸出")
+            .onAppear {
+                guard !reduceMotion else { return }
+                scale = 1.45
+                withAnimation(.easeOut(duration: 0.32)) {
+                    scale = 1
+                }
+            }
     }
 }
 
@@ -864,6 +913,7 @@ private struct WorkspaceDragGhost: View {
             }
             Text(title)
                 .lineLimit(1)
+                .truncationMode(.middle)
         }
         .font(.callout.weight(.medium))
         .padding(.horizontal, 13)
@@ -1244,12 +1294,14 @@ struct TerminalWorkspaceView: View {
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject var session: TerminalSession
+    let presentationName: String
     let isVisible: Bool
     let isActive: Bool
     let workspaceIsSplit: Bool
     let splitAxis: TerminalWorkspaceSplitAxis?
     let paneIndex: Int?
     let onActivate: () -> Void
+    let onOutputActivity: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
     let onRetry: () -> Void
@@ -1264,11 +1316,19 @@ struct TerminalWorkspaceView: View {
                 HStack(spacing: 10) {
                     HStack(spacing: 7) {
                         TerminalSessionIcon(session: session, size: 18)
-                        Text(session.detailDescription)
+                        Text(presentationName)
                             .lineLimit(1)
+                            .truncationMode(.middle)
+                            .layoutPriority(1)
+                        if session.kind != .local {
+                            Text("· \(session.detailDescription)")
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .help("\(presentationName) — \(session.detailDescription)")
                     Spacer()
                     HStack(spacing: 6) {
                         Circle().fill(sessionStatusColor).frame(width: 7, height: 7)
@@ -1333,6 +1393,7 @@ struct TerminalWorkspaceView: View {
                         onCloseAfterUserEOF: onClose,
                         onPlatformDetected: recordPlatform,
                         onActivate: onActivate,
+                        onOutputActivity: onOutputActivity,
                         onRetry: onRetry
                     )
                     .padding(.horizontal, TerminalCanvasAppearance.horizontalContentInset)
