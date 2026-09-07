@@ -26,6 +26,12 @@ Google 登入也必須按建置通道隔離。Dev／Update Lab 不得查詢或�
 - Xcode 26 或相容的 Command Line Tools
 - 專案鎖定的 Swift Package 相依套件
 
+### 終端元件來源
+
+SwiftTerm library runtime 隨原始碼保存於 `Vendor/SwiftTerm`，供標籤分色與黑白文字對比的最小 macOS 顯示擴充使用；它不是建置快取。一般建置不需下載 fork 或手動修改 `.build/checkouts`。上游 revision、MIT 授權、兩個 renderer 檔案的局部差異與更新程序見 [SwiftTerm 來源說明](Vendor/SwiftTerm/UPSTREAM.md)。`Package.resolved` 只鎖定其餘遠端依賴。
+
+升級終端元件前，取得該說明指定 revision 的 upstream Git checkout，再執行 `bash scripts/verify-swiftterm-vendor.sh /path/to/upstream-checkout`；它會比對完整 runtime 清單、未修改檔案及授權，列出兩個 renderer 差異供審查。更新後需執行完整測試、全新 scratch build、Dev 互動與封裝資源驗收。App 會附上 `SwiftTerm-LICENSE.txt`。
+
 Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是一般本機建置的必要原始碼，也不得提交至 Git。
 
 ## 雲端功能建置模式

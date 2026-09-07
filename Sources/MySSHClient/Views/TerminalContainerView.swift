@@ -8,17 +8,14 @@ enum TerminalCanvasAppearance {
     static let verticalContentInset: CGFloat = 4
 
     static func backgroundColor(for colorScheme: ColorScheme) -> NSColor {
-        if colorScheme == .dark {
-            NSColor(srgbRed: 0.045, green: 0.070, blue: 0.115, alpha: 1)
-        } else {
-            NSColor(srgbRed: 0.955, green: 0.972, blue: 0.985, alpha: 1)
-        }
+        (colorScheme == .dark ? TerminalOutputTheme.dark : .light).background
     }
 }
 
 struct TerminalContainerView: NSViewRepresentable {
     @ObservedObject var session: TerminalSession
     @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(TerminalMessageHighlight.storageKey) private var messageHighlightEnabled = true
     let isVisible: Bool
     let isActive: Bool
     let onCloseAfterUserEOF: () -> Void
@@ -49,6 +46,8 @@ struct TerminalContainerView: NSViewRepresentable {
         terminal.hideScrollIndicator()
         applyTheme(to: terminal)
         context.coordinator.lastAppliedColorScheme = colorScheme
+        TerminalMessageHighlight.apply(to: terminal, enabled: messageHighlightEnabled, isDark: colorScheme == .dark)
+        context.coordinator.lastMessageHighlightEnabled = messageHighlightEnabled
         context.coordinator.installControlDMonitor(for: terminal)
         context.coordinator.installActivationMonitor(for: terminal)
         context.coordinator.installTextCursorMonitor(for: terminal)
@@ -141,7 +140,12 @@ struct TerminalContainerView: NSViewRepresentable {
         }
         if context.coordinator.lastAppliedColorScheme != colorScheme {
             applyTheme(to: nsView)
+            TerminalMessageHighlight.apply(to: nsView, enabled: messageHighlightEnabled, isDark: colorScheme == .dark)
             context.coordinator.lastAppliedColorScheme = colorScheme
+        }
+        if context.coordinator.lastMessageHighlightEnabled != messageHighlightEnabled {
+            TerminalMessageHighlight.apply(to: nsView, enabled: messageHighlightEnabled, isDark: colorScheme == .dark)
+            context.coordinator.lastMessageHighlightEnabled = messageHighlightEnabled
         }
     }
 
@@ -150,19 +154,7 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     private func applyTheme(to terminal: LocalProcessTerminalView) {
-        if colorScheme == .dark {
-            terminal.nativeForegroundColor = NSColor(srgbRed: 0.88, green: 0.92, blue: 0.97, alpha: 1)
-            terminal.caretColor = NSColor(srgbRed: 0.35, green: 0.78, blue: 1.0, alpha: 1)
-            terminal.selectedTextBackgroundColor = NSColor(srgbRed: 0.16, green: 0.33, blue: 0.52, alpha: 1)
-            terminal.selectedTextForegroundColor = .white
-        } else {
-            terminal.nativeForegroundColor = NSColor(srgbRed: 0.13, green: 0.18, blue: 0.28, alpha: 1)
-            terminal.caretColor = NSColor(srgbRed: 0.15, green: 0.47, blue: 0.93, alpha: 1)
-            terminal.selectedTextBackgroundColor = NSColor(srgbRed: 0.72, green: 0.84, blue: 1.0, alpha: 1)
-            terminal.selectedTextForegroundColor = NSColor(srgbRed: 0.07, green: 0.15, blue: 0.25, alpha: 1)
-        }
-        terminal.nativeBackgroundColor = TerminalCanvasAppearance.backgroundColor(for: colorScheme)
-        terminal.layer?.backgroundColor = terminal.nativeBackgroundColor.cgColor
+        (colorScheme == .dark ? TerminalOutputTheme.dark : .light).apply(to: terminal)
     }
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
@@ -177,6 +169,7 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     final class Coordinator: NSObject, LocalProcessTerminalViewDelegate {
+        var lastMessageHighlightEnabled: Bool?
         let session: TerminalSession
         let onCloseAfterUserEOF: () -> Void
         var onActivate: () -> Void

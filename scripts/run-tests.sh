@@ -91,3 +91,23 @@ swiftc \
     "$terminal_build_dir"/SwiftTerm.build/*.o \
     -o "$test_dir/TerminalFontZoomTests"
 "$test_dir/TerminalFontZoomTests"
+
+swiftc \
+    -I "$terminal_build_dir/Modules" \
+    Sources/MySSHClient/Views/TerminalFontZoom.swift \
+    Sources/MySSHClient/Views/TerminalOutputTheme.swift \
+    Sources/MySSHClient/Views/TerminalMessageHighlight.swift \
+    SelfTests/TerminalOutputThemeTests.swift \
+    "$terminal_build_dir"/SwiftTerm.build/*.o \
+    -o "$test_dir/TerminalOutputThemeTests"
+"$test_dir/TerminalOutputThemeTests"
+
+swiftc \
+    -I "$terminal_build_dir/Modules" \
+    Sources/MySSHClient/Views/TerminalFontZoom.swift \
+    Sources/MySSHClient/Views/TerminalOutputTheme.swift \
+    Sources/MySSHClient/Views/TerminalMessageHighlight.swift \
+    SelfTests/TerminalMessageHighlightTests.swift \
+    "$terminal_build_dir"/SwiftTerm.build/*.o \
+    -o "$test_dir/TerminalMessageHighlightTests"
+"$test_dir/TerminalMessageHighlightTests"

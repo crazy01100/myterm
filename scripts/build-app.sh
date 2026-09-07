@@ -368,6 +368,7 @@ if (( update_lab == 0 )) && [[ -f "$cloud_config" ]]; then
     chmod 0644 "$runtime_cloud_config"
 fi
 dependency_resource_bundles=(SwiftTerm_SwiftTerm.bundle)
+cp "$project_dir/Vendor/SwiftTerm/LICENSE" "$app_dir/Contents/Resources/SwiftTerm-LICENSE.txt"
 for resource_bundle_name in "${dependency_resource_bundles[@]}"; do
     resource_bundle="$release_dir/$resource_bundle_name"
     [[ -d "$resource_bundle" ]] || {

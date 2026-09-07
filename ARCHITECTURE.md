@@ -40,6 +40,9 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 - `Sources/MySSHClient/Views`：主機庫、平台徽章、編輯器、終端機、Serial、SFTP、連線稽核 Logs 與設定畫面。
 - `Sources/MySSHClient/Views/AppVisualTheme.swift`：主視窗 chrome、側欄、內容底、卡片、選取、滑過與邊界的集中式語意色彩來源；每個角色都有成對的淺色／深色值，需要跨 SwiftUI／AppKit 邊界時由同一來源提供 `Color` 與 `NSColor`，避免不同畫面各自硬編碼而漂移。
+- `Sources/MySSHClient/Views/TerminalOutputTheme.swift`：終端專用背景、一般文字、caret、selection 與明暗 16 色 ANSI 預設色盤。`TerminalContainerView` 只在建立畫面或外觀改變時安裝色盤並清除 SwiftTerm 顏色快取，不重建 Session／PTY 或改寫輸出。既有 ANSI 索引文字同步換色，保留粗體及黑／白端點語意；明確選用 `.xterm` 策略，將擴展索引 16～255 固定為標準色塊／灰階，不使用 SwiftTerm 預設的 `base16Lab` 隨主題衍生擴展色；true-color RGB 保留原值。OSC 可暫時覆寫色盤，OSC 104／soft reset 還原已安裝主題；下次外觀切換重新套用該模式的預設色盤。任意應用自訂前景／背景配對不保證符合預設背景上的對比目標。
+- `TerminalMessageHighlight.swift` 提供兩項顯示政策：`TerminalNeutralContrast` 在 attributes 快取前對低於 4.5:1 的 neutral ANSI 前景（0／7／8／15）依實際背景補償；`TerminalMessageHighlight` 在既有 renderer 建立行內容時只查看前 48 個 cell，回傳一個行首標籤範圍及明暗專用字色。標籤分色可覆蓋該標籤原本 ANSI／RGB 字色，後方內容不變；selection 優先。wrapped continuation、alternate buffer、明確底色、conceal／inverse／dim 標籤不匹配；黑白補償也排除 conceal／inverse／dim，RGB 與擴展色不補償。不儲存輸出、不改 parser／buffer／PTY，沒有額外 stream buffer 或全 scrollback 掃描。開關以通道各自的 UserDefaults 保存，既有分頁同步更新。
+- `Vendor/SwiftTerm` 保存固定 upstream revision 的 library runtime、MIT 授權與 library-only manifest；macOS renderer 只有兩個預設 nil 的可選 hook：前景配對轉換與行範圍高亮。MyTerm 的套用入口會使現有顏色／行繪製快取失效；沒有更換繪圖後端或修改輸入／選取幾何。上游來源、局部差異及升級核對流程見 `Vendor/SwiftTerm/UPSTREAM.md`。
 - `Sources/MySSHClient/MySSHClientApp.swift`：App 進入點、設定視窗、選單與整體生命週期。
 - App 外觀以深海軍藍框架、霧藍內容層與抬升卡片建立一致層級，沿用既有「自動、淺色、深色」偏好，不新增每台主機的獨立主題。Terminal canvas／ANSI、平台 Logo，以及成功、警告、錯誤與取消狀態保留各自的專用色彩與文字／圖示語意，不由通用色票覆蓋。
 - SwiftUI 負責狀態、macOS 原生 toolbar 中的單一工作區列與主要 App 外殼；隱藏原生文字標題及 toolbar 的共享膠囊背景，但保留系統視窗拖動、縮放與全螢幕行為。工作區分頁與內容畫布分屬 toolbar／content view hierarchy，因此以輕量 AppKit frame reader 將兩者矩形及滑鼠事件統一成視窗左上座標；同一套座標供分頁重排、四向合併預覽及窗格拖回拆分使用，不依賴固定 toolbar 高度。Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。

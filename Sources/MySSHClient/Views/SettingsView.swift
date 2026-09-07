@@ -96,6 +96,7 @@ struct SettingsView: View {
     @State private var syncActionNotice: String?
     @State private var showingUnifiedSyncSetup = false
     @State private var showingSyncDiagnostics = false
+    @AppStorage(TerminalMessageHighlight.storageKey) private var messageHighlightEnabled = true
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -1040,6 +1041,12 @@ struct SettingsView: View {
                 .pickerStyle(.menu)
 
                 Text("主題會套用到主機庫、設定與所有本機／SSH 終端機分頁。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("終端訊息") {
+                Toggle("訊息等級標籤分色", isOn: $messageHighlightEnabled)
+                Text("依行首的 [資訊]、[警告]、[合格]、[成功] 等標籤分色，只改標籤、不改複製文字。全螢幕終端程式及自訂底色不套用；關閉後保留原本 ANSI 配色。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

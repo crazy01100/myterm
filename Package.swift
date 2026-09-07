@@ -10,10 +10,7 @@ let package = Package(
     ],
     traits: [],
     dependencies: [
-        .package(
-            url: "https://github.com/migueldeicaza/SwiftTerm.git",
-            revision: "3219b171cacbe011635f1c1b6c47b0725ff56d3a"
-        ),
+        .package(path: "Vendor/SwiftTerm"),
         .package(
             url: "https://github.com/jedisct1/swift-sodium.git",
             exact: "0.11.0"
