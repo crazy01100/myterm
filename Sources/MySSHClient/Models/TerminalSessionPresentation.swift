@@ -1,5 +1,24 @@
 import Foundation
 
+enum TerminalFontZoomAction {
+    case increase, decrease, reset
+}
+
+enum TerminalFontSizePolicy {
+    static let defaultSize = 14
+    static let minimumSize = 10
+    static let maximumSize = 32
+
+    static func size(after action: TerminalFontZoomAction, current: Int) -> Int {
+        let bounded = min(maximumSize, max(minimumSize, current))
+        switch action {
+        case .increase: return min(maximumSize, bounded + 1)
+        case .decrease: return max(minimumSize, bounded - 1)
+        case .reset: return defaultSize
+        }
+    }
+}
+
 enum TerminalConnectionIndicator: Equatable {
     case connecting
     case connected

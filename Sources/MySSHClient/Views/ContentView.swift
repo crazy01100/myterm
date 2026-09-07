@@ -691,6 +691,10 @@ struct ContentView: View {
         case .selectAllTerminal:
             guard let session = sessionManager.selectedSession else { return false }
             session.selectAllTerminalContent()
+        case .increaseTerminalFont, .decreaseTerminalFont, .resetTerminalFont:
+            guard let session = sessionManager.selectedSession,
+                  let zoomAction = action.fontZoomAction else { return false }
+            return session.zoomTerminalFont(zoomAction)
         case .openHosts:
             libraryWorkspace = .hosts
             hostLibrarySelection = .all
@@ -1105,10 +1109,13 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
             removeMonitor()
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self, event.window === self.hostView?.window else { return event }
+                guard event.window?.attachedSheet == nil, NSApp.modalWindow == nil else { return event }
                 if let action = self.shortcutStore.action(matching: event) {
                     return self.perform(action) ? nil : event
                 }
                 if self.shortcutStore.isManagedDefault(event), self.shouldSuppressManagedDefaults() {
+                    if self.shortcutStore.isFontZoomDefault(event),
+                       !(event.window?.firstResponder is LoginAwareTerminalView) { return event }
                     return nil
                 }
                 return event

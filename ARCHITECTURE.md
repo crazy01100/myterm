@@ -52,6 +52,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
 - `AppShortcutStore` 保存只在 MyTerm 內生效的快捷鍵設定。
+- 字體縮放快捷鍵整合於相同 store；預設放大的 equals／plus 及數字鍵盤別名使用同一事件匹配與衝突規則，停用或自訂後釋放預設別名。新增縮放動作透過一次性遷移補入未占用的預設組合，保留既有自訂與停用；單項恢復預設也會檢查衝突。
 - `TerminalWorkspaceCollection` 保存執行期間的視覺分頁順序、作用中窗格、分割方向與比例；每個工作區的不變條件限制為一或兩個 Terminal session，並負責把雙窗格中的任一 session 拆回獨立分頁及收斂原工作區。
 - `TerminalSessionPresentation` 保存不依賴 SwiftUI 或 SwiftTerm 的執行期顯示規則：把 Session 狀態映射為分頁連線燈、依基礎名稱配置不受排序／合併影響的同名 Session 編號，並以 Session UUID 集合聚合背景 Workspace 的未讀輸出。編號與未讀狀態只存在程序記憶體，不改寫主機名稱、Logs、同步或匯出資料。
 - `ConnectionAuditStore` 以獨立 versioned 文件保存互動式 SSH 的主機快照、帳號端點、來源裝置快照、開始／驗證／結束時間與結構化結果。連線開始時已知的平台直接進入快照；若尚未知，該 Terminal Session 後續辨識出的第一個平台可補寫同一筆紀錄，之後不再覆寫，也不會由目前 `HostStore` 動態回填其他歷史紀錄。保存工作在背景序列佇列執行，最多保留 30 天與 5,000 筆；損壞檔案會先隔離備份，App 仍可從空紀錄啟動。這份資料不併入 `HostStore` 或主機匯出。
@@ -66,6 +67,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - `TerminalContainerView`／`LoginAwareTerminalView` 保留 SwiftTerm 的原生 terminal buffer 與 TUI mouse reporting：遠端滑鼠模式關閉時，一般及持續輸出不會清除使用者已建立的本機 selection；Vim、tmux 等程式啟用 mouse reporting 後，普通點擊、拖曳與滾輪仍完整送往遠端，Shift＋拖曳沿用 SwiftTerm 的本機選取。終端內容區使用 I-beam，滾動期間暫時隱藏系統指標以避免箭頭／I-beam 交替；文字 caret 以 steady 形狀顯示，遠端同一批 hide/show 只套用最後可見狀態。預設 Vim 未啟用 mouse reporting 時的 alternate-buffer 滾輪 fallback 以 display link 逐幀傳送方向步驟並合併中間回應；實體鍵盤、一般 shell scrollback 與已啟用的遠端滑鼠回報不經此路徑。
 - 系統預設模式沿用 OpenSSH 的現代演算法政策；RSA 相容與自訂選項只套用至指定主機。
 - 本機 Terminal 執行 `/bin/zsh` login shell，起始目錄為目前使用者家目錄。
+- `TerminalSession.terminalFontSize` 只在該 Session 執行期間保存 10～32 點的字體大小，預設 14 點；縮放入口確認該 terminal 確實擁有鍵盤焦點且沒有 modal／sheet，再交由 `TerminalFontSizePolicy` 計算。`TerminalContainerView` 只在大小改變時透過 `TerminalFontZoom.swift` 更新字體：同步暫用零尺寸以略過 SwiftTerm font setter 附帶的 soft reset，再恢復原 frame，沿一般視窗 resize 路徑通知 PTY 行列數，保留 process、游標模式與 scrollback。字體更新會清除當下 selection，後續選取依新字體座標建立；大小不寫入主機、Logs、同步或匯出，也不跨 App 重啟保存。
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
 - SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機 FileManager attributes 與遠端 SFTP v3 attributes 已取得的 POSIX permissions 會交由共用 `SFTPPermissionMode` 格式化成 symbolic／八進位權限，列表不會為每個項目增加額外 `stat` 或 SFTP request。視覺化權限矩陣與八進位輸入使用同一狀態，最後仍透過既有本機／遠端 chmod 流程套用，成功後重新載入實際 attributes，未知權限不套用預設值。本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。

@@ -23,6 +23,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     private(set) var connectionLogURL: URL?
     @Published var state: SessionState = .connecting
     @Published var terminalTitle: String
+    @Published private(set) var terminalFontSize = TerminalFontSizePolicy.defaultSize
     @Published var notice: String?
     @Published private(set) var connectionPhase: SSHConnectionPhase = .preparing
     @Published private(set) var connectionEvents: [SSHConnectionDiagnosticEvent] = [
@@ -352,6 +353,17 @@ final class TerminalSession: ObservableObject, Identifiable {
     func copyTerminalSelection() {
         guard let terminalView else { return }
         terminalView.copy(self)
+    }
+
+    @discardableResult
+    func zoomTerminalFont(_ action: TerminalFontZoomAction) -> Bool {
+        guard let terminalView, let window = terminalView.window,
+              window === NSApp.keyWindow,
+              window.attachedSheet == nil, NSApp.modalWindow == nil,
+              window.firstResponder === terminalView else { return false }
+        let updated = TerminalFontSizePolicy.size(after: action, current: terminalFontSize)
+        if terminalFontSize != updated { terminalFontSize = updated }
+        return true
     }
 
     func pasteClipboardToTerminal() {

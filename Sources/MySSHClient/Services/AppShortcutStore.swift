@@ -7,6 +7,9 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
     case pasteTerminal
     case pasteSavedPassword
     case selectAllTerminal
+    case increaseTerminalFont
+    case decreaseTerminalFont
+    case resetTerminalFont
     case openHosts
     case openLocalTerminal
     case openSerial
@@ -34,6 +37,9 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .pasteTerminal: "貼上至終端機"
         case .pasteSavedPassword: "填入已儲存的密碼"
         case .selectAllTerminal: "全選終端機內容"
+        case .increaseTerminalFont: "放大終端字體"
+        case .decreaseTerminalFont: "縮小終端字體"
+        case .resetTerminalFont: "還原終端字體"
         case .openHosts: "開啟主機首頁"
         case .openLocalTerminal: "開啟本地 Terminal"
         case .openSerial: "開啟 Serial 連線"
@@ -57,7 +63,8 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
 
     var category: AppShortcutCategory {
         switch self {
-        case .copyTerminal, .pasteTerminal, .pasteSavedPassword, .selectAllTerminal, .findTerminal:
+        case .copyTerminal, .pasteTerminal, .pasteSavedPassword, .selectAllTerminal, .findTerminal,
+             .increaseTerminalFont, .decreaseTerminalFont, .resetTerminalFont:
             .terminal
         case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession:
             .session
@@ -88,6 +95,9 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .pasteTerminal: .command(keyCode: 9, key: "V")
         case .pasteSavedPassword: .command(keyCode: 35, key: "P")
         case .selectAllTerminal: .command(keyCode: 0, key: "A")
+        case .increaseTerminalFont: .command(keyCode: 24, key: "+")
+        case .decreaseTerminalFont: .command(keyCode: 27, key: "−")
+        case .resetTerminalFont: .command(keyCode: 29, key: "0")
         case .openHosts: nil
         case .openLocalTerminal: .command(keyCode: 37, key: "L")
         case .openSerial: .commandOption(keyCode: 1, key: "S")
@@ -106,6 +116,33 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .tab9: .command(keyCode: 25, key: "9")
         case .findTerminal: .command(keyCode: 3, key: "F")
         case .disconnectSession: nil
+        }
+    }
+
+    var fontZoomAction: TerminalFontZoomAction? {
+        switch self {
+        case .increaseTerminalFont: .increase
+        case .decreaseTerminalFont: .decrease
+        case .resetTerminalFont: .reset
+        default: nil
+        }
+    }
+
+    // Only the default assignment owns aliases. Disabling or customizing the
+    // action releases those combinations for other actions as well.
+    func effectiveShortcuts(for assignment: AppShortcutDefinition) -> [AppShortcutDefinition] {
+        guard let defaultShortcut, assignment.hasSameCombination(as: defaultShortcut) else {
+            return [assignment]
+        }
+        switch self {
+        case .increaseTerminalFont:
+            return [assignment, .commandShift(keyCode: 24, key: "+"), .command(keyCode: 69, key: "+")]
+        case .decreaseTerminalFont:
+            return [assignment, .command(keyCode: 78, key: "−")]
+        case .resetTerminalFont:
+            return [assignment, .command(keyCode: 82, key: "0")]
+        default:
+            return [assignment]
         }
     }
 }
@@ -191,6 +228,10 @@ struct AppShortcutDefinition: Codable, Hashable {
         keyCode == event.keyCode && modifiers == .from(event.modifierFlags)
     }
 
+    func hasSameCombination(as other: Self) -> Bool {
+        keyCode == other.keyCode && modifiers == other.modifiers
+    }
+
     private static func displayKey(for event: NSEvent) -> String? {
         switch event.keyCode {
         case 36: return "↩"
@@ -228,6 +269,7 @@ enum AppShortcutAssignmentError: LocalizedError, Equatable {
 
 final class AppShortcutStore: ObservableObject {
     static let storageKey = "customKeyboardShortcuts.v1"
+    static let fontZoomMigrationKey = "customKeyboardShortcuts.fontZoomDefaults.v1"
 
     @Published private(set) var assignments: [AppShortcutAction: AppShortcutDefinition]
     private let defaults: UserDefaults
@@ -237,6 +279,14 @@ final class AppShortcutStore: ObservableObject {
         if let data = defaults.data(forKey: Self.storageKey),
            let decoded = try? JSONDecoder().decode([AppShortcutAction: AppShortcutDefinition].self, from: data) {
             assignments = decoded
+            if !defaults.bool(forKey: Self.fontZoomMigrationKey) {
+                for action in AppShortcutAction.allCases where action.fontZoomAction != nil {
+                    guard assignments[action] == nil, let shortcut = action.defaultShortcut,
+                          conflictingAction(for: shortcut, action: action) == nil else { continue }
+                    assignments[action] = shortcut
+                }
+                persist()
+            }
         } else {
             assignments = Self.defaultAssignments
         }
@@ -247,11 +297,22 @@ final class AppShortcutStore: ObservableObject {
     }
 
     func action(matching event: NSEvent) -> AppShortcutAction? {
-        assignments.first { $0.value.matches(event) }?.key
+        AppShortcutAction.allCases.first { action in
+            guard let assignment = assignments[action] else { return false }
+            return action.effectiveShortcuts(for: assignment).contains { $0.matches(event) }
+        }
     }
 
     func isManagedDefault(_ event: NSEvent) -> Bool {
-        Self.defaultAssignments.values.contains { $0.matches(event) }
+        Self.defaultAssignments.contains { action, shortcut in
+            action.effectiveShortcuts(for: shortcut).contains { $0.matches(event) }
+        }
+    }
+
+    func isFontZoomDefault(_ event: NSEvent) -> Bool {
+        Self.defaultAssignments.contains { action, shortcut in
+            action.fontZoomAction != nil && action.effectiveShortcuts(for: shortcut).contains { $0.matches(event) }
+        }
     }
 
     func assign(_ shortcut: AppShortcutDefinition?, to action: AppShortcutAction) throws {
@@ -259,7 +320,7 @@ final class AppShortcutStore: ObservableObject {
             if let reservedName = Self.reservedShortcutName(shortcut) {
                 throw AppShortcutAssignmentError.reserved(reservedName)
             }
-            if let conflict = assignments.first(where: { $0.key != action && $0.value == shortcut })?.key {
+            if let conflict = conflictingAction(for: shortcut, action: action) {
                 throw AppShortcutAssignmentError.conflict(conflict)
             }
             assignments[action] = shortcut
@@ -269,13 +330,8 @@ final class AppShortcutStore: ObservableObject {
         persist()
     }
 
-    func reset(_ action: AppShortcutAction) {
-        if let shortcut = action.defaultShortcut {
-            assignments[action] = shortcut
-        } else {
-            assignments.removeValue(forKey: action)
-        }
-        persist()
+    func reset(_ action: AppShortcutAction) throws {
+        try assign(action.defaultShortcut, to: action)
     }
 
     func resetAll() {
@@ -286,6 +342,17 @@ final class AppShortcutStore: ObservableObject {
     private func persist() {
         guard let data = try? JSONEncoder().encode(assignments) else { return }
         defaults.set(data, forKey: Self.storageKey)
+        defaults.set(true, forKey: Self.fontZoomMigrationKey)
+    }
+
+    private func conflictingAction(for shortcut: AppShortcutDefinition, action: AppShortcutAction) -> AppShortcutAction? {
+        let requested = action.effectiveShortcuts(for: shortcut)
+        return AppShortcutAction.allCases.first { existing in
+            guard existing != action, let assigned = assignments[existing] else { return false }
+            return existing.effectiveShortcuts(for: assigned).contains { combination in
+                requested.contains { $0.hasSameCombination(as: combination) }
+            }
+        }
     }
 
     private static let defaultAssignments: [AppShortcutAction: AppShortcutDefinition] = {

@@ -1057,9 +1057,15 @@ struct SettingsView: View {
             }
 
             ForEach(AppShortcutCategory.allCases) { category in
-                Section(category.title) {
+                Section {
                     ForEach(AppShortcutAction.allCases.filter { $0.category == category }) { action in
                         shortcutRow(action)
+                    }
+                } header: {
+                    Text(category.title)
+                } footer: {
+                    if category == .terminal {
+                        Text("字體縮放只調整目前操作的終端窗格（10～32 點），還原為 14 點。預設放大也接受 ⌘＝；數字鍵盤的 ⌘＋、⌘－、⌘0 亦可使用。重新設定或停用動作後，原預設別名不再生效。")
                     }
                 }
             }
@@ -1094,7 +1100,10 @@ struct SettingsView: View {
                 Button("重新設定…") { shortcutEditorAction = action }
                 Button("停用") { try? shortcutStore.assign(nil, to: action) }
                 Divider()
-                Button("恢復預設") { shortcutStore.reset(action) }
+                Button("恢復預設") {
+                    do { try shortcutStore.reset(action) }
+                    catch { errorMessage = error.localizedDescription }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }

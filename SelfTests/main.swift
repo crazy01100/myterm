@@ -1653,6 +1653,110 @@ do {
     check(false, "shortcut settings round trip: \(error)")
 }
 
+do {
+    let suiteName = "MyTerm.FontZoomShortcutTests.\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+    let store = AppShortcutStore(defaults: defaults)
+
+    func keyEvent(_ code: UInt16, _ flags: NSEvent.ModifierFlags = [.command]) -> NSEvent {
+        NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags,
+                        timestamp: 0, windowNumber: 0, context: nil,
+                        characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code)!
+    }
+
+    check(store.action(matching: keyEvent(24)) == .increaseTerminalFont &&
+          store.action(matching: keyEvent(24, [.command, .shift])) == .increaseTerminalFont &&
+          store.action(matching: keyEvent(69, [.command, .numericPad])) == .increaseTerminalFont,
+          "font zoom recognizes equals, shifted plus and keypad plus")
+    check(store.action(matching: keyEvent(27)) == .decreaseTerminalFont &&
+          store.action(matching: keyEvent(78, [.command, .numericPad])) == .decreaseTerminalFont &&
+          store.action(matching: keyEvent(29)) == .resetTerminalFont &&
+          store.action(matching: keyEvent(82, [.command, .numericPad])) == .resetTerminalFont,
+          "font zoom recognizes main and keypad minus and reset")
+    check(store.action(matching: keyEvent(24, [])) == nil &&
+          store.action(matching: keyEvent(27, [])) == nil &&
+          store.action(matching: keyEvent(29, [])) == nil &&
+          store.action(matching: keyEvent(24, [.command, .option])) == nil,
+          "font zoom leaves unmodified characters and unrelated modifiers alone")
+    check(store.action(matching: keyEvent(18)) == .tab1 &&
+          store.action(matching: keyEvent(25)) == .tab9,
+          "font reset does not replace numbered tab shortcuts")
+
+    for shortcut in [AppShortcutDefinition.command(keyCode: 24, key: "="),
+                     .commandShift(keyCode: 24, key: "+"), .command(keyCode: 69, key: "+")] {
+        do {
+            try store.assign(shortcut, to: .openHosts)
+            check(false, "font zoom aliases reject assignment to another action")
+        } catch AppShortcutAssignmentError.conflict(.increaseTerminalFont) {
+            check(true, "font zoom aliases reject assignment to another action")
+        }
+    }
+    try store.assign(.commandOption(keyCode: 40, key: "K"), to: .increaseTerminalFont)
+    check(store.action(matching: keyEvent(24)) == nil &&
+          store.action(matching: keyEvent(24, [.command, .shift])) == nil &&
+          store.action(matching: keyEvent(69)) == nil &&
+          store.action(matching: keyEvent(40, [.command, .option])) == .increaseTerminalFont,
+          "customizing font zoom releases every default alias")
+    try store.assign(.commandShift(keyCode: 24, key: "+"), to: .openHosts)
+    do {
+        try store.reset(.increaseTerminalFont)
+        check(false, "reset checks alias conflicts without replacing either assignment")
+    } catch AppShortcutAssignmentError.conflict(.openHosts) {
+        check(store.action(matching: keyEvent(40, [.command, .option])) == .increaseTerminalFont &&
+              store.action(matching: keyEvent(24, [.command, .shift])) == .openHosts,
+              "reset checks alias conflicts without replacing either assignment")
+    }
+    try store.assign(nil, to: .openHosts)
+    try store.reset(.increaseTerminalFont)
+    check(store.action(matching: keyEvent(69)) == .increaseTerminalFont,
+          "reset reinstates font zoom aliases after conflicts are removed")
+    try store.assign(nil, to: .increaseTerminalFont)
+    check(AppShortcutStore(defaults: defaults).action(matching: keyEvent(24)) == nil &&
+          AppShortcutStore(defaults: defaults).action(matching: keyEvent(69)) == nil,
+          "disabled zoom and aliases remain disabled across reload")
+    store.resetAll()
+    check(store.action(matching: keyEvent(24)) == .increaseTerminalFont &&
+          store.action(matching: keyEvent(27)) == .decreaseTerminalFont,
+          "reset all restores default font shortcuts")
+
+    // Simulate the v1.0.18 preference dictionary: absent old actions were
+    // deliberately disabled. A custom action already owns the plus alias.
+    let legacy: [AppShortcutAction: AppShortcutDefinition] = [
+        .openHosts: .commandShift(keyCode: 24, key: "+"),
+        .pasteSavedPassword: .commandOption(keyCode: 40, key: "K")
+    ]
+    defaults.set(try JSONEncoder().encode(legacy), forKey: AppShortcutStore.storageKey)
+    defaults.removeObject(forKey: AppShortcutStore.fontZoomMigrationKey)
+    let migrated = AppShortcutStore(defaults: defaults)
+    check(migrated.shortcut(for: .increaseTerminalFont) == nil &&
+          migrated.shortcut(for: .openHosts) == legacy[.openHosts] &&
+          migrated.shortcut(for: .pasteSavedPassword) == legacy[.pasteSavedPassword] &&
+          migrated.shortcut(for: .copyTerminal) == nil,
+          "zoom migration preserves custom aliases and previously disabled actions")
+    check(migrated.shortcut(for: .decreaseTerminalFont) != nil &&
+          migrated.shortcut(for: .resetTerminalFont) != nil,
+          "zoom migration adds unoccupied new defaults")
+    try migrated.assign(nil, to: .openHosts)
+    try migrated.assign(nil, to: .decreaseTerminalFont)
+    let migratedReload = AppShortcutStore(defaults: defaults)
+    check(migratedReload.shortcut(for: .increaseTerminalFont) == nil &&
+          migratedReload.shortcut(for: .decreaseTerminalFont) == nil,
+          "zoom migration runs once and never re-enables disabled or skipped actions")
+} catch {
+    check(false, "font zoom shortcut integration: \(error)")
+}
+
+check(TerminalFontSizePolicy.size(after: .increase, current: 14) == 15 &&
+      TerminalFontSizePolicy.size(after: .decrease, current: 14) == 13,
+      "font zoom changes size by one point")
+check(TerminalFontSizePolicy.size(after: .increase, current: 32) == 32 &&
+      TerminalFontSizePolicy.size(after: .decrease, current: 10) == 10,
+      "font zoom stops at readable minimum and maximum sizes")
+check(TerminalFontSizePolicy.size(after: .reset, current: 32) == 14 &&
+      TerminalFontSizePolicy.size(after: .reset, current: 10) == 14,
+      "font zoom reset uses MyTerm's fourteen-point default")
+
 let knownHostsFixture = """
 # ignored comment
 example.test ssh-ed25519 AQID imported

@@ -43,7 +43,7 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         terminal.processDelegate = context.coordinator
-        terminal.font = NSFont(name: "SFMono-Regular", size: 14) ?? NSFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+        applyFont(to: terminal)
         terminal.fontSmoothing = true
         terminal.scrollerStyle = .overlay
         terminal.hideScrollIndicator()
@@ -136,10 +136,17 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.isActive = isActive
         context.coordinator.onActivate = onActivate
         context.coordinator.onOutputActivity = onOutputActivity
+        if nsView.font.pointSize != CGFloat(session.terminalFontSize) {
+            applyFont(to: nsView)
+        }
         if context.coordinator.lastAppliedColorScheme != colorScheme {
             applyTheme(to: nsView)
             context.coordinator.lastAppliedColorScheme = colorScheme
         }
+    }
+
+    private func applyFont(to terminal: LocalProcessTerminalView) {
+        terminal.applyTerminalFontSize(session.terminalFontSize)
     }
 
     private func applyTheme(to terminal: LocalProcessTerminalView) {
