@@ -46,6 +46,12 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ## 日常開發流程
 
+Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.21-dev.2`；不要以通用 `0.0.0-dev.*` 代替功能測試交付版本。`CFBundleVersion` 仍使用每次建置獨立且遞增的時間戳，版本名稱不取代 Build 或通道隔離。
+
+同步可靠性回歸可獨立執行 `zsh scripts/run-sync-reliability-tests.sh`，完整 `scripts/run-tests.sh` 亦包含它。測試使用臨時目錄、獨立 UserDefaults、人工後端結果及縮短的排程時間，驗證真實協調層的單一週期、帳號世代與 JSON 保存失敗恢復，不連正式雲端。另以真實 `CloudAccountStore` 配合僅存在測試執行檔的合成登入／Keychain 依賴，驗證離線冷啟動、週期前不重試、下一輪登入及資料同步、single-flight、停用／登出／憑證失效與舊回應丟棄。加密測試另驗證既有保管庫可在未開啟 Settings 時初始化。
+
+雙機人工自動同步驗收需使用獨立測試 Google 帳號、相同已驗證 Dev Build；不可按「立即同步」代替啟動、前景週期或離線恢復測試。先不開設定驗證啟動路徑，之後才從「帳號與同步 → 診斷資訊 → 複製同步執行記錄」取得遮蔽後的階段證據。記錄兩台實際 App 身分、觸發與耗時；持續前景至少覆蓋三個 5 分鐘週期。單機加速測試不代表雙機實傳驗收完成。
+
 先執行自動測試：
 
 ```sh
@@ -56,7 +62,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 0.0.0-dev.1 \
+  --version 1.0.21-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -71,7 +77,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 0.0.0-dev.1 \
+  --version 1.0.21-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')" \
   --build-only
 ```

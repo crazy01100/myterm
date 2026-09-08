@@ -35,6 +35,21 @@ final class VaultSetupStore: ObservableObject {
         self.envelopeStore = envelopeStore
     }
 
+    /// Startup must not rely on the Settings scene appearing to load an existing vault.
+    /// Repeated lifecycle events must not cancel an in-progress setup for the same owner.
+    func prepareForAutomaticSync(account: FirebaseAccount?) {
+        if currentOwnerUID != account?.uid {
+            refresh(account: account)
+            return
+        }
+        switch state {
+        case .signedOut where account != nil, .failed:
+            refresh(account: account)
+        default:
+            break
+        }
+    }
+
     func refresh(account: FirebaseAccount?) {
         operationTask?.cancel()
         operationTask = nil

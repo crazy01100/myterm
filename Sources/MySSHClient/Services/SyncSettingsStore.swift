@@ -23,6 +23,14 @@ final class SyncSettingsStore: ObservableObject {
     static let unifiedSyncKey = "cloudSync.all.enabled.v2"
     static let metadataSyncKey = "cloudSync.metadata.enabled.v1"
     static let passwordSyncKey = "cloudSync.passwords.enabled.v1"
+    private static let sessionRecoveryKey = "cloudSync.lastContext.enabled.v1"
+
+    // Preserve the last known account's choice while startup authentication is unavailable.
+    // This is intent only; it never enables data sync without a signed-in account.
+    var sessionRecoveryEnabled: Bool {
+        defaults.object(forKey: Self.sessionRecoveryKey) as? Bool
+            ?? defaults.bool(forKey: Self.metadataSyncKey)
+    }
 
     @Published private(set) var metadataSyncEnabled: Bool
     @Published private(set) var passwordSyncEnabled: Bool
@@ -52,6 +60,7 @@ final class SyncSettingsStore: ObservableObject {
             && ownerUID.map { defaults.bool(forKey: scopedUnifiedKey(ownerUID: $0)) } == true
         metadataSyncEnabled = enabled
         passwordSyncEnabled = enabled
+        if ownerUID != nil { defaults.set(enabled, forKey: Self.sessionRecoveryKey) }
     }
 
     func setMetadataSyncEnabled(_ enabled: Bool) throws {
@@ -66,6 +75,7 @@ final class SyncSettingsStore: ObservableObject {
         }
         defaults.set(enabled, forKey: Self.metadataSyncKey)
         defaults.set(enabled, forKey: Self.passwordSyncKey)
+        defaults.set(enabled, forKey: Self.sessionRecoveryKey)
     }
 
     func disableAll() {
@@ -76,6 +86,7 @@ final class SyncSettingsStore: ObservableObject {
         }
         defaults.set(false, forKey: Self.metadataSyncKey)
         defaults.set(false, forKey: Self.passwordSyncKey)
+        defaults.set(false, forKey: Self.sessionRecoveryKey)
     }
 
     private func scopedUnifiedKey(ownerUID: String) -> String {

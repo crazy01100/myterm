@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ConnectionAuditLogView: View {
     @EnvironmentObject private var store: ConnectionAuditStore
+    @EnvironmentObject private var syncCoordinator: AutomaticSyncCoordinator
+    @EnvironmentObject private var auditSync: AutomaticConnectionAuditSyncStore
     @State private var searchText = ""
     @State private var filter: ConnectionAuditFilter = .all
 
@@ -9,6 +11,19 @@ struct ConnectionAuditLogView: View {
         VStack(spacing: 0) {
             toolbar
             Divider()
+            if syncCoordinator.isEnabled {
+                HStack {
+                    Text("Logs：\(auditSync.status.message)")
+                    Spacer()
+                    if let date = auditSync.lastSuccessfulSyncAt {
+                        Text("最後成功：\(date.formatted(date: .abbreviated, time: .standard))")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(auditSync.status.isError ? .orange : .secondary)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 6)
+            }
             if let error = store.lastError {
                 errorBanner(error)
             }
@@ -19,6 +34,7 @@ struct ConnectionAuditLogView: View {
             }
         }
         .background(AppVisualTheme.contentBackground)
+        .onAppear { syncCoordinator.request(.logsOpened) }
     }
 
     private var toolbar: some View {

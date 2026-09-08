@@ -242,7 +242,7 @@ final class SyncDiagnosticsStore: ObservableObject {
             fail("password-sync", "密碼同步", publicError(error))
         }
 
-        currentStage = "正在檢查自動同步狀態…"
+        currentStage = "正在檢查主機／密碼自動同步狀態…"
         if !settings.metadataSyncEnabled {
             warn("automatic-sync", "自動同步", "同步開關目前是關閉狀態。")
         } else {
@@ -255,8 +255,10 @@ final class SyncDiagnosticsStore: ObservableObject {
                 warn("automatic-sync", "自動同步", "有 \(count) 筆近期變更正在等待你的確認。")
             case .disabled:
                 warn("automatic-sync", "自動同步", "同步開關已開啟，但自動同步程序尚未啟動。")
+            case .cancelled:
+                warn("automatic-sync", "主機／密碼自動同步", "上次同步已取消，不代表已同步完成。")
             case .scheduled, .syncing:
-                pass("automatic-sync", "自動同步", "自動同步程序目前正在正常運作。")
+                warn("automatic-sync", "主機／密碼自動同步", "目前已排程或正在執行，尚不能確認成功；Logs 結果請見帳號與同步頁。")
             case .idle:
                 if let date = automaticSyncStore.lastSuccessfulSyncAt {
                     pass(

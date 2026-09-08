@@ -1,15 +1,6 @@
 import Combine
 import Foundation
 
-enum AutomaticMetadataSyncTrigger: Equatable, Sendable {
-    case launch
-    case foreground
-    case periodic
-    case localChange
-    case manual
-    case confirmedRecentOverwrite
-}
-
 enum AutomaticMetadataSyncStatus: Equatable {
     case disabled
     case idle
@@ -18,10 +9,12 @@ enum AutomaticMetadataSyncStatus: Equatable {
     case waitingForConfirmation(Int)
     case paused(String)
     case failed(String)
+    case cancelled
 
     var message: String {
         switch self {
         case .disabled: "自動同步已關閉"
+        case .cancelled: "同步已取消"
         case .idle: "同步就緒"
         case .scheduled: "已排入同步"
         case .syncing: "正在進行端對端加密同步…"
@@ -70,8 +63,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
     @Published private(set) var pendingConfirmation: PendingRecentSyncConfirmation?
     @Published private(set) var isApplyingRemoteChanges = false
 
-    private var operationTask: Task<Void, Never>?
-    private var needsAnotherPass = false
+    private var failureOutcome: SyncAttemptOutcome?
     private var suppressedConfirmationID: String?
     private let defaults: UserDefaults
 
@@ -94,83 +86,42 @@ final class AutomaticMetadataSyncStore: ObservableObject {
         restoreLastSuccess(for: accountStore.state.signedInAccount?.uid)
     }
 
-    func localInventoryDidChange(
+    func synchronize(
+        trigger: AutomaticSyncTrigger,
         hostStore: HostStore,
         settings: SyncSettingsStore,
         accountStore: CloudAccountStore,
         vaultSetupStore: VaultSetupStore
-    ) {
-        suppressedConfirmationID = nil
-        request(
-            trigger: .localChange,
-            hostStore: hostStore,
-            settings: settings,
-            accountStore: accountStore,
-            vaultSetupStore: vaultSetupStore
-        )
-    }
-
-    func request(
-        trigger: AutomaticMetadataSyncTrigger,
-        hostStore: HostStore,
-        settings: SyncSettingsStore,
-        accountStore: CloudAccountStore,
-        vaultSetupStore: VaultSetupStore
-    ) {
+    ) async -> SyncAttemptOutcome {
+        failureOutcome = nil
         guard settings.metadataSyncEnabled else {
             status = .disabled
-            return
+            return .disabled
         }
-        if trigger == .manual {
+        if trigger == .manual || trigger == .localChange || trigger == .confirmedRecentOverwrite {
             suppressedConfirmationID = nil
         }
-        guard operationTask == nil else {
-            needsAnotherPass = true
-            return
-        }
-        status = trigger == .localChange ? .scheduled : .syncing
-        operationTask = Task { [weak self, weak hostStore, weak settings, weak accountStore, weak vaultSetupStore] in
-            guard let self, let hostStore, let settings, let accountStore, let vaultSetupStore else { return }
-            if trigger == .localChange {
-                try? await Task.sleep(for: .seconds(1.2))
-            }
-            guard !Task.isCancelled else { return }
-            await self.run(
-                forceRecentOverwrite: trigger == .confirmedRecentOverwrite,
-                hostStore: hostStore,
-                settings: settings,
-                accountStore: accountStore,
-                vaultSetupStore: vaultSetupStore
-            )
-            self.operationTask = nil
-            if self.needsAnotherPass {
-                self.needsAnotherPass = false
-                self.request(
-                    trigger: .foreground,
-                    hostStore: hostStore,
-                    settings: settings,
-                    accountStore: accountStore,
-                    vaultSetupStore: vaultSetupStore
-                )
-            }
-        }
-    }
-
-    func confirmRecentUpdate(
-        hostStore: HostStore,
-        settings: SyncSettingsStore,
-        accountStore: CloudAccountStore,
-        vaultSetupStore: VaultSetupStore
-    ) {
-        pendingConfirmation = nil
-        suppressedConfirmationID = nil
-        request(
-            trigger: .confirmedRecentOverwrite,
+        SyncDiagnosticsJournal.shared.record(.metadata, .started, trigger: trigger)
+        await run(
+            forceRecentOverwrite: trigger == .confirmedRecentOverwrite,
             hostStore: hostStore,
             settings: settings,
             accountStore: accountStore,
             vaultSetupStore: vaultSetupStore
         )
+        if let failureOutcome { return failureOutcome }
+        switch status {
+        case .idle: return .completed
+        case .disabled: return .disabled
+        case .cancelled: return .cancelled
+        case .waitingForConfirmation, .paused: return .waiting(status.message)
+        default: return .retryable("同步期間資料變更，將再次同步。")
+        }
+    }
+
+    func acceptPendingConfirmation() {
+        pendingConfirmation = nil
+        suppressedConfirmationID = nil
     }
 
     func declineRecentUpdate() {
@@ -194,22 +145,32 @@ final class AutomaticMetadataSyncStore: ObservableObject {
         }
         status = .syncing
         do {
+            try Task.checkCancellation()
             guard case .signedIn(let account) = accountStore.state else {
+                SyncDiagnosticsJournal.shared.record(.metadata, .accountUnavailable)
                 throw CloudAccountStoreError.notSignedIn
             }
             // The cloud envelope is a recovery mechanism. Once this Mac has a
             // verified local Master Key, routine metadata sync must not require
             // re-checking that envelope on every launch.
             guard case .ready = vaultSetupStore.state else {
+                SyncDiagnosticsJournal.shared.record(.metadata, .vaultUnavailable)
                 throw MetadataSyncPreviewError.missingMasterKey
             }
             guard let projectID = accountStore.firebaseProjectID else {
                 throw CloudConfigurationError.invalidProjectID
             }
+            func validateContext() throws {
+                try Task.checkCancellation()
+                guard settings.metadataSyncEnabled,
+                      accountStore.state.signedInAccount?.uid == account.uid,
+                      accountStore.firebaseProjectID == projectID else { throw CancellationError() }
+            }
             guard let masterKey = try VaultMasterKeyStore.load(
                 ownerUID: account.uid,
                 version: VaultCryptoFormat.masterKeyVersion
             ) else {
+                SyncDiagnosticsJournal.shared.record(.metadata, .keyUnavailable)
                 throw MetadataSyncPreviewError.missingMasterKey
             }
             let baselineStore = MetadataSyncBaselineStore()
@@ -219,8 +180,11 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             let startingGroups = hostStore.groups
             let startingHosts = hostStore.hosts
             let token = try await accountStore.validIDToken()
+            try validateContext()
             let backend = FirestoreMetadataBackend(projectID: projectID)
+            SyncDiagnosticsJournal.shared.record(.metadata, .downloading)
             let snapshot = try await backend.fetchSnapshot(ownerUID: account.uid, idToken: token)
+            try validateContext()
             let metadataRecords = snapshot.records.filter {
                 $0.recordType == .host || $0.recordType == .group
             }
@@ -397,6 +361,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                         ? try await backend.create(pending, ownerUID: account.uid, idToken: token)
                         : try await backend.upsert(pending, ownerUID: account.uid, idToken: token)
                 }
+                try validateContext()
                 if saved.deleted {
                     baseline = MetadataSyncBaselinePlanner.removingEntry(recordID: saved.id, from: baseline)
                 } else {
@@ -419,6 +384,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             )
             try MetadataMergedInventoryValidator.validate(finalDocument)
             let verifiedRemote = try await backend.fetchAll(ownerUID: account.uid, idToken: token)
+            try validateContext()
             let verifiedPlan = try MetadataManualSyncPlanner.makePlan(
                 localGroups: finalDocument.groups,
                 localHosts: finalDocument.hosts,
@@ -446,6 +412,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             try baselineStore.save(baseline, ownerUID: account.uid)
 
             let passwordSnapshot = try await backend.fetchSnapshot(ownerUID: account.uid, idToken: token)
+            try validateContext()
             let passwordOutcome = try await PasswordSyncService().synchronize(
                 hosts: finalDocument.hosts,
                 snapshot: passwordSnapshot,
@@ -456,6 +423,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
                 deviceID: baseline.deviceID,
                 forceRecentOverwrite: forceRecentOverwrite
             )
+            try validateContext()
             if case .needsRecentOverwriteConfirmation(let pending) = passwordOutcome {
                 let confirmation = PendingRecentSyncConfirmation(
                     id: pending.signature,
@@ -475,13 +443,28 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             lastSuccessfulSyncAt = completedAt
             defaults.set(completedAt, forKey: lastSuccessKey(for: account.uid))
             status = .idle
+            SyncDiagnosticsJournal.shared.record(.metadata, .completed)
         } catch is CancellationError {
-            status = settings.metadataSyncEnabled ? .idle : .disabled
+            status = .cancelled
+            SyncDiagnosticsJournal.shared.record(.metadata, .cancelled)
         } catch AutomaticMetadataSyncError.localChangedDuringSync {
             status = .scheduled
-            needsAnotherPass = true
         } catch {
-            status = .failed(error.localizedDescription)
+            let outcome: SyncAttemptOutcome
+            if case MetadataSyncPreviewError.missingMasterKey = error {
+                outcome = .waiting("同步保管庫尚未就緒，請檢查帳號與同步密語設定。")
+            } else if case CloudAccountStoreError.notSignedIn = error {
+                outcome = .waiting("等待 Google 登入恢復。")
+            } else if case AutomaticMetadataSyncError.missingBaseline = error {
+                outcome = .waiting("請先完成首次同步並建立這台 Mac 的同步基線。")
+            } else if case FirestoreMetadataBackendError.serverFailure(let code) = error, code >= 500 || code == 429 {
+                outcome = .retryable("雲端服務暫時無法完成主機同步，將自動重試。")
+            } else {
+                outcome = .failure(error)
+            }
+            failureOutcome = outcome
+            status = .failed(outcome.message)
+            SyncDiagnosticsJournal.shared.record(.metadata, .failed, error: error)
         }
     }
 
@@ -524,12 +507,5 @@ final class AutomaticMetadataSyncStore: ObservableObject {
 
     private func lastSuccessKey(for ownerUID: String) -> String {
         Self.lastSuccessKeyPrefix + MetadataSyncBaselineStore.ownerDigest(ownerUID)
-    }
-}
-
-private extension CloudAccountState {
-    var signedInAccount: FirebaseAccount? {
-        guard case .signedIn(let account) = self else { return nil }
-        return account
     }
 }

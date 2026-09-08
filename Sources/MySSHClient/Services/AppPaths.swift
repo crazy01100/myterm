@@ -28,6 +28,9 @@ enum AppPaths {
     static var importBackupsDirectory: URL { rootDirectory.appending(path: "Import Backups", directoryHint: .isDirectory) }
     static var sshConnectionLogsDirectory: URL { rootDirectory.appending(path: "Authentication Logs", directoryHint: .isDirectory) }
     static var syncDirectory: URL { rootDirectory.appending(path: "Sync", directoryHint: .isDirectory) }
+    static var syncDiagnosticsFile: URL {
+        rootDirectory.appending(path: "Sync Diagnostics", directoryHint: .isDirectory).appending(path: "events.json")
+    }
     static var syncMutationJournalFile: URL { syncDirectory.appending(path: "mutation-journal.json") }
     static var syncDeviceIdentityFile: URL { syncDirectory.appending(path: "device-id") }
     static var syncBackupsDirectory: URL { rootDirectory.appending(path: "Sync Backups", directoryHint: .isDirectory) }

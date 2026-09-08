@@ -13,6 +13,7 @@ struct MySSHClientApp: App {
     @StateObject private var cloudAccountStore = CloudAccountStore()
     @StateObject private var vaultSetupStore = VaultSetupStore()
     @StateObject private var automaticMetadataSyncStore = AutomaticMetadataSyncStore()
+    @StateObject private var automaticSyncCoordinator = AutomaticSyncCoordinator()
     @StateObject private var unifiedSyncSetupStore = UnifiedSyncSetupStore()
     @StateObject private var appUpdaterStore = AppUpdaterStore()
     @StateObject private var appearanceStore = AppAppearanceStore()
@@ -34,13 +35,15 @@ struct MySSHClientApp: App {
                 cloudAccountStore: cloudAccountStore,
                 vaultSetupStore: vaultSetupStore,
                 automaticMetadataSyncStore: automaticMetadataSyncStore,
-                automaticConnectionAuditSyncStore: automaticConnectionAuditSyncStore
+                automaticConnectionAuditSyncStore: automaticConnectionAuditSyncStore,
+                automaticSyncCoordinator: automaticSyncCoordinator
             )
                 .environmentObject(hostStore)
                 .environmentObject(knownHostsStore)
                 .environmentObject(sessionManager)
                 .environmentObject(connectionAuditStore)
                 .environmentObject(automaticConnectionAuditSyncStore)
+                .environmentObject(automaticSyncCoordinator)
                 .environmentObject(shortcutStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
@@ -76,6 +79,7 @@ struct MySSHClientApp: App {
                 .environmentObject(automaticMetadataSyncStore)
                 .environmentObject(connectionAuditStore)
                 .environmentObject(automaticConnectionAuditSyncStore)
+                .environmentObject(automaticSyncCoordinator)
                 .environmentObject(unifiedSyncSetupStore)
                 .environmentObject(appearanceStore)
                 .preferredColorScheme(appearanceStore.effectiveColorScheme)
@@ -139,11 +143,13 @@ private struct AppRootView: View {
     @ObservedObject var vaultSetupStore: VaultSetupStore
     @ObservedObject var automaticMetadataSyncStore: AutomaticMetadataSyncStore
     @ObservedObject var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
-    @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject var automaticSyncCoordinator: AutomaticSyncCoordinator
 
     var body: some View {
         ContentView()
             .task {
+                configureSync()
+                automaticSyncCoordinator.setActive(NSApplication.shared.isActive)
                 // Unlock the single local vault root once for this process so
                 // account, sync and host-password access share one prompt.
                 do {
@@ -158,64 +164,42 @@ private struct AppRootView: View {
                 )
                 requestSync(.launch)
             }
-            .task(id: scenePhase) {
-                guard scenePhase == .active else { return }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                configureSync()
+                automaticSyncCoordinator.setActive(true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
+                automaticSyncCoordinator.setActive(false)
+            }
+            .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didWakeNotification)) { _ in
+                requestSync(.wake)
+            }
+            .onAppear {
+                configureSync()
                 requestSync(.foreground)
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(5 * 60))
-                    guard !Task.isCancelled else { return }
-                    requestSync(.periodic)
-                }
             }
             .onChange(of: hostStore.hosts) { _, _ in
                 guard !automaticMetadataSyncStore.isApplyingRemoteChanges else { return }
-                automaticMetadataSyncStore.localInventoryDidChange(
-                    hostStore: hostStore,
-                    settings: syncSettingsStore,
-                    accountStore: cloudAccountStore,
-                    vaultSetupStore: vaultSetupStore
-                )
+                requestSync(.localChange)
             }
             .onChange(of: hostStore.groups) { _, _ in
                 guard !automaticMetadataSyncStore.isApplyingRemoteChanges else { return }
-                automaticMetadataSyncStore.localInventoryDidChange(
-                    hostStore: hostStore,
-                    settings: syncSettingsStore,
-                    accountStore: cloudAccountStore,
-                    vaultSetupStore: vaultSetupStore
-                )
+                requestSync(.localChange)
             }
             .onReceive(NotificationCenter.default.publisher(for: .myTermPasswordDidChange)) { _ in
-                automaticMetadataSyncStore.localInventoryDidChange(
-                    hostStore: hostStore,
-                    settings: syncSettingsStore,
-                    accountStore: cloudAccountStore,
-                    vaultSetupStore: vaultSetupStore
-                )
+                requestSync(.localChange)
             }
             .onChange(of: connectionAuditStore.synchronizationRevision) { _, _ in
-                automaticConnectionAuditSyncStore.request(
-                    trigger: .localFinalized,
-                    auditStore: connectionAuditStore,
-                    settings: syncSettingsStore,
-                    accountStore: cloudAccountStore,
-                    vaultSetupStore: vaultSetupStore
-                )
+                requestSync(.localChange)
             }
             .onChange(of: syncSettingsStore.metadataSyncEnabled) { _, enabled in
-                if enabled { requestSync(.manual) }
+                if enabled { requestSync(.availability) }
                 else {
                     automaticMetadataSyncStore.updateAvailability(
                         settings: syncSettingsStore,
                         accountStore: cloudAccountStore
                     )
-                    automaticConnectionAuditSyncStore.request(
-                        trigger: .foreground,
-                        auditStore: connectionAuditStore,
-                        settings: syncSettingsStore,
-                        accountStore: cloudAccountStore,
-                        vaultSetupStore: vaultSetupStore
-                    )
+                    requestSync(.foreground)
                 }
             }
             .onChange(of: cloudAccountStore.state) { _, _ in
@@ -223,10 +207,10 @@ private struct AppRootView: View {
                     settings: syncSettingsStore,
                     accountStore: cloudAccountStore
                 )
-                requestSync(.foreground)
+                requestSync(.availability)
             }
-            .onChange(of: vaultSetupStore.state) { _, _ in requestSync(.foreground) }
-            .onChange(of: vaultSetupStore.cloudEnvelopeState) { _, _ in requestSync(.foreground) }
+            .onChange(of: vaultSetupStore.state) { _, _ in requestSync(.availability) }
+            .onChange(of: vaultSetupStore.cloudEnvelopeState) { _, _ in requestSync(.availability) }
             .confirmationDialog(
                 "雲端資料剛在其他裝置更新",
                 isPresented: Binding(
@@ -234,21 +218,19 @@ private struct AppRootView: View {
                     set: { presented in
                         if !presented, automaticMetadataSyncStore.pendingConfirmation != nil {
                             automaticMetadataSyncStore.declineRecentUpdate()
+                            automaticSyncCoordinator.showDeclinedConfirmation()
                         }
                     }
                 ),
                 titleVisibility: .visible
             ) {
                 Button("更新並同步") {
-                    automaticMetadataSyncStore.confirmRecentUpdate(
-                        hostStore: hostStore,
-                        settings: syncSettingsStore,
-                        accountStore: cloudAccountStore,
-                        vaultSetupStore: vaultSetupStore
-                    )
+                    automaticMetadataSyncStore.acceptPendingConfirmation()
+                    requestSync(.confirmedRecentOverwrite)
                 }
                 Button("不更新", role: .cancel) {
                     automaticMetadataSyncStore.declineRecentUpdate()
+                    automaticSyncCoordinator.showDeclinedConfirmation()
                 }
             } message: {
                 Text(recentUpdateMessage)
@@ -260,33 +242,30 @@ private struct AppRootView: View {
         return "\(target)在最近五分鐘內已由另一台 Mac 更新。若選擇「更新並同步」，將以這台 Mac 目前的內容建立下一個版本並同步到雲端。"
     }
 
-    private func requestSync(_ trigger: AutomaticMetadataSyncTrigger) {
-        automaticMetadataSyncStore.request(
-            trigger: trigger,
-            hostStore: hostStore,
-            settings: syncSettingsStore,
-            accountStore: cloudAccountStore,
-            vaultSetupStore: vaultSetupStore
-        )
-        automaticConnectionAuditSyncStore.request(
-            trigger: auditTrigger(for: trigger),
-            auditStore: connectionAuditStore,
-            settings: syncSettingsStore,
-            accountStore: cloudAccountStore,
-            vaultSetupStore: vaultSetupStore
-        )
+    private func requestSync(_ trigger: AutomaticSyncTrigger) {
+        automaticSyncCoordinator.request(trigger)
     }
 
-    private func auditTrigger(
-        for trigger: AutomaticMetadataSyncTrigger
-    ) -> AutomaticConnectionAuditSyncTrigger {
-        switch trigger {
-        case .launch: .launch
-        case .foreground, .confirmedRecentOverwrite: .foreground
-        case .periodic: .periodic
-        case .localChange: .localFinalized
-        case .manual: .manual
-        }
+    private func configureSync() {
+        automaticSyncCoordinator.configure(context: {
+            let uid = cloudAccountStore.state.signedInAccount?.uid ?? "signed-out"
+            return .init(scope: MetadataSyncBaselineStore.ownerDigest(uid), enabled: syncSettingsStore.metadataSyncEnabled)
+        }, prepare: {
+            vaultSetupStore.prepareForAutomaticSync(account: cloudAccountStore.state.signedInAccount)
+            automaticMetadataSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
+            automaticConnectionAuditSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
+        }, canRecoverSession: {
+            syncSettingsStore.sessionRecoveryEnabled && cloudAccountStore.canRetrySessionRestore
+        }, recoverSession: {
+            guard syncSettingsStore.sessionRecoveryEnabled else { return }
+            await cloudAccountStore.restoreIfPossible(retryTransientFailure: true)
+        }, metadata: { trigger in
+            await automaticMetadataSyncStore.synchronize(trigger: trigger, hostStore: hostStore,
+                settings: syncSettingsStore, accountStore: cloudAccountStore, vaultSetupStore: vaultSetupStore)
+        }, logs: { trigger in
+            await automaticConnectionAuditSyncStore.synchronize(trigger: trigger, auditStore: connectionAuditStore,
+                settings: syncSettingsStore, accountStore: cloudAccountStore, vaultSetupStore: vaultSetupStore)
+        })
     }
 }
 

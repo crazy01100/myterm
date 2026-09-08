@@ -110,7 +110,7 @@ let fixedDate = Date(timeIntervalSince1970: 1_786_118_400)
 
 @main
 enum VaultCryptoTestRunner {
-static func main() {
+@MainActor static func main() {
 do {
     let masterKey = try VaultMasterKey(rawRepresentation: Data(0..<32), version: 1)
     let context = VaultRecordContext(
@@ -387,6 +387,23 @@ do {
 
     let confirmed = try VaultSetupService.confirmRecoveryKey(ownerUID: uid, envelopeStore: store)
     check(confirmed.recoveryConfirmedAt != nil, "recovery confirmation is persisted")
+    let restoredVault = VaultSetupStore(envelopeStore: store)
+    let restoredAccount = FirebaseAccount(uid: uid, email: nil, displayName: nil)
+    check(restoredVault.state == .signedOut,
+          "fresh vault store is not ready merely because a valid vault exists on disk (startup regression evidence)")
+    restoredVault.prepareForAutomaticSync(account: restoredAccount)
+    let readyState = restoredVault.state
+    if case .ready = readyState {
+        check(true, "automatic startup prepares existing vault without ever opening Settings")
+    } else {
+        check(false, "automatic startup prepares existing vault without ever opening Settings")
+    }
+    restoredVault.prepareForAutomaticSync(account: restoredAccount)
+    check(restoredVault.state == readyState, "repeated startup preparation preserves the same ready vault")
+    restoredVault.prepareForAutomaticSync(account: nil)
+    check(restoredVault.state == .signedOut, "sign-out clears the prepared vault state")
+    restoredVault.prepareForAutomaticSync(account: restoredAccount)
+    check(restoredVault.state == readyState, "account return restores readiness without Settings")
     checkThrowing("confirmed vault summary is ready") {
         try VaultSetupService.summary(ownerUID: uid, envelopeStore: store)?.recoveryConfirmed == true
     }

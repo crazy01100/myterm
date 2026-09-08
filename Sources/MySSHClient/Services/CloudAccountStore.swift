@@ -9,6 +9,11 @@ enum CloudAccountState: Equatable {
     case signingIn
     case signedIn(FirebaseAccount)
     case failed(String)
+
+    var signedInAccount: FirebaseAccount? {
+        guard case .signedIn(let account) = self else { return nil }
+        return account
+    }
 }
 
 enum CloudAccountStoreError: LocalizedError {
@@ -29,7 +34,13 @@ final class CloudAccountStore: ObservableObject {
     private var currentIDToken: String?
     private var currentTokenExpiresAt: Date?
     private var signInTask: Task<Void, Never>?
-    private var didAttemptRestore = false
+    private var tokenRefreshTask: Task<String, Error>?
+    private var credentialGeneration = 0
+    private enum RestoreDisposition { case initial, retryableFailure, blocked, restored }
+    private var restoreDisposition: RestoreDisposition = .initial
+    private var restorationTask: Task<Void, Never>?
+
+    var canRetrySessionRestore: Bool { restoreDisposition == .retryableFailure }
 
     init(bundle: Bundle = .main) {
         legacySessionImportPolicy = .current(bundle: bundle)
@@ -45,32 +56,71 @@ final class CloudAccountStore: ObservableObject {
         }
     }
 
-    func restoreIfPossible() async {
-        guard !didAttemptRestore else { return }
-        didAttemptRestore = true
-        guard let client, let configuration else { return }
-        do {
-            try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
-                projectID: configuration.firebaseProjectID,
-                legacyImportPolicy: legacySessionImportPolicy
-            )
-            guard let refreshToken = try CloudSessionKeychainStore.refreshToken(
-                projectID: configuration.firebaseProjectID,
-                legacyImportPolicy: legacySessionImportPolicy
-            ) else {
-                state = .signedOut
-                return
-            }
-            state = .restoring
-            let session = try await client.refresh(refreshToken: refreshToken)
-            try persist(session)
-        } catch {
-            state = .failed("無法恢復 Google 登入狀態：\(error.localizedDescription)")
+    func restoreIfPossible(retryTransientFailure: Bool = false) async {
+        if let restorationTask {
+            await restorationTask.value
+            return
         }
+        guard restoreDisposition == .initial || (retryTransientFailure && canRetrySessionRestore) else { return }
+        guard let client, let configuration else { return }
+        let generation = credentialGeneration
+        restoreDisposition = .blocked
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try CloudSessionKeychainStore.resetIsolatedChannelSessionIfNeeded(
+                    projectID: configuration.firebaseProjectID,
+                    legacyImportPolicy: legacySessionImportPolicy
+                )
+                guard let refreshToken = try CloudSessionKeychainStore.refreshToken(
+                    projectID: configuration.firebaseProjectID,
+                    legacyImportPolicy: legacySessionImportPolicy
+                ) else {
+                    state = .signedOut
+                    return
+                }
+                state = .restoring
+                let session = try await client.refresh(refreshToken: refreshToken)
+                guard generation == credentialGeneration, !Task.isCancelled else { return }
+                try persist(session)
+                restoreDisposition = .restored
+            } catch {
+                guard generation == credentialGeneration else { return }
+                restoreDisposition = Self.isTransientRestoreError(error) ? .retryableFailure : .blocked
+                state = .failed(canRetrySessionRestore
+                    ? "暫時無法恢復 Google 登入，將於下一次同步時再試。"
+                    : "無法恢復 Google 登入，請檢查帳號或重新登入。")
+            }
+        }
+        restorationTask = task
+        await task.value
+        if generation == credentialGeneration { restorationTask = nil }
+    }
+
+    private static func isTransientRestoreError(_ error: Error) -> Bool {
+        if let error = error as? URLError {
+            return [.notConnectedToInternet, .timedOut, .networkConnectionLost, .cannotConnectToHost,
+                    .cannotFindHost, .dnsLookupFailed, .resourceUnavailable].contains(error.code)
+        }
+        if case GoogleFirebaseAuthError.firebaseRefreshFailed(let status) = error {
+            return status == 429 || (500...599).contains(status)
+        }
+        return false
+    }
+
+    private func stopSessionRestoration() {
+        restoreDisposition = .blocked
+        restorationTask?.cancel()
+        restorationTask = nil
     }
 
     func signIn() {
         guard signInTask == nil, let client, configuration != nil else { return }
+        credentialGeneration += 1
+        stopSessionRestoration()
+        tokenRefreshTask?.cancel()
+        tokenRefreshTask = nil
+        let generation = credentialGeneration
         state = .signingIn
         signInTask = Task { [weak self] in
             guard let self else { return }
@@ -100,10 +150,13 @@ final class CloudAccountStore: ObservableObject {
                     pkceVerifier: pkce.verifier,
                     nonce: nonce
                 )
+                guard !Task.isCancelled, generation == self.credentialGeneration else { return }
                 try persist(session)
             } catch is CancellationError {
+                guard generation == self.credentialGeneration else { return }
                 self.state = .signedOut
             } catch {
+                guard generation == self.credentialGeneration else { return }
                 self.state = .failed(error.localizedDescription)
             }
             self.signInTask = nil
@@ -111,12 +164,20 @@ final class CloudAccountStore: ObservableObject {
     }
 
     func cancelSignIn() {
+        credentialGeneration += 1
+        stopSessionRestoration()
+        tokenRefreshTask?.cancel()
+        tokenRefreshTask = nil
         signInTask?.cancel()
         signInTask = nil
         state = .signedOut
     }
 
     func signOut() {
+        credentialGeneration += 1
+        stopSessionRestoration()
+        tokenRefreshTask?.cancel()
+        tokenRefreshTask = nil
         signInTask?.cancel()
         signInTask = nil
         currentIDToken = nil
@@ -137,11 +198,13 @@ final class CloudAccountStore: ObservableObject {
 
     func retryAfterFailure() {
         guard client != nil else { return }
+        credentialGeneration += 1
+        stopSessionRestoration()
         state = .signedOut
     }
 
     func validIDToken() async throws -> String {
-        guard case .signedIn = state,
+        guard case .signedIn(let account) = state,
               let client,
               let configuration else {
             throw CloudAccountStoreError.notSignedIn
@@ -151,15 +214,26 @@ final class CloudAccountStore: ObservableObject {
            currentTokenExpiresAt.timeIntervalSinceNow > 90 {
             return currentIDToken
         }
+        if let tokenRefreshTask { return try await tokenRefreshTask.value }
         guard let refreshToken = try CloudSessionKeychainStore.refreshToken(
             projectID: configuration.firebaseProjectID,
             legacyImportPolicy: legacySessionImportPolicy
         ) else {
             throw CloudAccountStoreError.notSignedIn
         }
-        let session = try await client.refresh(refreshToken: refreshToken)
-        try persist(session)
-        return session.idToken
+        let generation = credentialGeneration
+        let task = Task { @MainActor in
+            let session = try await client.refresh(refreshToken: refreshToken)
+            try Task.checkCancellation()
+            guard self.credentialGeneration == generation,
+                  self.state.signedInAccount?.uid == account.uid,
+                  session.account.uid == account.uid else { throw CancellationError() }
+            try self.persist(session)
+            return session.idToken
+        }
+        tokenRefreshTask = task
+        defer { if credentialGeneration == generation { tokenRefreshTask = nil } }
+        return try await task.value
     }
 
     var firebaseProjectID: String? { configuration?.firebaseProjectID }

@@ -70,6 +70,7 @@ struct SettingsView: View {
     @EnvironmentObject private var automaticMetadataSyncStore: AutomaticMetadataSyncStore
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
+    @EnvironmentObject private var automaticSyncCoordinator: AutomaticSyncCoordinator
     @EnvironmentObject private var unifiedSyncSetupStore: UnifiedSyncSetupStore
     @EnvironmentObject private var appearanceStore: AppAppearanceStore
     @StateObject private var metadataSyncPreviewStore = MetadataSyncPreviewStore()
@@ -96,6 +97,7 @@ struct SettingsView: View {
     @State private var syncActionNotice: String?
     @State private var showingUnifiedSyncSetup = false
     @State private var showingSyncDiagnostics = false
+    @State private var showingSyncDiagnosticsDetails = false
     @AppStorage(TerminalMessageHighlight.storageKey) private var messageHighlightEnabled = true
 
     var body: some View {
@@ -269,7 +271,6 @@ struct SettingsView: View {
             handleRequestedAction()
         }
         .onChange(of: cloudAccountStore.state) { _, state in
-            vaultSetupStore.refresh(account: state.signedInAccount)
             metadataSyncPreviewStore.reset()
             syncActionNotice = nil
         }
@@ -343,55 +344,48 @@ struct SettingsView: View {
 
                 Label {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(automaticMetadataSyncStore.status.message)
-                        Text(lastMetadataSyncDescription)
+                        Text(automaticSyncCoordinator.message)
+                        Text(lastSyncDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("Logs：\(automaticConnectionAuditSyncStore.status.message)")
-                            .font(.caption)
-                            .foregroundStyle(
-                                automaticConnectionAuditSyncStore.status.isError ? .orange : .secondary
-                            )
                     }
                 } icon: {
-                    Image(systemName: automaticMetadataSyncStore.status.isError
+                    Image(systemName: (automaticMetadataSyncStore.status.isError || automaticConnectionAuditSyncStore.status.isError)
                         ? "exclamationmark.icloud"
                         : "arrow.triangle.2.circlepath.icloud")
-                        .foregroundStyle(automaticMetadataSyncStore.status.isError ? .orange : .green)
+                        .foregroundStyle((automaticMetadataSyncStore.status.isError || automaticConnectionAuditSyncStore.status.isError) ? .orange : .secondary)
                 }
 
                 Button("立即同步") {
-                    automaticMetadataSyncStore.request(
-                        trigger: .manual,
-                        hostStore: hostStore,
-                        settings: syncSettingsStore,
-                        accountStore: cloudAccountStore,
-                        vaultSetupStore: vaultSetupStore
-                    )
-                    automaticConnectionAuditSyncStore.request(
-                        trigger: .manual,
-                        auditStore: connectionAuditStore,
-                        settings: syncSettingsStore,
-                        accountStore: cloudAccountStore,
-                        vaultSetupStore: vaultSetupStore
-                    )
+                    automaticSyncCoordinator.request(.manual)
                 }
                 .disabled(!syncSettingsStore.metadataSyncEnabled)
-
                 Label("同步採端對端加密；雲端同步服務無法看到主機名稱、IP、帳號、裝置名稱、連線紀錄、備註或密碼。私鑰檔案與 known_hosts 不會同步。", systemImage: "lock.shield")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Section("同步功能除錯") {
-                Button {
-                    showingSyncDiagnostics = true
+                DisclosureGroup(isExpanded: $showingSyncDiagnosticsDetails) {
+                    Button("複製同步執行記錄") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(SyncDiagnosticsJournal.shared.copyableSummary(), forType: .string)
+                    }
+                    Text("執行記錄只保留本機 7 天的同步階段與錯誤代碼，不包含主機、帳號、密碼或終端內容。")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Button {
+                        showingSyncDiagnostics = true
+                    } label: {
+                        Label("執行同步功能檢測…", systemImage: "stethoscope")
+                    }
+                    Text("此檢測檢查登入、保管庫及主機／密碼同步；Logs 與自動排程問題請參考同步執行記錄。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 } label: {
-                    Label("執行同步功能檢測…", systemImage: "stethoscope")
+                    Button("診斷資訊") { showingSyncDiagnosticsDetails.toggle() }
+                        .buttonStyle(.plain)
                 }
-                Text("MyTerm 會自動依序檢查登入、加密保管庫、雲端資料、同步基線、Keychain 密碼與自動同步狀態，並指出發生問題的階段。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section {
@@ -405,7 +399,7 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .task {
             await cloudAccountStore.restoreIfPossible()
-            vaultSetupStore.refresh(account: cloudAccountStore.state.signedInAccount)
+            vaultSetupStore.prepareForAutomaticSync(account: cloudAccountStore.state.signedInAccount)
         }
     }
 
@@ -418,9 +412,9 @@ struct SettingsView: View {
         return "MyTerm \(version) · Build \(build)"
     }
 
-    private var lastMetadataSyncDescription: String {
-        guard let date = automaticMetadataSyncStore.lastSuccessfulSyncAt else {
-            return "這台 Mac 尚無自動同步成功紀錄。"
+    private var lastSyncDescription: String {
+        guard let date = automaticSyncCoordinator.lastSuccessfulSyncAt else {
+            return "尚無同步成功紀錄"
         }
         return "上次同步成功：\(date.formatted(date: .abbreviated, time: .standard))"
     }
@@ -1546,13 +1540,6 @@ private struct MetadataSyncPreviewDetailView: View {
         case .unchanged: "equal.circle.fill"
         case .remoteTombstone: "trash.slash"
         }
-    }
-}
-
-private extension CloudAccountState {
-    var signedInAccount: FirebaseAccount? {
-        guard case .signedIn(let account) = self else { return nil }
-        return account
     }
 }
 

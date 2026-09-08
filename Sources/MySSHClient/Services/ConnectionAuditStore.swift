@@ -16,6 +16,8 @@ final class ConnectionAuditStore: ObservableObject {
     private let sourceDeviceID: UUID
     private let sourceDeviceName: String
     private var lastRetentionMaintenanceAt: Date?
+    private var persistenceRevision: UInt64 = 0
+    private var savedPersistenceRevision: UInt64 = 0
     private let persistenceQueue = DispatchQueue(
         label: "tw.local.MyTerm.connection-audit-persistence",
         qos: .utility
@@ -169,8 +171,19 @@ final class ConnectionAuditStore: ObservableObject {
         let retained = incoming.filter {
             !$0.status.isOngoing && $0.retentionReferenceDate >= cutoff
         }
-        guard index.mergeFinalized(retained) else { return }
+        guard index.mergeFinalized(retained) else {
+            // A previous download may exist only in memory after a failed disk write.
+            if savedPersistenceRevision != persistenceRevision { enqueuePersistence() }
+            return
+        }
         publishAndPersist()
+    }
+
+    /// Sync success includes durable local storage, not just a published in-memory merge.
+    func persistForSync() async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            enqueuePersistence { result in continuation.resume(with: result) }
+        }
     }
 
     private func publishAndPersist(finalizedChange: Bool = false) {
@@ -179,16 +192,32 @@ final class ConnectionAuditStore: ObservableObject {
         enqueuePersistence()
     }
 
-    private func enqueuePersistence() {
+    private func enqueuePersistence(completion: ((Result<Void, Error>) -> Void)? = nil) {
+        persistenceRevision &+= 1
+        let revision = persistenceRevision
         let document = ConnectionAuditDocument(records: index.records)
         let fileURL = fileURL
         persistenceQueue.async { [weak self] in
+            let result: Result<Void, Error>
             do {
                 try Self.saveDocument(document, to: fileURL)
+                result = .success(())
             } catch {
-                DispatchQueue.main.async { [weak self] in
-                    self?.lastError = "連線紀錄暫時無法保存：\(error.localizedDescription)"
+                result = .failure(error)
+            }
+            DispatchQueue.main.async { [weak self] in
+                if let self {
+                    switch result {
+                    case .success:
+                        self.savedPersistenceRevision = revision
+                        if revision == self.persistenceRevision { self.lastError = nil }
+                    case .failure(let error):
+                        if revision == self.persistenceRevision {
+                            self.lastError = "連線紀錄暫時無法保存：\(error.localizedDescription)"
+                        }
+                    }
                 }
+                completion?(result)
             }
         }
     }

@@ -80,6 +80,7 @@ swiftc \
 "$test_dir/OAuthLoopbackTests"
 
 MYTERM_SECRET_VAULT_TEST_RUN_ID="$$" "$project_dir/scripts/run-crypto-tests.sh"
+zsh "$project_dir/scripts/run-sync-reliability-tests.sh"
 
 # The crypto suite above already built the locked SwiftTerm dependency. Link
 # its real AppKit renderer to verify that font changes do not reset TUI state.

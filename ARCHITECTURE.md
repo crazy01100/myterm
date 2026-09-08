@@ -94,6 +94,14 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 ## 端對端加密同步
 
+`AutomaticSyncCoordinator` 是日常同步排程入口，先由 `VaultSetupStore.prepareForAutomaticSync` 在帳號還原後初始化既有本機保管庫，不依賴 Settings scene 出現。協調層並行呼叫獨立的 metadata／password 及 Logs worker，等待兩部分結果；衝突等待確認不阻止 Logs，但不能算整輪成功。主機／密碼及 Logs 仍保留原有加密與資料集合。
+
+AppKit 作用中／非作用中事件控制唯一的前景 5 分鐘同步週期，另接受啟動、喚醒、本機變動及過期 Logs 頁面的要求。本機變動合併約 1.2 秒；執行中合併下一輪要求，不反覆延後目前工作。暫時失敗等待既有週期或明確的回前景／喚醒／手動入口，不設短間隔退避計時器；失敗後的一般資料／狀態變更不會形成緊密重試。整輪 120 秒逾時只取消並等待兩 worker 釋放，不另排重試。停用／帳號變更取消舊世代；worker 在網路回應與本機套用邊界檢查取消，舊世代不能發布新帳號的成功結果。
+
+`CloudAccountStore` 的登入還原使用 single-flight 任務與 initial／retryableFailure／blocked／restored 狀態；只有暫時網路或服務錯誤可在後續同步週期再試。`SyncSettingsStore.sessionRecoveryEnabled` 記住最後已知帳號的同步啟用選擇，即使登入暫時不可用也能決定是否允許恢復；它不會在未登入時啟用資料同步。協調層於五分鐘、回前景、喚醒或手動要求時先執行符合條件的登入恢復，成功後接續同步；availability 回呼不會遞迴發出登入請求。主動登出、停用、無憑證或永久失效不進行週期性登入恢復；啟動時原有的單次 session 還原不依賴同步啟用。Google ID Token 更新沿用共用單一更新任務；登入世代檢查拒絕登出後才到達的舊回應。
+
+`ConnectionAuditStore` 保留尚未保存的修訂，即使下載紀錄已在記憶體去重也能重試磁碟寫入；Logs worker 等待 `persistForSync` 成功才標記完成。各 worker 與整輪成功時間按帳號摘要保存於通道專用 UserDefaults；設定的日常同步區只顯示整體狀態與單一整輪成功時間，不列分項明細。取消、部分失敗與尚未成功不能當作全部完成。`SyncDiagnosticsJournal` 只在本機保存 allow-list 的有界同步執行事件，不加入同步資料或既有連線稽核；設定內的診斷工具預設收合。
+
 同步是選用功能，資料流如下：
 
 1. 使用者以 Google Desktop OAuth 登入；PKCE、state、nonce 與只監聽 `127.0.0.1` 的暫時回呼降低授權碼攔截風險。
@@ -159,5 +167,5 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
 - `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
 - Logs 只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。跨裝置只同步已結束紀錄，不顯示其他裝置的連線中狀態或即時計時。
-- 跨裝置同步由 App 啟動、回到前景、切換主要功能及定期排程等本機事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。
+- 跨裝置同步由 App 啟動、回到前景、喚醒、本機可同步資料變動、過期 Logs 頁面及前景定期事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。App 關閉、睡眠或不在作用中時沒有常駐輪詢保證。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。

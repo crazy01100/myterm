@@ -258,6 +258,7 @@ struct PasswordSyncService: Sendable {
         forceRecentOverwrite: Bool,
         conflictResolution: PasswordSyncConflictResolution = .preferLocal
     ) async throws -> PasswordSyncOutcome {
+        try Task.checkCancellation()
         let hostByID = Dictionary(uniqueKeysWithValues: hosts.map { ($0.id, $0) })
         let baselineStore = PasswordSyncBaselineStore()
         var baseline = try baselineStore.load(ownerUID: ownerUID) ?? PasswordSyncBaseline(
@@ -382,6 +383,7 @@ struct PasswordSyncService: Sendable {
         var uploaded = 0
         var downloaded = 0
         for id in downloads {
+            try Task.checkCancellation()
             guard let remoteValue = remote[id] else { throw PasswordSyncError.verificationFailed }
             var data = remoteValue.passwordData
             defer { data.resetBytes(in: data.startIndex..<data.endIndex) }
@@ -418,6 +420,7 @@ struct PasswordSyncService: Sendable {
         }
 
         for id in uploads + conflicts {
+            try Task.checkCancellation()
             guard let localValue = local[id] else { throw PasswordSyncError.verificationFailed }
             let remoteValue = remote[id]
             let revision = remoteValue.map { $0.record.revision + 1 } ?? 1
@@ -450,6 +453,7 @@ struct PasswordSyncService: Sendable {
             } else {
                 saved = try await backend.create(pending, ownerUID: ownerUID, idToken: idToken)
             }
+            try Task.checkCancellation()
             baseline = replacing(
                 entry: PasswordSyncBaselineEntry(
                     recordID: id,
@@ -465,6 +469,7 @@ struct PasswordSyncService: Sendable {
         }
 
         for record in staleRemoteRecords.values.sorted(by: { $0.id.uuidString < $1.id.uuidString }) {
+            try Task.checkCancellation()
             let tombstone = try PasswordSyncCodec.tombstone(
                 recordID: record.id,
                 ownerUID: ownerUID,
@@ -473,6 +478,7 @@ struct PasswordSyncService: Sendable {
                 modifiedByDeviceID: deviceID
             )
             _ = try await backend.upsert(tombstone, ownerUID: ownerUID, idToken: idToken)
+            try Task.checkCancellation()
         }
         if !staleRemoteRecords.isEmpty || !remoteTombstones.isEmpty {
             baseline = removing(
@@ -483,6 +489,7 @@ struct PasswordSyncService: Sendable {
         }
 
         let verification = try await backend.fetchSnapshot(ownerUID: ownerUID, idToken: idToken)
+        try Task.checkCancellation()
         let allRemotePasswords = verification.records.filter { $0.recordType == .password }
         for tombstone in allRemotePasswords where tombstone.deleted {
             try PasswordSyncCodec.validateTombstone(
