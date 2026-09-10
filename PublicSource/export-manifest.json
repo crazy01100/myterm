@@ -1,0 +1,911 @@
+{
+  "schemaVersion": 1,
+  "publicRepository": "crazy01100/myterm-source",
+  "files": [
+    {
+      "path": ".gitignore",
+      "overlay": "PublicSource/overrides/.gitignore",
+      "baseSHA256": "4ce870d76d571175c5aceac502ab15adf2bd195475c9175a6706d4784faf53ac"
+    },
+    {
+      "path": "ARCHITECTURE.en.md",
+      "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
+      "baseSHA256": "45cdeaf7bbc2d6a675e8c3e8c624fb3d559da972640f3ac28c764720241a1db2"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "overlay": "PublicSource/overrides/ARCHITECTURE.md",
+      "baseSHA256": "b28e2a440883145dfd0920d3197c0dbb5a828be85170e226b79d0ef7f72d489c"
+    },
+    {
+      "path": "Config/MyTermCloudConfig.example.plist"
+    },
+    {
+      "path": "DEVELOPMENT.en.md",
+      "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
+      "baseSHA256": "a110dd13ec12d03bf3c98f24d91893cf87ee5e14ee5728aa05cc02731e932f7e"
+    },
+    {
+      "path": "DEVELOPMENT.md",
+      "overlay": "PublicSource/overrides/DEVELOPMENT.md",
+      "baseSHA256": "2c2f8a43d8fdbb1be43757150eef1e270b4a7dcf9f5bc14d38a6b1d24a08603e"
+    },
+    {
+      "path": "FIREBASE_SETUP.en.md",
+      "overlay": "PublicSource/overrides/FIREBASE_SETUP.en.md",
+      "baseSHA256": "6a7d73f285c09788a437a2fcb9a43e9f8470061bc969f548827c730a4743649d"
+    },
+    {
+      "path": "FIREBASE_SETUP.md",
+      "overlay": "PublicSource/overrides/FIREBASE_SETUP.md",
+      "baseSHA256": "6f1e8e6da24bc15ab47f96645f031c6341e6e5060914b2f53b1c86e9f91a06ae"
+    },
+    {
+      "path": "LICENSE"
+    },
+    {
+      "path": "Package.resolved"
+    },
+    {
+      "path": "Package.swift"
+    },
+    {
+      "path": "README.en.md",
+      "overlay": "PublicSource/overrides/README.en.md",
+      "baseSHA256": "8ce920ff5a7723b8b42e6b585e48ee288872f92b270f0ef2cbed84a0da34d886"
+    },
+    {
+      "path": "README.md",
+      "overlay": "PublicSource/overrides/README.md",
+      "baseSHA256": "54bb156d019ba202b148ec9a95bff9e18ee776d870ca223e9a54a7423346cc11"
+    },
+    {
+      "path": "Resources/AppIcon-original.png"
+    },
+    {
+      "path": "Resources/AppIcon.icns"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_128x128.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_128x128@2x.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_16x16.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_16x16@2x.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_256x256.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_256x256@2x.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_32x32.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_32x32@2x.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_512x512.png"
+    },
+    {
+      "path": "Resources/AppIcon.iconset/icon_512x512@2x.png"
+    },
+    {
+      "path": "Resources/AppIcon.png"
+    },
+    {
+      "path": "Resources/Info.plist"
+    },
+    {
+      "path": "Resources/Readme/NOTICE.md"
+    },
+    {
+      "path": "Resources/Readme/openai-blossom-black.svg"
+    },
+    {
+      "path": "Resources/Readme/openai-blossom-white.svg"
+    },
+    {
+      "path": "Resources/UpdateLab/1.0.0-beta.2.en.md",
+      "overlay": "PublicSource/overrides/Resources/UpdateLab/1.0.0-beta.2.en.md",
+      "baseSHA256": "fc5f156cf4a89f2c04b8c21f5b3dff830f26496c01f0de569fd617a9ec7e1740"
+    },
+    {
+      "path": "Resources/UpdateLab/1.0.0-beta.2.md"
+    },
+    {
+      "path": "SECURITY.en.md",
+      "overlay": "PublicSource/overrides/SECURITY.en.md",
+      "baseSHA256": "69c1bb9b1bdac955c5b4870cd28b66dbe4ad49074f4fc3f4c19cac0fa48fe5a1"
+    },
+    {
+      "path": "SECURITY.md",
+      "overlay": "PublicSource/overrides/SECURITY.md",
+      "baseSHA256": "98d3738756cfaf7ec2b043dd70c5da7e8a26ebdafb2b41d612b62a9d701c5ac2"
+    },
+    {
+      "path": "SelfTests/CloudAccountRecoveryTests.swift"
+    },
+    {
+      "path": "SelfTests/OAuthLoopbackTests.swift"
+    },
+    {
+      "path": "SelfTests/SyncReliabilityTests.swift"
+    },
+    {
+      "path": "SelfTests/TerminalFontZoomTests.swift"
+    },
+    {
+      "path": "SelfTests/TerminalMessageHighlightTests.swift"
+    },
+    {
+      "path": "SelfTests/TerminalOutputThemeTests.swift"
+    },
+    {
+      "path": "SelfTests/VaultCryptoTests.swift"
+    },
+    {
+      "path": "SelfTests/main.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/ConnectionAuditRecord.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/FirestoreMetadataSnapshot.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/HostGroupMove.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/HostProfile.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/HostTransferDocument.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/InventoryDocument.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/KnownHostRecord.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/SFTPModels.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/SerialConfiguration.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/SyncModels.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/TerminalSessionPresentation.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/TerminalSessionState.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/TerminalWorkspace.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Models/VaultCryptoModels.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/MySSHClientApp.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/almalinux.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/alpinelinux.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/apple.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/archlinux.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/centos.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/cisco.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/debian.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/fedora.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/freebsd.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/junipernetworks.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/opensuse.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/openwrt.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/redhat.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/rockylinux.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Resources/PlatformIcons/ubuntu.svg"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AppPaths.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AppShortcutStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AppUpdaterStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AutomaticConnectionAuditSyncStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AutomaticMetadataSyncStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/AutomaticSyncCoordinator.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/CloudAccountStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/CloudConfiguration.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/CloudSessionKeychainStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/ConnectionAuditStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/ConnectionAuditSyncCodec.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/DataTransferCoordinator.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/FirestoreConnectionAuditBackend.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/FirestoreMetadataBackend.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/FirestoreVaultBackend.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/HostConnectionRecency.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/HostPlatformDetector.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/HostPlatformProbe.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/HostStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/KeychainStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/KnownHostsStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/LocalSecretVaultStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/LoginPasswordPromptDetector.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/LoopbackOAuthListener.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/MetadataManualSync.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/MetadataSyncBaselineStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/MetadataSyncCodec.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/MetadataSyncPreview.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/OAuthSecurity.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/PasswordChangeCapture.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/PasswordSync.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SFTPBrowserStores.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SFTPClient.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SFTPProtocol.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SSHArgumentBuilder.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SSHConnectionDiagnostics.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SSHLoginPasswordCapture.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncBackend.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncDeviceIdentityStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncDiagnosticsJournal.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncDiagnosticsStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncMutationJournal.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/SyncSettingsStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/UnifiedSyncSetupStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/VaultCrypto.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/VaultEnvelopeStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/VaultMasterKeyStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/VaultSetupStore.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Sessions/SSHSession.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/AppVisualTheme.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/ConnectionAuditLogView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/ConnectionUsernameView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/ContentView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/GroupEditorView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/HostEditorView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/HostLibraryDragMonitor.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/HostLibraryView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/HostPlatformBadge.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/KnownHostsView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/SFTPWorkspaceView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/SerialConnectionView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/SettingsView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalContainerView.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalFontZoom.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalMessageHighlight.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalOutputTheme.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalWorkspaceSplitContainer.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Views/TerminalWorkspaceSplitDelegate.swift"
+    },
+    {
+      "path": "TERMIUS_MIGRATION.en.md",
+      "overlay": "PublicSource/overrides/TERMIUS_MIGRATION.en.md",
+      "baseSHA256": "4fb5311580f056504fee64e5e72cfe4af768a5595dbcb0843a6e7c21f6cd9583"
+    },
+    {
+      "path": "TERMIUS_MIGRATION.md",
+      "overlay": "PublicSource/overrides/TERMIUS_MIGRATION.md",
+      "baseSHA256": "b8575c16e4585d3a362d06a37bb7731fba2b093af367165c83a4d97771f1a3e7"
+    },
+    {
+      "path": "Tests/FirebaseRules/firestore.rules.test.mjs"
+    },
+    {
+      "path": "Vendor/SwiftTerm/LICENSE"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Package.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/AppleTerminalView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/BlockElementRenderer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/BoxDrawingRenderer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/CaretView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Extensions.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/CoreTextGlyphRasterizer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/GlyphAtlas.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/MetalBufferingMode.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/MetalError.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/MetalTerminalRenderer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/Metal/Shaders.metal"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/PowerlineRenderer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/TerminalProgressBarView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Apple/TerminalViewDelegate.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Buffer.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/BufferLine.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/BufferSet.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/CharData.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/CharSets.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/CircularList.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Colors.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Customization.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Documentation.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Extensions/HeadlessTerminal.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Extensions/Terminal.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Extensions/TerminalOptions.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/GPURendering.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/GettingStarted.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/GraphicsSupport.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/HeadlessUsage.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/SSHIntegration.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Documentation.docc/Search.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/EscapeSequenceParser.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/EscapeSequences.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/ExtensionsTerminal.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/File.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/HangulInput.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/HeadlessTerminal.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/KittyGraphics.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/KittyKeyboardEncoder.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/KittyKeyboardProtocol.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/KittyPlaceholder.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Line.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/LocalProcess.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacAccessibilityService.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacCaretView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacDebugView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacExtensions.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacFindBarView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacLocalTerminalView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/MacTerminalView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Mac/README.md"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Position.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Pty.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SearchEngine.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SearchLineCache.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SearchOptions.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SearchService.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SearchState.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SelectionService.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SixelDcsHandler.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/SyncDebug.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Terminal.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/TerminalOptions.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/TerminalViewSearch.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/UnicodeWidthData.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/Utilities.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/SwiftUITerminalView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSAccessoryView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSCaretView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSDoubleButton.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSExtensions.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSKeyboardView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSTerminalView.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSTextInput.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/Sources/SwiftTerm/iOS/iOSTextStorage.swift"
+    },
+    {
+      "path": "Vendor/SwiftTerm/UPSTREAM.md"
+    },
+    {
+      "path": "firebase.json"
+    },
+    {
+      "path": "firestore.indexes.json"
+    },
+    {
+      "path": "firestore.rules"
+    },
+    {
+      "path": "package-lock.json"
+    },
+    {
+      "path": "package.json"
+    },
+    {
+      "path": "scripts/TermiusExport/export_decrypted_metadata.js"
+    },
+    {
+      "path": "scripts/backup-sparkle-signing-key.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/build-app.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/check-release-safety.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/code-signing-common.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/configure-cloud.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/create-sparkle-signing-key.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/deploy-firestore.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/firebase-tools.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/initialize-local-code-signing-identity.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/initialize-sparkle-signing-key.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/make-app-icon.py",
+      "executable": true
+    },
+    {
+      "path": "scripts/package-app.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/prepare-local-update-lab.sh",
+      "overlay": "PublicSource/overrides/scripts/prepare-local-update-lab.sh",
+      "baseSHA256": "046f4e3d72f16c6d0439729a1edd342dbbfdb52c848057de2eb87aaad5e73a5e",
+      "executable": true
+    },
+    {
+      "path": "scripts/prepare-pages-deployment.sh",
+      "overlay": "PublicSource/overrides/scripts/prepare-pages-deployment.sh",
+      "baseSHA256": "bdad914c05cd8b46b80a68d9f4cbe525baf85f99bd435561c50fed1faea1042c",
+      "executable": true
+    },
+    {
+      "path": "scripts/prepare-release-assets.sh",
+      "overlay": "PublicSource/overrides/scripts/prepare-release-assets.sh",
+      "baseSHA256": "1ef8c75fb849336d1909aa4039600a5d5c2d5e0a0a269a021c9d5084aa02698e",
+      "executable": true
+    },
+    {
+      "path": "scripts/prepare-release-build.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/release.sh",
+      "overlay": "PublicSource/overrides/scripts/release.sh",
+      "baseSHA256": "7f6501846ce3760db7c46dcef6dac068007c8b2407cc9e4c2c55291be1c71a4c",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-crypto-tests.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-dev-app.sh",
+      "overlay": "PublicSource/overrides/scripts/run-dev-app.sh",
+      "baseSHA256": "2b867db2da49337b42be8c04b6f39f002e4efc9b2a215770d1ee7c4d7450f3d0",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-sync-reliability-tests.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-tests.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/serve-local-update-lab.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/sparkle-key-common.sh",
+      "overlay": "PublicSource/overrides/scripts/sparkle-key-common.sh",
+      "baseSHA256": "da721155443ea494101e1399bb6883ede3f82cc43fc7f382543060c8cbd1c92b",
+      "executable": true
+    },
+    {
+      "path": "scripts/stage-code-signing-baseline.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/update-source-config.sh",
+      "overlay": "PublicSource/overrides/scripts/update-source-config.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-app.sh",
+      "overlay": "PublicSource/overrides/scripts/verify-app.sh",
+      "baseSHA256": "ca619c0bf56b1fd9bc4fbc01b7165b35a4424664bc741ad6fc5fd0ce0e602fe8",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-code-signing-key-backup.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-local-update-lab-security.sh",
+      "executable": true,
+      "overlay": "PublicSource/overrides/scripts/verify-local-update-lab-security.sh",
+      "baseSHA256": "2681f788479d462bf186a281f481ab7bcb439d026ddc339cc78709e09f687c15"
+    },
+    {
+      "path": "scripts/verify-packaged-resources.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-pages-site.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-public-update-site.sh",
+      "overlay": "PublicSource/overrides/scripts/verify-public-update-site.sh",
+      "baseSHA256": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-release-assets.sh",
+      "overlay": "PublicSource/overrides/scripts/verify-release-assets.sh",
+      "baseSHA256": "8cd6e3e3365e7ae381467fdbc17e290265d5f112e56409dc51c9447cf452fe57",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-swiftterm-vendor.sh",
+      "executable": true
+    },
+    {
+      "path": "update-site/404.html"
+    },
+    {
+      "path": "update-site/README.en.md",
+      "overlay": "PublicSource/overrides/update-site/README.en.md",
+      "baseSHA256": "4ac7d034f188066ac79378f1834a6e46d126d249c9dfe812aa168dce239f8938"
+    },
+    {
+      "path": "update-site/README.md",
+      "overlay": "PublicSource/overrides/update-site/README.md",
+      "baseSHA256": "7fdc9876a9407555089f340df42c4174d93433715dabaf844de37b44132c2b2b"
+    },
+    {
+      "path": "update-site/_headers"
+    },
+    {
+      "path": "update-site/assets/site.css"
+    },
+    {
+      "path": "update-site/index.html"
+    },
+    {
+      "path": "update-site/install/index.html"
+    },
+    {
+      "path": "update-site/privacy/index.html"
+    },
+    {
+      "path": "update-site/robots.txt"
+    },
+    {
+      "path": "update-site/security/index.html"
+    }
+  ]
+}

@@ -1,6 +1,4 @@
 .DS_Store
-__pycache__/
-*.py[cod]
 
 # Internal planning, progress records and operator notes stay on the development Mac.
 /docs/
@@ -53,3 +51,7 @@ npm-debug.log*
 .env
 .env.*
 !.env.example
+
+# Distributor-specific signing baselines are generated locally.
+/Config/Release/
+/AGENTS.md

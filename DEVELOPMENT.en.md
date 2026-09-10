@@ -1,0 +1,245 @@
+# MyTerm Development and Release Guide
+
+[繁體中文](DEVELOPMENT.md) | **English**
+
+This guide explains how to test source changes, build candidates, and prepare releases without affecting production MyTerm. Build scripts are stored in GitHub so a fresh checkout can reproduce the workflow without depending on a particular AI tool or local activity history.
+
+## Environment and artifact isolation
+
+| Purpose | Fixed output in a checkout | Description |
+|---|---|---|
+| Production | `/Applications/MyTerm.app` | The stable app for daily use. Development scripts do not modify or replace it. |
+| Local testing | `build/dev/MyTerm Dev.app` | Daily development and manual checks. Rebuilt at the same location with separate Bundle ID, Application Support, and vault Keychain service. |
+| Candidate | `build/candidates/MyTerm-<version>-build-<build>/MyTerm.app` | A candidate app for RC/production release preparation; never interchangeable with Dev. |
+| Release assets | `build/releases/MyTerm-<version>-build-<build>/` | The five versioned files used by a GitHub Draft Release. |
+
+Do not create or use `build/MyTerm.app`. A path with no version or channel makes it easy to confuse a running old app with newly built files. Build and verification scripts reject it.
+
+All apps, ZIPs, test results, and release assets in `build/` are reproducible and excluded from Git. This is a temporary development/release workspace, not a long-term production backup. After GitHub Release, Cloudflare deployment, in-app updating, and manual acceptance all succeed, the five GitHub Release assets are the authoritative copy. Clear the entire `build/` directory and recreate it with the scripts during the next development cycle.
+
+These paths define checkout build and automated verification rules, not hard-coded app runtime requirements. A verified `MyTerm Dev.app` sent to another Mac for manual testing may run from any stable, writable local folder. `~/Applications/MyTerm Dev.app` is recommended; there is no need to recreate `Documents/MySSHClient/build/dev/`. Isolation comes from the app's development Bundle ID, Application Support directory, and Keychain service, not its location. External testing must still record the actual path and verify version, Build, Bundle ID, and signature, without replacing `/Applications/MyTerm.app`.
+
+Google sign-in is isolated by build channel too. Dev/Update Lab must not query or import early production Keychain sessions. The first run with the isolation fix clears only refresh tokens previously imported into that test channel by mistake; production remains untouched. After that one-time cleanup, accounts explicitly signed into Dev are retained in its own vault, and rebuilding the same channel does not repeatedly sign users out.
+
+## Development requirements
+
+- Apple Silicon Mac (arm64)
+- macOS 26 or later
+- Xcode 26 or compatible Command Line Tools
+- The project's pinned Swift Package dependencies
+
+### Terminal component source
+
+The SwiftTerm library runtime is tracked under `Vendor/SwiftTerm` for minimal macOS display extensions supporting label highlighting and black/white text contrast. It is not a build cache. Normal builds do not require downloading a fork or editing `.build/checkouts`. See [SwiftTerm source notes](Vendor/SwiftTerm/UPSTREAM.md) for the upstream revision, MIT license, changes to two renderer files, and upgrade procedure. `Package.resolved` locks only the other remote dependencies.
+
+Before an upgrade, obtain the upstream Git checkout at the documented revision and run `bash scripts/verify-swiftterm-vendor.sh /path/to/upstream-checkout`. It compares the runtime file list, unchanged files, and license, and presents the two renderer differences for review. After upgrading, run the full tests, a clean scratch build, Dev interaction checks, and packaged-resource verification. The app includes `SwiftTerm-LICENSE.txt`.
+
+Firebase/OAuth/Cloudflare credentials, Sparkle private keys, and code-signing private keys are not required source files for a normal local build and must never be committed.
+
+## Cloud-feature build modes
+
+| Goal | Firebase/OAuth configuration | Result |
+|---|---|---|
+| Normal local development | Not required | SSH, Terminal, Serial, SFTP, and local data work; Google sign-in and sync report missing configuration. |
+| Build with your own sync backend | Your own Firebase/Google Cloud project | Enables testing Google sign-in, Firestore Rules, and end-to-end encrypted cross-device sync. |
+| Official release | Production settings supplied securely by the maintainer on the local Mac | Production settings must not be inferred or obtained from the repository, examples, or CI. |
+
+See [Firebase setup](FIREBASE_SETUP.en.md) for the Console, Desktop OAuth, Firestore, configuration generation, Rules deployment, and acceptance steps. Real settings belong in Git-ignored `Config/Local/`. The shared repository contains only examples without real values, Rules, Indexes, and safe deployment tools.
+
+## Daily development workflow
+
+Dev versions follow `target-release-dev.sequence`, such as `1.0.22-dev.1` and `1.0.22-dev.2`. Do not use generic `0.0.0-dev.*` versions for feature-test deliveries. `CFBundleVersion` remains a distinct, increasing timestamp for every build; a version name does not replace Build or channel isolation. Versions in this guide are naming examples and must be adjusted to the actual target when building.
+
+Run sync reliability regression tests independently with `zsh scripts/run-sync-reliability-tests.sh`; the complete `scripts/run-tests.sh` also includes them. Tests use temporary directories, isolated UserDefaults, synthetic backend results, and shortened scheduling intervals to exercise the real coordinator's single schedule, account generations, and JSON-save recovery without production cloud access. The real `CloudAccountStore`, with synthetic sign-in/Keychain dependencies confined to the test executable, covers offline cold launch, no retries before the next cycle, session/data recovery on the next cycle, single-flight requests, disable/sign-out/invalid credentials, and stale responses. Crypto tests also verify that an existing vault initializes without opening Settings.
+
+Manual two-Mac automatic-sync acceptance requires a separate test Google account and the same verified Dev Build. Do not substitute Sync Now for launch, foreground-cycle, or offline-recovery checks. First test launch without opening Settings; only afterward use Account & Sync → Diagnostics → Copy Sync Execution Log to obtain redacted stage evidence. Record both apps' actual identities, triggers, and elapsed times, and keep them active for at least three five-minute cycles. Accelerated single-Mac tests do not establish successful transfer between two Macs.
+
+Run automated tests first:
+
+```sh
+./scripts/run-tests.sh
+```
+
+For manual app checks, use the fixed development entry point:
+
+```sh
+./scripts/run-dev-app.sh \
+  --version 1.0.22-dev.1 \
+  --build "$(date '+%Y%m%d%H%M%S')"
+```
+
+This entry point:
+
+1. Closes only the test app currently running from `build/dev/MyTerm Dev.app`.
+2. Rebuilds at that same fixed location.
+3. Verifies version, Build, bundle, and signature.
+4. Launches Dev and verifies its actual executable path.
+
+To check compilation and the app bundle without launching the UI:
+
+```sh
+./scripts/run-dev-app.sh \
+  --version 1.0.22-dev.1 \
+  --build "$(date '+%Y%m%d%H%M%S')" \
+  --build-only
+```
+
+Documentation, comment, or instruction-only changes do not require building or launching Dev. Check links, relevant script syntax, and the Git diff instead.
+
+Commit and push source after feature acceptance. On the primary development Mac, do not move `build/dev/MyTerm Dev.app` into system `/Applications` or use it to replace production. This does not prevent external test Macs from using the recommended per-user `~/Applications/MyTerm Dev.app` location.
+
+### Document languages and synchronized maintenance
+
+GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.
+
+| Document | Traditional Chinese | English |
+|---|---|---|
+| Project introduction | [README.md](README.md) | [README.en.md](README.en.md) |
+| Architecture | [ARCHITECTURE.md](ARCHITECTURE.md) | [ARCHITECTURE.en.md](ARCHITECTURE.en.md) |
+| Development and releases | [DEVELOPMENT.md](DEVELOPMENT.md) | [DEVELOPMENT.en.md](DEVELOPMENT.en.md) |
+| Security design | [SECURITY.md](SECURITY.md) | [SECURITY.en.md](SECURITY.en.md) |
+| Firebase setup | [FIREBASE_SETUP.md](FIREBASE_SETUP.md) | [FIREBASE_SETUP.en.md](FIREBASE_SETUP.en.md) |
+| Termius migration | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
+| Update site | [update-site/README.md](update-site/README.md) | [update-site/README.en.md](update-site/README.en.md) |
+| UpdateLab beta.2 test notes | [Original Chinese fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [English reading companion](Resources/UpdateLab/1.0.0-beta.2.en.md) |
+
+When changing project descriptions, features, architecture, security, installation, builds, deployment, or migration instructions, update both languages of each affected document. Contents, commands, configuration keys, data flows, and limitations must agree. Documentation translation does not mean that the app or update website has an English interface. Add English files as `<original-name>.en.md` in the same directory, then update this table and language links. Do not put them in local Git-ignored `docs/`.
+
+The original Chinese UpdateLab file is a historical fixture used by the local update script; the English file is for reading on GitHub only. This table links both versions. Do not add a language bar to the original fixture or change the script's selected language. If test requirements later change the original text, update its English companion too. Already-English upstream documents and original LICENSE/NOTICE files retain their original wording; bilingual maintenance does not justify rewriting third-party content.
+
+Before development, present a plan and acceptance cases for maintainer approval. At the end of the plan, review the Chinese and English files for README, ARCHITECTURE, DEVELOPMENT, SECURITY, FIREBASE_SETUP, TERMIUS_MIGRATION, the update site, and UpdateLab individually, adding LICENSE and asset notices when affected. Record whether each needs an update, why, and what was done. Close the plan only after necessary changes and content/link/language-switch checks are complete; unaffected files may explicitly be marked as requiring no update. Development attribution and image labels must also agree across languages.
+
+MyTerm's original code and documentation use the root [MIT LICENSE](LICENSE). Third-party components and assets retain their own LICENSE/NOTICE files; do not overwrite them when updating project license information.
+
+README brand assets live in `Resources/Readme/`; [NOTICE.md](Resources/Readme/NOTICE.md) records their sources and terms. The OpenAI logo identifies development tools only, using the original black/white versions selected for the color scheme. Do not crop, recolor, or incorporate it into MyTerm's own logo. It is not covered by the project's MIT License. Check both READMEs' presentation and notices when editing the header.
+
+## Build and release scripts
+
+Every main script supports `--help`. Check it when unsure about arguments:
+
+```sh
+./scripts/build-app.sh --help
+./scripts/release.sh --help
+```
+
+| Script | Purpose | Publishes? |
+|---|---|---|
+| `scripts/run-tests.sh` | Main regression and crypto/sync tests. | No |
+| `scripts/run-crypto-tests.sh` | Crypto, vault, and sync tests separately. | No |
+| `scripts/configure-cloud.sh` | Generate runtime cloud configuration from local Firebase/Desktop OAuth inputs. | No |
+| `scripts/deploy-firestore.sh` | Require an explicit Firebase Project ID and deploy Rules/Indexes. | Yes, only Firestore configuration in the specified project |
+| `scripts/run-dev-app.sh` | Safely build, verify, and optionally launch the fixed test app. | No |
+| `scripts/build-app.sh` | Lower-level app builder with channel-specific path restrictions. | No |
+| `scripts/verify-app.sh` | Verify a specified app's version, Build, architecture, signature, and update settings. | No |
+| `scripts/verify-packaged-resources.sh` | Compare platform icons in apps/ZIPs and reject a MyTerm SwiftPM resource accessor that depends on the build machine. | No |
+| `scripts/check-release-safety.sh` | Scan release settings, secrets, and unsafe artifacts. | No |
+| `scripts/prepare-release-build.sh` | Run tests, build a versioned candidate, and package a ZIP. | No |
+| `scripts/package-app.sh` | Package an explicitly specified candidate as a versioned ZIP. | No |
+| `scripts/prepare-release-assets.sh` | Create appcast, release notes, checksums, and manifest. | No |
+| `scripts/verify-release-assets.sh` | Verify the five GitHub/Cloudflare release assets. | No |
+| `scripts/release.sh` | Complete release preparation, creating at most a GitHub Draft Release. | Draft only |
+| `scripts/cleanup-build-artifacts.sh` | After full production acceptance, download and verify the five GitHub assets, ensure no app runs from `build/`, and clear local build output. Preview by default; requires `--apply` to act. | No |
+| `scripts/prepare-pages-deployment.sh` | Prepare static Cloudflare Pages content from published assets. | No |
+| `scripts/verify-public-update-site.sh` | Externally verify the production appcast, downloads, and security headers. | No |
+
+Lower-level scripts support these entry points. Use `run-dev-app.sh` for normal development and `release.sh` for production releases instead of assembling a seemingly equivalent sequence manually.
+
+## Candidate and release workflow
+
+To build a candidate without creating a GitHub Release, replace `X.Y.Z` with the intended release version:
+
+```sh
+./scripts/prepare-release-build.sh \
+  --version X.Y.Z-rc.1 \
+  --build "$(date '+%Y%m%d%H%M%S')"
+```
+
+The full release entry point requires a local release-notes file:
+
+```sh
+./scripts/release.sh \
+  --version X.Y.Z-rc.1 \
+  --build "$(date '+%Y%m%d%H%M%S')" \
+  --notes build/release-notes/X.Y.Z-rc.1.md
+```
+
+`release.sh` enforces these boundaries:
+
+1. A clean working tree on `main`, with local `HEAD` equal to `origin/main`.
+2. Safety scanning, all tests, an arm64 Release build, and stable-signature verification.
+3. Creation and re-verification of the five release assets.
+4. Stop after creating the GitHub Draft Release.
+
+The five production assets are:
+
+- `MyTerm-<version>-build-<build>-arm64.zip`
+- `appcast.xml`
+- `release-notes.html`
+- `CHECKSUMS.txt`
+- `release-manifest.json`
+
+The Draft requires human confirmation before publication. Candidate apps, packaged ZIPs, and assets downloaded again from GitHub undergo the same resource checks. Publishing the GitHub Release triggers `.github/workflows/deploy-update-site.yml`, which checks the downloaded ZIP again before Cloudflare deployment. Production acceptance still requires updating an existing app through Sparkle and completing manual checks; directly replacing `/Applications/MyTerm.app` is not a substitute.
+
+After all manual acceptance is complete and the corresponding plan is ready to close, run:
+
+```sh
+./scripts/cleanup-build-artifacts.sh \
+  --version X.Y.Z \
+  --build <build> \
+  --apply
+```
+
+Cleanup accepts only a production version that is GitHub's latest non-Draft, non-prerelease release. It downloads the five assets into a system temporary directory and fully verifies them. It refuses deletion if processes cannot be listed or an app is still running from the checkout's `build/`. It removes only the entire `build/` directory, not `/Applications/MyTerm.app`, Application Support, Keychain, `Config/Local/`, signing/recovery material, or SwiftPM dependency caches.
+
+## Signing and secrets
+
+Safe to commit:
+
+- Signing and deployment scripts
+- Sparkle public keys and public designated-requirement baselines
+- Configuration examples without credential values
+
+Never commit:
+
+- Code-signing private keys, `.p12` files, Keychain exports, or encrypted-backup passwords
+- Sparkle Ed25519 private keys
+- Google OAuth client secrets, Firebase tokens, or Cloudflare tokens
+- Production Firebase Project IDs hard-coded into examples, `.firebaserc`, or shared npm scripts
+- Sync passphrases, recovery keys, host passwords, or real host inventories
+- Local `.env` files, actual Firebase settings, or `build/` output
+
+Shared scripts may describe how to obtain or use local credentials, but must not embed them. Derive personal paths from the project root or pass them as arguments.
+
+## Codex skills and source code
+
+The local `release-myterm` skill is a safety manual for Codex operating MyTerm releases. It is neither a build dependency nor part of this repository.
+
+This guide and script `--help` output are the authoritative GitHub instructions for human developers. Testing, candidate preparation, and Draft creation must be possible using these documents and scripts without installing a Codex skill.
+
+## Troubleshooting
+
+### The app still looks like an old version
+
+Do not rely on the Dock icon or app files on disk. Check the actual executable path, version, and Build first. The correct executable for daily testing in the primary checkout is:
+
+```text
+build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
+```
+
+### Can a test build overwrite production?
+
+No. Development scripts restrict output to `build/dev/`, `build/candidates/`, or `build/update-lab/`. Production changes only through a user-initiated Sparkle update or an explicitly authorized production installation.
+
+### Why is `build/MyTerm.app` prohibited?
+
+It identifies neither development, candidate, nor production and makes it easy to confuse builds on disk with running processes. Scripts reject this path.
+
+### Does the release script publish immediately?
+
+No. `release.sh` creates at most a Draft. Public release, production update-site deployment, and in-app update acceptance have separate human confirmation gates.
+
+## Private maintenance and public source
+
+- This private maintenance repository retains personal versions, existing Git history, signed assets, and automatic deployment. `crazy01100/myterm-source` is a separate source-only project, providing no personal app archives, cloud configuration, or update service.
+- Maintainers export with `scripts/export-public-source.py --output build/public-source/<new-candidate-name>`. `PublicSource/export-manifest.json` defines the explicit file list; `PublicSource/overrides/` holds public documentation and tool differences. When an upstream hash changes, review and update the public differences and both languages before refreshing the manifest. Do not push the entire working directory or private Git history to the public repository.
+- Before publication, run `python3 PublicSource/test_export.py`, service/credential scans, document checks, and a build-only verification without personal settings. Create fresh Git history initially and use the public repository's own normal commits for later updates. Private app releases and update-site deployments retain their separate workflows and authorization.

@@ -2,6 +2,8 @@
 
 [繁體中文](README.md) | **English**
 
+This repository provides source code, build resources, and documentation only. MyTerm is shaped around the maintainer’s personal workflow; build and adapt it for your own needs. No prebuilt app or hosted sync/update service is provided.
+
 <p>
   <a href="https://openai.com/brand/">
     <picture>
@@ -20,17 +22,14 @@ This is an independent personal project, not endorsed or sponsored by OpenAI. Th
 
 MyTerm is a native SSH management app for **Apple Silicon and macOS 26**. It brings host management, SSH, a local terminal, serial connections, and a dual-pane SFTP browser into one app. All local features work without signing in.
 
-Latest stable release and downloads: [GitHub Releases](https://github.com/crazy01100/myterm/releases/latest).
 
-- [Download and installation](https://mtus.lieniapp.work/install/)
-- [Release notes](https://mtus.lieniapp.work/)
 - [Development and release guide](DEVELOPMENT.en.md)
 - [Set up your own Firebase sync backend](FIREBASE_SETUP.en.md)
 - [Migrate host metadata from Termius](TERMIUS_MIGRATION.en.md)
 - [System architecture](ARCHITECTURE.en.md)
 - [Security design](SECURITY.en.md)
 
-The linked project guides are available in English, with language links to their Traditional Chinese counterparts. The app interface and update website remain in Traditional Chinese. English menu descriptions below refer to the corresponding Chinese controls.
+The linked project guides are available in English, with language links to their Traditional Chinese counterparts. The app interface remains in Traditional Chinese. English menu descriptions below refer to the corresponding Chinese controls.
 
 ## Features
 
@@ -52,7 +51,7 @@ The linked project guides are available in English, with language links to their
 - Import MyTerm or Termius host metadata with a selectable preview, and export MyTerm host metadata. See [Termius migration](TERMIUS_MIGRATION.en.md) for supported data and the optional conversion tool.
 - Customize or disable shortcuts that apply within the app. Saved passwords can only be filled at recognized safe password prompts. If the initial automatic login password fails, MyTerm offers to replace it only after OpenSSH confirms that the next manually entered password authenticated successfully. For a forced password change, both new entries must match and the server must explicitly report success before MyTerm offers to update the local vault.
 - Detect operating systems and network platforms from terminal output, with a read-only background probe for SSH hosts that remain unidentified. The host library, SFTP picker, connection tab, terminal title, and that connection's Logs record use consistent platform badges.
-- Install stable releases through Sparkle's secure updater using MyTerm → Check for Updates.
+- Optionally use Sparkle updates from your own configured HTTPS feed and verification key. Without that configuration, update by rebuilding from source.
 
 ## Optional cross-device sync
 
@@ -70,16 +69,16 @@ Sync is off by default. To sync hosts, groups, host passwords, and finalized Log
 - Private-key files, private-key paths, and `known_hosts` always remain local to each Mac.
 - Disable sync at any time and continue using the app locally.
 
-The official release does not require your own Firebase project. Only developers building from source with their own Google sign-in and sync backend need to follow the [Firebase setup guide](FIREBASE_SETUP.en.md). Missing cloud configuration does not affect local features.
+To enable Google sign-in and sync in your own build, configure your own Firebase project using the [Firebase setup guide](FIREBASE_SETUP.en.md). Without cloud configuration, all local features remain available.
 
 ## Requirements and installation
 
 - Apple Silicon Mac (arm64)
 - macOS 26 or later
 
-After downloading and extracting the archive, move `MyTerm.app` to Applications before launching it. Do not run it directly from an archive, disk image, temporary download location, or read-only location. macOS App Translocation or a location where the app cannot be replaced can prevent Sparkle from completing updates.
+Build from source using the instructions below. The default output is `build/dev/MyTerm Dev.app`, isolated from a production app. Keep your build in a stable, writable local folder. For a distribution of your own, choose a distinct app identity and signing configuration; see [DEVELOPMENT.en.md](DEVELOPMENT.en.md).
 
-The project is not currently enrolled in the Apple Developer Program, so macOS may warn that it cannot verify the developer on the first manual download. After verifying the source, allow the app once in System Settings → Privacy & Security. The self-signed certificate has no Apple Team ID and cannot guarantee Keychain identity continuity across builds. All local secrets share one encrypted vault so that the number of Keychain approvals required after an update does not grow with the number of hosts. In-app updates separately verify Sparkle Ed25519 signatures.
+The default build has no update feed. Update it by fetching source changes and rebuilding, or configure your own HTTPS feed and Sparkle verification key. Self-signed or ad-hoc builds are not Apple-notarized and may require macOS approval when transferred to another Mac.
 
 ## Getting started
 
@@ -101,8 +100,8 @@ The project is not currently enrolled in the Apple Developer Program, so macOS m
 You need macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools. The Dev version below is a naming example; replace it with the actual target version when building.
 
 ```sh
-git clone https://github.com/crazy01100/myterm.git
-cd myterm
+git clone https://github.com/crazy01100/myterm-source.git
+cd myterm-source
 ./scripts/run-tests.sh
 ./scripts/run-dev-app.sh \
   --version 1.0.22-dev.1 \

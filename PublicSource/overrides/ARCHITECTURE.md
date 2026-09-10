@@ -26,7 +26,7 @@
              │                                  ▼（僅啟用同步後讀寫）
              │                         Cloud Firestore（只保存密文）
              │
-             └─ App 更新 ──────────── HTTPS ──▶ mtus.lieniapp.work
+             └─ App 更新 ──────────── HTTPS ──▶ 自行設定的 HTTPS 更新服務
                                                 │ Sparkle appcast
                                                 ▼
                                       GitHub Release 安裝包
@@ -34,7 +34,7 @@
 
 MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 與 Firebase Authentication 建立雲端帳號身分；只有使用者另外啟用同步後，MyTerm 才會使用 Firebase ID token 存取 Cloud Firestore，並初始化主機資料與已結束 Logs 的跨裝置同步流程。
 
-官方 App、純本機原始碼建置與自行建置同步後端的設定邊界，以及 Firebase／Google Cloud 前置作業，見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
+純本機原始碼建置與自行建置同步後端的設定邊界，以及 Firebase／Google Cloud 前置作業，見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
 
 ## App 元件
 
@@ -129,23 +129,11 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 
 ## 更新與發布
 
-```text
-開發 Mac
-  └─ 測試、arm64 Release 建置、固定本機發行憑證簽署、Sparkle Ed25519 簽署
-       └─ 私人 GitHub Draft Release
-            └─ 人工核對並發布
-                 └─ GitHub Actions
-                      ├─ 下載並驗證五個 Release Assets
-                      ├─ Direct Upload 至 Cloudflare Pages
-                      └─ 從外部重新驗證網站、appcast、ZIP 與安全標頭
-```
+這個原始碼專案不發布 App 安裝包或提供更新站。一般開發建置沒有 `SUFeedURL`，Sparkle 不啟動更新器；可取得新版原始碼並在本機重建。
 
-- GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
-- Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
-- Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
-- MyTerm 自有的 SVG 平台圖示由建置腳本放入標準 `Contents/Resources/PlatformIcons`，執行期只從 `Bundle.main` 載入，不使用會嵌入建置機 fallback 路徑的 executable-target `Bundle.module`。候選 App、封裝 ZIP、GitHub 回下載資產與 Cloudflare 部署前會共同驗證圖示內容並拒絕不安全的 MyTerm SwiftPM resource accessor。
-- Sparkle 不要求 App 路徑名稱必須是 `/Applications`，但會拒絕從 App Translocation、唯讀映像、暫時位置或無法替換 App 的位置更新。正式安裝一律先將 `MyTerm.app` 移到「應用程式」資料夾；專案 `build/` 內的 App 只供開發測試。
-- 目前未使用 Apple Developer ID，因此第一次手動下載可能需要 macOS 使用者確認。零費用自簽憑證無法取得 Apple Team ID，Keychain 仍可能把每次建置視為新的程式身分；本機機密集中於單一加密保管庫與單一 Keychain 根金鑰，使更新後的驗證不會隨主機數量增加。這不會取代 Sparkle 的更新簽章驗證。
+獨立發行者可在建置時設定 `MYTERM_SPARKLE_FEED_URL` 與自己的 Ed25519 驗證公鑰。選用的封裝及驗證腳本只使用明確提供的 `MYTERM_UPDATE_BASE_URL`，不內建維護者主機或部署帳號。安裝包、已簽署 appcast、manifest、校驗碼、程式簽章與 App 身分必須一致，見 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+平台 SVG 放在 `Contents/Resources/PlatformIcons` 並由 `Bundle.main` 載入；封裝檢查會核對完整圖示並拒絕依賴建置機路徑的 MyTerm resource accessor。更新安裝不可使用 App Translocation、唯讀映像或無法替換 App 的位置。
 
 ## 儲存庫結構
 
@@ -157,8 +145,7 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 | `Resources` | App 圖示、Info.plist 與測試資源 |
 | `Config` | 可公開的設定範例與 Sparkle 公鑰 |
 | `scripts` | 建置、測試、封裝、發布與驗證工具 |
-| `.github/workflows` | GitHub Release 發布後的 Cloudflare 自動部署 |
-| `update-site` | Cloudflare Pages 靜態網站來源 |
+| `update-site` | 選用的靜態更新站範例 |
 | `firebase.json`、`firestore.rules` | Firebase Emulator 與正式安全規則 |
 
 `build/`、SwiftPM 快取、`node_modules/`、本機 Firebase 設定、OAuth secret、使用者匯出資料及內部計劃紀錄均不屬於公開原始碼。

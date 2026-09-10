@@ -1,5 +1,7 @@
 # MyTerm 開發與發布指南
 
+**繁體中文** | [English](DEVELOPMENT.en.md)
+
 本文件說明如何在不影響正式版 MyTerm 的前提下，測試原始碼、建立候選版並準備發布。所有建置腳本都保存在 GitHub，讓新的 checkout 不需要依賴特定 AI 工具或本機操作紀錄，也能重現相同流程。
 
 ## 環境與產物隔離
@@ -46,7 +48,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 ## 日常開發流程
 
-Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.21-dev.2`；不要以通用 `0.0.0-dev.*` 代替功能測試交付版本。`CFBundleVersion` 仍使用每次建置獨立且遞增的時間戳，版本名稱不取代 Build 或通道隔離。
+Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.22-dev.2`；不要以通用 `0.0.0-dev.*` 代替功能測試交付版本。`CFBundleVersion` 仍使用每次建置獨立且遞增的時間戳，版本名稱不取代 Build 或通道隔離。本文版本僅為命名範例，實際建置時須依當次目標版本調整。
 
 同步可靠性回歸可獨立執行 `zsh scripts/run-sync-reliability-tests.sh`，完整 `scripts/run-tests.sh` 亦包含它。測試使用臨時目錄、獨立 UserDefaults、人工後端結果及縮短的排程時間，驗證真實協調層的單一週期、帳號世代與 JSON 保存失敗恢復，不連正式雲端。另以真實 `CloudAccountStore` 配合僅存在測試執行檔的合成登入／Keychain 依賴，驗證離線冷啟動、週期前不重試、下一輪登入及資料同步、single-flight、停用／登出／憑證失效與舊回應丟棄。加密測試另驗證既有保管庫可在未開啟 Settings 時初始化。
 
@@ -62,7 +64,7 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.21-dev.1 \
+  --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
@@ -77,7 +79,7 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.
 
 ```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.21-dev.1 \
+  --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')" \
   --build-only
 ```
@@ -86,13 +88,26 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.
 
 功能驗證完成後，再提交並推送原始碼。在主要開發 Mac 不要把 `build/dev/MyTerm Dev.app` 搬到系統的 `/Applications`，也不要用測試版覆蓋正式版；這不限制外部測試 Mac 使用前述建議的使用者目錄 `~/Applications/MyTerm Dev.app`。
 
-### README 語系與授權文件
+### 文件語系與同步維護
 
-根目錄 [README.md](README.md) 是 GitHub 預設顯示的繁體中文版，[README.en.md](README.en.md) 是完整英文版；兩份文件透過頁首的語言連結互相切換。新增語系時，在根目錄建立 `README.<語系>.md`，並同步更新各版本的語言列，不要放進僅供本機協作、被 Git 排除的 `docs/`。
+GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [README.en.md](README.en.md)。專案自有的文件配對如下；現行指南在頁首提供雙向語言切換，英文文件優先連到英文版，中文文件優先連到中文版。
 
-修改使用者可見功能、安裝需求、基本使用、建置步驟或安全限制時，必須同步維護中英文 README。兩版保留相同的功能範圍、命令與限制；英文版的操作名稱翻譯不代表 App 已提供英文介面。進階文件尚未翻譯時，英文 README 應標明連結內容的語言。
+| 文件 | 繁體中文 | English |
+|---|---|---|
+| 專案介紹 | [README.md](README.md) | [README.en.md](README.en.md) |
+| 架構 | [ARCHITECTURE.md](ARCHITECTURE.md) | [ARCHITECTURE.en.md](ARCHITECTURE.en.md) |
+| 開發與發布 | [DEVELOPMENT.md](DEVELOPMENT.md) | [DEVELOPMENT.en.md](DEVELOPMENT.en.md) |
+| 安全設計 | [SECURITY.md](SECURITY.md) | [SECURITY.en.md](SECURITY.en.md) |
+| Firebase 設定 | [FIREBASE_SETUP.md](FIREBASE_SETUP.md) | [FIREBASE_SETUP.en.md](FIREBASE_SETUP.en.md) |
+| Termius 遷移 | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
+| 更新站 | [update-site/README.md](update-site/README.md) | [update-site/README.en.md](update-site/README.en.md) |
+| UpdateLab beta.2 測試說明 | [中文原始 fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [英文閱讀對照](Resources/UpdateLab/1.0.0-beta.2.en.md) |
 
-開發前先提出計劃與驗收案例並取得維護者確認；計劃末尾應分別盤點中文 README、英文 README、ARCHITECTURE，以及依影響加入 SECURITY、DEVELOPMENT、LICENSE 與素材聲明。每份記錄是否需要更新、理由與實際結果，必要更新完成後再結案。中英文介紹、開發來源署名與圖片標示也須保持語意一致。
+修改專案介紹、功能、架構、安全、安裝、建置、部署或遷移說明時，同步更新受影響文件的中英文版；內容、命令、設定鍵、資料流與限制應一致。語言翻譯不代表 App 或更新網站已提供英文介面。新增英文版採同目錄的 `<原檔名>.en.md`，並更新此表與語言連結；不要放進被 Git 排除的本機 `docs/`。
+
+UpdateLab 中文原檔是本機更新腳本使用的歷史 fixture，英文檔只供 GitHub 閱讀。兩版由本表連結，不在原 fixture 加入切換列，也不修改腳本選用語言；日後若因測試需求改動原文，才同步更新英文對照。已是英文的上游文件與原始 LICENSE／NOTICE 保留原文，不為雙語整理改寫第三方內容。
+
+開發前先提出計劃與驗收案例並取得維護者確認。計劃末尾逐份盤點 README、ARCHITECTURE、DEVELOPMENT、SECURITY、FIREBASE_SETUP、TERMIUS_MIGRATION、更新站及 UpdateLab 的中英文文件，以及依影響加入 LICENSE 與素材聲明；每份記錄是否需要更新、理由與實際結果。必要更新及內容、連結與語言切換驗證完成後再結案；未受影響的文件可明確記錄不需更新。中英文開發來源署名與圖片標示也須保持語意一致。
 
 MyTerm 原創程式碼與文件的 MIT 授權位於根目錄 [LICENSE](LICENSE)。第三方元件及素材保留原有 LICENSE／NOTICE；更新專案授權說明時不得覆寫第三方聲明。
 
@@ -222,3 +237,9 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 ### 發布腳本會直接公開版本嗎？
 
 不會。`release.sh` 最多只建立 Draft。公開 Release、部署正式更新站及 App 端更新驗收都有獨立的人工確認門檻。
+
+## 私人維護與公開原始碼
+
+- 此私人維護庫保留個人版本、既有 Git 歷史、簽署成品與自動部署；`crazy01100/myterm-source` 是獨立的 source-only 專案。公開來源不提供個人 App 成品、雲端設定或更新服務。
+- 維護者以 `scripts/export-public-source.py --output build/public-source/<新的候選名稱>` 匯出；`PublicSource/export-manifest.json` 定義明確檔案清單，`PublicSource/overrides/` 維護公開版文件與工具差異。來源變動導致雜湊不符時，先審閱並更新公開差異與雙語文件，再更新清單；不將整個工作目錄或私人 Git 歷史推到公開庫。
+- 公開前執行 `python3 PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。初次建立全新 Git 歷史，之後以公開庫自己的正常提交同步；私人版本發布及更新站部署仍沿用各自流程與授權。

@@ -8,11 +8,10 @@
 
 | 使用方式 | 是否需要自己的 Firebase 專案 |
 |---|---|
-| 安裝 MyTerm 官方發布版 | 不需要；官方 App 已包含其服務設定 |
 | 從原始碼建置，只使用主機、SSH、Terminal、Serial、SFTP | 不需要；沒有雲端設定時會建立純本機版 |
 | 從原始碼建置，並使用 Google 登入與跨裝置同步 | 需要；請依本文件建立自己的 Firebase／Google Cloud 專案 |
 
-不同 Firebase 專案的帳號、UID、Firestore 資料與同步密文彼此獨立。自行建置的 App 不應使用 MyTerm 官方 Firebase 專案。
+不同 Firebase 專案的帳號、UID、Firestore 資料與同步密文彼此獨立。每位自行建置者均須使用自己的 Firebase 專案；這個原始碼專案不提供代管後端。
 
 ## 架構與安全邊界
 
