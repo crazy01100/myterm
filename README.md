@@ -1,8 +1,26 @@
 # MyTerm
 
+**繁體中文** | [English](README.en.md)
+
+<p>
+  <a href="https://openai.com/brand/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="Resources/Readme/openai-blossom-white.svg">
+      <img src="Resources/Readme/openai-blossom-black.svg" alt="OpenAI" width="48" height="48" align="middle">
+    </picture>
+  </a>
+  <strong>Developed with GPT-5.6 · GPT-6 Astra</strong>
+</p>
+
+MyTerm 是一個主要由 GPT-5.6 與 GPT-6 Astra 完成程式實作的 macOS SSH 管理工具。我負責提出需求、決定功能方向，並在日常使用中驗收與調整。
+
+這個專案源自我的實際需要：在多台 Mac 上管理不同類型的主機，同時同步主機設定與登入密碼，又不希望把可直接讀取的密碼交給其他軟體開發者保管。因此，MyTerm 採用本機加密保管庫與選用的端對端加密同步，讓雲端保存密文，並由自己的 Mac 解密使用。
+
+這是獨立的個人專案，未獲 OpenAI 官方背書或贊助；上述標示說明開發時使用的工具。OpenAI 標誌屬於 OpenAI，詳見[素材來源與使用條款](Resources/Readme/NOTICE.md)。
+
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
-目前正式版本：**1.0.20**
+最新正式版本與下載：[GitHub Releases](https://github.com/crazy01100/myterm/releases/latest)。
 
 - [下載與安裝](https://mtus.lieniapp.work/install/)
 - [更新說明](https://mtus.lieniapp.work/)
@@ -103,3 +121,9 @@ cd myterm
 - `sudo`／`su` 密碼不會自動送出，需在已辨識的安全提示中按按鈕或快捷鍵。
 
 更多信任邊界與儲存方式請見 [SECURITY.md](SECURITY.md) 及 [ARCHITECTURE.md](ARCHITECTURE.md)。
+
+## 授權
+
+MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 2026 LienYi。
+
+第三方元件與素材仍適用各自的授權及版權聲明，包括 [SwiftTerm](Vendor/SwiftTerm/LICENSE)、[平台圖示來源聲明](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt)及 [OpenAI 品牌素材聲明](Resources/Readme/NOTICE.md)；本專案的 MIT License 不取代這些授權。

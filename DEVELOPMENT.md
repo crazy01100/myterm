@@ -86,6 +86,18 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.21-dev.1`、`1.0.
 
 功能驗證完成後，再提交並推送原始碼。在主要開發 Mac 不要把 `build/dev/MyTerm Dev.app` 搬到系統的 `/Applications`，也不要用測試版覆蓋正式版；這不限制外部測試 Mac 使用前述建議的使用者目錄 `~/Applications/MyTerm Dev.app`。
 
+### README 語系與授權文件
+
+根目錄 [README.md](README.md) 是 GitHub 預設顯示的繁體中文版，[README.en.md](README.en.md) 是完整英文版；兩份文件透過頁首的語言連結互相切換。新增語系時，在根目錄建立 `README.<語系>.md`，並同步更新各版本的語言列，不要放進僅供本機協作、被 Git 排除的 `docs/`。
+
+修改使用者可見功能、安裝需求、基本使用、建置步驟或安全限制時，必須同步維護中英文 README。兩版保留相同的功能範圍、命令與限制；英文版的操作名稱翻譯不代表 App 已提供英文介面。進階文件尚未翻譯時，英文 README 應標明連結內容的語言。
+
+開發前先提出計劃與驗收案例並取得維護者確認；計劃末尾應分別盤點中文 README、英文 README、ARCHITECTURE，以及依影響加入 SECURITY、DEVELOPMENT、LICENSE 與素材聲明。每份記錄是否需要更新、理由與實際結果，必要更新完成後再結案。中英文介紹、開發來源署名與圖片標示也須保持語意一致。
+
+MyTerm 原創程式碼與文件的 MIT 授權位於根目錄 [LICENSE](LICENSE)。第三方元件及素材保留原有 LICENSE／NOTICE；更新專案授權說明時不得覆寫第三方聲明。
+
+README 專用品牌素材位於 `Resources/Readme/`，來源及使用條款見 [NOTICE.md](Resources/Readme/NOTICE.md)。OpenAI 標誌只用於開發工具署名，使用官方原始黑白版本及明暗模式切換；不裁切、改色或併入 MyTerm 自有標誌，且不屬於專案 MIT 授權。調整頁首時同步核對兩版 README 的呈現與聲明。
+
 ## 建置與發布腳本
 
 每個主要腳本都支援 `--help`。不確定參數時，先查看說明，例如：
