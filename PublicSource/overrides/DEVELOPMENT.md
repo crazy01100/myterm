@@ -4,37 +4,65 @@
 
 這個專案只發布原始碼、必要素材與文件，不提供 App 安裝包、代管 Firebase 或更新站。MyTerm 以維護者自己的工作習慣為出發點；你可以修改功能、自己建置，並決定是否建立自己的發行與更新服務。
 
-## 本機建置
+<a id="build-tools"></a>
+## 建置前準備
 
-需要 Apple Silicon、macOS 26、Xcode 26／相容 Command Line Tools（Swift 6.2）、Git 與 ripgrep。雲端設定工具另需 jq；Firestore Rules 測試另需 Node.js 24 與專案 npm 相依套件。
+需要 Apple Silicon、macOS 26、Xcode 26／相容 Command Line Tools（Swift 6.2）、Git、Python 3 與 ripgrep（`rg`）。未安裝 Apple 開發工具時可執行 `xcode-select --install`，依系統提示完成；若已有 Xcode，請確認目前選用的工具鏈提供 Swift 6.2。以 `swift --version`、`git --version`、`python3 --version`、`rg --version` 檢查工具；缺少 ripgrep 時可透過自己使用的套件管理器安裝（已使用 Homebrew 者可執行 `brew install ripgrep`）。
 
-```sh
-git clone https://github.com/crazy01100/myterm-source.git
-cd myterm-source
-./scripts/run-tests.sh
-./scripts/run-dev-app.sh \
-  --version 1.0.22-dev.1 \
-  --build "$(date '+%Y%m%d%H%M%S')" \
-  --build-only
-```
+首次建置需要網路下載 Swift 相依套件。基本本機建置不需要 Node.js 或 Firebase；雲端設定工具另需 jq，Firestore Rules 測試另需 Node.js 24 與專案 npm 相依套件。
 
-版本僅為範例，請依自己的目標調整。移除 `--build-only` 可由同一安全入口啟動 App；每次啟動核對實際路徑、版本、Build、Bundle ID、簽章與 development 通道。腳本只終止本 checkout 固定 `build/dev/MyTerm Dev.app` 路徑的程序，不終止 `/Applications/MyTerm.app`；其他非標準 MyTerm 程序會阻擋操作。
+## 建立日常使用的 MyTerm.app
 
-預設為 MyTerm Dev，使用獨立 Bundle ID、Application Support 與機密保管庫 service。沒有本機簽章身分時使用 ad-hoc code signing；不需維護者的憑證、雲端設定或更新公鑰。移交別台 Mac 時，可放在穩定可寫入目錄，例如 `~/Applications/MyTerm Dev.app`；App 不依賴 checkout 的絕對路徑。跨裝置使用仍須核對實際 App 身分。
+依 [README 建置步驟](README.md#從原始碼建置)執行測試、`build-app.sh --channel candidate` 與 `verify-app.sh`。這會建立 Release 最佳化、一般 MyTerm 名稱與資料身分的 App；建置與驗證本身不啟動、不安裝、不上傳，也不建立更新站。
 
-## 更新自己的建置
+既有腳本以 `candidate` 表示安裝前的 App 輸出位置：`build/candidates/MyTerm-<version>-build-<build>/MyTerm.app`。這個目錄名稱不代表程式只供開發，也不保證來源經過正式發布驗收。README 的 `1.0.21` 是版本標籤範例；修改 `--version` 不會切換 Git 原始碼，請保留自己採用的來源 commit。Build 為每次建置產生、遞增的正整數；即使版本相同，也使用新的 Build。
 
-最簡單的方法是取得新版原始碼並重新建置：
+一般自用不需要 `prepare-release-build.sh` 或 `release.sh`；前者為固定簽章候選的測試／建置／封裝流程，後者為搭配自有更新站的發行流程，要求不同。自用建置沿用 `build-app.sh` 既有能力，不移除發行流程的簽章要求。
+
+<a id="install-and-data"></a>
+## 安裝與既有資料
+
+- 首次安裝：建置／驗證成功後，從 Finder 將 `MyTerm.app` 複製到 `/Applications`（應用程式）；若無該目錄寫入權限，可使用自己的 `~/Applications`。之後從選定位置開啟，不需每次啟動都進入原始碼目錄或重新建置。
+- 已有 MyTerm：先確認來源、版本、Build 與資料用途；完成連線工作並退出原 App 後，才決定是否替換。不要同時啟動兩份使用相同資料身分的 App；若想並存測試，選 Dev。此指南不會自動覆蓋任何安裝。
+- 一般版使用 `tw.local.MySSHClient` Bundle ID、`~/Library/Application Support/MySSHClient/` 與 `tw.local.MySSHClient.local-secret-vault-root` Keychain 根金鑰項目。它可能讀取這台 Mac 上既有一般 MyTerm 的資料；換名稱或移動 App 不會隔離資料。
+- Dev 使用 `tw.local.MySSHClient.Development`、`~/Library/Application Support/MyTerm Development/` 及開發專用 Keychain service。Dev 與一般版不自動遷移主機、密碼、登入或設定；需要搬移時使用 App 支援的匯入／匯出或自己的同步服務，核對其涵蓋範圍，不直接複製保管庫檔案。主機匯出不含密碼，詳見 [資料界線](SECURITY.md)。
+- 移交另一台相容 Mac 時可複製完整 App bundle；另核對 macOS 的開啟許可與簽章。App 不依賴原始碼目錄，但本機保管庫根金鑰不能透過複製 App 或資料夾搬到另一台 Mac。
+
+<a id="manual-update"></a>
+## 手動更新日常使用版
+
+保留原始碼目錄以便更新。先在該目錄執行：
 
 ```sh
 git pull --ff-only
-./scripts/run-tests.sh
+```
+
+只有成功後才重新執行 README 的完整建置／驗證區塊。若有自己的修改或更新失敗，先解決來源差異，不用強制重設或刪除設定來排除問題。`git pull` 不會更新已安裝的 App。
+
+確認新 App 驗證成功後，退出舊 App，把新 App 替換到同一安裝位置，再開啟並核對「關於」的版本／Build。替換 App 不需要刪除 Application Support、Keychain、同步資料或 `Config/Local/`；保留這些資料及自己設定的簽章身分。若新舊版身分相同，會沿用原本的資料位置，但仍應核對新來源是否有遷移或相容性限制。保管庫密文與裝置根金鑰缺一不可，不能把主機匯出當作密碼備份。
+
+乾淨來源預設沒有 `SUFeedURL`，所以不會從預設服務取得更新；單獨設定公鑰而沒有網址也不啟動更新器。有自訂同步或更新配置時，每次重建都要保留相同設定，不能只複製上次已建好的 App 內檔案。
+
+<a id="local-signing"></a>
+## 自用簽章
+
+未設定本機 code-signing 身分時，`build-app.sh` 使用 ad-hoc 簽章；不需付費開發者帳號即可建置，但這不等同 Developer ID 簽章或 Apple 公證。macOS 可能要求開啟許可；重建或更換簽章後，Keychain 可能要求重新授權，不能保證不出現提示。不要以刪除 Keychain 根金鑰或停用系統保護來解決問題。
+
+長期自行維護者可使用自己的固定 code-signing 身分，透過 `MYTERM_CODE_SIGN_IDENTITY` 或 `Config/Local/CodeSigningIdentity.txt` 指定；簽章憑證與私鑰應保留在自己的 Keychain 並妥善備份。固定簽章有助於維持身分，不代表已通過公證；對外發行的完整簽章／更新要求見下方「獨立發行」。
+
+## 開發與測試用的 MyTerm Dev
+
+在來源目錄執行：
+
+```sh
 ./scripts/run-dev-app.sh \
-  --version 1.0.22-dev.2 \
+  --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-有自己的修改時先處理 Git 合併，再建置。預設沒有 `SUFeedURL`，App 不會連到任何預設更新站；只有 Sparkle 公鑰但沒有網址也不會啟動更新器。
+此入口會建置、驗證並啟動隔離的 `build/dev/MyTerm Dev.app`；加上 `--build-only` 則不啟動。版本僅為範例。腳本只終止本 checkout 固定 Dev 路徑的程序，不終止 `/Applications/MyTerm.app`；其他非標準 MyTerm 程序會阻擋操作。若一般自用 App 安裝在 `~/Applications`，執行開發入口前先自行退出它。每次啟動核對實際路徑、版本、Build、Bundle ID、簽章與 development 通道。
+
+Dev 同樣使用 Release 最佳化，其差異是名稱與資料隔離。移交其他 Mac 的已驗證 Dev 可放在穩定、可寫入的 `~/Applications/MyTerm Dev.app` 或其他位置；它不依賴主要開發 checkout 路徑。
 
 ## 設定自己的同步服務
 
@@ -47,17 +75,13 @@ git pull --ff-only
 ```sh
 export MYTERM_SPARKLE_FEED_URL="https://updates.example.org/appcast.xml"
 export MYTERM_SPARKLE_PUBLIC_KEY="YOUR_BASE64_ED25519_PUBLIC_KEY"
-./scripts/run-dev-app.sh \
-  --version 1.0.22-dev.1 \
-  --build "$(date '+%Y%m%d%H%M%S')" \
-  --build-only
 ```
 
-請替換範例值；公鑰必須是 Base64 編碼的 32-byte Ed25519 公鑰。`build-app.sh` 也支援 `--sparkle-feed-url`／`--sparkle-public-key`。若設定 `MYTERM_SPARKLE_PUBLIC_KEY`，驗證工具優先核對該值；否則核對自行產生的 `Config/Release/SparklePublicKey.txt`（如有）。建置入口沿用安全通道與路徑規則，不直接覆蓋正式 App。
+在同一個終端機設定後，重新執行 README 的日常使用版建置區塊，或上方 Dev 指令。只有配置網址及公鑰不會產生可用更新；還須完成下方自有簽署資產與服務流程。請替換範例值；公鑰必須是 Base64 編碼的 32-byte Ed25519 公鑰。`build-app.sh` 也支援 `--sparkle-feed-url`／`--sparkle-public-key`。若設定 `MYTERM_SPARKLE_PUBLIC_KEY`，驗證工具優先核對該值；否則核對自行產生的 `Config/Release/SparklePublicKey.txt`（如有）。建置入口沿用安全通道與路徑規則，不直接覆蓋正式 App。
 
 ## 選用：獨立發行
 
-發布給其他人前，先替自己的發行版建立獨立 App／資料身分，避免與其他 MyTerm 建置共享資料。核對 `Resources/Info.plist` 的 Bundle ID，以及 `build-app.sh`／`verify-app.sh` 的 development Bundle ID、Application Support 與 Keychain service 設定；若改身分，相關驗證也要同步更新。這項來源預設供本機 Dev 使用，不承諾多個衍生發行版可直接並存。
+發布給其他人前，先替自己的發行版建立獨立 App／資料身分，避免與其他 MyTerm 建置共享資料。核對 `Resources/Info.plist` 的 Bundle ID，以及 `build-app.sh`／`verify-app.sh` 的 development Bundle ID、Application Support 與 Keychain service 設定；若改身分，相關驗證也要同步更新。一般自用建置與 Dev 的身分不同，但不承諾多個一般衍生發行版可直接並存。
 
 自行發行需要自己的固定 code-signing 身分、Sparkle 私鑰與可管理的 HTTPS 主機。私鑰保存在自己的 Keychain 並安全備份，不能寫入 repository。取得自己的簽章身分後，使用 `stage-code-signing-baseline.sh --identity <IDENTITY>` 建立本機基線；`create-sparkle-signing-key.sh` 產生自己的 Sparkle 公鑰。產生金鑰前先完成依賴建置。工具可能開啟 Keychain 或建立金鑰，請確認執行目的後再使用。
 

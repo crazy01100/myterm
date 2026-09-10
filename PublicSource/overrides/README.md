@@ -23,7 +23,7 @@ MyTerm 是一個主要由 GPT-5.6 與 GPT-6 Astra 完成程式實作的 macOS SS
 MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。它把主機管理、SSH、本機 Terminal、Serial Port 與雙欄 SFTP 放在同一個 App 中；不登入帳號也能完整使用本機功能。
 
 
-- [開發與發布指南](DEVELOPMENT.md)
+- [建置、安裝與開發指南](DEVELOPMENT.md)
 - [Firebase 自架同步設定](FIREBASE_SETUP.md)
 - [Termius 主機資料遷移](TERMIUS_MIGRATION.md)
 - [系統架構](ARCHITECTURE.md)
@@ -74,9 +74,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - Apple Silicon Mac（arm64）
 - macOS 26 或更新版本
 
-請依下方原始碼建置步驟建立 App。預設輸出為隔離正式 App 的 `build/dev/MyTerm Dev.app`，可放在穩定、可寫入的本機位置使用。若自行發行給其他人，應設定獨立 App 身分與簽章，見 [DEVELOPMENT.md](DEVELOPMENT.md)。
-
-預設建置沒有更新 feed；取得新版原始碼並重建即可更新，也可設定自己的 HTTPS feed 與 Sparkle 驗證公鑰。自簽或 ad-hoc 建置未經 Apple 公證，移交其他 Mac 時可能需要 macOS 使用者允許開啟。
+請依下方「建置並安裝日常使用版」建立 `MyTerm.app` 並安裝。只想使用本機功能時不需要帳號、雲端設定或更新站；日後可取得新版原始碼重新建置。開發測試另使用隔離的 `MyTerm Dev.app`。
 
 ## 基本使用
 
@@ -95,20 +93,56 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 ## 從原始碼建置
 
-需要 macOS 26、Apple Silicon，以及 Xcode 26 或相容的 Command Line Tools。下列 Dev 版本僅為命名範例，建置時請依實際目標版本調整。
+### 建置並安裝日常使用版
+
+如果只想使用 MyTerm，依照以下步驟建立 **MyTerm.app** 即可，不需要修改程式碼、建立 GitHub Release、架設更新站或設定 Firebase。這個流程使用 Release 最佳化建置，保留一般 MyTerm 的名稱與資料身分。
+
+先備妥 Apple Silicon Mac、macOS 26、Xcode 26 或相容 Command Line Tools（Swift 6.2），以及 Git、Python 3 和 ripgrep（`rg`）。可用 `swift --version`、`git --version`、`python3 --version`、`rg --version` 確認工具可用；首次建置需要網路下載相依套件。工具設定見 [建置指南](DEVELOPMENT.md#build-tools)。
+
+**1.** 開啟 macOS「終端機」，取得來源並進入專案目錄：
 
 ```sh
 git clone https://github.com/crazy01100/myterm-source.git
 cd myterm-source
-./scripts/run-tests.sh
+```
+
+**2.** 在同一個終端機貼上以下整段指令。它會先測試、建置及驗證，全部成功後在 Finder 顯示產生的 App；任何一步失敗都會停止。`1.0.21` 是可替換的版本標籤範例，不會自動選取該版原始碼；實際內容取決於目前下載的來源。
+
+```sh
+(
+  set -e
+  myterm_version="1.0.21"
+  myterm_build="$(date '+%Y%m%d%H%M%S')"
+  myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
+
+  ./scripts/run-tests.sh
+  ./scripts/build-app.sh --channel candidate \
+    --version "$myterm_version" --build "$myterm_build"
+  ./scripts/verify-app.sh --app "$myterm_app" \
+    --version "$myterm_version" --build "$myterm_build"
+  open -R "$myterm_app"
+)
+```
+
+**3.** 把 Finder 顯示的 **MyTerm.app** 拖到「應用程式」，再從該位置開啟，就能日常使用。建置指令只產生 App，不會自動安裝或啟動。若已有同名 App，先閱讀[既有安裝與資料](DEVELOPMENT.md#install-and-data)，確認是否要取代，並先結束 SSH 工作與退出舊 App。
+
+這是你自行建置的使用版，沒有維護者的發布簽章或 Apple 公證。未設定自己的簽章身分時會使用 ad-hoc 簽章；首次開啟或日後重建可能需要 macOS／Keychain 授權，詳見[簽章說明](DEVELOPMENT.md#local-signing)。預設不含同步設定或更新網址。
+
+### 日後更新
+
+在保留的來源目錄執行 `git pull --ff-only`，成功後重新執行上面的建置指令，再退出舊 App、將驗證成功的新 App 替換到原安裝位置。每次指令會產生新的 Build 編號；請保留既有本機資料、Keychain 與自己的 `Config/Local/` 設定。若修改過來源或要從 Dev 切換，先依[更新與資料說明](DEVELOPMENT.md#manual-update)處理。
+
+### 參與開發與測試
+
+若要修改功能並隔離日常資料，使用 **MyTerm Dev.app**：
+
+```sh
 ./scripts/run-dev-app.sh \
   --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-從原始碼 checkout 建置時，測試 App 固定輸出到 `build/dev/MyTerm Dev.app`，並使用獨立的 Bundle ID、Application Support 目錄與本機保管庫 Keychain service；Google session 也按通道隔離，Dev 不會匯入正式版的舊登入，需自行登入測試帳號。腳本只會關閉與重啟這個路徑，不會讀寫或變更 `/Applications/MyTerm.app` 的正式資料。這是建置與程序隔離規則，不是 App 執行時的目錄依賴；已驗證的 Dev App 若交由另一台 Mac 人工測試，建議放在 `~/Applications/MyTerm Dev.app`，也可使用其他穩定、可寫入的本機資料夾。候選版與發布成品則分別放在帶版本與 Build 的 `build/candidates/`、`build/releases/`。`build/`、SwiftPM 快取、ZIP 與本機 Firebase／OAuth 設定都不屬於原始碼，不會提交至 Git。
-
-各建置通道、腳本用途、候選版與發布流程請見 [DEVELOPMENT.md](DEVELOPMENT.md)。
+Dev 使用獨立資料目錄及 Keychain service，輸出於 `build/dev/MyTerm Dev.app`；不會自動帶入一般版的主機、密碼或 Google 登入。開發流程、自有同步、App 內更新與獨立發行見 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 資料與安全界線
 

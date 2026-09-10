@@ -129,7 +129,9 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 
 ## 更新與發布
 
-這個原始碼專案不發布 App 安裝包或提供更新站。一般開發建置沒有 `SUFeedURL`，Sparkle 不啟動更新器；可取得新版原始碼並在本機重建。
+自用建置透過 `build-app.sh --channel candidate` 產生一般 MyTerm 身分的 Release 最佳化 App，預設沿用 `tw.local.MySSHClient` 與 `MySSHClient` 資料目錄；安裝前的候選目錄不會隔離執行時資料。development 同樣採 Release 最佳化，但使用獨立名稱、Bundle ID、資料與保管庫 service。完整建置／安裝及手動更新見 [DEVELOPMENT.md](DEVELOPMENT.md)。
+
+這個原始碼專案不發布 App 安裝包或提供更新站。未配置更新的一般自用與開發建置均沒有 `SUFeedURL`，Sparkle 不啟動更新器；可取得新版原始碼並在本機重建。
 
 獨立發行者可在建置時設定 `MYTERM_SPARKLE_FEED_URL` 與自己的 Ed25519 驗證公鑰。選用的封裝及驗證腳本只使用明確提供的 `MYTERM_UPDATE_BASE_URL`，不內建維護者主機或部署帳號。安裝包、已簽署 appcast、manifest、校驗碼、程式簽章與 App 身分必須一致，見 [DEVELOPMENT.md](DEVELOPMENT.md)。
 

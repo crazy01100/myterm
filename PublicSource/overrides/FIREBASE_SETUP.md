@@ -2,7 +2,7 @@
 
 **繁體中文** | [English](FIREBASE_SETUP.en.md)
 
-本文件供「從原始碼自行建置，且希望啟用 Google 登入與跨裝置同步」的開發者使用。
+本文件供「從原始碼自行建置，且希望啟用 Google 登入與跨裝置同步」的使用者與開發者使用。
 
 ## 先確認你是否需要設定
 
@@ -151,7 +151,13 @@ npm run deploy:firestore -- --project YOUR_FIREBASE_PROJECT_ID
 
 參考：[Firebase CLI 部署與 `--only firestore`](https://firebase.google.com/docs/cli)
 
-## 8. 建置含雲端功能的 MyTerm Dev
+## 8. 建置含雲端功能的 MyTerm
+
+完成設定後，日常使用版請重新執行 [README 的建置與驗證步驟](README.md#從原始碼建置)，再依指南安裝／替換。一般自用與 Dev 都會包入 `Config/Local/MyTermCloudConfig.plist` 的允許欄位；事後加入設定不會更新已安裝的 App。
+
+建置完成後，於 Finder 顯示的 `MyTerm.app` 選擇「顯示套件內容」，核對 `Contents/Resources/MyTermCloudConfig.plist` 是否存在，不公開其中的設定。接著完成第 9 節的登入／同步驗收。
+
+若要先在隔離資料中測試，再使用下列 MyTerm Dev 流程；Dev 的登入與主機不會自動移到一般版，兩版須各自設定登入及同步。
 
 只要 `Config/Local/MyTermCloudConfig.plist` 存在，標準開發建置就會把 allow-list 中的四個執行期欄位放入 App。下列 Dev 版本僅為命名範例，請依實際目標版本調整：
 

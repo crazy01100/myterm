@@ -2,7 +2,7 @@
 
 [繁體中文](FIREBASE_SETUP.md) | **English**
 
-This guide is for developers building MyTerm from source who want to enable Google sign-in and cross-device sync.
+This guide is for users and developers building MyTerm from source who want to enable Google sign-in and cross-device sync.
 
 ## Check whether you need this setup
 
@@ -151,7 +151,13 @@ The deployment script stops if `--project` is missing or malformed, or if the Fi
 
 Reference: [Firebase CLI deployment and `--only firestore`](https://firebase.google.com/docs/cli)
 
-## 8. Build MyTerm Dev with cloud features
+## 8. Build MyTerm with cloud features
+
+After configuration, rebuild your everyday app using the [README build and verification steps](README.en.md#building-from-source), then install or replace it as described there. Both regular personal builds and Dev include the allowed fields from `Config/Local/MyTermCloudConfig.plist`; adding settings later does not update an installed app.
+
+For the resulting `MyTerm.app` revealed in Finder, choose Show Package Contents and check for `Contents/Resources/MyTermCloudConfig.plist` without disclosing its settings. Then complete the sign-in/sync acceptance checks in section 9.
+
+To test with isolated data first, use the MyTerm Dev flow below. Dev sign-in and hosts do not automatically move to regular MyTerm; configure sign-in and sync separately in each app.
 
 When `Config/Local/MyTermCloudConfig.plist` exists, the standard development build includes its four allow-listed runtime fields in the app. The Dev version below is a naming example; replace it with the actual target version:
 

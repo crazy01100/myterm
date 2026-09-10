@@ -4,6 +4,8 @@
 
 This source repository contains no maintainer cloud configuration, update URL, signing keys, or user data. Builds without local cloud configuration and an explicit update feed do not use a maintainer-hosted service. Independent distributors must use their own services and preserve signature verification.
 
+Personal regular builds use the existing production data identity and may read MyTerm data already on this Mac; Dev is separate. Renaming or moving the app does not create a new vault. Manual updates replace the app while preserving Application Support and Keychain items. Ad-hoc rebuilds may require root-key authorization again; do not delete that key to eliminate prompts. See the [installation and update guide](DEVELOPMENT.en.md#install-and-data).
+
 ## Local secrets
 
 - Google sign-in state, the sync master key, and all host passwords share one local AES-256-GCM encrypted vault.

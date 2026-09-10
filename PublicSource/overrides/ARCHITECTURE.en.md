@@ -133,7 +133,9 @@ Logs use separate immutable documents at `users/<UID>/connectionLogs/<record UUI
 
 ## Updates and releases
 
-This source repository publishes no app archives or hosted update service. Normal development builds have no `SUFeedURL`, so Sparkle does not start an updater. Source changes can be pulled and rebuilt locally.
+Personal builds use `build-app.sh --channel candidate` to produce a Release-optimized app with the regular MyTerm identity, retaining `tw.local.MySSHClient` and the `MySSHClient` data directory by default. The pre-installation candidate directory does not isolate runtime data. Development also uses Release optimization, with a separate name, Bundle ID, data directory, and vault service. See [DEVELOPMENT.en.md](DEVELOPMENT.en.md) for building, installing, and manual updates.
+
+This source repository publishes no app archives or hosted update service. Unconfigured personal and development builds have no `SUFeedURL`, so Sparkle does not start an updater. Source changes can be pulled and rebuilt locally.
 
 An independent distributor may set `MYTERM_SPARKLE_FEED_URL` and their own Ed25519 verification key at build time. Optional packaging and verification scripts use the explicitly supplied `MYTERM_UPDATE_BASE_URL`; no maintainer host or deployment account is built in. Keep the archive, signed appcast, manifest, checksums, code-signing identity, and app identity consistent. See [DEVELOPMENT.en.md](DEVELOPMENT.en.md).
 

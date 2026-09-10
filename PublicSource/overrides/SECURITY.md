@@ -4,6 +4,8 @@
 
 這個原始碼專案不包含維護者雲端設定、更新網址、簽章金鑰或使用者資料。未配置本機雲端設定及明確更新 feed 的建置不會使用維護者代管服務；獨立發行者須使用自己的服務並保留簽章驗證。
 
+一般自用建置使用既有 production 資料身分，可能讀取這台 Mac 已有的 MyTerm 資料；Dev 則獨立。更換 App 名稱或安裝位置不會建立新的保管庫。手動更新只替換 App，保留 Application Support 與 Keychain；ad-hoc 重建可能需要重新授權根金鑰，不應刪除它來消除提示。安裝／更新步驟見 [建置指南](DEVELOPMENT.md#install-and-data)。
+
 ## 本機機密資料
 
 - Google 登入狀態、同步 Master Key 與所有主機密碼保存於同一個 AES-256-GCM 本機加密保管庫。

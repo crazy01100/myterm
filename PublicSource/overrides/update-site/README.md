@@ -4,7 +4,7 @@
 
 此目錄是供獨立發行者調整的靜態網站範例，不是本來源專案提供的線上服務。本原始碼庫不附預先打包的 MyTerm、既有已簽署 appcast 或自動部署 workflow。
 
-- 若只自行建置使用，不需要更新站；取得原始碼後重新建置即可。
+- 若只自行建置使用，不需要更新站；依 [README](../README.md#從原始碼建置) 建置 `MyTerm.app`、安裝及手動更新即可。
 - 想要 App 內更新時，先建立自己的 HTTPS 主機、Sparkle 私鑰及 App 驗證公鑰，設定 `MYTERM_UPDATE_BASE_URL`，並依[開發指南](../DEVELOPMENT.md)建立簽署資產。
 - `prepare-pages-deployment.sh` 將自己的 appcast、ZIP、release notes 及 checksums 放進部署輸出；它不會把來源中的空白範例當成有效更新。
 - 此庫沒有 appcast 成品；以自己的發布資產建立 feed，不手動修改已簽署的 feed。部署前調整 HTML 的文案與安裝說明，使其符合自己的發行方式。

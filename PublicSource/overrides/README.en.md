@@ -23,7 +23,7 @@ This is an independent personal project, not endorsed or sponsored by OpenAI. Th
 MyTerm is a native SSH management app for **Apple Silicon and macOS 26**. It brings host management, SSH, a local terminal, serial connections, and a dual-pane SFTP browser into one app. All local features work without signing in.
 
 
-- [Development and release guide](DEVELOPMENT.en.md)
+- [Build, installation, and development guide](DEVELOPMENT.en.md)
 - [Set up your own Firebase sync backend](FIREBASE_SETUP.en.md)
 - [Migrate host metadata from Termius](TERMIUS_MIGRATION.en.md)
 - [System architecture](ARCHITECTURE.en.md)
@@ -76,9 +76,7 @@ To enable Google sign-in and sync in your own build, configure your own Firebase
 - Apple Silicon Mac (arm64)
 - macOS 26 or later
 
-Build from source using the instructions below. The default output is `build/dev/MyTerm Dev.app`, isolated from a production app. Keep your build in a stable, writable local folder. For a distribution of your own, choose a distinct app identity and signing configuration; see [DEVELOPMENT.en.md](DEVELOPMENT.en.md).
-
-The default build has no update feed. Update it by fetching source changes and rebuilding, or configure your own HTTPS feed and Sparkle verification key. Self-signed or ad-hoc builds are not Apple-notarized and may require macOS approval when transferred to another Mac.
+Follow “Build and install for everyday use” below to create and install `MyTerm.app`. Local features need no account, cloud configuration, or update service; fetch newer source and rebuild when you want to update. Development and testing use the separate `MyTerm Dev.app`.
 
 ## Getting started
 
@@ -97,20 +95,56 @@ The default build has no update feed. Update it by fetching source changes and r
 
 ## Building from source
 
-You need macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools. The Dev version below is a naming example; replace it with the actual target version when building.
+### Build and install for everyday use
+
+To use MyTerm, follow these steps to create **MyTerm.app**. You do not need to change code, create a GitHub Release, host an update service, or configure Firebase. This produces a Release-optimized build with the regular MyTerm name and data identity.
+
+You need an Apple Silicon Mac, macOS 26, Xcode 26 or compatible Command Line Tools (Swift 6.2), Git, Python 3, and ripgrep (`rg`). Check availability with `swift --version`, `git --version`, `python3 --version`, and `rg --version`. The first build downloads dependencies over the internet. See [build tools](DEVELOPMENT.en.md#build-tools) for setup.
+
+**1.** Open macOS Terminal, download the source, and enter its directory:
 
 ```sh
 git clone https://github.com/crazy01100/myterm-source.git
 cd myterm-source
-./scripts/run-tests.sh
+```
+
+**2.** Paste the entire block below into the same Terminal. It runs tests, builds, and verifies the app, then reveals it in Finder only if every step succeeds. Any failed step stops the sequence. `1.0.21` is a replaceable version-label example; it does not select that source version. The app's contents come from the source currently checked out.
+
+```sh
+(
+  set -e
+  myterm_version="1.0.21"
+  myterm_build="$(date '+%Y%m%d%H%M%S')"
+  myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
+
+  ./scripts/run-tests.sh
+  ./scripts/build-app.sh --channel candidate \
+    --version "$myterm_version" --build "$myterm_build"
+  ./scripts/verify-app.sh --app "$myterm_app" \
+    --version "$myterm_version" --build "$myterm_build"
+  open -R "$myterm_app"
+)
+```
+
+**3.** Drag **MyTerm.app** from Finder into Applications, then open it from there for everyday use. The build commands do not install or launch it automatically. If an app with that name already exists, read [existing installations and data](DEVELOPMENT.en.md#install-and-data), decide whether to replace it, and finish your SSH work and quit the old app first.
+
+This is your own build, without the maintainer's release signature or Apple notarization. Without your own signing identity configured, it uses ad-hoc signing. macOS or Keychain may require approval when first opening it or after rebuilding; see [signing notes](DEVELOPMENT.en.md#local-signing). The default contains no sync configuration or update URL.
+
+### Updating later
+
+Run `git pull --ff-only` in your retained source directory. After it succeeds, repeat the build block above, quit the old app, and replace it at the same installation location with the verified new app. Each run generates a new Build number. Preserve existing local data, Keychain items, and your own `Config/Local/` settings. If you have source changes or are switching from Dev, follow the [update and data guidance](DEVELOPMENT.en.md#manual-update) first.
+
+### Development and testing
+
+To change features while keeping everyday data separate, use **MyTerm Dev.app**:
+
+```sh
 ./scripts/run-dev-app.sh \
   --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
 ```
 
-In a source checkout, the test app is built at `build/dev/MyTerm Dev.app`, with a separate bundle ID, Application Support directory, and vault Keychain service. Google sessions are also isolated by channel: Dev does not import the production app's legacy sign-in and requires its own test-account sign-in. The script only closes and relaunches the app at that Dev path; it does not read, write, or change the production app's data for `/Applications/MyTerm.app`. This is a build and process-isolation rule, not a runtime dependency on that directory. If you send a verified Dev app to another Mac for manual testing, `~/Applications/MyTerm Dev.app` is recommended, but any stable, writable local folder is acceptable. Candidates and release assets use version-and-build-specific directories under `build/candidates/` and `build/releases/`. Build output, SwiftPM caches, ZIP archives, and local Firebase/OAuth configuration are not source files and are excluded from Git.
-
-See [DEVELOPMENT.en.md](DEVELOPMENT.en.md) for build channels, scripts, candidate builds, and the release process.
+Dev has its own data directory and Keychain service, with output at `build/dev/MyTerm Dev.app`. It does not automatically import regular MyTerm hosts, passwords, or Google sign-in. See [DEVELOPMENT.en.md](DEVELOPMENT.en.md) for development, your own sync backend, in-app updates, and independent distribution.
 
 ## Data and security boundaries
 
