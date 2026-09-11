@@ -1,46 +1,41 @@
-<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+--><rss xmlns:myterm="urn:myterm:release:v1" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
     <channel>
         <title>MyTerm</title>
         <item>
-            <title>1.0.9</title>
-            <pubDate>Wed, 19 Aug 2026 00:59:47 +0800</pubDate>
-            <sparkle:version>20260819005831</sparkle:version>
-            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
+            <title>1.0.22</title>
+            <pubDate>Fri, 11 Sep 2026 20:29:17 +0800</pubDate>
+            <sparkle:version>20260911202536</sparkle:version>
+            <sparkle:shortVersionString>1.0.22</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# MyTerm 1.0.9
+            <description sparkle:format="markdown"># MyTerm 1.0.22
 
-## 新功能
+## 安全修正
 
-- 主機庫會依最近一次成功 SSH 連線時間排序，最近使用的主機優先顯示在左上角；連線失敗、取消或只開啟分頁不會改變順序。
-- 在「所有主機」頁面可直接把主機卡片拖到內容區的分類卡片，核對確認視窗後完成移動。
-- 分類卡片的上緣、中央、下方與左右區域都可作為拖曳目標，並提供低對比的目標提示。
+- 將 Sparkle 更新框架升級至 2.9.6，修補舊版框架的已知安全問題。建議現有使用者更新。
+- 強化 SFTP 對異常伺服器回應的處理，限制單一目錄的累計資料量、項目數與遞迴深度，拒絕沒有進展的讀取回應。
+- SFTP 連線初始化與伺服器回應加入期限及取消保護；中斷後停止傳輸，避免舊連線的結果干擾重新連線。
+- 更新資產在解壓與部署前以可信公鑰驗證，並核對更新說明、來源版本與相依清單。
 
-## 資料與安全
+## 使用與相容性
 
-- 最近連線時間只保存在目前 Mac 的權限限制檔案，內容僅有主機 UUID 與時間，不包含主機名稱、位址、帳號、密碼或連線內容，也不會匯出或同步到 Firebase。
-- 移動分類只更新既有主機的分類與修改時間，保留主機 UUID、密碼、平台辨識及最近連線關聯，不需要資料遷移。
-- 主機分類拖曳只追蹤目前 MyTerm 視窗內、從主機卡片開始的滑鼠操作，不接受其他 App 傳入的拖放資料；放手後仍須由使用者確認才會保存。
+- 需要 macOS 26 或更新版本、Apple Silicon Mac。
+- 本版不變更主機、密碼保管庫或同步資料格式。
+- 首次啟動此 Build 時，可能需要一次本機保管庫 Keychain 授權；不應隨主機數量反覆出現提示。
+- 超大型目錄或長時間未回應的 SFTP 伺服器可能被拒絕或斷線；可縮小目錄範圍或重新連線後再試。
 
-## 驗證
+## 驗證與維護
 
-- 440 項本機自動測試全部通過：核心 292 項、同步與加密 148 項。
-- 已在隔離的 MyTerm Dev 實際驗證多台主機會依成功連線先後重新排序，同一端點的不同主機仍各自保有紀錄。
-- 已實際驗證主機可拖到分類卡片的任何位置，確認後正確移動分類並在重啟後保存結果。
-
-## 現有限制
-
-- 最近使用排序第一版只套用於主機庫，不改變 SFTP 主機選擇器順序。
-- 拖曳目標只限「所有主機」頁面的內容區分類卡片；左側分類列表不是投放區。
-- 目前正式成品僅支援 Apple Silicon 與 macOS 26。
-- 目前未使用 Apple Developer ID 與 Apple 公證；安裝方式與安全界線維持既有說明。
-]]></description>
-            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.9-build-20260819005831-arm64.zip" length="6639795" type="application/octet-stream" sparkle:edSignature="oDZUCZXSDl3I+lGGwXYz42hRB4gmMNobx4r46rxz/VXCVHjPOf2WTQeaNIJpQMDBtnRqcMcj2mYkizyFU5h1Dg=="></enclosure>
-        </item>
+- 已完成隔離核心回歸、SFTP 安全案例、Firebase Rules、安全驗簽及政策測試；MyTerm Dev 的 SSH、SFTP、取消與重連、帳號／同步及 Logs 已經人工驗收。
+- 相依風險改以私人 Issue 追蹤，日常監測的失敗狀態只表示運作異常；發布安全門檻仍阻擋未處理的風險。
+- 開發工具仍有一筆 stream-json 中風險公告，以限定工具入口及至台北時間 2026-09-18 23:59:59 的明確例外追蹤；此套件不屬於 App 執行時相依。
+</description>
+            <enclosure url="https://mtus.lieniapp.work/downloads/MyTerm-1.0.22-build-20260911202536-arm64.zip" length="7012395" type="application/octet-stream" sparkle:edSignature="R9nO1m6LjmFeSVWxZTmiari75R7RPD2j38mPV4dQcWNZNO/IizD78vKrco3OTrknbAwdIurBi8Xcu3h4eEcQAw=="></enclosure>
+        <sparkle:releaseNotesLink length="2303" sparkle:edSignature="nKbljizW3jJi1H1bT41o6G9kIf+GhikWUi25Q7fBrCL+S324KErU9OZeuIg8jABQfPKdM92KILzXJP5DdfUfBQ==">https://mtus.lieniapp.work/releases/1.0.22.html</sparkle:releaseNotesLink><myterm:sourceCommit>b6e03abbdc81fc9fb6a045c192f528e9d7441459</myterm:sourceCommit><myterm:dependencies>[{"ecosystem": "native", "name": "https://github.com/jedisct1/libsodium", "version": "1.0.22"}, {"ecosystem": "swift", "name": "https://github.com/jedisct1/swift-sodium", "revision": "cfd195c76882aa9b997560ca7cb95d72fbf5db00", "version": "0.11.0"}, {"ecosystem": "swift", "name": "https://github.com/migueldeicaza/SwiftTerm", "revision": "3219b171cacbe011635f1c1b6c47b0725ff56d3a", "vendored": true}, {"ecosystem": "swift", "name": "https://github.com/sparkle-project/Sparkle", "revision": "ac2def288cbff5cfc7df3ffef6abdf45b72bcb0a", "version": "2.9.6"}]</myterm:dependencies></item>
     </channel>
 </rss><!-- sparkle-signatures:
-edSignature: hI9LzMQOZak19RWplE57RMlIJHRYqcySaTk/h8gMtQ5X/IMsZ42wgnq6tcbWHegR3QYmALqjDX13m82gSnZqCg==
-length: 2967
+edSignature: voz1DoyrT6DmCBgMVkhsuN1LeTmWuj3OzP3ah8FePAYH6aTX8ivVvR9b/WEp5Y6vO+skiyYwHo9AVzzzPRJgBg==
+length: 3658
 -->
