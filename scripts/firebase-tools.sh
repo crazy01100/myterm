@@ -16,6 +16,9 @@ if [[ ! -x "$firebase_cli" ]]; then
   exit 1
 fi
 
+# Refuse an incomplete install or upstream drift before loading CLI commands.
+python3 "$project_root/scripts/patch-firebase-stream-json.py" --check >/dev/null
+
 # Homebrew 在 Apple Silicon 的標準位置是 /opt/homebrew；這台 Mac 目前的
 # 既有 Homebrew 位於 /usr/local。兩者都檢查，避免要求使用者修改全域 PATH。
 for java_home_candidate in \

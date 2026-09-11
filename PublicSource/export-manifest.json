@@ -13,12 +13,12 @@
     {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "4c8f87c93e6b83322ae7a5bdebe005746d24f088441c40eabc90901af79f9cca"
+      "baseSHA256": "0a123a195f59229069177a08b9aa2c785c4ccc63820bbd9c7dd3ed5c17ef6bf1"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "6fb070580d8dcf08326a375122fdab9cef28cd11eafba559d5f349aedf70342b"
+      "baseSHA256": "d4e927c0a7709ada5ea43fb9cbe18a78e0bf42be2fe017be201c65cedab634b5"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
@@ -26,7 +26,7 @@
     {
       "path": "Config/Security/exceptions.json",
       "overlay": "PublicSource/overrides/Config/Security/exceptions.json",
-      "baseSHA256": "e7b1503770f3550bcef88a44f49fcf4556fde11f46a74177c4a290c7ef4ca2af"
+      "baseSHA256": "af779c1dea4c6b472330c33e22f55b6e880c3973478e0a3639ed3e4a9fa62ac4"
     },
     {
       "path": "Config/Security/native-components.json"
@@ -34,22 +34,22 @@
     {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "1995ce8dbcefc2dec1b83e9559f0b048b0f756217d30740b36bdc44fe7e264ac"
+      "baseSHA256": "28a875075b9f5f6beb8b73927459962f319ea1b7feeabf238ae7ed014ca59f79"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "d3b0af84e7dcd96cd3f6e63163739df114fb1b1cd5881680f0bfa99e3e7b6234"
+      "baseSHA256": "b356b1d7d6e86f197f357a71b1fe23dd264677d5ba88cf8ac166b43d12651601"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.en.md",
-      "baseSHA256": "d827fae0a64263bf75059334dae5eeadfa1cb9dbf734e752ccb83335f0c68265"
+      "baseSHA256": "eaa9b57b30d4d6a411779294f1d22867a4cc861451c9bba765d0a6ccc6fa049b"
     },
     {
       "path": "FIREBASE_SETUP.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.md",
-      "baseSHA256": "58a29accc32546aba5d7a631fb76688f5118f655d646e2ac39e1c5037142e34b"
+      "baseSHA256": "f54cb7ff64d83a31ff6327542ccbf8bd6160016a8f9fe095e1efa6d141fc76c3"
     },
     {
       "path": "LICENSE"
@@ -142,12 +142,12 @@
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "1d7b0640e772f98c71ba6b92d5c9770cbf4b810a83559a75cffc9a8187b454fb"
+      "baseSHA256": "02dff40168a2d6e49baf982413b94dc369efd14d84b64e13c2c6f86845835b32"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "244628f2f76d68985a217cb236870126d6efc4f1c382672813f675b081894379"
+      "baseSHA256": "6184e72bda774b00d8f0da00dd004e5ef51aa2afdc7d1e78b322e45861008c28"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"
@@ -496,10 +496,16 @@
       "path": "Tests/Security/fake_sftp.py"
     },
     {
+      "path": "Tests/Security/firebase-stream-json.test.cjs"
+    },
+    {
       "path": "Tests/Security/requirements.txt"
     },
     {
       "path": "Tests/Security/test_audit_policy.py"
+    },
+    {
+      "path": "Tests/Security/test_firebase_patch.py"
     },
     {
       "path": "Tests/Security/test_firebase_policy.py"
@@ -823,6 +829,9 @@
     {
       "path": "scripts/package-app.sh",
       "executable": true
+    },
+    {
+      "path": "scripts/patch-firebase-stream-json.py"
     },
     {
       "path": "scripts/prepare-local-update-lab.sh",

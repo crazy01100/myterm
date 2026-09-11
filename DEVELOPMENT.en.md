@@ -88,6 +88,10 @@ Documentation, comment, or instruction-only changes do not require building or l
 
 Commit and push source after feature acceptance. On the primary development Mac, do not move `build/dev/MyTerm Dev.app` into system `/Applications` or use it to replace production. This does not prevent external test Macs from using the recommended per-user `~/Applications/MyTerm Dev.app` location.
 
+### Firebase development tool compatibility
+
+Development tools require Node.js 24 or later and Python 3.9.2 or later. `npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
+
 ### Document languages and synchronized maintenance
 
 GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.

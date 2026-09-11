@@ -27,6 +27,7 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 - A Firebase/Google Cloud project you can administer.
 - Node.js 24 or later; [package.json](package.json) defines the version requirement.
 - The repository's pinned Firebase CLI, used through `scripts/firebase-tools.sh` after running `npm install` at the repository root.
+- Development tools also require Node.js 24 or later and Python 3.9.2 or later. npm installation applies the hash-verified CLI adapter. If install scripts are disabled, run `python3 scripts/patch-firebase-stream-json.py` explicitly, then verify with `npm run test:development-tools`.
 - macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools to build MyTerm.
 
 The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.

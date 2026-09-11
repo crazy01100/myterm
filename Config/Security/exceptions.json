@@ -1,15 +1,4 @@
 {
   "schemaVersion": 1,
-  "exceptions": [
-    {
-      "id": "GHSA-528h-pc64-c93x",
-      "component": "stream-json",
-      "version": "1.9.1",
-      "scope": "development",
-      "acceptedBy": "Maintainer, explicit approval in the security remediation task",
-      "acceptedAt": "2026-09-11T02:20:14.562282+00:00",
-      "expiresAt": "2026-09-18T15:59:59+00:00",
-      "reason": "Temporary accepted development risk. Firebase CLI still requires the incompatible CommonJS stream-json 1.x paths. The repository wrapper blocks Auth import and Hosting commands; only Firestore deployment, bounded local emulator tests and basic account setup are supported. Direct invocation of node_modules Firebase CLI is outside this mitigation. Remove when a compatible patched parent is available."
-    }
-  ]
+  "exceptions": []
 }

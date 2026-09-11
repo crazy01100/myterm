@@ -28,6 +28,11 @@ jobs:
           python-version: '3.12'
       - name: Install pinned verification tools
         run: ./scripts/setup-security-tools.sh
+      - name: Verify pinned Firebase development tools
+        run: |
+          npm ci --ignore-scripts --no-fund
+          python3 scripts/patch-firebase-stream-json.py
+          npm run test:development-tools
       - name: Verify release validation and audit policies
         run: ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
       - name: Enforce source security policy

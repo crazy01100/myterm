@@ -2,7 +2,7 @@
 """Limit the repository Firebase wrapper to its documented Firestore workflow.
 
 This is not a sandbox against a local owner invoking firebase-tools directly.
-It prevents accidentally reaching unsupported vulnerable import/hosting paths.
+It prevents accidentally reaching unsupported import/hosting paths.
 """
 import json
 from pathlib import Path

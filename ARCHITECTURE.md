@@ -181,3 +181,5 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 私人安全監測以 `sync-security-issues.py` 將完整成功掃描映射至 bot 所建立的私人 Issue，依公告／元件／範圍去重；只在預設分支排程／手動工作授予 issues:write。監測成功與風險是否存在分離；PR／發布的安全門檻獨立保留阻擋條件。
 
 `render-release-notes.py` 是私人／公開發布共用的更新說明 HTML 產生器，保留文字 escaping 與原段落內容，統一版本標題。專用 release-notes.css 只負責窄幅深淺色呈現；HTML 仍在既有流程中簽署並驗證，不包含網站導覽。
+
+Firebase 開發工具的 `stream-json` 相容性由 `scripts/patch-firebase-stream-json.py` 負責，npm 安裝時套用、CLI wrapper 啟動前驗證固定版本與檔案雜湊；相容補丁只轉接 Node 串流介面，不改 App 資料流。套件自身的深度限制與專案命令範圍限制共同保留，細節見 [安全維護指南](SECURITY_MAINTENANCE.md)。

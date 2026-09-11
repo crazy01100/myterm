@@ -168,3 +168,5 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 `dependency-inventory.py` 讀取 Swift 鎖定檔、Vendor revision 與已審閱的 native binary 資訊；`bind-release-metadata.py` 在簽署前把相依清單與來源 commit 綁入 feed。`verify-signed-release.py` 使用可信公鑰驗證原始 feed bytes 後才信任 URL 或解壓 ZIP，並核對更新說明及五項發布資產。`security-audit.py` 另行檢查目前來源與已發布相依；簽章證明來源，不保證沒有漏洞。操作需求見 [安全維護指南](SECURITY_MAINTENANCE.md)。
 
 `render-release-notes.py` 是私人／公開發布共用的更新說明 HTML 產生器，保留文字 escaping 與原段落內容，統一版本標題。專用 release-notes.css 只負責窄幅深淺色呈現；HTML 仍在既有流程中簽署並驗證，不包含網站導覽。
+
+Firebase 開發工具的 `stream-json` 相容性由 `scripts/patch-firebase-stream-json.py` 負責，npm 安裝時套用、CLI wrapper 啟動前驗證固定版本與檔案雜湊；相容補丁只轉接 Node 串流介面，不改 App 資料流。套件自身的深度限制與專案命令範圍限制共同保留，細節見 [安全維護指南](SECURITY_MAINTENANCE.md)。

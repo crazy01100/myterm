@@ -140,3 +140,7 @@ export MYTERM_SPARKLE_KEY_ACCOUNT="MyTerm.Source.Release.ed25519"
 撰寫更新說明時不要加入「驗證與維護」區塊。版本標題可省略，或以第一行 `# MyTerm X.Y.Z` 提供；必須符合目標版本。私人／公開的資產腳本共用 `scripts/render-release-notes.py` 產生已簽署 HTML，版本標題只顯示一次，沒有返回網站導覽。App 與網站使用同一份精簡內容及 `update-site/assets/release-notes.css`；網站首頁樣式不套用到更新說明。
 
 渲染器保留作者輸入的章節，不偷偷刪除內容；維護者應在撰寫與審閱時確認範圍。簽章與發布前驗證門檻保持原樣。每次發布前檢查窄幅、深淺色與捲動預覽，並在實際 Sparkle 更新驗收核對畫面；瀏覽器預覽不代替 App 內驗收。已發布的簽署說明與 appcast 不直接覆寫，模板調整隨下一次核准發布採用。
+
+### Firebase 開發工具相容性
+
+開發工具需要 Node.js 24 以上及 Python 3.9.2 以上。`npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
