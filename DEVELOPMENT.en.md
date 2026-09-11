@@ -149,6 +149,20 @@ Every main script supports `--help`. Check it when unsure about arguments:
 
 Lower-level scripts support these entry points. Use `run-dev-app.sh` for normal development and `release.sh` for production releases instead of assembling a seemingly equivalent sequence manually.
 
+## App versioning and release decisions
+
+MyTerm uses `Major.Minor.Patch`, based on user impact and compatibility:
+
+- **Patch**: compatible bug/security fixes, performance improvements, or small presentation refinements.
+- **Minor**: compatible feature additions/expansions, or deprecation notices while the feature remains usable.
+- **Major**: incompatible changes to existing functionality, data formats, synchronization, or platform support; raising the minimum macOS version also belongs here.
+
+Use the highest applicable level for mixed changes. Work size, vulnerability severity, and upstream dependency version numbers do not determine the App level. Judge UI redesigns and data migrations by their actual compatibility impact. CI, tooling, or documentation-only maintenance may need no App release; necessary fixes packaged inside the App still need delivery in a new release.
+
+Reset Patch when increasing Minor, and reset both lower fields when increasing Major; there is no count threshold. Dev/RC versions append a suffix to the target version (such as `1.1.0-dev.1` or `1.1.0-rc.1`), with independently increasing Builds. Apply this policy to future releases without renumbering published versions or overwriting signed assets.
+
+Every release plan records: **current → proposed version | level and reason | compatibility impact and required user actions | whether an App release is needed**. Proceed through the existing workflow after maintainer confirmation. Automation verifies consistency; it does not select the level or publish automatically.
+
 ## Release-note content and presentation
 
 Update dialogs show user-visible features/fixes, necessary compatibility, significant known limitations, and actions users must take after updating. Keep test counts, verification procedures, CI, deployment, monitoring and development-tool exceptions in feature plans, CI or security Issues. Continue disclosing security information that directly affects app users.
