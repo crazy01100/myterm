@@ -13,12 +13,12 @@
     {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "a7df92a6c1377f5bf760a4b7454b039c02fdc4d56f50fd5c1d9a9ef078e24ed9"
+      "baseSHA256": "b62a67ab0649b5224761ef45c61389b25785d7ea105d694b71ab341bfd23e9df"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "befc03370ef26233d76a8f1e6074689dec490e8a31605ffc81a2fd8bad64f3ad"
+      "baseSHA256": "b11c5fc51f502f72c823b81dafbf92f8ff7c4cc1e1909c1c5ac10075c167d223"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
@@ -142,12 +142,12 @@
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "443ddcf19a0ec21b1cf40a75a4a90df5870c9d035611d226e46f114abc2a11f8"
+      "baseSHA256": "612128dde1b328a0e7eb2077786b1efaade3fa7b31760e5e4a9422c6aba38758"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "34347f2b7765032c8268e30799d393c6d5d5cc97a1fb2103a86e24d102c9dba4"
+      "baseSHA256": "e416717d8648daf929228a3a3f7f21953e27a42e721238d0055faf925ad25f75"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"

@@ -1,8 +1,5 @@
-name: MyTerm security checks
+name: MyTerm security monitor
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '23 1 * * *'
@@ -10,12 +7,18 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: security-${{ github.event_name }}-${{ github.ref }}
+  group: myterm-security-monitor
   cancel-in-progress: false
 jobs:
-  audit:
+  monitor:
+    name: Risk monitoring (failure means an operational error)
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     env:
       GH_TOKEN: ${{ github.token }}
       npm_config_cache: ${{ github.workspace }}/.npm-cache
@@ -34,31 +37,22 @@ jobs:
       - name: Verify release validation and audit policies
         run: ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
       - name: Restore previous monitor state
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: python3 scripts/restore-security-monitor.py build/previous-security-report.json
-      - name: Check source dependencies
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        run: python3 scripts/security-audit.py --output build/security-report.json
-      - name: Check source and released App; notify meaningful changes
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      - name: Scan source and released App
         run: |
           python3 scripts/security-audit.py --monitor \
             --include-release "$GITHUB_REPOSITORY" \
             --previous build/previous-security-report.json \
             --output build/security-report.json
-      - name: Save monitor state
-        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      - name: Record risks in private Issues
+        run: python3 scripts/sync-security-issues.py --report build/security-report.json --apply
+      - name: Save monitor evidence
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: security-monitor-state
-          path: build/security-report.json
+          path: |
+            build/security-report.json
+            build/security-issues-result.json
           retention-days: 30
-          if-no-files-found: error
-      - name: Save check evidence
-        if: always() && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: security-check-report
-          path: build/security-report.json
-          retention-days: 14
           if-no-files-found: error

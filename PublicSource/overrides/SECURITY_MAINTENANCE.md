@@ -20,6 +20,9 @@ python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output bu
 
 新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
 
+
+`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。未加 `--monitor` 的發布前檢查維持未處理風險阻擋。公開來源不包含維護者的私人 Issue 自動化，發行者應建立自己的風險追蹤流程。
+
 ## 開發工具的相容性覆寫
 
 目前的 npm overrides 分別維持 Firebase CSV 串流、PubSub trace-context propagator、Gaxios CommonJS UUID 與 qs API。版本精確固定；`Tests/Security/development-tools.test.cjs` 和 Firestore Emulator 測試驗證實際使用路徑。上層相依允許安全版本後應移除覆寫，至少每月重新審閱，不能持續累積無人維護的強制版本。

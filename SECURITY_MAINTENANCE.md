@@ -8,9 +8,13 @@
 
 啟用 GitHub 的 dependency graph、Dependabot alerts，並確認維護者已訂閱安全警示與 Actions 失敗通知。首次啟用時主動檢查既有警示；收到新版本不代表應自動合併或發布。
 
-`.github/dependabot.yml` 提供 Swift、npm、GitHub Actions 與驗簽工具 Python 套件的每週更新提案。`.github/workflows/security-checks.yml` 對 PR／main 執行檢查，並提供每日及手動監測；這些工作流程必須先推送到預設分支才會生效。監測同時檢查來源及最新正式 Release 對應的相依版本，避免 main 已修復但使用者仍使用舊版時漏報。SHA 固定的 Actions、Vendor/SwiftTerm 與 swift-sodium 內含 libsodium 另外比對上游公告；未知版本範圍或查詢失敗不能當作安全。
+`.github/dependabot.yml` 提供每週一的 Swift、npm、GitHub Actions 與驗簽 Python 套件更新提案。日常監測 `MyTerm security monitor`（security-checks.yml）每天台北時間 09:23 及手動執行，檢查來源與最新正式 Release；`MyTerm release security gate`（security-gate.yml）則在 PR／main 推送檢查來源，維持中高風險阻擋。排程可能延遲，不保證準時。
 
-每日監測保存上一份可信的排程／手動執行報告，只在命中、上游版本或失敗狀態改變時以失敗的檢查通知維護者；沒有變化不重複通知。報告中的 `scanStatus` 與 `lastSuccessfulScanAt` 才代表掃描是否成功；安靜的監測工作不代表未修復問題已消失。超過 48 小時的舊成功結果會在下一次檢查標為過期。GitHub 排程延遲或完全未執行時，無法靠該排程自己即時發通知，維護者仍需留意 Actions 狀態。
+日常監測的成功表示掃描與 Issue 處理完成，不代表沒有風險。有風險時以私人 Issue 記錄公告、元件、版本、影響範圍、上游修補資訊及例外期限；同一公告／元件／範圍沿用同一 Issue，沒有變化就不重複寫入。重要變更追加紀錄；只有完整成功掃描確認不再命中時才關閉，再次命中會重新開啟。人工作業的 Issue 不由工具管理，人工關閉仍命中的自動 Issue 不等於接受風險，下次會重新開啟。
+
+只有查詢、測試、報告或 Issue 寫入等運作異常才使日常監測 Fail；即使連續相同故障也不能顯示成功。來源安全門檻是另一個 workflow，發現未處理風險仍會阻擋，不能把它解讀成監測故障。未知適用範圍記為待確認風險，不宣稱安全。
+
+Issue 寫入權限只供私人庫預設分支的排程／手動監測，PR 無此權限。紀錄只包含公開公告、相依版本與接受狀態，不包含主機、憑證或使用者資料。`scanStatus` 與 `lastSuccessfulScanAt` 記錄掃描健康；前次成功距今超過 48 小時會在下一次檢查提示。排程完全不執行時無法靠自己即時報警。上游版本資訊仍保存在掃描報告；沒有命中的一般新版由 Dependabot 提案追蹤，不為每個新版建立風險 Issue。
 
 ```sh
 python3 scripts/security-audit.py --output build/security-report.json
@@ -20,6 +24,12 @@ python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output bu
 需要已登入且有適當讀取權限的 `gh`、Python 3.9.2 以上、Node.js 24 以上及 npm。只查詢公開公告與必要來源／版本資訊，不讀取本機雲端設定或簽章私鑰。`Config/Security/native-components.json` 將 libsodium 版本綁定到 swift-sodium revision；更新 wrapper 後必須重新核對實際 XCFramework header。上游修復版以 commit 公告的 Vendor，使用 commit ancestry 判斷，不捏造版本號。
 
 新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
+
+
+`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。未加 `--monitor` 的發布前檢查維持未處理風險阻擋。公開來源不包含維護者的私人 Issue 自動化，發行者應建立自己的風險追蹤流程。
+
+
+發布安全門檻以失敗的檢查結果表示來源不符合政策；它不等於 GitHub 已強制設定分支保護。私人庫目前的方案未提供此保護，維護者仍須遵守不合併未通過檢查的規則；本機發布入口亦會重新檢查。
 
 ## 開發工具的相容性覆寫
 

@@ -20,6 +20,9 @@ Requires an authenticated `gh` with appropriate read access, Python 3.9.2 or new
 
 New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
 
+
+`security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the maintainer's private Issue automation; distributors must configure their own risk tracking.
+
 ## Development dependency compatibility overrides
 
 Current npm overrides preserve Firebase's CSV stream, PubSub trace-context propagator, Gaxios CommonJS UUID and qs APIs. Versions are exact; `Tests/Security/development-tools.test.cjs` and Firestore Emulator tests cover the consuming paths. Remove overrides when parent constraints allow safe versions, and review them at least monthly rather than accumulating unmaintained forced versions.

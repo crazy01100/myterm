@@ -115,7 +115,7 @@ def scan_runtime(items,scope,report,cache):
                     else:
                         match=affected(component['version'],vuln.get('vulnerable_version_range',''))
                     if match is not False:
-                        report['findings'].append({'id':advisory['ghsa_id'],'component':repo,'version':component.get('version',component.get('revision')),'scope':scope,'severity':advisory.get('severity','unknown'),'status':'affected' if match else 'needs-review','url':advisory['html_url']})
+                        report['findings'].append({'id':advisory['ghsa_id'],'component':repo,'version':component.get('version',component.get('revision')),'scope':scope,'severity':advisory.get('severity','unknown'),'status':'affected' if match else 'needs-review','url':advisory['html_url'],'fixedVersion':vuln.get('patched_versions')})
         except (ValueError,KeyError,subprocess.TimeoutExpired) as error:
             report['errors'].append(str(error))
 
@@ -152,7 +152,7 @@ def scan_actions(report,cache):
                     for vuln in advisory.get('vulnerabilities',[]):
                         patched=vuln.get('patched_versions')
                         safe=vendor_is_patched(repo,revision,patched) if patched else None
-                        if not safe:report['findings'].append({'id':advisory['ghsa_id'],'component':repo,'version':revision,'scope':'github-actions','severity':advisory.get('severity','unknown'),'status':'needs-review','url':advisory['html_url']})
+                        if not safe:report['findings'].append({'id':advisory['ghsa_id'],'component':repo,'version':revision,'scope':'github-actions','severity':advisory.get('severity','unknown'),'status':'needs-review','url':advisory['html_url'],'fixedVersion':vuln.get('patched_versions')})
             except (ValueError,KeyError) as error:report['errors'].append(str(error))
 
 
@@ -202,6 +202,31 @@ def blocking(report):
     return bool(report['errors'] or any(f['scope']!='released-app' and not f.get('acceptedRisk',False) and (f['status']=='needs-review' or f['severity'] not in ['low','info']) for f in report['findings']))
 
 
+def write_summary(report, monitor):
+    path = os.environ.get('GITHUB_STEP_SUMMARY')
+    if not path:
+        return
+    import html
+    if report['errors']:
+        title = '安全檢查運作異常：本次無法判定完整結果'
+    elif monitor:
+        title = f"掃描完成：發現 {len(report['findings'])} 項風險，交由 Issue 追蹤"
+    elif blocking(report):
+        title = '發布安全門檻未通過：存在未處理風險'
+    else:
+        title = '發布安全門檻通過'
+    lines = ['## '+title, '', '掃描成功不等於沒有漏洞；正式版風險與目前來源分別記錄。', '']
+    for finding in report['findings']:
+        detail = '／'.join(str(finding.get(k, '')) for k in ['severity', 'component', 'version', 'scope', 'id'])
+        lines.append('- '+html.escape(detail))
+    for error in report['errors']:
+        lines.append('- 運作異常：'+html.escape(str(error)))
+    if report.get('stalePreviousScan'):
+        lines.append('- 前次成功掃描距今超過 48 小時；本次結果請依上方狀態判讀。')
+    with open(path, 'a') as output:
+        output.write('\n'.join(lines)+'\n')
+
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);p.add_argument('--include-release');p.add_argument('--monitor',action='store_true');p.add_argument('--previous',type=Path)
     args=p.parse_args();report=run(args.include_release)
@@ -214,8 +239,9 @@ def main():
     report['changed']=changed
     args.output.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
     print(json.dumps({'status':report['scanStatus'],'findings':len(report['findings']),'errors':len(report['errors']),'changed':changed,'release':report.get('releaseTag')}))
+    write_summary(report, args.monitor)
     if args.monitor:
-        return int(changed and bool(report['findings'] or report['errors'] or (previous and report['upstreamReleases']!=previous.get('upstreamReleases')) or report['stalePreviousScan']))
+        return int(bool(report['errors']))
     return int(blocking(report))
 
 if __name__=='__main__':sys.exit(main())

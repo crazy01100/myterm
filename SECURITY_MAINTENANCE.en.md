@@ -8,9 +8,13 @@ This guide covers dependency maintenance and release verification. See [Security
 
 Enable GitHub's dependency graph and Dependabot alerts, and confirm the maintainer subscribes to security alerts and failed Actions notifications. Review existing alerts when enabling the feature; a new version is not approval to merge or publish automatically.
 
-`.github/dependabot.yml` proposes weekly Swift, npm, GitHub Actions and verifier Python dependency updates. `.github/workflows/security-checks.yml` checks PRs/main and provides daily and manual monitoring; workflows become active after pushing them to the default branch. Monitoring examines both the source and the dependencies associated with the latest stable release. A fix on main does not mean installed apps are fixed. SHA-pinned Actions, Vendor/SwiftTerm and the libsodium binary inside swift-sodium receive additional upstream advisory checks. Unknown version ranges and failed queries are not considered safe.
+`.github/dependabot.yml` proposes weekly Monday updates for Swift, npm, GitHub Actions and verifier Python dependencies. `MyTerm security monitor` (security-checks.yml) runs daily at 09:23 Asia/Taipei and manually, checking source and the latest stable release. `MyTerm release security gate` (security-gate.yml) checks PRs/main pushes and retains moderate/high-risk blocking. Scheduled runs can be delayed.
 
-The daily monitor retains the previous trusted scheduled/manual report and uses a failed check to notify the maintainer when findings, upstream versions or failure state change. Unchanged results do not produce repeated notifications. `scanStatus` and `lastSuccessfulScanAt` describe scan health; a quiet monitor does not mean outstanding findings disappeared. A previous successful scan older than 48 hours is marked stale on the next check. A schedule cannot notify immediately about its own complete failure to run, so maintainers must still watch Actions health.
+Monitor success means scanning and Issue handling completed, not that no risks exist. Private Issues record advisories, components, versions, scope, upstream fix information and exception expiry. The same advisory/component/scope retains one Issue; unchanged findings cause no writes. Significant changes append a record. Only complete successful scans may close findings that no longer match; recurring findings reopen the same Issue. Human-authored Issues are untouched. Manually closing a still-affected automated Issue is not risk acceptance; the next scan reopens it.
+
+Only operational errors in queries, tests, reports or Issue writes fail the daily monitor. Repeated identical errors must also fail. The separate source security gate continues to block unresolved risks; that policy rejection is distinct from monitor failure. Unknown applicability remains a finding requiring review rather than a claim of safety.
+
+Issue write permission is limited to scheduled/manual monitoring on the private repository's default branch, never PRs. Records contain public advisory and dependency metadata and acceptance status, not hosts, credentials or user data. `scanStatus` and `lastSuccessfulScanAt` describe scan health; a previous success older than 48 hours is flagged on the next run. A schedule cannot immediately alert about its own failure to run. Upstream versions remain in reports; ordinary new versions without matching advisories are tracked through Dependabot proposals rather than risk Issues.
 
 ```sh
 python3 scripts/security-audit.py --output build/security-report.json
@@ -20,6 +24,12 @@ python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output bu
 Requires an authenticated `gh` with appropriate read access, Python 3.9.2 or newer, Node.js 24 or newer, and npm. Checks query public advisories and necessary source/version metadata, without reading local cloud configuration or signing private keys. `Config/Security/native-components.json` binds the libsodium version to the swift-sodium revision; review the actual XCFramework header after changing the wrapper. Vendor fixes announced by commit are checked using commit ancestry rather than an invented version.
 
 New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
+
+
+`security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the maintainer's private Issue automation; distributors must configure their own risk tracking.
+
+
+The release security gate reports policy rejection as a failed check; it does not imply enforced GitHub branch protection. The private repository's current plan does not provide that protection. Maintainers must avoid merging failed checks, and the local release entry point also rechecks the policy.
 
 ## Development dependency compatibility overrides
 
