@@ -30,6 +30,8 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 - The repository's pinned Firebase CLI, used through `scripts/firebase-tools.sh` after running `npm install` at the repository root.
 - macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools to build MyTerm.
 
+The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.
+
 ## 1. Create a Firebase project
 
 1. Create a project in the Firebase Console, or add Firebase to a Google Cloud project you administer.

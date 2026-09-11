@@ -160,3 +160,9 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 - Logs 只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。跨裝置只同步已結束紀錄，不顯示其他裝置的連線中狀態或即時計時。
 - 跨裝置同步由 App 啟動、回到前景、喚醒、本機可同步資料變動、過期 Logs 頁面及前景定期事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。App 關閉、睡眠或不在作用中時沒有常駐輪詢保證。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。
+
+## 安全控制元件
+
+`SFTPCancellation` 在協定初始化之前保存由 lock 保護的取消動作。Transport 以非阻塞 pipe 與單調時鐘期限進行 poll；取消不等待序列操作鎖，也不在進行中的操作仍持有 descriptor 時關閉／重用它。Browser 的 generation 核對避免舊連線覆寫目前狀態。
+
+`dependency-inventory.py` 讀取 Swift 鎖定檔、Vendor revision 與已審閱的 native binary 資訊；`bind-release-metadata.py` 在簽署前把相依清單與來源 commit 綁入 feed。`verify-signed-release.py` 使用可信公鑰驗證原始 feed bytes 後才信任 URL 或解壓 ZIP，並核對更新說明及五項發布資產。`security-audit.py` 另行檢查目前來源與已發布相依；簽章證明來源，不保證沒有漏洞。操作需求見 [安全維護指南](SECURITY_MAINTENANCE.md)。

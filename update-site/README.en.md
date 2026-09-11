@@ -10,3 +10,5 @@ This directory contains the static source for `https://mtus.lieniapp.work`.
 - If automatic deployment fails, the repository owner can redeploy an existing published version with the workflow's `release_tag` input. The workflow still uses only that release's signed assets.
 - After deployment, an external GitHub runner downloads the homepage, appcast, release notes, and ZIP again to check the version, SHA-256, contents, and security headers. This prevents corporate-network DNS restrictions from masking public-site problems.
 - Do not add Sparkle private keys, Cloudflare tokens, OAuth secrets, local Firebase configuration, or user data to this directory.
+
+Before deployment, verify all five assets with a trusted public key, including the manifest, signed source/dependency metadata and signed release notes. Run `scripts/setup-security-tools.sh` first; independent distributors set `MYTERM_SPARKLE_PUBLIC_KEY_FILE`. Missing signed fields in older assets require a separate compatibility review. See [Security maintenance](../SECURITY_MAINTENANCE.en.md).

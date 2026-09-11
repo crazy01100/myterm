@@ -10,3 +10,5 @@
 - 自動部署失敗時，可由 repository 擁有者以 workflow 的 `release_tag` 指定既有已發布版本重新部署；流程仍只會使用 Release 上已簽署的成品。
 - 部署完成後由 GitHub 的外部 runner 重新下載首頁、appcast、更新說明與 ZIP，核對版本、SHA-256、內容及安全標頭，避免公司內部 DNS 限制掩蓋公開站異常。
 - 不得在此目錄加入 Sparkle 私鑰、Cloudflare Token、OAuth secret、Firebase 本機設定或使用者資料。
+
+部署前以可信公鑰驗證全部五項資產，包括 manifest、已簽署的來源／相依資訊及更新說明。先執行 `scripts/setup-security-tools.sh`；獨立發行者設定 `MYTERM_SPARKLE_PUBLIC_KEY_FILE`。舊資產缺少簽署欄位時需另行相容審查。見 [安全維護指南](../SECURITY_MAINTENANCE.md)。

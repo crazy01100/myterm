@@ -11,3 +11,5 @@ This directory is a static template for independent distributors, not a hosted s
 - Host the output on your Cloudflare Pages project or a compatible HTTPS service. Configure your own project, account, and deployment credentials.
 - After deploying, run `verify-public-update-site.sh` with your own URL and assets, then validate the update from your app through Sparkle.
 - Do not include private keys, tokens, OAuth secrets, real Firebase settings, host inventories, or other user data.
+
+Before deployment, verify all five assets with a trusted public key, including the manifest, signed source/dependency metadata and signed release notes. Run `scripts/setup-security-tools.sh` first; independent distributors set `MYTERM_SPARKLE_PUBLIC_KEY_FILE`. Missing signed fields in older assets require a separate compatibility review. See [Security maintenance](../SECURITY_MAINTENANCE.en.md).

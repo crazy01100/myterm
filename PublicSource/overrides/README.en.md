@@ -117,7 +117,7 @@ cd myterm-source
   myterm_build="$(date '+%Y%m%d%H%M%S')"
   myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
 
-  ./scripts/run-tests.sh
+  python3 scripts/run-isolated-tests.py
   ./scripts/build-app.sh --channel candidate \
     --version "$myterm_version" --build "$myterm_build"
   ./scripts/verify-app.sh --app "$myterm_app" \
@@ -162,3 +162,5 @@ See [SECURITY.en.md](SECURITY.en.md) and [ARCHITECTURE.en.md](ARCHITECTURE.en.md
 MyTerm's original code and documentation are licensed under the [MIT License](LICENSE), Copyright (c) 2026 LienYi.
 
 Third-party components and assets retain their own licenses and copyright notices, including [SwiftTerm](Vendor/SwiftTerm/LICENSE), the [platform icon attribution](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt), and the [OpenAI brand asset notice](Resources/Readme/NOTICE.md). MyTerm's MIT License does not replace those licenses.
+
+Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).

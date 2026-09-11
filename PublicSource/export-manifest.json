@@ -3,6 +3,9 @@
   "publicRepository": "crazy01100/myterm-source",
   "files": [
     {
+      "path": ".github/dependabot.yml"
+    },
+    {
       "path": ".gitignore",
       "overlay": "PublicSource/overrides/.gitignore",
       "baseSHA256": "4ce870d76d571175c5aceac502ab15adf2bd195475c9175a6706d4784faf53ac"
@@ -10,35 +13,43 @@
     {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "45cdeaf7bbc2d6a675e8c3e8c624fb3d559da972640f3ac28c764720241a1db2"
+      "baseSHA256": "a7df92a6c1377f5bf760a4b7454b039c02fdc4d56f50fd5c1d9a9ef078e24ed9"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "b28e2a440883145dfd0920d3197c0dbb5a828be85170e226b79d0ef7f72d489c"
+      "baseSHA256": "befc03370ef26233d76a8f1e6074689dec490e8a31605ffc81a2fd8bad64f3ad"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
     },
     {
+      "path": "Config/Security/exceptions.json",
+      "overlay": "PublicSource/overrides/Config/Security/exceptions.json",
+      "baseSHA256": "e7b1503770f3550bcef88a44f49fcf4556fde11f46a74177c4a290c7ef4ca2af"
+    },
+    {
+      "path": "Config/Security/native-components.json"
+    },
+    {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "31cf28499e2261c07c589d57ae4ad4d67ffd8935d2633a4d9539fbe1fcbaf2a8"
+      "baseSHA256": "61f0bbe9c117b25275bb6f20010088ac30a112b454f3e28ceb3533ffe00d6437"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "fbf6acaf09a0f9fa311ed8990aa9bce35f87b290855023ea6036aecf787433dd"
+      "baseSHA256": "9a7a7414c708ac509b007784d4e45dbaaf54ceb5d40b8734accc5b329da00da6"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.en.md",
-      "baseSHA256": "6a7d73f285c09788a437a2fcb9a43e9f8470061bc969f548827c730a4743649d"
+      "baseSHA256": "d827fae0a64263bf75059334dae5eeadfa1cb9dbf734e752ccb83335f0c68265"
     },
     {
       "path": "FIREBASE_SETUP.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.md",
-      "baseSHA256": "6f1e8e6da24bc15ab47f96645f031c6341e6e5060914b2f53b1c86e9f91a06ae"
+      "baseSHA256": "58a29accc32546aba5d7a631fb76688f5118f655d646e2ac39e1c5037142e34b"
     },
     {
       "path": "LICENSE"
@@ -52,12 +63,12 @@
     {
       "path": "README.en.md",
       "overlay": "PublicSource/overrides/README.en.md",
-      "baseSHA256": "8ce920ff5a7723b8b42e6b585e48ee288872f92b270f0ef2cbed84a0da34d886"
+      "baseSHA256": "dd93bd954b15d9eea0669b774309a68f7524c4b76a4de4f478a9ef8bf36a8812"
     },
     {
       "path": "README.md",
       "overlay": "PublicSource/overrides/README.md",
-      "baseSHA256": "54bb156d019ba202b148ec9a95bff9e18ee776d870ca223e9a54a7423346cc11"
+      "baseSHA256": "00a0589d96436aaa5d5bdbc2dcb9d7f5fb40eb62f02cdc43e2920056a294aecc"
     },
     {
       "path": "Resources/AppIcon-original.png"
@@ -121,18 +132,31 @@
     {
       "path": "SECURITY.en.md",
       "overlay": "PublicSource/overrides/SECURITY.en.md",
-      "baseSHA256": "69c1bb9b1bdac955c5b4870cd28b66dbe4ad49074f4fc3f4c19cac0fa48fe5a1"
+      "baseSHA256": "5c98740ea0b5e98d6e97c4bd52af24c88f4dee69d96e47b56d798d6b4fc0ed56"
     },
     {
       "path": "SECURITY.md",
       "overlay": "PublicSource/overrides/SECURITY.md",
-      "baseSHA256": "98d3738756cfaf7ec2b043dd70c5da7e8a26ebdafb2b41d612b62a9d701c5ac2"
+      "baseSHA256": "b3df395e0040550b6f7678facca865bc0f6d2fd80f1995aa49feee6eb555507d"
+    },
+    {
+      "path": "SECURITY_MAINTENANCE.en.md",
+      "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
+      "baseSHA256": "443ddcf19a0ec21b1cf40a75a4a90df5870c9d035611d226e46f114abc2a11f8"
+    },
+    {
+      "path": "SECURITY_MAINTENANCE.md",
+      "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
+      "baseSHA256": "34347f2b7765032c8268e30799d393c6d5d5cc97a1fb2103a86e24d102c9dba4"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"
     },
     {
       "path": "SelfTests/OAuthLoopbackTests.swift"
+    },
+    {
+      "path": "SelfTests/SFTPSecurityTests.swift"
     },
     {
       "path": "SelfTests/SyncReliabilityTests.swift"
@@ -466,6 +490,24 @@
       "path": "Tests/FirebaseRules/firestore.rules.test.mjs"
     },
     {
+      "path": "Tests/Security/development-tools.test.cjs"
+    },
+    {
+      "path": "Tests/Security/fake_sftp.py"
+    },
+    {
+      "path": "Tests/Security/requirements.txt"
+    },
+    {
+      "path": "Tests/Security/test_audit_policy.py"
+    },
+    {
+      "path": "Tests/Security/test_firebase_policy.py"
+    },
+    {
+      "path": "Tests/Security/test_signed_release.py"
+    },
+    {
       "path": "Vendor/SwiftTerm/LICENSE"
     },
     {
@@ -725,6 +767,10 @@
       "executable": true
     },
     {
+      "path": "scripts/bind-release-metadata.py",
+      "executable": true
+    },
+    {
       "path": "scripts/build-app.sh",
       "executable": true
     },
@@ -745,8 +791,15 @@
       "executable": true
     },
     {
+      "path": "scripts/dependency-inventory.py",
+      "executable": true
+    },
+    {
       "path": "scripts/deploy-firestore.sh",
       "executable": true
+    },
+    {
+      "path": "scripts/firebase-command-policy.py"
     },
     {
       "path": "scripts/firebase-tools.sh",
@@ -777,13 +830,13 @@
     {
       "path": "scripts/prepare-pages-deployment.sh",
       "overlay": "PublicSource/overrides/scripts/prepare-pages-deployment.sh",
-      "baseSHA256": "bdad914c05cd8b46b80a68d9f4cbe525baf85f99bd435561c50fed1faea1042c",
+      "baseSHA256": "0b2f43cfba7c583826eda7c7e8d9655ca657e9434fb1de830058676c3aa7df79",
       "executable": true
     },
     {
       "path": "scripts/prepare-release-assets.sh",
       "overlay": "PublicSource/overrides/scripts/prepare-release-assets.sh",
-      "baseSHA256": "1ef8c75fb849336d1909aa4039600a5d5c2d5e0a0a269a021c9d5084aa02698e",
+      "baseSHA256": "20821b73a8f68f36ea4091abb94c02f34d995e56d0c1b82111cf13466b0c2e26",
       "executable": true
     },
     {
@@ -803,7 +856,15 @@
     {
       "path": "scripts/run-dev-app.sh",
       "overlay": "PublicSource/overrides/scripts/run-dev-app.sh",
-      "baseSHA256": "2b867db2da49337b42be8c04b6f39f002e4efc9b2a215770d1ee7c4d7450f3d0",
+      "baseSHA256": "1c7725b999ee06911aa3f1b90fdaff6a1ba836a16e658bb319919f7ecabc1f8e",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-isolated-tests.py",
+      "executable": true
+    },
+    {
+      "path": "scripts/run-sftp-security-tests.sh",
       "executable": true
     },
     {
@@ -815,7 +876,19 @@
       "executable": true
     },
     {
+      "path": "scripts/security-audit.py",
+      "executable": true
+    },
+    {
+      "path": "scripts/security-python.sh",
+      "executable": true
+    },
+    {
       "path": "scripts/serve-local-update-lab.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/setup-security-tools.sh",
       "executable": true
     },
     {
@@ -866,7 +939,11 @@
     {
       "path": "scripts/verify-release-assets.sh",
       "overlay": "PublicSource/overrides/scripts/verify-release-assets.sh",
-      "baseSHA256": "8cd6e3e3365e7ae381467fdbc17e290265d5f112e56409dc51c9447cf452fe57",
+      "baseSHA256": "5dc9980018193017c14bff4c7be2dbb9a0de9a5bb3909b9016d5fe75d1f0f2f5",
+      "executable": true
+    },
+    {
+      "path": "scripts/verify-signed-release.py",
       "executable": true
     },
     {
@@ -879,12 +956,12 @@
     {
       "path": "update-site/README.en.md",
       "overlay": "PublicSource/overrides/update-site/README.en.md",
-      "baseSHA256": "4ac7d034f188066ac79378f1834a6e46d126d249c9dfe812aa168dce239f8938"
+      "baseSHA256": "f225087aaa7e394128acdfb85d82bdede6cc1925bb2892a07ccbd438a8037082"
     },
     {
       "path": "update-site/README.md",
       "overlay": "PublicSource/overrides/update-site/README.md",
-      "baseSHA256": "7fdc9876a9407555089f340df42c4174d93433715dabaf844de37b44132c2b2b"
+      "baseSHA256": "f589a84054b421662f2f74644bd14e64abd235ca38999758329d61373003bca4"
     },
     {
       "path": "update-site/_headers"

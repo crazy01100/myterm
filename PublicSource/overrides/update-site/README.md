@@ -11,3 +11,5 @@
 - 可將輸出放到自己的 Cloudflare Pages 或相容 HTTPS 主機；Cloudflare 專案、帳號與部署憑證由你自行配置。
 - 部署後使用 `verify-public-update-site.sh` 明確指定自己的網址與資產，再由自己的 App 經 Sparkle 驗收。
 - 不放入私鑰、token、OAuth secret、真實 Firebase 設定、主機清單或其他使用者資料。
+
+部署前以可信公鑰驗證全部五項資產，包括 manifest、已簽署的來源／相依資訊及更新說明。先執行 `scripts/setup-security-tools.sh`；獨立發行者設定 `MYTERM_SPARKLE_PUBLIC_KEY_FILE`。舊資產缺少簽署欄位時需另行相容審查。見 [安全維護指南](../SECURITY_MAINTENANCE.md)。

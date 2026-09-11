@@ -57,7 +57,7 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 先執行自動測試：
 
 ```sh
-./scripts/run-tests.sh
+python3 scripts/run-isolated-tests.py
 ```
 
 需要人工驗證 App 行為時，使用固定的測試版入口：
@@ -102,6 +102,7 @@ GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [
 | Termius 遷移 | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
 | 更新站 | [update-site/README.md](update-site/README.md) | [update-site/README.en.md](update-site/README.en.md) |
 | UpdateLab beta.2 測試說明 | [中文原始 fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [英文閱讀對照](Resources/UpdateLab/1.0.0-beta.2.en.md) |
+| 安全維護 | [SECURITY_MAINTENANCE.md](SECURITY_MAINTENANCE.md) | [SECURITY_MAINTENANCE.en.md](SECURITY_MAINTENANCE.en.md) |
 
 修改專案介紹、功能、架構、安全、安裝、建置、部署或遷移說明時，同步更新受影響文件的中英文版；內容、命令、設定鍵、資料流與限制應一致。語言翻譯不代表 App 或更新網站已提供英文介面。新增英文版採同目錄的 `<原檔名>.en.md`，並更新此表與語言連結；不要放進被 Git 排除的本機 `docs/`。
 
@@ -245,3 +246,5 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 - 公開前執行 `python3 PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。初次建立全新 Git 歷史，之後以公開庫自己的正常提交同步；私人版本發布及更新站部署仍沿用各自流程與授權。
 
 - 公開文件須分清「一般自用 MyTerm.app」「隔離開發 MyTerm Dev.app」與「獨立發行／更新站」；自用入口採現有 build-app.sh 的 candidate 輸出與 verify-app.sh，並解釋安裝、重建更新、共享一般資料身分及 ad-hoc 授權限制。這不取代私人 release.sh／固定簽章／更新驗收流程。
+
+相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。

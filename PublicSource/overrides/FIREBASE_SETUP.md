@@ -29,6 +29,8 @@ MyTerm 的雲端流程分成兩層：
 - 專案鎖定的 Firebase CLI；在 repository 根目錄執行 `npm install` 後由 `scripts/firebase-tools.sh` 使用。
 - macOS 26、Apple Silicon 與 Xcode 26 或相容 Command Line Tools，用於建置 MyTerm。
 
+Firebase 工具入口僅支援本指南的 Firestore 部署、基本帳號設定及 `demo-myterm` 本機 Emulator；Auth 匯入、Hosting、替代設定與任意測試子命令會被拒絕。相依例外、期限與限制詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
+
 ## 1. 建立 Firebase 專案
 
 1. 在 Firebase Console 建立新專案，或將 Firebase 加入你可管理的 Google Cloud 專案。

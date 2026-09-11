@@ -103,7 +103,7 @@ You need macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools.
 ```sh
 git clone https://github.com/crazy01100/myterm.git
 cd myterm
-./scripts/run-tests.sh
+python3 scripts/run-isolated-tests.py
 ./scripts/run-dev-app.sh \
   --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
@@ -129,3 +129,5 @@ See [SECURITY.en.md](SECURITY.en.md) and [ARCHITECTURE.en.md](ARCHITECTURE.en.md
 MyTerm's original code and documentation are licensed under the [MIT License](LICENSE), Copyright (c) 2026 LienYi.
 
 Third-party components and assets retain their own licenses and copyright notices, including [SwiftTerm](Vendor/SwiftTerm/LICENSE), the [platform icon attribution](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt), and the [OpenAI brand asset notice](Resources/Readme/NOTICE.md). MyTerm's MIT License does not replace those licenses.
+
+Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).

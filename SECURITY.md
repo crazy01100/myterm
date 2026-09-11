@@ -62,3 +62,9 @@
 - 跨裝置同步為預設關閉的選用功能。啟用後，主機、群組、密碼與已結束 Logs 只會以逐筆端對端加密密文傳送至 Firebase；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫，保管庫根金鑰為 ThisDeviceOnly Keychain 項目。私鑰檔案、私鑰路徑與 known_hosts 不同步；架構與資料流見 [系統架構](ARCHITECTURE.md)。自行建置同步後端時必須部署 repository 內的 Security Rules，不得以測試用全開規則代替；完整前置作業見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。
 - 正式、development 與 update-lab 的 Google refresh token 位於各自通道的本機加密保管庫。只有 production 可從早期正式 Keychain 項目做一次相容遷移；Dev／Update Lab 不讀取正式舊 session，並會一次性清理過去可能誤匯入其自身保管庫的 token，不會刪除正式版 session。
 - 主機與群組刪除會同步端對端驗證的加密 tombstone。套用遠端刪除前會備份本機清單；遠端主機刪除後再清理該台 Mac 保管庫中的密碼，舊 Keychain 項目權限異常不會阻止清單刪除。
+
+## SFTP 資源與更新驗證限制
+
+- SFTP READ 拒絕沒有資料的成功狀態，以及超過此次要求長度的回應。目錄操作在累計 100,000 筆、64 MiB 回應或 10,000 次回應時停止；遞迴深度上限為 64。超限回報錯誤，不把截斷清單當作完整結果。
+- 初始化總期限為 30 秒，每次協定回應的期限為 30 秒；取消可停止初始化與阻塞 I/O，只終止該 transport 自建的子程序。各次請求正常完成時，大檔可持續傳輸。
+- 部署前以可信公鑰驗證 feed、ZIP 與更新說明簽章，再解壓資產；已簽署 feed 綁定來源 commit 與執行時相依清單，checksum 不能單獨證明來源。見 [安全維護指南](SECURITY_MAINTENANCE.md)。

@@ -115,7 +115,7 @@ cd myterm-source
   myterm_build="$(date '+%Y%m%d%H%M%S')"
   myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
 
-  ./scripts/run-tests.sh
+  python3 scripts/run-isolated-tests.py
   ./scripts/build-app.sh --channel candidate \
     --version "$myterm_version" --build "$myterm_build"
   ./scripts/verify-app.sh --app "$myterm_app" \
@@ -160,3 +160,5 @@ Dev 使用獨立資料目錄及 Keychain service，輸出於 `build/dev/MyTerm D
 MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 2026 LienYi。
 
 第三方元件與素材仍適用各自的授權及版權聲明，包括 [SwiftTerm](Vendor/SwiftTerm/LICENSE)、[平台圖示來源聲明](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt)及 [OpenAI 品牌素材聲明](Resources/Readme/NOTICE.md)；本專案的 MIT License 不取代這些授權。
+
+相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。

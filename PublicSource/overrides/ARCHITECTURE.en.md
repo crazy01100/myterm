@@ -164,3 +164,9 @@ Platform SVGs are copied to `Contents/Resources/PlatformIcons` and loaded throug
 - Logs record only interactive SSH metadata for connections created from the host library. They exclude local Terminal, SFTP, Serial, commands, and terminal output, and cannot backfill history from before the feature was enabled. Only finalized records sync; other devices' active connection status and timers are not shown.
 - Sync is triggered by launch, foreground, wake, local changes to synced data, stale Logs views, and foreground periodic events, not a persistent push service. Another Mac's changes apply at the next local trigger. There is no continuous polling guarantee while the app is closed, asleep, or inactive.
 - Apple Developer ID and notarization are not currently used, so macOS may warn that it cannot verify the developer at first installation.
+
+## Security control components
+
+`SFTPCancellation` retains a lock-protected cancellation action before protocol initialization. The transport polls nonblocking pipe descriptors with monotonic deadlines; cancellation does not wait for the serial operation lock or close/reuse descriptors while an operation owns them. Browser generation checks prevent an old connection from replacing current state.
+
+`dependency-inventory.py` reads the Swift lockfile, Vendor revision and reviewed native binary metadata. `bind-release-metadata.py` binds that inventory and the source commit into the feed before signing. `verify-signed-release.py` verifies the original feed bytes with a trusted public key before trusting URLs or extracting the archive, and checks notes plus all five release assets. `security-audit.py` separately checks current and released dependencies; signatures establish provenance, not freedom from vulnerabilities. Operational requirements are in [Security maintenance](SECURITY_MAINTENANCE.en.md).

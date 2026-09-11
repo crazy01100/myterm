@@ -125,7 +125,10 @@ Removing `--prepare-only` creates a GitHub Draft Release in the project identifi
 | Termius | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
 | Update site | [README.md](update-site/README.md) | [README.en.md](update-site/README.en.md) |
 | UpdateLab | [Chinese fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [English companion](Resources/UpdateLab/1.0.0-beta.2.en.md) |
+| Security maintenance | [SECURITY_MAINTENANCE.md](SECURITY_MAINTENANCE.md) | [SECURITY_MAINTENANCE.en.md](SECURITY_MAINTENANCE.en.md) |
 
 Prepare a plan and acceptance cases before changes and obtain maintainer approval. Review each language at the end of the plan, recording whether an update is needed, why, and what was done. Update affected translations and links before closing. Translation does not change the original UpdateLab fixture's script references; preserve upstream licenses and original English notices. The app interface remains primarily Traditional Chinese.
 
 Original code and documentation use the [MIT License](LICENSE); third-party assets retain their terms, including [OpenAI brand assets](Resources/Readme/NOTICE.md). Preserve attribution and original-author notices; development-tool attribution is not an official endorsement.
+
+Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).

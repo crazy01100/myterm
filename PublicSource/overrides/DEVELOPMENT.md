@@ -125,7 +125,10 @@ export MYTERM_SPARKLE_KEY_ACCOUNT="MyTerm.Source.Release.ed25519"
 | Termius | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
 | 更新站 | [README.md](update-site/README.md) | [README.en.md](update-site/README.en.md) |
 | UpdateLab | [中文 fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [英文對照](Resources/UpdateLab/1.0.0-beta.2.en.md) |
+| 安全維護 | [SECURITY_MAINTENANCE.md](SECURITY_MAINTENANCE.md) | [SECURITY_MAINTENANCE.en.md](SECURITY_MAINTENANCE.en.md) |
 
 變更前先建立計劃與驗收案例，取得維護者確認；計劃末尾逐份盤點各語系，記錄需要／不需要更新、理由與結果。修改受影響的中英文文件與連結後才結案。UpdateLab 原 fixture 的引用不因翻譯改動；第三方授權與原始英文聲明保留原文。App 介面仍以繁體中文為主。
 
 原創程式碼與文件採 [MIT License](LICENSE)；第三方素材適用自身條款，包括 [OpenAI 品牌素材](Resources/Readme/NOTICE.md)。請保留開發來源與原作者聲明，不把品牌工具署名當成官方背書。
+
+相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。

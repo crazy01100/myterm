@@ -57,7 +57,7 @@ Manual two-Mac automatic-sync acceptance requires a separate test Google account
 Run automated tests first:
 
 ```sh
-./scripts/run-tests.sh
+python3 scripts/run-isolated-tests.py
 ```
 
 For manual app checks, use the fixed development entry point:
@@ -102,6 +102,7 @@ GitHub's default homepage is the Traditional Chinese [README.md](README.md); the
 | Termius migration | [TERMIUS_MIGRATION.md](TERMIUS_MIGRATION.md) | [TERMIUS_MIGRATION.en.md](TERMIUS_MIGRATION.en.md) |
 | Update site | [update-site/README.md](update-site/README.md) | [update-site/README.en.md](update-site/README.en.md) |
 | UpdateLab beta.2 test notes | [Original Chinese fixture](Resources/UpdateLab/1.0.0-beta.2.md) | [English reading companion](Resources/UpdateLab/1.0.0-beta.2.en.md) |
+| Security maintenance | [SECURITY_MAINTENANCE.md](SECURITY_MAINTENANCE.md) | [SECURITY_MAINTENANCE.en.md](SECURITY_MAINTENANCE.en.md) |
 
 When changing project descriptions, features, architecture, security, installation, builds, deployment, or migration instructions, update both languages of each affected document. Contents, commands, configuration keys, data flows, and limitations must agree. Documentation translation does not mean that the app or update website has an English interface. Add English files as `<original-name>.en.md` in the same directory, then update this table and language links. Do not put them in local Git-ignored `docs/`.
 
@@ -245,3 +246,5 @@ No. `release.sh` creates at most a Draft. Public release, production update-site
 - Before publication, run `python3 PublicSource/test_export.py`, service/credential scans, document checks, and a build-only verification without personal settings. Create fresh Git history initially and use the public repository's own normal commits for later updates. Private app releases and update-site deployments retain their separate workflows and authorization.
 
 - Public guides distinguish regular personal MyTerm.app, isolated MyTerm Dev.app, and independent distribution/update hosting. The personal path uses existing build-app.sh candidate output and verify-app.sh, covering installation, rebuild updates, shared regular data identity, and ad-hoc authorization limitations. It does not replace the private release.sh, pinned-signing, or update-acceptance workflow.
+
+Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
