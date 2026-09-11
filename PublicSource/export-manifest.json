@@ -142,12 +142,12 @@
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "02dff40168a2d6e49baf982413b94dc369efd14d84b64e13c2c6f86845835b32"
+      "baseSHA256": "fee327c4e7b95adb7c2cb2669e5b5d083b56b03ec7a976c7bf2adb1505ef415e"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "6184e72bda774b00d8f0da00dd004e5ef51aa2afdc7d1e78b322e45861008c28"
+      "baseSHA256": "23161c0d247f306f76ba475f049fc11514e516478ebe2fc5ebaedc431290d67f"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"

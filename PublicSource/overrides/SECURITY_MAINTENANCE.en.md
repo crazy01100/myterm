@@ -23,6 +23,18 @@ New moderate/high risks, uncertain applicability and query failures block releas
 
 `security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the maintainer's private Issue automation; distributors must configure their own risk tracking.
 
+## Security Issue remediation summaries
+
+At closure, decide whether a summary is needed by asking whether a future maintainer can understand the remediation and its verification evidence. Within the task's authorized Issue-update scope, read the Issue body and existing comments first:
+
+- A straightforward dependency upgrade needs no repeated comment when the commit/PR and scan results already provide sufficient traceability. If only links are missing, add those links.
+- Add a short summary for compatibility patches, custom code or configuration, feature restrictions, temporary exceptions or compensating controls, and rollback or removal conditions. Do not duplicate an adequate explanation for the same commit and results; add a follow-up when material results change.
+- Explain what changed and why, the actual verification results with commit/PR/CI links, and remaining limitations or follow-up actions. State only confirmed facts and distinguish a fix from mitigation or acceptance of an expiring exception. Fixed source does not imply that every user's device has been updated.
+- Check the summary after required remote verification and before declaring the task complete. If monitoring has already closed the Issue, add the comment to the closed Issue without reopening it. Preserve the original alert, resolution record, and history; read the comment back after writing.
+- Omit full test logs, credentials, private endpoints, and unrelated internal discussion. These are maintainer tracking records, not material for ordinary user-facing release notes.
+
+The maintainer or agent performing the remediation writes the summary from actual evidence. An automated resolution record only establishes that the scan no longer matches within its scope; it does not describe how the remediation was performed. This judgment does not change scanning, exception, or Issue-closure conditions.
+
 ## Development dependency compatibility overrides
 
 Current npm overrides preserve Firebase's CSV stream, PubSub trace-context propagator, Gaxios CommonJS UUID and qs APIs. Versions are exact; `Tests/Security/development-tools.test.cjs` and Firestore Emulator tests cover the consuming paths. Remove overrides when parent constraints allow safe versions, and review them at least monthly rather than accumulating unmaintained forced versions.
