@@ -1,6 +1,7 @@
 import Foundation
 
 enum SFTPProtocolError: LocalizedError, Equatable {
+    case resourceLimit
     case malformedPacket
     case packetTooLarge(Int)
     case unsupportedVersion(UInt32)
@@ -11,6 +12,7 @@ enum SFTPProtocolError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
+        case .resourceLimit: "SFTP 目錄資料或遞迴深度超過安全上限，操作已停止。"
         case .malformedPacket: "SFTP 伺服器傳回了格式不正確的資料。"
         case .packetTooLarge(let size): "SFTP 封包超過安全上限（\(size) bytes）。"
         case .unsupportedVersion(let version): "伺服器使用不支援的 SFTP 版本 \(version)。"

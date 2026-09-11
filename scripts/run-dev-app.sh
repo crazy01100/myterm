@@ -81,7 +81,9 @@ foreign_myterm_processes() {
         [[ -n "$pid" ]] || continue
         command_line="$(/bin/ps -ww -p "$pid" -o command= 2>/dev/null || true)"
         if [[ "$command_line" == *"/Contents/MacOS/MySSHClient" || "$command_line" == *"/Contents/MacOS/MySSHClient "* ]]; then
-            if [[ "$command_line" != "$dev_executable" && "$command_line" != "$dev_executable "* ]]; then
+            if [[ "$command_line" != "$dev_executable" && "$command_line" != "$dev_executable "*
+                && "$command_line" != "/Applications/MyTerm.app/Contents/MacOS/MySSHClient"
+                && "$command_line" != "/Applications/MyTerm.app/Contents/MacOS/MySSHClient "* ]]; then
                 matches+=("$pid  $command_line")
             fi
         fi

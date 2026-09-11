@@ -193,6 +193,7 @@ final class SFTPRemoteBrowserStore: ObservableObject {
     @Published private(set) var overwriteRequest: SFTPOverwriteRequest?
 
     private var client: SFTPClient?
+    private var connectionCancellation: SFTPCancellation?
     private var generation = UUID()
     private var pendingOverwriteOperation: PendingOverwriteOperation?
 
@@ -219,6 +220,8 @@ final class SFTPRemoteBrowserStore: ObservableObject {
         disconnect()
         let generation = UUID()
         self.generation = generation
+        let cancellation = SFTPCancellation()
+        connectionCancellation = cancellation
         state = .connecting
         connectedHost = host
         connectedUsername = username
@@ -227,10 +230,11 @@ final class SFTPRemoteBrowserStore: ObservableObject {
         Task {
             do {
                 let result = try await Task.detached(priority: .userInitiated) {
-                    let client = try SFTPClient.connect(to: host, username: username)
+                    let client = try SFTPClient.connect(to: host, username: username, cancellation: cancellation)
                     do {
                         let path = try client.realPath(".")
                         let entries = try client.listDirectory(path)
+                        client.completeInitialization()
                         return (client, path, Self.sorted(entries))
                     } catch {
                         client.close()
@@ -286,8 +290,18 @@ final class SFTPRemoteBrowserStore: ObservableObject {
 
     func disconnect() {
         generation = UUID()
+        connectionCancellation?.cancel()
+        connectionCancellation = nil
         client?.close()
         client = nil
+        for index in transferItems.indices {
+            switch transferItems[index].state {
+            case .waiting, .transferring:
+                transferItems[index].state = .failed(SFTPConnectionError.cancelled.localizedDescription)
+            case .completed, .failed:
+                break
+            }
+        }
         connectedHost = nil
         connectedUsername = ""
         homePath = ""
@@ -405,8 +419,10 @@ final class SFTPRemoteBrowserStore: ObservableObject {
             )
         }
         transferItems.append(contentsOf: jobs)
+        let sessionID = generation
         Task {
             for (url, job) in zip(localURLs, jobs) {
+                guard generation == sessionID else { return }
                 updateTransfer(job.id, state: .transferring)
                 do {
                     try await Task.detached(priority: .userInitiated) { [weak self] in
@@ -416,12 +432,15 @@ final class SFTPRemoteBrowserStore: ObservableObject {
                             overwrite: overwrite
                         ) { completed, total in
                             DispatchQueue.main.async {
-                                self?.updateTransfer(job.id, completed: completed, total: total)
+                                guard let self, self.generation == sessionID else { return }
+                                self.updateTransfer(job.id, completed: completed, total: total)
                             }
                         }
                     }.value
+                    guard generation == sessionID else { return }
                     updateTransfer(job.id, state: .completed)
                 } catch {
+                    guard generation == sessionID else { return }
                     updateTransfer(job.id, state: .failed(error.localizedDescription))
                     if errorMessage == nil { errorMessage = error.localizedDescription }
                 }
@@ -483,8 +502,10 @@ final class SFTPRemoteBrowserStore: ObservableObject {
             )
         }
         transferItems.append(contentsOf: jobs)
+        let sessionID = generation
         Task {
             for (entry, job) in zip(entries, jobs) {
+                guard generation == sessionID else { return }
                 updateTransfer(job.id, state: .transferring)
                 do {
                     try await Task.detached(priority: .userInitiated) { [weak self] in
@@ -495,12 +516,15 @@ final class SFTPRemoteBrowserStore: ObservableObject {
                             overwrite: overwrite
                         ) { completed, total in
                             DispatchQueue.main.async {
-                                self?.updateTransfer(job.id, completed: completed, total: total)
+                                guard let self, self.generation == sessionID else { return }
+                                self.updateTransfer(job.id, completed: completed, total: total)
                             }
                         }
                     }.value
+                    guard generation == sessionID else { return }
                     updateTransfer(job.id, state: .completed)
                 } catch {
+                    guard generation == sessionID else { return }
                     updateTransfer(job.id, state: .failed(error.localizedDescription))
                     if errorMessage == nil { errorMessage = error.localizedDescription }
                 }
@@ -605,6 +629,7 @@ final class SFTPRemoteBrowserStore: ObservableObject {
         guard let client, state == .connected else { return }
         let remoteDirectory = currentPath
         isFileOperationInProgress = true
+        let sessionID = generation
         Task {
             let result: Result<URL, Error>
             do {
@@ -614,6 +639,10 @@ final class SFTPRemoteBrowserStore: ObservableObject {
                 result = .success(url)
             } catch {
                 result = .failure(error)
+            }
+            guard generation == sessionID else {
+                if case .success(let url) = result { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+                return
             }
             isFileOperationInProgress = false
             completion(result)
@@ -652,13 +681,16 @@ final class SFTPRemoteBrowserStore: ObservableObject {
     private func performFileOperation(_ operation: @escaping @Sendable () throws -> Void) {
         isFileOperationInProgress = true
         errorMessage = nil
+        let sessionID = generation
         Task {
             do {
                 try await Task.detached(priority: .userInitiated, operation: operation).value
+                guard generation == sessionID else { return }
                 isFileOperationInProgress = false
                 selectedNames.removeAll()
                 reload()
             } catch {
+                guard generation == sessionID else { return }
                 isFileOperationInProgress = false
                 errorMessage = error.localizedDescription
             }

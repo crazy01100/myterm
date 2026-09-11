@@ -2,6 +2,8 @@ import Darwin
 import Foundation
 
 enum SFTPConnectionError: LocalizedError {
+    case cancelled
+    case timedOut
     case missingSavedPassword
     case unsupportedPassword
     case failedToStart(String)
@@ -9,6 +11,8 @@ enum SFTPConnectionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .cancelled: "SFTP 操作已取消。"
+        case .timedOut: "SFTP 伺服器回應逾時，連線已關閉，請重新連線。"
         case .missingSavedPassword:
             "這台主機尚未在本機加密保管庫儲存密碼。請先編輯主機並儲存密碼，再使用 SFTP。"
         case .unsupportedPassword:
@@ -122,6 +126,31 @@ final class SSHPasswordPipe {
     deinit { cleanup() }
 }
 
+/// A cancellation signal independent of the serial operation lock. It can be
+/// installed before the first SFTP response, including cancellation during connect.
+final class SFTPCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private var action: (() -> Void)?
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        let callback = action
+        action = nil
+        lock.unlock()
+        callback?()
+    }
+
+    fileprivate func register(_ callback: @escaping () -> Void) {
+        lock.lock()
+        let alreadyCancelled = cancelled
+        if !alreadyCancelled { action = callback }
+        lock.unlock()
+        if alreadyCancelled { callback() }
+    }
+}
+
 private final class SFTPProcessSession {
     private let process = Process()
     private let inputPipe = Pipe()
@@ -130,85 +159,154 @@ private final class SFTPProcessSession {
     private let stderr = SFTPStderrCollector()
     private let stateLock = NSLock()
     private var isClosed = false
+    private let responseTimeout: TimeInterval
+    private var initializationDeadline: TimeInterval?
 
     init(
         arguments: [String],
         environment: [String: String],
-        executableURL: URL = URL(fileURLWithPath: "/usr/bin/ssh")
+        executableURL: URL = URL(fileURLWithPath: "/usr/bin/ssh"),
+        cancellation: SFTPCancellation? = nil,
+        responseTimeout: TimeInterval = 30,
+        initializationTimeout: TimeInterval = 30
     ) throws {
+        self.responseTimeout = responseTimeout
+        initializationDeadline = ProcessInfo.processInfo.systemUptime + initializationTimeout
         process.executableURL = executableURL
         process.arguments = arguments
         process.environment = environment
         process.standardInput = inputPipe
         process.standardOutput = outputPipe
         process.standardError = errorPipe
-
         errorPipe.fileHandleForReading.readabilityHandler = { [stderr] handle in
             stderr.append(handle.availableData)
         }
         do {
             try process.run()
+            for fd in [inputPipe.fileHandleForWriting.fileDescriptor, outputPipe.fileHandleForReading.fileDescriptor] {
+                let flags = fcntl(fd, F_GETFL)
+                guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else {
+                    throw POSIXError(.EIO)
+                }
+            }
+            guard fcntl(inputPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
+                throw POSIXError(.EIO)
+            }
+            cancellation?.register { [weak self] in self?.close() }
+            try checkOpen()
         } catch {
-            errorPipe.fileHandleForReading.readabilityHandler = nil
-            throw SFTPConnectionError.failedToStart(error.localizedDescription)
+            close()
+            throw error
+        }
+    }
+
+    func completeInitialization() {
+        stateLock.lock()
+        initializationDeadline = nil
+        stateLock.unlock()
+    }
+
+    private func deadline() -> TimeInterval {
+        stateLock.lock()
+        defer { stateLock.unlock() }
+        return min(ProcessInfo.processInfo.systemUptime + responseTimeout, initializationDeadline ?? .infinity)
+    }
+
+    private func checkOpen() throws {
+        stateLock.lock()
+        let closed = isClosed
+        stateLock.unlock()
+        if closed { throw SFTPConnectionError.cancelled }
+    }
+
+    // The operation owns its descriptors until it unwinds. close() signals
+    // cancellation but does not close/reuse an fd while read/write may use it.
+    private func waitFor(_ fd: Int32, events: Int16, until deadline: TimeInterval) throws {
+        while true {
+            try checkOpen()
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard remaining > 0 else {
+                close()
+                throw SFTPConnectionError.timedOut
+            }
+            var descriptor = pollfd(fd: fd, events: events, revents: 0)
+            let result = Darwin.poll(&descriptor, 1, Int32(min(100, max(1, remaining * 1000))))
+            if result < 0 {
+                if errno == EINTR { continue }
+                throw SFTPConnectionError.connectionClosed(stderr.message)
+            }
+            if result > 0 {
+                try checkOpen()
+                if descriptor.revents & Int16(POLLNVAL | POLLERR) != 0 {
+                    throw SFTPConnectionError.connectionClosed(stderr.message)
+                }
+                return // POLLHUP is consumed as EOF by read; never loop on it.
+            }
         }
     }
 
     func write(_ data: Data) throws {
-        stateLock.lock()
-        let canWrite = !isClosed
-        stateLock.unlock()
-        guard canWrite else { throw SFTPConnectionError.connectionClosed(stderr.message) }
-        do {
-            try inputPipe.fileHandleForWriting.write(contentsOf: data)
-        } catch {
-            throw SFTPConnectionError.connectionClosed(stderr.message.isEmpty ? error.localizedDescription : stderr.message)
+        let end = deadline()
+        let fd = inputPipe.fileHandleForWriting.fileDescriptor
+        try data.withUnsafeBytes { buffer in
+            var offset = 0
+            while offset < buffer.count {
+                try waitFor(fd, events: Int16(POLLOUT), until: end)
+                let count = Darwin.write(fd, buffer.baseAddress!.advanced(by: offset), buffer.count - offset)
+                if count < 0, errno == EINTR || errno == EAGAIN { continue }
+                guard count > 0 else { throw SFTPConnectionError.connectionClosed(stderr.message) }
+                offset += count
+            }
         }
     }
 
     func readPacket() throws -> Data {
-        let header = try readExactly(4)
+        let end = deadline()
+        let header = try readExactly(4, until: end)
         let length = header.reduce(Int(0)) { ($0 << 8) | Int($1) }
         guard length > 0 else { throw SFTPProtocolError.malformedPacket }
         guard length <= SFTPProtocolCodec.maximumPacketSize else {
             throw SFTPProtocolError.packetTooLarge(length)
         }
-        return try readExactly(length)
+        return try readExactly(length, until: end)
     }
 
     func close() {
         stateLock.lock()
-        guard !isClosed else {
-            stateLock.unlock()
-            return
-        }
+        guard !isClosed else { stateLock.unlock(); return }
         isClosed = true
         stateLock.unlock()
         errorPipe.fileHandleForReading.readabilityHandler = nil
-        try? inputPipe.fileHandleForWriting.close()
-        try? outputPipe.fileHandleForReading.close()
-        if process.isRunning { process.terminate() }
+        if process.isRunning {
+            process.terminate()
+            let child = process
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1) {
+                // Only the child Process retained by this session is eligible.
+                if child.isRunning { _ = Darwin.kill(child.processIdentifier, SIGKILL) }
+            }
+        }
     }
 
-    private func readExactly(_ count: Int) throws -> Data {
+    private func readExactly(_ count: Int, until deadline: TimeInterval) throws -> Data {
         var result = Data()
         result.reserveCapacity(count)
+        let fd = outputPipe.fileHandleForReading.fileDescriptor
+        var buffer = [UInt8](repeating: 0, count: min(count, 64 * 1024))
         while result.count < count {
-            let chunk: Data
-            do {
-                chunk = try outputPipe.fileHandleForReading.read(upToCount: count - result.count) ?? Data()
-            } catch {
-                throw SFTPConnectionError.connectionClosed(stderr.message.isEmpty ? error.localizedDescription : stderr.message)
-            }
-            guard !chunk.isEmpty else {
-                throw SFTPConnectionError.connectionClosed(stderr.message)
-            }
-            result.append(chunk)
+            try waitFor(fd, events: Int16(POLLIN), until: deadline)
+            let size = Darwin.read(fd, &buffer, min(buffer.count, count - result.count))
+            if size < 0, errno == EINTR || errno == EAGAIN { continue }
+            guard size > 0 else { throw SFTPConnectionError.connectionClosed(stderr.message) }
+            result.append(contentsOf: buffer.prefix(size))
         }
         return result
     }
 
-    deinit { close() }
+    deinit {
+        close()
+        try? inputPipe.fileHandleForWriting.close()
+        try? outputPipe.fileHandleForReading.close()
+    }
 }
 
 final class SFTPClient: @unchecked Sendable {
@@ -220,7 +318,7 @@ final class SFTPClient: @unchecked Sendable {
         self.session = session
     }
 
-    static func connect(to host: HostProfile, username: String) throws -> SFTPClient {
+    static func connect(to host: HostProfile, username: String, cancellation: SFTPCancellation? = nil) throws -> SFTPClient {
         var arguments = try SSHArgumentBuilder.arguments(for: host, usernameOverride: username)
         guard let destination = arguments.popLast() else {
             throw SFTPConnectionError.failedToStart("缺少 SSH 目的地。")
@@ -246,7 +344,7 @@ final class SFTPClient: @unchecked Sendable {
 
         let processSession: SFTPProcessSession
         do {
-            processSession = try SFTPProcessSession(arguments: arguments, environment: environment)
+            processSession = try SFTPProcessSession(arguments: arguments, environment: environment, cancellation: cancellation)
             try processSession.write(SFTPProtocolCodec.initializationPacket())
             try SFTPProtocolCodec.parseVersion(processSession.readPacket())
             passwordPipe?.cleanup()
@@ -260,12 +358,18 @@ final class SFTPClient: @unchecked Sendable {
 #if MYTERM_SELF_TESTS
     static func connectForTesting(
         executableURL: URL,
-        arguments: [String]
+        arguments: [String],
+        cancellation: SFTPCancellation? = nil,
+        responseTimeout: TimeInterval = 30,
+        initializationTimeout: TimeInterval = 30
     ) throws -> SFTPClient {
         let session = try SFTPProcessSession(
             arguments: arguments,
             environment: SSHEnvironmentBuilder.environmentDictionary(),
-            executableURL: executableURL
+            executableURL: executableURL,
+            cancellation: cancellation,
+            responseTimeout: responseTimeout,
+            initializationTimeout: initializationTimeout
         )
         do {
             try session.write(SFTPProtocolCodec.initializationPacket())
@@ -277,6 +381,8 @@ final class SFTPClient: @unchecked Sendable {
         }
     }
 #endif
+
+    func completeInitialization() { session.completeInitialization() }
 
     func realPath(_ path: String) throws -> String {
         try synchronized { try realPathUnlocked(path) }
@@ -461,15 +567,25 @@ final class SFTPClient: @unchecked Sendable {
         }
         let handle = try openReader.readData()
         var entries: [SFTPDirectoryEntry] = []
+        var totalBytes = 0
+        var pageCount = 0
         do {
             while true {
+                pageCount += 1
+                guard pageCount <= 10_000 else { throw SFTPProtocolError.resourceLimit }
                 let response = try request(type: SFTPPacketType.readDirectory) { $0.append(data: handle) }
                 var (type, reader) = response
+                totalBytes += reader.remainingCount + 5
+                guard totalBytes <= 64 * 1024 * 1024 else { throw SFTPProtocolError.resourceLimit }
                 if type == SFTPPacketType.status {
                     let shouldContinue = try SFTPProtocolCodec.parseStatus(&reader, allowEndOfFile: true)
                     if !shouldContinue { break }
+                    throw SFTPProtocolError.unexpectedPacket(type)
                 } else if type == SFTPPacketType.name {
-                    entries.append(contentsOf: try SFTPProtocolCodec.parseNameEntries(&reader))
+                    let page = try SFTPProtocolCodec.parseNameEntries(&reader)
+                    guard !page.isEmpty else { throw SFTPProtocolError.malformedPacket }
+                    guard entries.count + page.count <= 100_000 else { throw SFTPProtocolError.resourceLimit }
+                    entries.append(contentsOf: page)
                 } else {
                     throw SFTPProtocolError.unexpectedPacket(type)
                 }
@@ -529,12 +645,13 @@ final class SFTPClient: @unchecked Sendable {
         var (type, reader) = response
         if type == SFTPPacketType.data {
             let data = try SFTPProtocolCodec.parseData(&reader)
-            guard !data.isEmpty else { throw SFTPProtocolError.malformedPacket }
+            guard !data.isEmpty, data.count <= Int(length) else { throw SFTPProtocolError.malformedPacket }
             return data
         }
         guard type == SFTPPacketType.status else { throw SFTPProtocolError.unexpectedPacket(type) }
         let shouldContinue = try SFTPProtocolCodec.parseStatus(&reader, allowEndOfFile: true)
-        return shouldContinue ? Data() : nil
+        guard !shouldContinue else { throw SFTPProtocolError.unexpectedPacket(type) }
+        return nil
     }
 
     private func writeFileUnlocked(handle: Data, offset: UInt64, data: Data) throws {
@@ -552,8 +669,10 @@ final class SFTPClient: @unchecked Sendable {
         overwriteExisting: Bool,
         completed: inout UInt64,
         total: UInt64?,
-        progress: (UInt64, UInt64?) -> Void
+        progress: (UInt64, UInt64?) -> Void,
+        depth: Int = 0
     ) throws {
+        guard depth <= 64 else { throw SFTPProtocolError.resourceLimit }
         let values = try localURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
         if values.isSymbolicLink == true {
             throw SFTPFileOperationError.symbolicLinkTransferUnsupported(localURL.lastPathComponent)
@@ -581,7 +700,8 @@ final class SFTPClient: @unchecked Sendable {
                         overwriteExisting: false,
                         completed: &completed,
                         total: total,
-                        progress: progress
+                        progress: progress,
+                        depth: depth + 1
                     )
                 }
             } catch {
@@ -629,8 +749,10 @@ final class SFTPClient: @unchecked Sendable {
         localURL: URL,
         completed: inout UInt64,
         total: UInt64?,
-        progress: (UInt64, UInt64?) -> Void
+        progress: (UInt64, UInt64?) -> Void,
+        depth: Int = 0
     ) throws {
+        guard depth <= 64 else { throw SFTPProtocolError.resourceLimit }
         try Self.validatePathComponent(entry.name)
         guard !FileManager.default.fileExists(atPath: localURL.path) else {
             throw SFTPFileOperationError.destinationExists(entry.name)
@@ -653,7 +775,8 @@ final class SFTPClient: @unchecked Sendable {
                         localURL: localURL.appending(path: child.name),
                         completed: &completed,
                         total: total,
-                        progress: progress
+                        progress: progress,
+                        depth: depth + 1
                     )
                 }
             } catch {
@@ -698,13 +821,15 @@ final class SFTPClient: @unchecked Sendable {
         }
     }
 
-    private func removeRecursivelyUnlocked(path: String, kind: SFTPFileKind) throws {
+    private func removeRecursivelyUnlocked(path: String, kind: SFTPFileKind, depth: Int = 0) throws {
+        guard depth <= 64 else { throw SFTPProtocolError.resourceLimit }
         if kind == .directory {
             for entry in try listDirectoryUnlocked(path) {
                 try Self.validatePathComponent(entry.name)
                 try removeRecursivelyUnlocked(
                     path: Self.appending(entry.name, to: path),
-                    kind: entry.attributes.kind
+                    kind: entry.attributes.kind,
+                    depth: depth + 1
                 )
             }
             let response = try request(type: SFTPPacketType.removeDirectory) { $0.append(string: path) }
