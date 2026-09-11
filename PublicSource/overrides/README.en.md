@@ -99,7 +99,7 @@ Follow “Build and install for everyday use” below to create and install `MyT
 
 To use MyTerm, follow these steps to create **MyTerm.app**. You do not need to change code, create a GitHub Release, host an update service, or configure Firebase. This produces a Release-optimized build with the regular MyTerm name and data identity.
 
-You need an Apple Silicon Mac, macOS 26, Xcode 26 or compatible Command Line Tools (Swift 6.2), Git, Python 3, and ripgrep (`rg`). Check availability with `swift --version`, `git --version`, `python3 --version`, and `rg --version`. The first build downloads dependencies over the internet. See [build tools](DEVELOPMENT.en.md#build-tools) for setup.
+You need an Apple Silicon Mac, macOS 26, Xcode 26 or compatible Command Line Tools (Swift 6.2), Git, Python 3.12+, and ripgrep (`rg`). Check availability with `swift --version`, `git --version`, `./scripts/project-python.sh --version`, and `rg --version`. The first build downloads dependencies over the internet. See [build tools](DEVELOPMENT.en.md#build-tools) for setup.
 
 **1.** Open macOS Terminal, download the source, and enter its directory:
 
@@ -117,7 +117,7 @@ cd myterm-source
   myterm_build="$(date '+%Y%m%d%H%M%S')"
   myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
 
-  python3 scripts/run-isolated-tests.py
+  ./scripts/project-python.sh scripts/run-isolated-tests.py
   ./scripts/build-app.sh --channel candidate \
     --version "$myterm_version" --build "$myterm_build"
   ./scripts/verify-app.sh --app "$myterm_app" \
@@ -164,3 +164,5 @@ MyTerm's original code and documentation are licensed under the [MIT License](LI
 Third-party components and assets retain their own licenses and copyright notices, including [SwiftTerm](Vendor/SwiftTerm/LICENSE), the [platform icon attribution](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt), and the [OpenAI brand asset notice](Resources/Readme/NOTICE.md). MyTerm's MIT License does not replace those licenses.
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
+
+Source tests and administration scripts require Python 3.12 or newer through the project launcher; see [Python tool environment](DEVELOPMENT.en.md#python-runtime). App users do not need Python.

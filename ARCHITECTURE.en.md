@@ -187,3 +187,7 @@ Private monitoring maps complete successful scans to bot-owned private Issues us
 `render-release-notes.py` is the shared release-note HTML generator for private/public distributions. It preserves text escaping and authored sections while normalizing the version heading. Dedicated release-notes.css handles narrow light/dark presentation; HTML remains signed and verified through the existing pipeline and contains no website navigation.
 
 The Firebase development-tool adapter in `scripts/patch-firebase-stream-json.py` maps stream-json Node stream APIs during npm installation; the CLI wrapper checks pinned versions and file hashes before launch. It does not change App data flows. The dependency depth limit and repository command restrictions remain in place; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+
+`scripts/project-python.sh` selects Python for administration, tests, and release scripts from an explicit supported executable, the project environment, or PATH. It rejects versions below 3.12 without replacing system Python. `setup-security-tools.sh` uses the same selection to recreate an isolated verification venv; this tooling is not packaged in the App.
+
+`scripts/project-node.sh` selects Node 24 LTS and provides the npm entry point; Firebase subprocesses and npm audits use that environment without changing global Node or the App runtime.

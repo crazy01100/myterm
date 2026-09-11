@@ -12,4 +12,4 @@ port="${MYTERM_UPDATE_LAB_PORT:-48123}"
 
 print -r -- "MyTerm 本機更新 feed：http://127.0.0.1:$port/appcast.xml"
 print -r -- "保持這個程序執行，直到 beta.1 → beta.2 測試完成。"
-exec /usr/bin/python3 -m http.server "$port" --bind 127.0.0.1 --directory "$feed_dir"
+exec "$project_dir/scripts/project-python.sh" -m http.server "$port" --bind 127.0.0.1 --directory "$feed_dir"

@@ -101,7 +101,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 ```sh
 git clone https://github.com/crazy01100/myterm.git
 cd myterm
-python3 scripts/run-isolated-tests.py
+./scripts/project-python.sh scripts/run-isolated-tests.py
 ./scripts/run-dev-app.sh \
   --version 1.0.22-dev.1 \
   --build "$(date '+%Y%m%d%H%M%S')"
@@ -129,3 +129,5 @@ MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 202
 第三方元件與素材仍適用各自的授權及版權聲明，包括 [SwiftTerm](Vendor/SwiftTerm/LICENSE)、[平台圖示來源聲明](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt)及 [OpenAI 品牌素材聲明](Resources/Readme/NOTICE.md)；本專案的 MIT License 不取代這些授權。
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+原始碼測試與管理腳本需要 Python 3.12 以上；使用統一入口，設定方式見 [Python 工具環境](DEVELOPMENT.md#python-runtime)。一般 App 使用者不需安裝 Python。

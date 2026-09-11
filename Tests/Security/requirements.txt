@@ -1,4 +1,4 @@
-# Public-key verification only. Python >=3.9.2; wheels only, no build scripts.
+# Public-key verification only. Python >=3.12; wheels only, no build scripts.
 cryptography==50.0.1 \
     --hash=sha256:01f41478cf33fc605a6a089cd56d28b45c6c0b45a1928b61797f2621a04bac71 \
     --hash=sha256:05ba322c4da95b262a212c345af888ef2c37c88c0509756ea00a0e6d68850f23 \

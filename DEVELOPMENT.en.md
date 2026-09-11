@@ -57,7 +57,7 @@ Manual two-Mac automatic-sync acceptance requires a separate test Google account
 Run automated tests first:
 
 ```sh
-python3 scripts/run-isolated-tests.py
+./scripts/project-python.sh scripts/run-isolated-tests.py
 ```
 
 For manual app checks, use the fixed development entry point:
@@ -90,7 +90,7 @@ Commit and push source after feature acceptance. On the primary development Mac,
 
 ### Firebase development tool compatibility
 
-Development tools require Node.js 24 or later and Python 3.9.2 or later. `npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
+Development tools require Node.js 24 LTS and Python 3.12 or later. `./scripts/project-node.sh --npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `./scripts/project-node.sh --npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `./scripts/project-node.sh --npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
 
 ### Document languages and synchronized maintenance
 
@@ -255,8 +255,25 @@ No. `release.sh` creates at most a Draft. Public release, production update-site
 
 - This private maintenance repository retains personal versions, existing Git history, signed assets, and automatic deployment. `crazy01100/myterm-source` is a separate source-only project, providing no personal app archives, cloud configuration, or update service.
 - Maintainers export with `scripts/export-public-source.py --output build/public-source/<new-candidate-name>`. `PublicSource/export-manifest.json` defines the explicit file list; `PublicSource/overrides/` holds public documentation and tool differences. When an upstream hash changes, review and update the public differences and both languages before refreshing the manifest. Do not push the entire working directory or private Git history to the public repository.
-- Before publication, run `python3 PublicSource/test_export.py`, service/credential scans, document checks, and a build-only verification without personal settings. Create fresh Git history initially and use the public repository's own normal commits for later updates. Private app releases and update-site deployments retain their separate workflows and authorization.
+- Before publication, run `./scripts/project-python.sh PublicSource/test_export.py`, service/credential scans, document checks, and a build-only verification without personal settings. Create fresh Git history initially and use the public repository's own normal commits for later updates. Private app releases and update-site deployments retain their separate workflows and authorization.
 
 - Public guides distinguish regular personal MyTerm.app, isolated MyTerm Dev.app, and independent distribution/update hosting. The personal path uses existing build-app.sh candidate output and verify-app.sh, covering installation, rebuild updates, shared regular data identity, and ad-hoc authorization limitations. It does not replace the private release.sh, pinned-signing, or update-acceptance workflow.
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
+
+<a id="python-runtime"></a>
+## Python tool environment
+
+Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
+
+With Python 3.12 installed, create an isolated environment at the repository root:
+
+```sh
+python3.12 -m venv .build/python-runtime
+./scripts/project-python.sh --version
+./scripts/setup-security-tools.sh
+```
+
+Alternatively, point `MYTERM_PYTHON` to your installed supported interpreter. The minimum-version check does not replace lifecycle review: check official EoL/EoS status during tool updates. Verification packages use the separate `.build/security-tools` environment. Running setup recreates that reproducible directory with the selected Python, installing pinned wheels with verified hashes. App users do not need Python.
+
+Use `./scripts/project-node.sh` for Node/npm. It selects Node 24 LTS from `MYTERM_NODE`, `.build/node-runtime/bin/node`, or an installed Node 24, and gives subprocesses the same PATH. `./scripts/project-node.sh --npm ci` avoids an EoL odd-numbered system default. Extract the complete official Node 24 distribution into `.build/node-runtime` or select an installed Node 24 executable without replacing global Node. Package engine constraints and `.npmrc` also reject installations on other major versions.

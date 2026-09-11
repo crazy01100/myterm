@@ -99,7 +99,7 @@ fi
     /usr/bin/shasum -a 256 -c CHECKSUMS.txt
 )
 
-/usr/bin/python3 - "$appcast" "$manifest" "$archive" "$notes" "$version" "$build_number" <<'PY'
+"$project_dir/scripts/project-python.sh" - "$appcast" "$manifest" "$archive" "$notes" "$version" "$build_number" <<'PY'
 import hashlib
 import json
 import os
@@ -169,7 +169,7 @@ for path, key in (
         raise SystemExit(f"release-manifest.json 的 {key} 不符。")
 PY
 
-archive_signature="$(/usr/bin/python3 - "$appcast" <<'PY'
+archive_signature="$("$project_dir/scripts/project-python.sh" - "$appcast" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
 

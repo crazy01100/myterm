@@ -2,7 +2,7 @@
 # An independent distributor supplies its own HTTPS base URL. No upstream endpoint.
 validate_update_source() {
     export MYTERM_UPDATE_BASE_URL
-    python3 - <<'CHECK'
+    "$project_dir/scripts/project-python.sh" - <<'CHECK'
 import os, sys
 from urllib.parse import urlsplit
 value = os.environ.get("MYTERM_UPDATE_BASE_URL", "").rstrip("/")

@@ -11,14 +11,17 @@
       "baseSHA256": "4ce870d76d571175c5aceac502ab15adf2bd195475c9175a6706d4784faf53ac"
     },
     {
+      "path": ".npmrc"
+    },
+    {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "0a123a195f59229069177a08b9aa2c785c4ccc63820bbd9c7dd3ed5c17ef6bf1"
+      "baseSHA256": "aa351dd35f9de68938ec62d1d8a629b2d99327364a2640b5a708987450117b06"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "d4e927c0a7709ada5ea43fb9cbe18a78e0bf42be2fe017be201c65cedab634b5"
+      "baseSHA256": "eba411fdd0461e1823f5fc5239f2585481f122f1ff93627eabd476d37251b8c9"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
@@ -34,22 +37,22 @@
     {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "28a875075b9f5f6beb8b73927459962f319ea1b7feeabf238ae7ed014ca59f79"
+      "baseSHA256": "0459a1acb38724a38028e270d6154eef71638ffd7feb412a84d3dad789719636"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "b356b1d7d6e86f197f357a71b1fe23dd264677d5ba88cf8ac166b43d12651601"
+      "baseSHA256": "d35e1fe92aad4d20f2961da3bda17e806fa00a0b6124fd22a921224625a336e5"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.en.md",
-      "baseSHA256": "eaa9b57b30d4d6a411779294f1d22867a4cc861451c9bba765d0a6ccc6fa049b"
+      "baseSHA256": "b1908f249cd979f7ab4e8c978887bd1baa8de01d218e193289d019ea54045ccc"
     },
     {
       "path": "FIREBASE_SETUP.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.md",
-      "baseSHA256": "f54cb7ff64d83a31ff6327542ccbf8bd6160016a8f9fe095e1efa6d141fc76c3"
+      "baseSHA256": "d45be751e149a287973bed0d9ff911937dcce4a14e0ac158cb941900a5b67f56"
     },
     {
       "path": "LICENSE"
@@ -63,12 +66,12 @@
     {
       "path": "README.en.md",
       "overlay": "PublicSource/overrides/README.en.md",
-      "baseSHA256": "dd93bd954b15d9eea0669b774309a68f7524c4b76a4de4f478a9ef8bf36a8812"
+      "baseSHA256": "bddfe07d388c6ae6fa937c893389eec758180a6745a780ed656d2f31b28ba2e1"
     },
     {
       "path": "README.md",
       "overlay": "PublicSource/overrides/README.md",
-      "baseSHA256": "00a0589d96436aaa5d5bdbc2dcb9d7f5fb40eb62f02cdc43e2920056a294aecc"
+      "baseSHA256": "0e3a762bcda3d83f89deb7e877ef71a6c906ce7af39df11687eafb8ccc40059a"
     },
     {
       "path": "Resources/AppIcon-original.png"
@@ -142,12 +145,12 @@
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "fee327c4e7b95adb7c2cb2669e5b5d083b56b03ec7a976c7bf2adb1505ef415e"
+      "baseSHA256": "ea8de45503367165e9d8434c0092ac5113bad77c88b3ee5cd20df864e1c0f1a7"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "23161c0d247f306f76ba475f049fc11514e516478ebe2fc5ebaedc431290d67f"
+      "baseSHA256": "c889d01e9ed5ac9bc1e1834a285a5d4ef33ceee64c0b1ef568747b16f95952fd"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"
@@ -511,6 +514,12 @@
       "path": "Tests/Security/test_firebase_policy.py"
     },
     {
+      "path": "Tests/Security/test_project_node.py"
+    },
+    {
+      "path": "Tests/Security/test_project_python.py"
+    },
+    {
       "path": "Tests/Security/test_release_notes.py"
     },
     {
@@ -842,17 +851,25 @@
     {
       "path": "scripts/prepare-pages-deployment.sh",
       "overlay": "PublicSource/overrides/scripts/prepare-pages-deployment.sh",
-      "baseSHA256": "0b2f43cfba7c583826eda7c7e8d9655ca657e9434fb1de830058676c3aa7df79",
+      "baseSHA256": "1448a81e44ca324778fa4c858842f692c02dfa4bfe9a64f50d235eab48e586c9",
       "executable": true
     },
     {
       "path": "scripts/prepare-release-assets.sh",
       "overlay": "PublicSource/overrides/scripts/prepare-release-assets.sh",
-      "baseSHA256": "2a1f5e652d319aba70db7863d73abc9b6a7fdc04445b0d6877a8db3ab209b7cf",
+      "baseSHA256": "734a01db109730c55797c5c93b1835d923ca4876958ee9575c9c0eb865c5ac1f",
       "executable": true
     },
     {
       "path": "scripts/prepare-release-build.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/project-node.sh",
+      "executable": true
+    },
+    {
+      "path": "scripts/project-python.sh",
       "executable": true
     },
     {
@@ -954,7 +971,7 @@
     {
       "path": "scripts/verify-release-assets.sh",
       "overlay": "PublicSource/overrides/scripts/verify-release-assets.sh",
-      "baseSHA256": "5dc9980018193017c14bff4c7be2dbb9a0de9a5bb3909b9016d5fe75d1f0f2f5",
+      "baseSHA256": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
       "executable": true
     },
     {

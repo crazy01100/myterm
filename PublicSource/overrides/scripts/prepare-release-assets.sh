@@ -94,7 +94,7 @@ trap '/bin/rm -rf -- "$stage_dir"' EXIT
 notes_companion="$stage_dir/${archive_name:r}.md"
 /bin/cp "$notes_file" "$notes_companion"
 
-/usr/bin/python3 "$project_dir/scripts/render-release-notes.py" \
+"$project_dir/scripts/project-python.sh" "$project_dir/scripts/render-release-notes.py" \
     --source "$notes_file" --output "$stage_dir/release-notes.html" --version "$version"
 
 generate_appcast="$(find_sparkle_tool "$project_dir" generate_appcast)"
@@ -112,7 +112,7 @@ generate_appcast="$(find_sparkle_tool "$project_dir" generate_appcast)"
 sign_update="$(find_sparkle_tool "$project_dir" sign_update)"
 commit_sha="$(git -C "$project_dir" rev-parse HEAD)"
 notes_signature="$("$sign_update" --account "$MYTERM_SPARKLE_KEY_ACCOUNT" --disable-signing-warning -p "$stage_dir/release-notes.html")"
-/usr/bin/python3 "$project_dir/scripts/bind-release-metadata.py" \
+"$project_dir/scripts/project-python.sh" "$project_dir/scripts/bind-release-metadata.py" \
     --feed "$stage_dir/appcast.xml" --notes "$stage_dir/release-notes.html" \
     --signature "$notes_signature" --base-url "$MYTERM_UPDATE_BASE_URL" \
     --version "$version" --commit "$commit_sha"
@@ -127,7 +127,7 @@ notes_sha="$(/usr/bin/shasum -a 256 "$stage_dir/release-notes.html" | awk '{prin
 commit_sha="$(git -C "$project_dir" rev-parse HEAD)"
 created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
-/usr/bin/python3 - "$stage_dir/release-manifest.json" "$version" "$build_number" "$commit_sha" "$created_at" "$archive_name" "$archive_sha" "$appcast_sha" "$notes_sha" <<'PY'
+"$project_dir/scripts/project-python.sh" - "$stage_dir/release-manifest.json" "$version" "$build_number" "$commit_sha" "$created_at" "$archive_name" "$archive_sha" "$appcast_sha" "$notes_sha" <<'PY'
 import json
 import xml.etree.ElementTree as ET
 import os
