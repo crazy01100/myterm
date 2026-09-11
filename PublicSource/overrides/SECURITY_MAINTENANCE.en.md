@@ -12,16 +12,24 @@ The included `.github/dependabot.yml` proposes weekly dependency updates after a
 
 
 ```sh
-python3 scripts/security-audit.py --output build/security-report.json
-python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
+./scripts/project-python.sh scripts/security-audit.py --output build/security-report.json
+./scripts/project-python.sh scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
 ```
 
-Requires an authenticated `gh` with appropriate read access, Python 3.9.2 or newer, Node.js 24 or newer, and npm. Checks query public advisories and necessary source/version metadata, without reading local cloud configuration or signing private keys. `Config/Security/native-components.json` binds the libsodium version to the swift-sodium revision; review the actual XCFramework header after changing the wrapper. Vendor fixes announced by commit are checked using commit ancestry rather than an invented version.
+Requires an authenticated `gh` with appropriate read access, Python 3.12 or newer, Node.js 24 LTS, and npm. Checks query public advisories and necessary source/version metadata, without reading local cloud configuration or signing private keys. `Config/Security/native-components.json` binds the libsodium version to the swift-sodium revision; review the actual XCFramework header after changing the wrapper. Vendor fixes announced by commit are checked using commit ancestry rather than an invented version.
 
 New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
 
 
 `security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the maintainer's private Issue automation; distributors must configure their own risk tracking.
+
+## Update grouping and support lifecycle
+
+Weekly minor/patch proposals are grouped separately for GitHub Actions and Python verification tools; major updates remain separate for review. Grouping does not enable automatic merging or waive compatibility and security validation.
+
+During dependency maintenance, check official support status for packages, tools, and their runtimes. Do not knowingly adopt or continue depending on EoL/EoS versions. Absence of known vulnerabilities does not establish support. For components without a formal lifecycle, record upstream maintenance status and evidence rather than inventing an expiry date. Prioritize a supported replacement when support has ended, validate it before migration, and explicitly document impact, deadlines, and acceptance when immediate removal is not feasible.
+
+Project Python tools require at least 3.12, CI uses 3.12, and administration scripts select their interpreter through `scripts/project-python.sh`. The minimum-version guard does not track future EoL dates; lifecycle review remains part of each maintenance pass. See the [tool environment](DEVELOPMENT.en.md#python-runtime).
 
 ## Security Issue remediation summaries
 
@@ -41,7 +49,7 @@ Current npm overrides preserve Firebase's CSV stream, PubSub trace-context propa
 
 `scripts/firebase-tools.sh` permits only Firestore Rules/indexes deployment, local Auth/Firestore emulators under `demo-myterm`, and basic sign-in/project queries. Deployment requires explicit `--project` and Firestore `--only` options. Emulators require loopback configuration; `emulators:exec` accepts only this repository's fixed Rules test command. Auth import, Hosting, alternate configuration files and arbitrary emulator subprocess commands are rejected. This restricts the repository entry point; it cannot prevent a local owner from directly invoking the CLI in `node_modules`.
 
-Firebase CLI is pinned to `15.30.0` with an npm override selecting the officially patched `stream-json` `3.6.0`. The npm postinstall hook runs `scripts/patch-firebase-stream-json.py` to map three CLI consumers to the new Node stream APIs. It checks both package versions and SHA-256 hashes of all three files before writing, and verifies already-patched files on repeated runs. Version, input, or output drift is rejected; no expiring exception remains for this advisory. `firebase-tools.sh` also checks the patch before every launch. After `npm ci --ignore-scripts`, run the patch script explicitly and then `npm run test:development-tools`. Tests cover actual consumer loading, chunked JSON, existing CLI data semantics, excessive-depth rejection, and patch drift. Once upstream Firebase CLI supports a patched dependency natively, remove the override and adapter only after the same regression tests pass; never change versions or hashes merely to bypass verification.
+Firebase CLI is pinned to `15.30.0` with an npm override selecting the officially patched `stream-json` `3.6.0`. The npm postinstall hook runs `scripts/patch-firebase-stream-json.py` to map three CLI consumers to the new Node stream APIs. It checks both package versions and SHA-256 hashes of all three files before writing, and verifies already-patched files on repeated runs. Version, input, or output drift is rejected; no expiring exception remains for this advisory. `firebase-tools.sh` also checks the patch before every launch. After `./scripts/project-node.sh --npm ci --ignore-scripts`, run the patch script explicitly and then `./scripts/project-node.sh --npm run test:development-tools`. Tests cover actual consumer loading, chunked JSON, existing CLI data semantics, excessive-depth rejection, and patch drift. Once upstream Firebase CLI supports a patched dependency natively, remove the override and adapter only after the same regression tests pass; never change versions or hashes merely to bypass verification.
 
 ## Public-key release verification
 
@@ -52,7 +60,7 @@ Initial setup:
 ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
 ```
 
-Tools use a reproducible `.build/security-tools` Python venv, exact versions, wheel hashes and `--require-hashes`, without source-package build scripts. Python 3.9.2 or newer is supported. Existing release procedures retain signing material locally; CI needs only the public key.
+Tools use a reproducible `.build/security-tools` Python venv, exact versions, wheel hashes and `--require-hashes`, without source-package build scripts. Python 3.12 or newer is supported. Existing release procedures retain signing material locally; CI needs only the public key.
 
 ```sh
 ./scripts/security-python.sh scripts/verify-signed-release.py \
@@ -71,7 +79,7 @@ Verification proceeds through the complete feed signature and original byte leng
 ## Safe testing and app updates
 
 ```sh
-python3 scripts/run-isolated-tests.py
+./scripts/project-python.sh scripts/run-isolated-tests.py
 ./scripts/run-sftp-security-tests.sh
 ```
 

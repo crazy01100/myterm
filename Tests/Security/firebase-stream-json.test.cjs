@@ -16,7 +16,7 @@ function input(value,size){const bytes=Buffer.from(JSON.stringify(value));return
 function collect(stages){return new Promise((resolve,reject)=>{const out=[];new Chain(stages).on('data',v=>out.push(v)).on('error',reject).on('end',()=>resolve(out));});}
 
 test('installed CLI has the reviewed compatibility patch and loads its consumers',()=>{
- const checked=spawnSync('python3',[path.join(root,'scripts/patch-firebase-stream-json.py'),'--check'],{encoding:'utf8',timeout:10000});
+ const checked=spawnSync(path.join(root,'scripts/project-python.sh'),[path.join(root,'scripts/patch-firebase-stream-json.py'),'--check'],{encoding:'utf8',timeout:10000});
  assert.equal(checked.status,0,checked.stderr);
  for(const module of ['commands/auth-import','database/import','frameworks/next/index'])assert.doesNotThrow(()=>cli('./lib/'+module+'.js'));
 });

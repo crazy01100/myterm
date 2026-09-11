@@ -97,7 +97,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 如果只想使用 MyTerm，依照以下步驟建立 **MyTerm.app** 即可，不需要修改程式碼、建立 GitHub Release、架設更新站或設定 Firebase。這個流程使用 Release 最佳化建置，保留一般 MyTerm 的名稱與資料身分。
 
-先備妥 Apple Silicon Mac、macOS 26、Xcode 26 或相容 Command Line Tools（Swift 6.2），以及 Git、Python 3 和 ripgrep（`rg`）。可用 `swift --version`、`git --version`、`python3 --version`、`rg --version` 確認工具可用；首次建置需要網路下載相依套件。工具設定見 [建置指南](DEVELOPMENT.md#build-tools)。
+先備妥 Apple Silicon Mac、macOS 26、Xcode 26 或相容 Command Line Tools（Swift 6.2），以及 Git、Python 3.12+ 和 ripgrep（`rg`）。可用 `swift --version`、`git --version`、`./scripts/project-python.sh --version`、`rg --version` 確認工具可用；首次建置需要網路下載相依套件。工具設定見 [建置指南](DEVELOPMENT.md#build-tools)。
 
 **1.** 開啟 macOS「終端機」，取得來源並進入專案目錄：
 
@@ -115,7 +115,7 @@ cd myterm-source
   myterm_build="$(date '+%Y%m%d%H%M%S')"
   myterm_app="$PWD/build/candidates/MyTerm-$myterm_version-build-$myterm_build/MyTerm.app"
 
-  python3 scripts/run-isolated-tests.py
+  ./scripts/project-python.sh scripts/run-isolated-tests.py
   ./scripts/build-app.sh --channel candidate \
     --version "$myterm_version" --build "$myterm_build"
   ./scripts/verify-app.sh --app "$myterm_app" \
@@ -162,3 +162,5 @@ MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 202
 第三方元件與素材仍適用各自的授權及版權聲明，包括 [SwiftTerm](Vendor/SwiftTerm/LICENSE)、[平台圖示來源聲明](Sources/MySSHClient/Resources/PlatformIcons/NOTICE.txt)及 [OpenAI 品牌素材聲明](Resources/Readme/NOTICE.md)；本專案的 MIT License 不取代這些授權。
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+原始碼測試與管理腳本需要 Python 3.12 以上；使用統一入口，設定方式見 [Python 工具環境](DEVELOPMENT.md#python-runtime)。一般 App 使用者不需安裝 Python。

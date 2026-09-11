@@ -7,7 +7,7 @@
 <a id="build-tools"></a>
 ## 建置前準備
 
-需要 Apple Silicon、macOS 26、Xcode 26／相容 Command Line Tools（Swift 6.2）、Git、Python 3 與 ripgrep（`rg`）。未安裝 Apple 開發工具時可執行 `xcode-select --install`，依系統提示完成；若已有 Xcode，請確認目前選用的工具鏈提供 Swift 6.2。以 `swift --version`、`git --version`、`python3 --version`、`rg --version` 檢查工具；缺少 ripgrep 時可透過自己使用的套件管理器安裝（已使用 Homebrew 者可執行 `brew install ripgrep`）。
+需要 Apple Silicon、macOS 26、Xcode 26／相容 Command Line Tools（Swift 6.2）、Git、Python 3.12+ 與 ripgrep（`rg`）。未安裝 Apple 開發工具時可執行 `xcode-select --install`，依系統提示完成；若已有 Xcode，請確認目前選用的工具鏈提供 Swift 6.2。以 `swift --version`、`git --version`、`./scripts/project-python.sh --version`、`rg --version` 檢查工具；缺少 ripgrep 時可透過自己使用的套件管理器安裝（已使用 Homebrew 者可執行 `brew install ripgrep`）。
 
 首次建置需要網路下載 Swift 相依套件。基本本機建置不需要 Node.js 或 Firebase；雲端設定工具另需 jq，Firestore Rules 測試另需 Node.js 24 與專案 npm 相依套件。
 
@@ -108,7 +108,7 @@ export MYTERM_SPARKLE_KEY_ACCOUNT="MyTerm.Source.Release.ed25519"
 ## 測試、資源與清理
 
 - `run-tests.sh` 涵蓋核心、OAuth、加密同步、登入恢復及真實終端 renderer 測試；`run-crypto-tests.sh` 與 `run-sync-reliability-tests.sh` 可獨立執行。
-- Firestore Rules 使用 `npm install` 後的 `npm run test:firestore-rules`；測試 Firebase Emulator，不連正式雲端。
+- Firestore Rules 使用 `./scripts/project-node.sh --npm install` 後的 `./scripts/project-node.sh --npm run test:firestore-rules`；測試 Firebase Emulator，不連正式雲端。
 - SwiftTerm runtime 固定於 `Vendor/SwiftTerm`，兩個 renderer hook 的來源與升級核對見 [UPSTREAM.md](Vendor/SwiftTerm/UPSTREAM.md)。保留 MIT 授權，升級後驗證來源、完整測試、乾淨建置與 App 互動。
 - 包裝與 App 驗證使用 `verify-app.sh`、`verify-packaged-resources.sh`、`package-app.sh`。測試成功不能代替拖放、焦點、捲動、分割及真實連線驗收。
 - `build/`、SwiftPM 快取與 ZIP 為可重建產物；清理前確認沒有程序執行、沒有待驗收或發布仍引用的資產。不清除使用者資料、Keychain、Config/Local 或簽章復原材料。
@@ -143,4 +143,21 @@ export MYTERM_SPARKLE_KEY_ACCOUNT="MyTerm.Source.Release.ed25519"
 
 ### Firebase 開發工具相容性
 
-開發工具需要 Node.js 24 以上及 Python 3.9.2 以上。`npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+開發工具需要 Node.js 24 LTS及 Python 3.12 以上。`./scripts/project-node.sh --npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`./scripts/project-node.sh --npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+
+<a id="python-runtime"></a>
+## Python 工具環境
+
+專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
+
+若已安裝 Python 3.12，可在專案根目錄建立獨立環境：
+
+```sh
+python3.12 -m venv .build/python-runtime
+./scripts/project-python.sh --version
+./scripts/setup-security-tools.sh
+```
+
+也可將 `MYTERM_PYTHON` 指向自己安裝的受支援 Python 執行檔。最低版本門檻不代替生命週期檢查；更新工具時仍需核對官方 EoL／EoS 狀態。驗簽套件另由 `.build/security-tools` 的隔離環境管理，重新執行 setup 會以選定的 Python 重建該可重建目錄，並以固定版本、wheel 及雜湊安裝。App 使用者不需要安装 Python。
+
+Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，依序接受 `MYTERM_NODE`、`.build/node-runtime/bin/node` 或已安裝的 Node 24，並讓子程序沿用相同 PATH。`./scripts/project-node.sh --npm ci` 可避免系統預設 Node 指到已EoL的奇數版本。可將官方 Node 24 發行包完整解壓至 `.build/node-runtime`，或指定已安裝的 Node 24 執行檔；不需覆蓋全域 Node。套件引擎範圍與 `.npmrc` 亦拒絕非24版本的安裝。

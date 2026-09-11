@@ -57,7 +57,7 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 先執行自動測試：
 
 ```sh
-python3 scripts/run-isolated-tests.py
+./scripts/project-python.sh scripts/run-isolated-tests.py
 ```
 
 需要人工驗證 App 行為時，使用固定的測試版入口：
@@ -90,7 +90,7 @@ python3 scripts/run-isolated-tests.py
 
 ### Firebase 開發工具相容性
 
-開發工具需要 Node.js 24 以上及 Python 3.9.2 以上。`npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+開發工具需要 Node.js 24 LTS及 Python 3.12 以上。`./scripts/project-node.sh --npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`./scripts/project-node.sh --npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
 
 ### 文件語系與同步維護
 
@@ -255,8 +255,25 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 
 - 此私人維護庫保留個人版本、既有 Git 歷史、簽署成品與自動部署；`crazy01100/myterm-source` 是獨立的 source-only 專案。公開來源不提供個人 App 成品、雲端設定或更新服務。
 - 維護者以 `scripts/export-public-source.py --output build/public-source/<新的候選名稱>` 匯出；`PublicSource/export-manifest.json` 定義明確檔案清單，`PublicSource/overrides/` 維護公開版文件與工具差異。來源變動導致雜湊不符時，先審閱並更新公開差異與雙語文件，再更新清單；不將整個工作目錄或私人 Git 歷史推到公開庫。
-- 公開前執行 `python3 PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。初次建立全新 Git 歷史，之後以公開庫自己的正常提交同步；私人版本發布及更新站部署仍沿用各自流程與授權。
+- 公開前執行 `./scripts/project-python.sh PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。初次建立全新 Git 歷史，之後以公開庫自己的正常提交同步；私人版本發布及更新站部署仍沿用各自流程與授權。
 
 - 公開文件須分清「一般自用 MyTerm.app」「隔離開發 MyTerm Dev.app」與「獨立發行／更新站」；自用入口採現有 build-app.sh 的 candidate 輸出與 verify-app.sh，並解釋安裝、重建更新、共享一般資料身分及 ad-hoc 授權限制。這不取代私人 release.sh／固定簽章／更新驗收流程。
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+<a id="python-runtime"></a>
+## Python 工具環境
+
+專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
+
+若已安裝 Python 3.12，可在專案根目錄建立獨立環境：
+
+```sh
+python3.12 -m venv .build/python-runtime
+./scripts/project-python.sh --version
+./scripts/setup-security-tools.sh
+```
+
+也可將 `MYTERM_PYTHON` 指向自己安裝的受支援 Python 執行檔。最低版本門檻不代替生命週期檢查；更新工具時仍需核對官方 EoL／EoS 狀態。驗簽套件另由 `.build/security-tools` 的隔離環境管理，重新執行 setup 會以選定的 Python 重建該可重建目錄，並以固定版本、wheel 及雜湊安裝。App 使用者不需要安装 Python。
+
+Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，依序接受 `MYTERM_NODE`、`.build/node-runtime/bin/node` 或已安裝的 Node 24，並讓子程序沿用相同 PATH。`./scripts/project-node.sh --npm ci` 可避免系統預設 Node 指到已EoL的奇數版本。可將官方 Node 24 發行包完整解壓至 `.build/node-runtime`，或指定已安裝的 Node 24 執行檔；不需覆蓋全域 Node。套件引擎範圍與 `.npmrc` 亦拒絕非24版本的安裝。

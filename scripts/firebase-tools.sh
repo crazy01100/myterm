@@ -4,7 +4,7 @@ set -euo pipefail
 
 project_root="${0:A:h:h}"
 firebase_cli="$project_root/node_modules/.bin/firebase"
-python3 "$project_root/scripts/firebase-command-policy.py" "$@"
+"$project_root/scripts/project-python.sh" "$project_root/scripts/firebase-command-policy.py" "$@"
 cd "$project_root"
 
 export FIREBASE_EMULATORS_PATH="$project_root/.firebase/emulators"
@@ -17,7 +17,7 @@ if [[ ! -x "$firebase_cli" ]]; then
 fi
 
 # Refuse an incomplete install or upstream drift before loading CLI commands.
-python3 "$project_root/scripts/patch-firebase-stream-json.py" --check >/dev/null
+"$project_root/scripts/project-python.sh" "$project_root/scripts/patch-firebase-stream-json.py" --check >/dev/null
 
 # Homebrew 在 Apple Silicon 的標準位置是 /opt/homebrew；這台 Mac 目前的
 # 既有 Homebrew 位於 /usr/local。兩者都檢查，避免要求使用者修改全域 PATH。
@@ -32,4 +32,4 @@ do
   fi
 done
 
-exec "$firebase_cli" "$@"
+exec "$project_root/scripts/project-node.sh" "$firebase_cli" "$@"

@@ -7,7 +7,7 @@ This project publishes source code, required assets, and documentation only. It 
 <a id="build-tools"></a>
 ## Build prerequisites
 
-You need Apple Silicon, macOS 26, Xcode 26/compatible Command Line Tools (Swift 6.2), Git, Python 3, and ripgrep (`rg`). If Apple development tools are missing, run `xcode-select --install` and complete the system prompts. With Xcode already installed, ensure the selected toolchain provides Swift 6.2. Check `swift --version`, `git --version`, `python3 --version`, and `rg --version`. Install missing ripgrep through your preferred package manager (existing Homebrew users can run `brew install ripgrep`).
+You need Apple Silicon, macOS 26, Xcode 26/compatible Command Line Tools (Swift 6.2), Git, Python 3.12+, and ripgrep (`rg`). If Apple development tools are missing, run `xcode-select --install` and complete the system prompts. With Xcode already installed, ensure the selected toolchain provides Swift 6.2. Check `swift --version`, `git --version`, `./scripts/project-python.sh --version`, and `rg --version`. Install missing ripgrep through your preferred package manager (existing Homebrew users can run `brew install ripgrep`).
 
 The first build downloads Swift dependencies. A basic local build needs neither Node.js nor Firebase. Cloud configuration tools additionally need jq; Firestore Rules tests need Node.js 24 and the repository's npm dependencies.
 
@@ -108,7 +108,7 @@ Removing `--prepare-only` creates a GitHub Draft Release in the project identifi
 ## Tests, resources, and cleanup
 
 - `run-tests.sh` covers core, OAuth, crypto/sync, sign-in recovery, and real terminal renderer tests. `run-crypto-tests.sh` and `run-sync-reliability-tests.sh` can run independently.
-- Firestore Rules tests use `npm install` followed by `npm run test:firestore-rules`, against Firebase Emulator rather than production cloud data.
+- Firestore Rules tests use `./scripts/project-node.sh --npm install` followed by `./scripts/project-node.sh --npm run test:firestore-rules`, against Firebase Emulator rather than production cloud data.
 - SwiftTerm is pinned in `Vendor/SwiftTerm`. See [UPSTREAM.md](Vendor/SwiftTerm/UPSTREAM.md) for the two renderer hooks and upgrade checks. Preserve the MIT license; upgrades require source comparison, full tests, a clean build, and app interaction checks.
 - Use `verify-app.sh`, `verify-packaged-resources.sh`, and `package-app.sh` for app/package verification. Tests do not replace manual dragging, focus, scrolling, splitting, and real-connection acceptance.
 - Build directories, SwiftPM caches, and ZIPs are reproducible. Before cleanup, check for running processes and assets still under review or used by a release. Do not remove user data, Keychain items, Config/Local, or signing/recovery material.
@@ -143,4 +143,21 @@ The renderer preserves author-supplied sections rather than silently removing co
 
 ### Firebase development tool compatibility
 
-Development tools require Node.js 24 or later and Python 3.9.2 or later. `npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
+Development tools require Node.js 24 LTS and Python 3.12 or later. `./scripts/project-node.sh --npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `./scripts/project-node.sh --npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `./scripts/project-node.sh --npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
+
+<a id="python-runtime"></a>
+## Python tool environment
+
+Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
+
+With Python 3.12 installed, create an isolated environment at the repository root:
+
+```sh
+python3.12 -m venv .build/python-runtime
+./scripts/project-python.sh --version
+./scripts/setup-security-tools.sh
+```
+
+Alternatively, point `MYTERM_PYTHON` to your installed supported interpreter. The minimum-version check does not replace lifecycle review: check official EoL/EoS status during tool updates. Verification packages use the separate `.build/security-tools` environment. Running setup recreates that reproducible directory with the selected Python, installing pinned wheels with verified hashes. App users do not need Python.
+
+Use `./scripts/project-node.sh` for Node/npm. It selects Node 24 LTS from `MYTERM_NODE`, `.build/node-runtime/bin/node`, or an installed Node 24, and gives subprocesses the same PATH. `./scripts/project-node.sh --npm ci` avoids an EoL odd-numbered system default. Extract the complete official Node 24 distribution into `.build/node-runtime` or select an installed Node 24 executable without replacing global Node. Package engine constraints and `.npmrc` also reject installations on other major versions.

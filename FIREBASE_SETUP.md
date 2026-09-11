@@ -27,8 +27,8 @@ MyTerm 的雲端流程分成兩層：
 
 - 一個可管理的 Firebase／Google Cloud 專案。
 - Node.js 24 或更新版本；版本要求以 [package.json](package.json) 為準。
-- 專案鎖定的 Firebase CLI；在 repository 根目錄執行 `npm install` 後由 `scripts/firebase-tools.sh` 使用。
-- 開發工具另需 Node.js 24 以上與 Python 3.9.2 以上。npm 安裝會套用經雜湊驗證的 CLI 相容補丁；若停用安裝腳本，先執行 `python3 scripts/patch-firebase-stream-json.py`，再用 `npm run test:development-tools` 驗證。
+- 專案鎖定的 Firebase CLI；在 repository 根目錄執行 `./scripts/project-node.sh --npm install` 後由 `scripts/firebase-tools.sh` 使用。
+- 開發工具另需 Node.js 24 LTS與 Python 3.12 以上。npm 安裝會套用經雜湊驗證的 CLI 相容補丁；若停用安裝腳本，先執行 `./scripts/project-python.sh scripts/patch-firebase-stream-json.py`，再用 `./scripts/project-node.sh --npm run test:development-tools` 驗證。
 - macOS 26、Apple Silicon 與 Xcode 26 或相容 Command Line Tools，用於建置 MyTerm。
 
 Firebase 工具入口僅支援本指南的 Firestore 部署、基本帳號設定及 `demo-myterm` 本機 Emulator；Auth 匯入、Hosting、替代設定與任意測試子命令會被拒絕。相依例外、期限與限制詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
@@ -135,8 +135,8 @@ jq -e '.installed.client_id and .installed.client_secret and .installed.project_
 安裝專案鎖定工具並先執行 Emulator 測試：
 
 ```sh
-npm install
-npm run test:firestore-rules
+./scripts/project-node.sh --npm install
+./scripts/project-node.sh --npm run test:firestore-rules
 ```
 
 登入 Firebase CLI：
@@ -148,7 +148,7 @@ npm run test:firestore-rules
 確認目前帳號有權管理目標專案後，明確指定 Project ID 部署 Rules 與 Indexes：
 
 ```sh
-npm run deploy:firestore -- --project YOUR_FIREBASE_PROJECT_ID
+./scripts/project-node.sh --npm run deploy:firestore -- --project YOUR_FIREBASE_PROJECT_ID
 ```
 
 部署腳本在缺少 `--project`、格式不合法或 Firebase CLI 失敗時會停止。不要把正式 Project ID 寫回 `package.json`、`.firebaserc` 或範例設定。

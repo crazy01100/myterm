@@ -121,7 +121,7 @@ def scan_runtime(items,scope,report,cache):
 
 
 def scan_npm(report):
-    result=subprocess.run(['npm','audit','--package-lock-only','--ignore-scripts','--json'],cwd=ROOT,capture_output=True,text=True,timeout=180,env={**os.environ,'npm_config_cache':str(ROOT/'.npm-cache')})
+    result=subprocess.run([str(ROOT/'scripts/project-node.sh'),'--npm','audit','--package-lock-only','--ignore-scripts','--json'],cwd=ROOT,capture_output=True,text=True,timeout=180,env={**os.environ,'npm_config_cache':str(ROOT/'.npm-cache')})
     data=json.loads(result.stdout)
     if data.get('error') or 'metadata' not in data:raise ValueError('npm audit unavailable')
     report['npmCounts']=data['metadata']['vulnerabilities']

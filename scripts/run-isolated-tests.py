@@ -8,6 +8,7 @@ from pathlib import Path
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 ROOT=Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix='MyTerm-isolated-tests-',dir='/private/tmp') as tmp:
@@ -24,5 +25,6 @@ with tempfile.TemporaryDirectory(prefix='MyTerm-isolated-tests-',dir='/private/t
     replacement=f'    static let rootDirectory = URL(fileURLWithPath: "{root}/application-support", isDirectory: true)'
     paths.write_text(source[:start]+replacement+source[end:])
     print('Isolated Application Support:',root/'application-support',flush=True)
-    subprocess.run([str(root/'scripts/run-tests.sh')],cwd=root,check=True)
-    subprocess.run([str(root/'scripts/run-sftp-security-tests.sh')],cwd=root,check=True)
+    env = {**os.environ, 'MYTERM_PYTHON': sys.executable, 'PATH': str(Path(sys.executable).parent) + os.pathsep + os.environ.get('PATH', '')}
+    subprocess.run([str(root/'scripts/run-tests.sh')],cwd=root,check=True,env=env)
+    subprocess.run([str(root/'scripts/run-sftp-security-tests.sh')],cwd=root,check=True,env=env)

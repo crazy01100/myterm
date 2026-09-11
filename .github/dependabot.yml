@@ -24,6 +24,10 @@ updates:
       day: monday
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
+    groups:
+      actions-compatible:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: pip
     directory: /Tests/Security
     schedule:
@@ -31,3 +35,7 @@ updates:
       day: monday
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
+    groups:
+      verifier-compatible:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

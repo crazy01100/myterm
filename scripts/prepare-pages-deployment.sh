@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 canonicalize_path() {
-    /usr/bin/python3 - "$1" "$project_dir" <<'PY'
+    "$project_dir/scripts/project-python.sh" - "$1" "$project_dir" <<'PY'
 import os
 import sys
 
@@ -76,7 +76,7 @@ case "$output_dir" in
         ;;
 esac
 
-python3 - "$assets_dir" "$output_dir" <<'CHECK_PATHS'
+"$project_dir/scripts/project-python.sh" - "$assets_dir" "$output_dir" <<'CHECK_PATHS'
 from pathlib import Path
 import sys
 a,o=map(lambda p:Path(p).resolve(),sys.argv[1:])

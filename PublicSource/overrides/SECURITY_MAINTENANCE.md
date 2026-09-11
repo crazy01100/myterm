@@ -12,16 +12,24 @@
 
 
 ```sh
-python3 scripts/security-audit.py --output build/security-report.json
-python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
+./scripts/project-python.sh scripts/security-audit.py --output build/security-report.json
+./scripts/project-python.sh scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
 ```
 
-需要已登入且有適當讀取權限的 `gh`、Python 3.9.2 以上、Node.js 24 以上及 npm。只查詢公開公告與必要來源／版本資訊，不讀取本機雲端設定或簽章私鑰。`Config/Security/native-components.json` 將 libsodium 版本綁定到 swift-sodium revision；更新 wrapper 後必須重新核對實際 XCFramework header。上游修復版以 commit 公告的 Vendor，使用 commit ancestry 判斷，不捏造版本號。
+需要已登入且有適當讀取權限的 `gh`、Python 3.12 以上、Node.js 24 LTS及 npm。只查詢公開公告與必要來源／版本資訊，不讀取本機雲端設定或簽章私鑰。`Config/Security/native-components.json` 將 libsodium 版本綁定到 swift-sodium revision；更新 wrapper 後必須重新核對實際 XCFramework header。上游修復版以 commit 公告的 Vendor，使用 commit ancestry 判斷，不捏造版本號。
 
 新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
 
 
 `security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。未加 `--monitor` 的發布前檢查維持未處理風險阻擋。公開來源不包含維護者的私人 Issue 自動化，發行者應建立自己的風險追蹤流程。
+
+## 更新分組與支援期限
+
+每週的 GitHub Actions 與 Python 驗證工具 minor／patch 版本提案各自分組，major 更新個別審查；分組不是自動合併，也不免除相容性與安全驗證。
+
+每次維護須核對套件、工具及其執行環境的官方支援狀態，不主動採用或繼續依賴已 EoL／EoS 的版本。沒有已知漏洞不等於仍受支援；沒有正式支援期限的元件，記錄上游維護狀態及查核依據，不自行捏造期限。發現已終止支援時優先規劃受支援替代環境，驗證後遷移；若確實無法立即移除，明確記錄影響與期限並取得接受，不默默忽略。
+
+Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/project-python.sh` 選擇執行環境。版本門檻本身不會追蹤未來EoL；每次相依維護仍須查核生命週期。詳見 [工具環境](DEVELOPMENT.md#python-runtime)。
 
 ## 安全 Issue 的修正摘要
 
@@ -41,7 +49,7 @@ python3 scripts/security-audit.py --include-release OWNER/REPOSITORY --output bu
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.30.0`，以 npm override 使用官方已修補的 `stream-json` `3.6.0`。`scripts/patch-firebase-stream-json.py` 在 npm postinstall 將三個 CLI 消費端的舊介面映射到新版 Node 串流 API；先核對兩個套件版本與三份檔案的 SHA-256，全部符合才修改，重跑可驗證已套用結果。版本、輸入或輸出漂移一律拒絕，不保留此公告的期限例外。`firebase-tools.sh` 每次啟動也先驗證補丁；若使用 `npm ci --ignore-scripts`，須先手動執行該修補腳本，再執行 `npm run test:development-tools`。測試涵蓋真實消費端載入、分段 JSON、CLI 原有資料語意、過深輸入拒絕與補丁漂移。上游 Firebase CLI 原生支援已修補相依後，應在相同回歸測試通過後移除 override 與相容補丁；不得只更改版本或雜湊繞過檢查。
+Firebase CLI 固定為 `15.30.0`，以 npm override 使用官方已修補的 `stream-json` `3.6.0`。`scripts/patch-firebase-stream-json.py` 在 npm postinstall 將三個 CLI 消費端的舊介面映射到新版 Node 串流 API；先核對兩個套件版本與三份檔案的 SHA-256，全部符合才修改，重跑可驗證已套用結果。版本、輸入或輸出漂移一律拒絕，不保留此公告的期限例外。`firebase-tools.sh` 每次啟動也先驗證補丁；若使用 `./scripts/project-node.sh --npm ci --ignore-scripts`，須先手動執行該修補腳本，再執行 `./scripts/project-node.sh --npm run test:development-tools`。測試涵蓋真實消費端載入、分段 JSON、CLI 原有資料語意、過深輸入拒絕與補丁漂移。上游 Firebase CLI 原生支援已修補相依後，應在相同回歸測試通過後移除 override 與相容補丁；不得只更改版本或雜湊繞過檢查。
 
 ## 公開金鑰發布驗證
 
@@ -52,7 +60,7 @@ Firebase CLI 固定為 `15.30.0`，以 npm override 使用官方已修補的 `st
 ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
 ```
 
-安裝位置為可重建的 `.build/security-tools`，使用 Python venv、精確套件版本、wheel 雜湊與 `--require-hashes`；不執行來源套件的建置腳本。支援 Python 3.9.2 以上。正式簽章材料仍只由原發布流程使用，CI 只需要公開金鑰。
+安裝位置為可重建的 `.build/security-tools`，使用 Python venv、精確套件版本、wheel 雜湊與 `--require-hashes`；不執行來源套件的建置腳本。支援 Python 3.12 以上。正式簽章材料仍只由原發布流程使用，CI 只需要公開金鑰。
 
 ```sh
 ./scripts/security-python.sh scripts/verify-signed-release.py \
@@ -71,7 +79,7 @@ Firebase CLI 固定為 `15.30.0`，以 npm override 使用官方已修補的 `st
 ## 安全測試與 App 更新
 
 ```sh
-python3 scripts/run-isolated-tests.py
+./scripts/project-python.sh scripts/run-isolated-tests.py
 ./scripts/run-sftp-security-tests.sh
 ```
 

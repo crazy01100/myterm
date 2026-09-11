@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 import os
@@ -88,7 +89,7 @@ class ConfigurationTests(unittest.TestCase):
                             ('https://updates.example.org/path/',True)]:
             with self.subTest(value=value):
                 result=subprocess.run(['sh','-c','. "$1"; validate_update_source','test',str(script)],
-                    env={**env,'MYTERM_UPDATE_BASE_URL':value},capture_output=True)
+                    env={**env,'MYTERM_UPDATE_BASE_URL':value,'project_dir':str(ROOT),'MYTERM_PYTHON':sys.executable},capture_output=True)
                 self.assertEqual(result.returncode==0,valid)
 
 

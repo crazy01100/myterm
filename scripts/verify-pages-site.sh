@@ -25,7 +25,7 @@ for relative_path in "${required[@]}"; do
     }
 done
 
-/usr/bin/python3 - "$site_dir/appcast.xml" <<'PY'
+"$project_dir/scripts/project-python.sh" - "$site_dir/appcast.xml" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
 
