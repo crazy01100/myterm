@@ -92,84 +92,8 @@ trap '/bin/rm -rf -- "$stage_dir"' EXIT
 notes_companion="$stage_dir/${archive_name:r}.md"
 /bin/cp "$notes_file" "$notes_companion"
 
-/usr/bin/python3 - "$notes_file" "$stage_dir/release-notes.html" "$version" <<'PY'
-import html
-import re
-import sys
-
-source_path, output_path, version = sys.argv[1:]
-with open(source_path, encoding="utf-8") as source:
-    lines = source.read().splitlines()
-
-parts = []
-paragraph = []
-list_kind = None
-
-def flush_paragraph():
-    if paragraph:
-        text = " ".join(item.strip() for item in paragraph)
-        parts.append(f"<p>{html.escape(text)}</p>")
-        paragraph.clear()
-
-def close_list():
-    global list_kind
-    if list_kind:
-        parts.append(f"</{list_kind}>")
-        list_kind = None
-
-for raw in lines:
-    line = raw.rstrip()
-    if not line:
-        flush_paragraph()
-        close_list()
-        continue
-    heading = re.match(r"^(#{1,3})\s+(.+)$", line)
-    bullet = re.match(r"^\s*[-*]\s+(.+)$", line)
-    numbered = re.match(r"^\s*\d+[.)]\s+(.+)$", line)
-    if heading:
-        flush_paragraph()
-        close_list()
-        level = min(len(heading.group(1)) + 1, 4)
-        parts.append(f"<h{level}>{html.escape(heading.group(2))}</h{level}>")
-    elif bullet or numbered:
-        flush_paragraph()
-        desired = "ul" if bullet else "ol"
-        if list_kind != desired:
-            close_list()
-            list_kind = desired
-            parts.append(f"<{desired}>")
-        value = (bullet or numbered).group(1)
-        parts.append(f"<li>{html.escape(value)}</li>")
-    else:
-        close_list()
-        paragraph.append(line)
-
-flush_paragraph()
-close_list()
-body = "\n        ".join(parts)
-document = f'''<!doctype html>
-<html lang="zh-Hant">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="MyTerm {html.escape(version)} 版本更新說明。">
-  <title>MyTerm {html.escape(version)} 更新說明</title>
-  <link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-  <main class="shell document">
-    <a class="back-link" href="/">← 回到 MyTerm</a>
-    <h1>MyTerm {html.escape(version)}</h1>
-    <section class="card">
-        {body}
-    </section>
-  </main>
-</body>
-</html>
-'''
-with open(output_path, "w", encoding="utf-8", newline="\n") as output:
-    output.write(document)
-PY
+/usr/bin/python3 "$project_dir/scripts/render-release-notes.py" \
+    --source "$notes_file" --output "$stage_dir/release-notes.html" --version "$version"
 
 generate_appcast="$(find_sparkle_tool "$project_dir" generate_appcast)"
 "$generate_appcast" \

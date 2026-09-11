@@ -12,6 +12,7 @@ required=(
     "_headers"
     "robots.txt"
     "assets/site.css"
+    "assets/release-notes.css"
     "install/index.html"
     "privacy/index.html"
     "security/index.html"

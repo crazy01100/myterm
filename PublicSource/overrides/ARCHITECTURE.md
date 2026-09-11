@@ -166,3 +166,5 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 `SFTPCancellation` 在協定初始化之前保存由 lock 保護的取消動作。Transport 以非阻塞 pipe 與單調時鐘期限進行 poll；取消不等待序列操作鎖，也不在進行中的操作仍持有 descriptor 時關閉／重用它。Browser 的 generation 核對避免舊連線覆寫目前狀態。
 
 `dependency-inventory.py` 讀取 Swift 鎖定檔、Vendor revision 與已審閱的 native binary 資訊；`bind-release-metadata.py` 在簽署前把相依清單與來源 commit 綁入 feed。`verify-signed-release.py` 使用可信公鑰驗證原始 feed bytes 後才信任 URL 或解壓 ZIP，並核對更新說明及五項發布資產。`security-audit.py` 另行檢查目前來源與已發布相依；簽章證明來源，不保證沒有漏洞。操作需求見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+
+`render-release-notes.py` 是私人／公開發布共用的更新說明 HTML 產生器，保留文字 escaping 與原段落內容，統一版本標題。專用 release-notes.css 只負責窄幅深淺色呈現；HTML 仍在既有流程中簽署並驗證，不包含網站導覽。

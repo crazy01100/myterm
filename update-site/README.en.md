@@ -12,3 +12,5 @@ This directory contains the static source for `https://mtus.lieniapp.work`.
 - Do not add Sparkle private keys, Cloudflare tokens, OAuth secrets, local Firebase configuration, or user data to this directory.
 
 Before deployment, verify all five assets with a trusted public key, including the manifest, signed source/dependency metadata and signed release notes. Run `scripts/setup-security-tools.sh` first; independent distributors set `MYTERM_SPARKLE_PUBLIC_KEY_FILE`. Missing signed fields in older assets require a separate compatibility review. See [Security maintenance](../SECURITY_MAINTENANCE.en.md).
+
+Release notes use the shared `scripts/render-release-notes.py` renderer and dedicated `assets/release-notes.css`, without homepage navigation or duplicate version headings. Write only user-relevant fixes, compatibility and required actions; retain test/maintenance records separately. See [Development](../DEVELOPMENT.en.md) for content policy. Published signed content is not rewritten.

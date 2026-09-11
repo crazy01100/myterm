@@ -132,3 +132,11 @@ Prepare a plan and acceptance cases before changes and obtain maintainer approva
 Original code and documentation use the [MIT License](LICENSE); third-party assets retain their terms, including [OpenAI brand assets](Resources/Readme/NOTICE.md). Preserve attribution and original-author notices; development-tool attribution is not an official endorsement.
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
+
+## Release-note content and presentation
+
+Update dialogs show user-visible features/fixes, necessary compatibility, significant known limitations, and actions users must take after updating. Keep test counts, verification procedures, CI, deployment, monitoring and development-tool exceptions in feature plans, CI or security Issues. Continue disclosing security information that directly affects app users.
+
+Do not add a “Validation and maintenance” section to ordinary release notes. Omit the version heading or provide `# MyTerm X.Y.Z` as the first line, matching the target version. Private and public asset scripts share `scripts/render-release-notes.py` to generate signed HTML with one version heading and no website navigation. The app and website use the same concise content and `update-site/assets/release-notes.css`; homepage styling does not apply to release notes.
+
+The renderer preserves author-supplied sections rather than silently removing content. Review their scope when writing notes. Signing and release-validation requirements remain intact. Check narrow layouts, light/dark appearance and scrolling before release, then verify the actual Sparkle update dialog; browser previews do not replace in-app acceptance. Do not overwrite published signed notes or appcasts; template changes take effect with the next authorized release.

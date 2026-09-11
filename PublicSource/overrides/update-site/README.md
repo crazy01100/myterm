@@ -13,3 +13,5 @@
 - 不放入私鑰、token、OAuth secret、真實 Firebase 設定、主機清單或其他使用者資料。
 
 部署前以可信公鑰驗證全部五項資產，包括 manifest、已簽署的來源／相依資訊及更新說明。先執行 `scripts/setup-security-tools.sh`；獨立發行者設定 `MYTERM_SPARKLE_PUBLIC_KEY_FILE`。舊資產缺少簽署欄位時需另行相容審查。見 [安全維護指南](../SECURITY_MAINTENANCE.md)。
+
+更新說明由共用 `scripts/render-release-notes.py` 與專用 `assets/release-notes.css` 呈現；不包含首頁導覽或重複版本標題。只撰寫使用者需要的修正、相容性與操作資訊，測試／維護紀錄另行保存。內容規範見[開發指南](../DEVELOPMENT.md)。已發布的簽署內容不回寫修改。

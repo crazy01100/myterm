@@ -13,3 +13,5 @@ This directory is a static template for independent distributors, not a hosted s
 - Do not include private keys, tokens, OAuth secrets, real Firebase settings, host inventories, or other user data.
 
 Before deployment, verify all five assets with a trusted public key, including the manifest, signed source/dependency metadata and signed release notes. Run `scripts/setup-security-tools.sh` first; independent distributors set `MYTERM_SPARKLE_PUBLIC_KEY_FILE`. Missing signed fields in older assets require a separate compatibility review. See [Security maintenance](../SECURITY_MAINTENANCE.en.md).
+
+Release notes use the shared `scripts/render-release-notes.py` renderer and dedicated `assets/release-notes.css`, without homepage navigation or duplicate version headings. Write only user-relevant fixes, compatibility and required actions; retain test/maintenance records separately. See [Development](../DEVELOPMENT.en.md) for content policy. Published signed content is not rewritten.
