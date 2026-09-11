@@ -4,6 +4,8 @@ set -euo pipefail
 
 project_root="${0:A:h:h}"
 firebase_cli="$project_root/node_modules/.bin/firebase"
+python3 "$project_root/scripts/firebase-command-policy.py" "$@"
+cd "$project_root"
 
 export FIREBASE_EMULATORS_PATH="$project_root/.firebase/emulators"
 export XDG_CONFIG_HOME="$project_root/.firebase/config"

@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 5
+    groups:
+      firebase-development:
+        patterns: ["firebase*", "@firebase/*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 5
+  - package-ecosystem: pip
+    directory: /Tests/Security
+    schedule:
+      interval: weekly
+      day: monday
+      timezone: Asia/Taipei
+    open-pull-requests-limit: 5

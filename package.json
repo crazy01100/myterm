@@ -10,11 +10,23 @@
     "deploy:firestore": "./scripts/deploy-firestore.sh"
   },
   "devDependencies": {
-    "@firebase/rules-unit-testing": "5.0.1",
-    "firebase": "12.17.1",
-    "firebase-tools": "15.26.0"
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.30.0"
   },
   "engines": {
     "node": ">=24"
+  },
+  "overrides": {
+    "@google-cloud/pubsub": {
+      "@opentelemetry/core": "2.11.0"
+    },
+    "firebase-tools": {
+      "csv-parse": "7.0.2"
+    },
+    "gaxios@6.7.1": {
+      "uuid": "11.1.1"
+    },
+    "qs": "6.16.0"
   }
 }

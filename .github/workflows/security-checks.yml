@@ -1,0 +1,64 @@
+name: MyTerm security checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 1 * * *'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: security-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      npm_config_cache: ${{ github.workspace }}/.npm-cache
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.21.0'
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned verification tools
+        run: ./scripts/setup-security-tools.sh
+      - name: Verify release validation and audit policies
+        run: ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
+      - name: Restore previous monitor state
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: python3 scripts/restore-security-monitor.py build/previous-security-report.json
+      - name: Check source dependencies
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        run: python3 scripts/security-audit.py --output build/security-report.json
+      - name: Check source and released App; notify meaningful changes
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          python3 scripts/security-audit.py --monitor \
+            --include-release "$GITHUB_REPOSITORY" \
+            --previous build/previous-security-report.json \
+            --output build/security-report.json
+      - name: Save monitor state
+        if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: security-monitor-state
+          path: build/security-report.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Save check evidence
+        if: always() && github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: security-check-report
+          path: build/security-report.json
+          retention-days: 14
+          if-no-files-found: error

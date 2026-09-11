@@ -73,6 +73,7 @@ candidate_dir="$project_dir/build/candidates/MyTerm-$version-build-$build_number
 candidate_app="$candidate_dir/MyTerm.app"
 candidate_build_state="$project_dir/build/candidates/.last-build-number"
 "$project_dir/scripts/check-release-safety.sh"
+python3 "$project_dir/scripts/security-audit.py" --output "$project_dir/build/security-preflight.json"
 sparkle_arguments=()
 if [[ -n "$sparkle_feed_url" ]]; then
     sparkle_arguments+=(--sparkle-feed-url "$sparkle_feed_url")
@@ -91,7 +92,7 @@ candidate_arguments+=("${sparkle_arguments[@]}")
 candidate_arguments+=(--require-stable-signing)
 "$project_dir/scripts/build-app.sh" "${candidate_arguments[@]}" --preflight
 if (( skip_tests == 0 )); then
-    "$project_dir/scripts/run-tests.sh"
+    python3 "$project_dir/scripts/run-isolated-tests.py"
 fi
 
 build_arguments=("${candidate_arguments[@]}")
