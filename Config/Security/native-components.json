@@ -1,0 +1,6 @@
+{
+  "libsodium": {
+    "version": "1.0.22",
+    "swiftSodiumRevision": "cfd195c76882aa9b997560ca7cb95d72fbf5db00"
+  }
+}

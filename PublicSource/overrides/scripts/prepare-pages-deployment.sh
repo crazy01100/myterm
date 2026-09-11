@@ -17,7 +17,7 @@ usage() {
   appcast.xml
   MyTerm-<版本>-...-arm64.zip（恰好一個）
   release-notes.html
-
+  release-manifest.json
   CHECKSUMS.txt
 USAGE
 }
@@ -78,6 +78,14 @@ case "$output_dir" in
         ;;
 esac
 
+python3 - "$assets_dir" "$output_dir" <<'CHECK_PATHS'
+from pathlib import Path
+import sys
+a,o=map(lambda p:Path(p).resolve(),sys.argv[1:])
+if a==o or a in o.parents or o in a.parents:
+    raise SystemExit("Deployment output must not overlap its input assets")
+CHECK_PATHS
+
 appcast="$assets_dir/appcast.xml"
 notes="$assets_dir/release-notes.html"
 checksums="$assets_dir/CHECKSUMS.txt"
@@ -95,41 +103,9 @@ case "$archive_name" in
     *) echo "ZIP 檔名沒有包含版本 $release_version：$archive_name" >&2; exit 65 ;;
 esac
 
-/usr/bin/python3 - "$appcast" "$archive" "$checksums" <<'PY'
-import hashlib
-import os
-import sys
-import xml.etree.ElementTree as ET
-
-path, archive_path, checksums_path = sys.argv[1:]
-archive_name = archive_path.rsplit("/", 1)[-1]
-root = ET.parse(path).getroot()
-enclosures = root.findall(".//enclosure")
-if len(enclosures) != 1:
-    raise SystemExit(f"appcast 必須恰好包含一個 enclosure，目前為 {len(enclosures)} 個。")
-enclosure = enclosures[0]
-expected = os.environ["MYTERM_UPDATE_BASE_URL"] + f"/downloads/{archive_name}"
-if enclosure.get("url") != expected:
-    raise SystemExit(f"appcast 下載網址不正確，預期為 {expected}")
-signature = enclosure.get("{http://www.andymatuschak.org/xml-namespaces/sparkle}edSignature")
-if not signature:
-    raise SystemExit("appcast enclosure 缺少 Sparkle Ed25519 簽章。")
-if int(enclosure.get("length", "-1")) != __import__("os").path.getsize(archive_path):
-    raise SystemExit("appcast enclosure length 與 ZIP 實際大小不同。")
-
-with open(path, "rb") as source:
-    if b"sparkle-signatures:" not in source.read():
-        raise SystemExit("appcast 缺少完整 feed 簽章。")
-
-digest = hashlib.sha256()
-with open(archive_path, "rb") as archive:
-    for chunk in iter(lambda: archive.read(1024 * 1024), b""):
-        digest.update(chunk)
-expected_line = f"{digest.hexdigest()}  {archive_name}"
-with open(checksums_path, encoding="utf-8") as checksums:
-    if expected_line not in {line.strip() for line in checksums}:
-        raise SystemExit("CHECKSUMS.txt 與 ZIP 的 SHA-256 不符。")
-PY
+"$project_dir/scripts/security-python.sh" "$project_dir/scripts/verify-signed-release.py" \
+    --assets "$assets_dir" --public-key-file "${MYTERM_SPARKLE_PUBLIC_KEY_FILE:?Set a trusted public key file}" \
+    --base-url "$MYTERM_UPDATE_BASE_URL" --version "$release_version"
 
 /bin/rm -rf "$output_dir"
 /bin/mkdir -p "$output_dir/downloads" "$output_dir/releases"
@@ -139,6 +115,14 @@ PY
 /bin/cp "$notes" "$output_dir/releases/$release_version.html"
 
 /bin/cp "$checksums" "$output_dir/downloads/CHECKSUMS.txt"
+verification_copy="$(mktemp -d)"
+trap 'rm -rf "$verification_copy"' EXIT
+cp "$output_dir/downloads/$archive_name" "$output_dir/appcast.xml" "$output_dir/downloads/CHECKSUMS.txt" "$assets_dir/release-manifest.json" "$verification_copy/"
+cp "$output_dir/releases/$release_version.html" "$verification_copy/release-notes.html"
+"$project_dir/scripts/security-python.sh" "$project_dir/scripts/verify-signed-release.py" \
+    --assets "$verification_copy" --public-key-file "${MYTERM_SPARKLE_PUBLIC_KEY_FILE:?Set a trusted public key file}" \
+    --base-url "$MYTERM_UPDATE_BASE_URL" --version "$release_version"
+
 
 /usr/bin/perl -0pi -e "s#<h2 id=\"release-title\">[^<]+</h2>#<h2 id=\"release-title\">$release_version</h2>#; s#<a class=\"button\" href=\"/install/\">查看安裝說明</a>#<a class=\"button\" href=\"/downloads/$archive_name\">下載 Apple Silicon 版本</a>#" "$output_dir/index.html"
 

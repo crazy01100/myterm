@@ -17,7 +17,7 @@ let package = Package(
         ),
         .package(
             url: "https://github.com/sparkle-project/Sparkle.git",
-            exact: "2.9.5"
+            exact: "2.9.6"
         )
     ],
     targets: [

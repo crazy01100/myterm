@@ -63,6 +63,9 @@ manifest="$assets_dir/release-manifest.json"
 for required_file in "$archive" "$appcast" "$notes" "$checksums" "$manifest"; do
     [[ -f "$required_file" ]] || { print -u2 -- "缺少發布資產：${required_file:t}"; exit 66; }
 done
+"$project_dir/scripts/security-python.sh" "$project_dir/scripts/verify-signed-release.py" \
+    --assets "$assets_dir" --public-key-file "$project_dir/Config/Release/SparklePublicKey.txt" \
+    --base-url "https://mtus.lieniapp.work" --version "$version" --build "$build_number"
 "$project_dir/scripts/verify-packaged-resources.sh" --archive "$archive"
 
 unexpected="$({

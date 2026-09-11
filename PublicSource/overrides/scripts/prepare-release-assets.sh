@@ -186,6 +186,12 @@ generate_appcast="$(find_sparkle_tool "$project_dir" generate_appcast)"
 # 正式 feed 一律加上完整 Ed25519 簽章。即使候選 App 尚未要求
 # SUVerifyUpdateBeforeExtraction，也不能因此產生未簽署的 appcast。
 sign_update="$(find_sparkle_tool "$project_dir" sign_update)"
+commit_sha="$(git -C "$project_dir" rev-parse HEAD)"
+notes_signature="$("$sign_update" --account "$MYTERM_SPARKLE_KEY_ACCOUNT" --disable-signing-warning -p "$stage_dir/release-notes.html")"
+/usr/bin/python3 "$project_dir/scripts/bind-release-metadata.py" \
+    --feed "$stage_dir/appcast.xml" --notes "$stage_dir/release-notes.html" \
+    --signature "$notes_signature" --base-url "$MYTERM_UPDATE_BASE_URL" \
+    --version "$version" --commit "$commit_sha"
 "$sign_update" --account "$MYTERM_SPARKLE_KEY_ACCOUNT" "$stage_dir/appcast.xml"
 
 /bin/rm -f "$notes_companion"
@@ -199,12 +205,14 @@ created_at="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
 /usr/bin/python3 - "$stage_dir/release-manifest.json" "$version" "$build_number" "$commit_sha" "$created_at" "$archive_name" "$archive_sha" "$appcast_sha" "$notes_sha" <<'PY'
 import json
+import xml.etree.ElementTree as ET
 import os
 import sys
 
 (path, version, build, commit, created_at, archive_name,
  archive_sha, appcast_sha, notes_sha) = sys.argv[1:]
 manifest = {
+    "dependencies": json.loads(ET.parse(path.rsplit("/", 1)[0]+"/appcast.xml").findtext("./channel/item/{urn:myterm:release:v1}dependencies")),
     "schemaVersion": 1,
     "product": "MyTerm",
     "version": version,
