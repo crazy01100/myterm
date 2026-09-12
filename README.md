@@ -2,8 +2,6 @@
 
 **繁體中文** | [English](README.en.md)
 
-本庫保存 MyTerm 的原始碼、維護紀錄與維護者發布流程。自行建置使用自己的雲端設定；原始碼不附同步服務設定或私鑰。使用預先打包的 App 時，請選擇[最新正式版本](https://github.com/crazy01100/myterm/releases/latest)；歷史版本與 RC 僅供追溯，不建議安裝，安全支援範圍見 [SECURITY.md](SECURITY.md)。
-
 <p>
   <a href="https://openai.com/brand/">
     <picture>
