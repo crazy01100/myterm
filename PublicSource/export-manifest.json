@@ -16,12 +16,12 @@
     {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "aa351dd35f9de68938ec62d1d8a629b2d99327364a2640b5a708987450117b06"
+      "baseSHA256": "873055b51004b6e917c35e8911d9747fa9dbb6f6621169f1f7ecd04d9e0b3e36"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "eba411fdd0461e1823f5fc5239f2585481f122f1ff93627eabd476d37251b8c9"
+      "baseSHA256": "232f7c9717788b85888a6b6e799eb56e03d542e75859059a77daf43fc742af3b"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
@@ -37,22 +37,22 @@
     {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "30b192baea27888b66cd60481b9403e5025d22cca7fa1f2e5e3a035675472138"
+      "baseSHA256": "58cf7d9447d91969edd475130afe59cc5e0bd8c42f66a01dd7af02eaf41de9d4"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "b715396753f3f76d1fcfd94f7bfc30c2cf262ed8fe8f563e94c11aaaf3126490"
+      "baseSHA256": "ec9ddb7cf54c5684daf0dc7f3fedb319c2a6326cc2f343400607a18c6ea9154f"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.en.md",
-      "baseSHA256": "b1908f249cd979f7ab4e8c978887bd1baa8de01d218e193289d019ea54045ccc"
+      "baseSHA256": "bd739377d989907127cc06fefa8741ed6ea4bf4404832ef771317a8b8fd12a9d"
     },
     {
       "path": "FIREBASE_SETUP.md",
       "overlay": "PublicSource/overrides/FIREBASE_SETUP.md",
-      "baseSHA256": "d45be751e149a287973bed0d9ff911937dcce4a14e0ac158cb941900a5b67f56"
+      "baseSHA256": "4e428a682f73168561e78a65dfaa46ef21d55e1a9bf0c24cc545e6feada693a6"
     },
     {
       "path": "LICENSE"
@@ -66,12 +66,12 @@
     {
       "path": "README.en.md",
       "overlay": "PublicSource/overrides/README.en.md",
-      "baseSHA256": "bddfe07d388c6ae6fa937c893389eec758180a6745a780ed656d2f31b28ba2e1"
+      "baseSHA256": "bc3298e9394fac37ad648b23aec1e33f486218485f84b23bbf6236065171f5ae"
     },
     {
       "path": "README.md",
       "overlay": "PublicSource/overrides/README.md",
-      "baseSHA256": "0e3a762bcda3d83f89deb7e877ef71a6c906ce7af39df11687eafb8ccc40059a"
+      "baseSHA256": "5558edd42988be87104ce2361a32aca3e6c2826555931cae82699cd2f8b8676b"
     },
     {
       "path": "Resources/AppIcon-original.png"
@@ -135,25 +135,31 @@
     {
       "path": "SECURITY.en.md",
       "overlay": "PublicSource/overrides/SECURITY.en.md",
-      "baseSHA256": "5c98740ea0b5e98d6e97c4bd52af24c88f4dee69d96e47b56d798d6b4fc0ed56"
+      "baseSHA256": "dfa06a1c8bb8838af0fed988198ed35259b28b667a36d6230147db3a3d160f5e"
     },
     {
       "path": "SECURITY.md",
       "overlay": "PublicSource/overrides/SECURITY.md",
-      "baseSHA256": "b3df395e0040550b6f7678facca865bc0f6d2fd80f1995aa49feee6eb555507d"
+      "baseSHA256": "382f21190677a92c7bb7ce01db5a88bc1ac64eb473e90f2455d6d2f16361c9e1"
     },
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "ea8de45503367165e9d8434c0092ac5113bad77c88b3ee5cd20df864e1c0f1a7"
+      "baseSHA256": "b5a093c1869b9fbfea35b9f18ea05990a205666f7d7f1a545345966ad8ad0ce0"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "c889d01e9ed5ac9bc1e1834a285a5d4ef33ceee64c0b1ef568747b16f95952fd"
+      "baseSHA256": "2c5e921bc0d51a7396f63fd78c441f0831bc7304a091d09d84bd0cab701c5e9d"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"
+    },
+    {
+      "path": "SelfTests/GoogleFirebaseAuthResponseTests.swift"
+    },
+    {
+      "path": "SelfTests/GoogleSignInRetryTests.swift"
     },
     {
       "path": "SelfTests/OAuthLoopbackTests.swift"
@@ -319,6 +325,9 @@
     },
     {
       "path": "Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift"
+    },
+    {
+      "path": "Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift"
     },
     {
       "path": "Sources/MySSHClient/Services/HostConnectionRecency.swift"
@@ -988,12 +997,12 @@
     {
       "path": "update-site/README.en.md",
       "overlay": "PublicSource/overrides/update-site/README.en.md",
-      "baseSHA256": "fbc0cfde3b60dd3963cb53cf2849f2911c3e50b2f8a4143dacc0f51208aab87f"
+      "baseSHA256": "87b12f0577787f8851a31e8a45728360b40527acbd6e8c1bcf9aefdcb62cd261"
     },
     {
       "path": "update-site/README.md",
       "overlay": "PublicSource/overrides/update-site/README.md",
-      "baseSHA256": "f4714f588ef893e8e0dd4ba96017d82ab42cd05562ed9972deab6fb4c6d1dcd0"
+      "baseSHA256": "c664ad8fb87be2d766ad1f11ee372ec1c748803560140164326140bab4775e3a"
     },
     {
       "path": "update-site/_headers"
@@ -1005,13 +1014,17 @@
       "path": "update-site/assets/site.css"
     },
     {
-      "path": "update-site/index.html"
+      "path": "update-site/index.html",
+      "overlay": "PublicSource/overrides/update-site/index.html",
+      "baseSHA256": "8bf3105b9d79d6095482a6dd52eeac8c18ec7367fb4dac065b9ed6c5b88a4909"
     },
     {
       "path": "update-site/install/index.html"
     },
     {
-      "path": "update-site/privacy/index.html"
+      "path": "update-site/privacy/index.html",
+      "overlay": "PublicSource/overrides/update-site/privacy/index.html",
+      "baseSHA256": "0046a44fdaded71d654b7cc20b38eafc4abe9ee3902071c7d24ef6012aed9a6e"
     },
     {
       "path": "update-site/robots.txt"

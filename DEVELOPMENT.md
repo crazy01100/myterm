@@ -46,6 +46,14 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 自架雲端功能的 Firebase Console、Google Desktop OAuth、Firestore、設定產生、Rules 部署與驗收步驟見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。實際設定固定放在被 Git 排除的 `Config/Local/`；公開 repository 只保存無真實值的範例、Rules、Indexes 與安全部署工具。
 
+## 原庫與獨立來源的界線
+
+`myterm` 保存維護歷史、正式 Release 與部署流程；`myterm-source` 是另行整理的來源輸出。原庫公開準備不會把 source-only 排除清單套用到既有簽署成品：Sparkle 公鑰、簽章公開基線與更新網站網址不是私鑰，保留它們才能核對既有發行者。真正的雲端設定、簽署私鑰與復原材料仍在本機。
+
+沒有 `Config/Local/` 的 checkout 不會帶入維護者雲端設定，也沒有預設更新 feed。修改或獨立發行 App 時應提供自己的服務、更新來源與簽章，不應讓自訂版本接回維護者的更新鏈。現有安裝包內的桌面 client 設定不能作為服務端秘密，界線見 [Firebase 設定](FIREBASE_SETUP.md)。
+
+Git 歷史清理會改變 commit／tag 的識別，並可能影響 PR 差異與簽署 feed 的來源綁定；不得為了遮蔽路徑、公開公鑰或一般識別資訊直接重寫歷史或替換已簽署資產。需要清理真正敏感內容時，另行審查歷史引用與更新鏈。
+
 ## 日常開發流程
 
 Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.22-dev.2`；不要以通用 `0.0.0-dev.*` 代替功能測試交付版本。`CFBundleVersion` 仍使用每次建置獨立且遞增的時間戳，版本名稱不取代 Build 或通道隔離。本文版本僅為命名範例，實際建置時須依當次目標版本調整。
@@ -91,6 +99,8 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 ### Firebase 開發工具相容性
 
 開發工具需要 Node.js 24 LTS及 Python 3.12 以上。`./scripts/project-node.sh --npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`./scripts/project-node.sh --npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+
+原庫另有維護者管理入口 `scripts/invite-sync-user.sh --help`，需本機 Google Cloud CLI 與管理員授權，不是 App 建置依賴或既有 Firebase CLI wrapper 的擴權。隔離安全測試為 `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`，也由既有 `Tests/Security` Python 測試探索納入。管理設定、憑證與私人操作紀錄不進 Git；此工具未納入獨立來源輸出。
 
 ### 文件語系與同步維護
 
@@ -291,3 +301,11 @@ python3.12 -m venv .build/python-runtime
 也可將 `MYTERM_PYTHON` 指向自己安裝的受支援 Python 執行檔。最低版本門檻不代替生命週期檢查；更新工具時仍需核對官方 EoL／EoS 狀態。驗簽套件另由 `.build/security-tools` 的隔離環境管理，重新執行 setup 會以選定的 Python 重建該可重建目錄，並以固定版本、wheel 及雜湊安裝。App 使用者不需要安装 Python。
 
 Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，依序接受 `MYTERM_NODE`、`.build/node-runtime/bin/node` 或已安裝的 Node 24，並讓子程序沿用相同 PATH。`./scripts/project-node.sh --npm ci` 可避免系統預設 Node 指到已EoL的奇數版本。可將官方 Node 24 發行包完整解壓至 `.build/node-runtime`，或指定已安裝的 Node 24 執行檔；不需覆蓋全域 Node。套件引擎範圍與 `.npmrc` 亦拒絕非24版本的安裝。
+
+## 建置時的同步服務說明
+
+開發者代管的同步服務暫不開放新使用者，既有使用者保留同步功能；公開來源仍支援使用自己的雲端服務。`Config/Local/CloudSyncServiceNotice.txt` 可加入該發行者的服務說明，僅在已配置雲端且非 Update Lab 的建置嵌入 `MyTermCloudSyncServiceNotice`；不放入 Git，也不作為後端權限判斷。修改說明須重建 App 才會顯示，舊版不會自動取得新文字。操作與驗收見 [Firebase 設定](FIREBASE_SETUP.md)。
+
+登入回應測試位於 `SelfTests/GoogleFirebaseAuthResponseTests.swift`，由 `scripts/run-tests.sh` 納入完整隔離回歸。測試以不落盤的 URLSession 與 URLProtocol 攔截所有請求，驗證 HTTP 成功內的登入失敗、缺失欄位、隱私邊界及正常登入，不連正式雲端或使用真實憑證。
+
+30 分鐘重試的期限／時鐘案例在 `SelfTests/GoogleSignInRetryTests.swift`；`CloudAccountRecoveryTests.swift` 使用真實 store 驗證免重新 OAuth、單一請求、取消、切換、過期與保存界線；`GoogleFirebaseAuthResponseTests.swift` 以合成傳輸驗證同一 Google 憑證重試 Firebase，不需等待真實半小時或操作正式帳號。完整入口仍為 `scripts/run-isolated-tests.py`。

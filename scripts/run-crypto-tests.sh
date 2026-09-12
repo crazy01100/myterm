@@ -55,6 +55,7 @@ swiftc \
     Sources/MySSHClient/Services/CloudConfiguration.swift \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
     Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift \
+    Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift \
     Sources/MySSHClient/Services/FirestoreVaultBackend.swift \
     Sources/MySSHClient/Services/MetadataSyncCodec.swift \
     Sources/MySSHClient/Services/FirestoreMetadataBackend.swift \

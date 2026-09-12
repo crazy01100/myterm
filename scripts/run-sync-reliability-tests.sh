@@ -19,6 +19,7 @@ swiftc -D MYTERM_SELF_TESTS \
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/AppPaths.swift \
     Sources/MySSHClient/Services/CloudAccountStore.swift \
+    Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift \
     Sources/MySSHClient/Services/SyncSettingsStore.swift \
     Sources/MySSHClient/Services/SyncDiagnosticsJournal.swift \
     Sources/MySSHClient/Services/AutomaticSyncCoordinator.swift \

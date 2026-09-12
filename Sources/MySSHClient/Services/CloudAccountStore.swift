@@ -27,6 +27,8 @@ enum CloudAccountStoreError: LocalizedError {
 @MainActor
 final class CloudAccountStore: ObservableObject {
     @Published private(set) var state: CloudAccountState
+    @Published private(set) var canRetryGoogleSignIn = false
+    let cloudSyncServiceNotice: String?
 
     private let client: GoogleFirebaseAuthClient?
     private let configuration: CloudConfiguration?
@@ -39,11 +41,18 @@ final class CloudAccountStore: ObservableObject {
     private enum RestoreDisposition { case initial, retryableFailure, blocked, restored }
     private var restoreDisposition: RestoreDisposition = .initial
     private var restorationTask: Task<Void, Never>?
+    private var pendingGoogleSignIn: GoogleSignInRetryCredential?
+    private var retryExpiryTask: Task<Void, Never>?
+    private let openAuthorizationURL: (URL) -> Bool
 
     var canRetrySessionRestore: Bool { restoreDisposition == .retryableFailure }
 
-    init(bundle: Bundle = .main) {
+    init(bundle: Bundle = .main, openAuthorizationURL: @escaping (URL) -> Bool = { NSWorkspace.shared.open($0) }) {
+        self.openAuthorizationURL = openAuthorizationURL
         legacySessionImportPolicy = .current(bundle: bundle)
+        let notice = (bundle.object(forInfoDictionaryKey: "MyTermCloudSyncServiceNotice") as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        cloudSyncServiceNotice = notice.flatMap { $0.isEmpty ? nil : $0 }
         do {
             let configuration = try CloudConfiguration.load(bundle: bundle)
             self.configuration = configuration
@@ -115,7 +124,45 @@ final class CloudAccountStore: ObservableObject {
     }
 
     func signIn() {
+        beginSignIn(retry: nil)
+    }
+
+    func retrySignIn() {
+        guard signInTask == nil else { return }
+        let retry = pendingGoogleSignIn.flatMap { $0.remainingLifetime() > 0 ? $0 : nil }
+        beginSignIn(retry: retry)
+    }
+
+    func signInWithDifferentAccount() {
+        cancelSignIn()
+        beginSignIn(retry: nil, selectAccount: true)
+    }
+
+    private func clearGoogleSignInRetry() {
+        retryExpiryTask?.cancel()
+        retryExpiryTask = nil
+        pendingGoogleSignIn = nil
+        canRetryGoogleSignIn = false
+    }
+
+    private func retainGoogleSignInRetry(_ credential: GoogleSignInRetryCredential) {
+        clearGoogleSignInRetry()
+        let remaining = credential.remainingLifetime()
+        guard remaining > 0 else { return }
+        pendingGoogleSignIn = credential
+        canRetryGoogleSignIn = true
+        let id = credential.id
+        // The expiry task captures only the ID, never another copy of the token.
+        retryExpiryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(remaining)) } catch { return }
+            guard let self, self.pendingGoogleSignIn?.id == id else { return }
+            self.clearGoogleSignInRetry()
+        }
+    }
+
+    private func beginSignIn(retry: GoogleSignInRetryCredential?, selectAccount: Bool = false) {
         guard signInTask == nil, let client, configuration != nil else { return }
+        clearGoogleSignInRetry()
         credentialGeneration += 1
         stopSessionRestoration()
         tokenRefreshTask?.cancel()
@@ -124,46 +171,57 @@ final class CloudAccountStore: ObservableObject {
         state = .signingIn
         signInTask = Task { [weak self] in
             guard let self else { return }
+            defer { if generation == self.credentialGeneration { self.signInTask = nil } }
+            var credential = retry
             do {
-                let pkce = try OAuthPKCE.generate()
-                let stateValue = try OAuthSecureRandom.base64URL(byteCount: 32)
-                let nonce = try OAuthSecureRandom.base64URL(byteCount: 32)
-                let listener = try await LoopbackOAuthListener.start(expectedState: stateValue)
-                guard let redirectURI = listener.redirectURI else {
-                    listener.cancel()
-                    throw GoogleFirebaseAuthError.invalidRedirectURI
+                if credential == nil {
+                    let pkce = try OAuthPKCE.generate()
+                    let stateValue = try OAuthSecureRandom.base64URL(byteCount: 32)
+                    let nonce = try OAuthSecureRandom.base64URL(byteCount: 32)
+                    let listener = try await LoopbackOAuthListener.start(expectedState: stateValue)
+                    guard let redirectURI = listener.redirectURI else {
+                        listener.cancel()
+                        throw GoogleFirebaseAuthError.invalidRedirectURI
+                    }
+                    let authorizationURL = try client.authorizationURL(
+                        redirectURI: redirectURI,
+                        pkce: pkce,
+                        state: stateValue,
+                        nonce: nonce,
+                        selectAccount: selectAccount
+                    )
+                    guard self.openAuthorizationURL(authorizationURL) else {
+                        listener.cancel()
+                        throw GoogleFirebaseAuthError.invalidAuthorizationURL
+                    }
+                    let callback = try await listener.waitForCallback()
+                    credential = try await client.prepareSignIn(
+                        authorizationCode: callback.code,
+                        redirectURI: redirectURI,
+                        pkceVerifier: pkce.verifier,
+                        nonce: nonce
+                    )
                 }
-                let authorizationURL = try client.authorizationURL(
-                    redirectURI: redirectURI,
-                    pkce: pkce,
-                    state: stateValue,
-                    nonce: nonce
-                )
-                guard NSWorkspace.shared.open(authorizationURL) else {
-                    listener.cancel()
-                    throw GoogleFirebaseAuthError.invalidAuthorizationURL
-                }
-                let callback = try await listener.waitForCallback()
-                let session = try await client.signIn(
-                    authorizationCode: callback.code,
-                    redirectURI: redirectURI,
-                    pkceVerifier: pkce.verifier,
-                    nonce: nonce
-                )
+                try Task.checkCancellation()
+                guard generation == self.credentialGeneration, let credential else { return }
+                let session = try await client.completeSignIn(credential)
                 guard !Task.isCancelled, generation == self.credentialGeneration else { return }
                 try persist(session)
             } catch is CancellationError {
                 guard generation == self.credentialGeneration else { return }
                 self.state = .signedOut
             } catch {
-                guard generation == self.credentialGeneration else { return }
+                guard generation == self.credentialGeneration, !Task.isCancelled else { return }
+                if case GoogleFirebaseAuthError.cloudSyncAccessUnavailable = error, let credential {
+                    self.retainGoogleSignInRetry(credential)
+                }
                 self.state = .failed(error.localizedDescription)
             }
-            self.signInTask = nil
         }
     }
 
     func cancelSignIn() {
+        clearGoogleSignInRetry()
         credentialGeneration += 1
         stopSessionRestoration()
         tokenRefreshTask?.cancel()
@@ -174,6 +232,7 @@ final class CloudAccountStore: ObservableObject {
     }
 
     func signOut() {
+        clearGoogleSignInRetry()
         credentialGeneration += 1
         stopSessionRestoration()
         tokenRefreshTask?.cancel()
@@ -194,13 +253,6 @@ final class CloudAccountStore: ObservableObject {
         } catch {
             state = .failed("無法清除這台 Mac 的登入狀態：\(error.localizedDescription)")
         }
-    }
-
-    func retryAfterFailure() {
-        guard client != nil else { return }
-        credentialGeneration += 1
-        stopSessionRestoration()
-        state = .signedOut
     }
 
     func validIDToken() async throws -> String {

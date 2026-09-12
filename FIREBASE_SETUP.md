@@ -8,11 +8,21 @@
 
 | 使用方式 | 是否需要自己的 Firebase 專案 |
 |---|---|
-| 安裝 MyTerm 官方發布版 | 不需要；官方 App 已包含其服務設定 |
+| 安裝 MyTerm 官方發布版 | 本機功能不需要；開發者代管同步暫不開放新使用者，既有使用者可繼續使用 |
 | 從原始碼建置，只使用主機、SSH、Terminal、Serial、SFTP | 不需要；沒有雲端設定時會建立純本機版 |
 | 從原始碼建置，並使用 Google 登入與跨裝置同步 | 需要；請依本文件建立自己的 Firebase／Google Cloud 專案 |
 
 不同 Firebase 專案的帳號、UID、Firestore 資料與同步密文彼此獨立。自行建置的 App 不應使用 MyTerm 官方 Firebase 專案。
+
+## 服務使用範圍與登入提示
+
+開發者代管服務受免費方案額度限制，暫不開放新使用者。MyTerm 本身保留同步能力；自行架設時使用自己的 Firebase 專案與服務政策，無需連接開發者的服務。不同專案的既有密文與帳號不會自動轉移，不能把更換 Project ID 當成資料遷移。
+
+若看到「此雲端同步服務暫未開放此 Google 帳號使用」，既有使用者先確認 Google 帳號是否正確；新使用者請依本指南自行架設並建置。這不是要求建立另一組 MyTerm 帳戶。一般網路錯誤、服務配額或 Google 憑證問題不會被一律解讀為這項限制。
+
+維護自己的服務時，可在 Firebase Authentication → Settings → User actions 關閉「Enable create／啟用建立功能」，限制新帳號加入服務；保留 Google provider 才能維持既有帳號登入。這不限制既有帳號用量，也不取代 Firestore Security Rules。變更後核對既有登入／重新啟動後恢復／同步，以及新帳號被拒絕；不要直接關閉 Google provider 或啟用不相容的 App Check enforcement。
+
+可選的 `Config/Local/CloudSyncServiceNotice.txt` 是純文字的服務使用說明。建置含雲端設定且非 Update Lab 的 App 時，腳本將它加入 `MyTermCloudSyncServiceNotice`，顯示於「帳號與同步」的登入區。沒有該檔案時不顯示代管說明；自架者可省略或撰寫自己的說明。它不改變任何後端權限，也不得放入憑證或私人資料。
 
 ## 架構與安全邊界
 
@@ -194,6 +204,10 @@ test -f "build/dev/MyTerm Dev.app/Contents/Resources/MyTermCloudConfig.plist"
 確認已執行 `scripts/configure-cloud.sh`，且建置前存在 `Config/Local/MyTermCloudConfig.plist`。已建好的 App 不會因為事後新增設定檔而自動更新，必須重新建置。
 
 ### OAuth 成功後 Firebase 登入失敗
+
+Google 驗證完成但同步服務暫未開放帳號時，畫面會提供「重新嘗試」：在最多 30 分鐘且 Google 憑證仍有效期間，直接重試同步服務登入。也可選擇「使用其他 Google 帳號」。逾期、關閉 App 或登出後，需重新登入 Google。
+
+瀏覽器顯示「已收到 Google 回應」只代表授權回應已交回 App，請回到 MyTerm 查看最終結果。若 App 提示需要確認既有身分、額外驗證或帳號已停用，請由同步服務管理者處理；若提示資料格式不正確，不代表本機主機資料遺失，請保留畫面並回報。不要把所有登入失敗都當成尚未開放。
 
 確認 Firebase Authentication 已啟用 Google provider、OAuth Client 屬於同一個 Project ID，且 Firebase API Key 未被限制到無法呼叫 Identity Toolkit／Secure Token API。
 

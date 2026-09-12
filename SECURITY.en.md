@@ -4,6 +4,8 @@
 
 ## Local secrets
 
+After Google verification succeeds and the service explicitly rejects new-account admission, the validated Google ID token is retained only in process memory for at most 30 minutes, bounded by Google expiry with a 30-second margin. A monotonic clock prevents wall-clock rollback from extending the deadline. Retries do not renew it, and it is never written to disk, Keychain, or diagnostics. Expiry, successful sign-in, sign-out, cancellation, account switching, and process exit release it; persistence of established Firebase sessions is unchanged.
+
 - Google sign-in state, the sync master key, and all host passwords share one local AES-256-GCM encrypted vault.
 - macOS Keychain holds only one random root key, using `WhenUnlockedThisDeviceOnly` accessibility. It does not migrate to another device through a backup.
 - Vault directories and files are accessible only to the current user, and writes use atomic replacement. The host inventory contains no passwords.
@@ -68,3 +70,13 @@
 - SFTP READ rejects success statuses without data and responses exceeding the requested length. Directory operations stop at 100,000 entries, 64 MiB of accumulated response bytes or 10,000 responses; recursive operations stop beyond depth 64. Limits report an error rather than presenting a truncated listing as complete.
 - Initialization has a 30-second deadline; each protocol response has a 30-second budget. Cancellation can stop initialization and blocked I/O, and only terminates the transport's own child. Large transfers may continue while individual requests complete within their budgets.
 - Release deployment verifies feed, archive and release-notes signatures using a trusted public key before extraction. The signed feed binds source commit and runtime dependency inventory. Checksums alone do not establish authenticity. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
+
+## Supported versions and security reporting
+
+Security fixes are delivered in the latest stable release. Older releases and RCs receive no backports and remain for traceability, not recommended installation. MyTerm 1.0.22 uses Sparkle 2.9.6; earlier existing Releases still contain Sparkle 2.9.5, which matches known high-severity advisories. Update to the [latest stable release](https://github.com/crazy01100/myterm/releases/latest). A version match does not establish exploitability in every usage scenario. Daily monitoring covers current source and the latest stable release; it does not imply that all historical packages are patched.
+
+Published upstream advisories and remediation tracking may be discussed in Issues. Do not post unpublished vulnerabilities, exploitation details, host data, credentials, or full private logs in public Issues. If the GitHub Security page offers “Report a vulnerability,” use that private reporting entry point. If unavailable, open an Issue without vulnerability details to ask the maintainer for a private contact channel. Never submit real passwords or user data to reproduce a problem.
+
+## Hosted sync availability
+
+The developer-hosted service uses a free plan with limited capacity and is closed to new users; existing accounts retain sign-in and sync. Firebase enforces access on the server, independently of visible app buttons, without changing existing end-to-end encryption or data formats. This does not eliminate abuse by existing accounts or all unauthenticated traffic. Self-hosted users follow their own backend policy; see [Firebase setup](FIREBASE_SETUP.en.md).

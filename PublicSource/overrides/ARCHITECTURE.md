@@ -174,3 +174,9 @@ Firebase 開發工具的 `stream-json` 相容性由 `scripts/patch-firebase-stre
 `scripts/project-python.sh` 是管理／測試／發布腳本的 Python 選擇入口，接受明確指定的受支援執行檔、專案隔離環境或 PATH；拒絕低於3.12，不覆蓋系統Python。`setup-security-tools.sh` 使用相同選擇建立獨立驗簽venv；此工具環境不隨App封裝。
 
 `scripts/project-node.sh` 選擇Node 24 LTS並提供npm入口，Firebase子程序及npm稽核使用同一環境；不更動全域Node或App執行期。
+
+## 同步服務可用性說明
+
+帳號加入代管服務的限制由 Firebase 控制；成功登入後的 UID 所有權、同步排程、加密及資料格式保持不變。`GoogleFirebaseAuthClient` 在建立 session 前先辨識 HTTP 錯誤與 HTTP 成功內的登入錯誤、帳號確認及額外驗證；只有明確的 `ADMIN_ONLY_OPERATION` 才顯示未開放提示。UID、兩種 token 及有效期限完整有效時才傳回 session；未知或缺欄位回應顯示固定錯誤，不顯示原始回應或 Google 錯誤描述。Google 錯誤只保留白名單代碼。Loopback 頁面只確認收到 Google 回應，最終登入結果以 App 為準。`build-app.sh` 可從本機 `Config/Local/CloudSyncServiceNotice.txt` 將非機密說明加入 Bundle；`CloudAccountStore`／`SettingsView` 只負責呈現，不把文字當成權限判斷。無本機說明的自架建置不繼承開發者代管提示。
+
+`GoogleSignInRetryCredential` 保存 process-local 的已驗證 Google token、原始 callback URI、client／project 綁定及固定到期界線。`CloudAccountStore` 只在明確未開放時保留它，使用單一請求與帳號世代防止重複／過時登入；`GoogleFirebaseAuthClient.prepareSignIn` 完成 Google 驗證，`completeSignIn` 可重試 Firebase 交換。 Google 驗證成功但服務明確拒絕新帳號加入時，已驗證的 Google ID token 只在目前程序記憶體保留最多 30 分鐘，且受 Google 到期時間及 30 秒安全餘裕限制。單調時鐘避免系統時間回撥延長期限；重試不續期，不保存至磁碟／Keychain 或診斷紀錄。到期、登入成功、登出、取消、切換帳號及程序結束時釋放；原 Firebase 登入狀態的保存方式不變。

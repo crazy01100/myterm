@@ -8,11 +8,21 @@ This guide is for developers building MyTerm from source who want to enable Goog
 
 | How you use MyTerm | Do you need your own Firebase project? |
 |---|---|
-| Install the official MyTerm release | No. The official app includes its service configuration. |
+| Install the official MyTerm release | Not for local features. Developer-hosted sync is closed to new users; existing users retain access. |
 | Build from source for hosts, SSH, Terminal, Serial, and SFTP only | No. Without cloud configuration, the build supports local features. |
 | Build from source with Google sign-in and cross-device sync | Yes. Follow this guide using your own Firebase/Google Cloud project. |
 
 Accounts, UIDs, Firestore data, and encrypted sync records are separate across Firebase projects. Independently built apps should not use MyTerm's official Firebase project.
+
+## Service availability and sign-in messages
+
+The developer-hosted service uses a free plan with limited capacity and is closed to new users. MyTerm retains sync support. Self-hosted builds use your own Firebase project and access policy without connecting to the developer's service. Existing encrypted data and accounts do not automatically move between projects; changing the Project ID is not a data migration.
+
+If the app says that this cloud sync service is unavailable to your Google account, existing users should check that they chose their original Google account; new users should follow this guide to set up their own service and build. This does not require a separate MyTerm account. Network failures, quota errors, and Google credential problems are not indiscriminately classified as this access restriction.
+
+For your own service, Firebase Authentication → Settings → User actions → Enable create can be disabled to prevent new accounts from joining. Keep the Google provider enabled for existing users. This does not cap existing users' usage or replace Firestore Security Rules. Verify existing sign-in, session recovery after restarting, sync, and rejection of new accounts. Do not disable the Google provider or enforce an incompatible App Check configuration as a shortcut.
+
+The optional `Config/Local/CloudSyncServiceNotice.txt` contains a plain-text service notice. When building an app with cloud configuration outside Update Lab, the build script embeds it as `MyTermCloudSyncServiceNotice`, displayed in the Account & Sync sign-in section. Without the file, no hosted-service notice is shown. Self-hosters may omit it or write their own notice. It grants no backend permissions and must not contain credentials or private data.
 
 ## Architecture and security boundaries
 
@@ -194,6 +204,10 @@ Complete at least these cases:
 Confirm that `scripts/configure-cloud.sh` ran and that `Config/Local/MyTermCloudConfig.plist` existed before building. Adding configuration after a build does not change that app; rebuild it.
 
 ### Google OAuth succeeds but Firebase sign-in fails
+
+When Google verification succeeds but the sync service has not enabled the account, “重新嘗試” (Try Again) retries the sync-service sign-in directly for up to 30 minutes while the Google credential remains valid. You can also choose “使用其他 Google 帳號” (Use Another Google Account). Expiry, quitting the app, or signing out requires a new Google sign-in.
+
+The browser message “已收到 Google 回應” only confirms that the authorization response reached the app. Check MyTerm for the final result. If the app requires identity confirmation or additional verification, or reports a disabled account, contact the sync service administrator. An invalid-response message does not mean that local host data was lost; retain the message and report it. Do not assume every sign-in failure means admission is closed.
 
 Check that Firebase Authentication has the Google provider enabled, the OAuth client belongs to the same Project ID, and the Firebase API Key allows calls to the Identity Toolkit and Secure Token APIs.
 

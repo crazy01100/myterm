@@ -1395,10 +1395,35 @@ do {
 do {
     let errorPayload = Data(#"{"error":"invalid_grant","error_description":"Bad verifier\nretry"}"#.utf8)
     let diagnostic = GoogleFirebaseAuthClient.googleErrorDiagnostic(from: errorPayload)
-    check(diagnostic == "invalid_grant: Bad verifier retry",
-          "Google token errors expose only a bounded safe diagnostic")
+    check(diagnostic == "invalid_grant",
+          "Google token errors expose only an allowlisted code without provider descriptions")
     check(GoogleFirebaseAuthClient.googleErrorDiagnostic(from: Data("not-json".utf8)) == "unknown_error",
           "invalid Google token errors do not expose raw response bodies")
+
+    let restricted = Data(#"{"error":{"code":400,"message":"ADMIN_ONLY_OPERATION"}}"#.utf8)
+    check(GoogleFirebaseAuthClient.firebaseSignInError(from: restricted, status: 400) == .cloudSyncAccessUnavailable,
+          "closed cloud access has a specific user-facing sign-in error")
+    check(GoogleFirebaseAuthClient.firebaseSignInError(from: restricted, status: 403) == .cloudSyncAccessUnavailable,
+          "forbidden cloud access preserves the same service explanation")
+    let restrictedDetail = Data(#"{"error":{"message":"ADMIN_ONLY_OPERATION : PRIVATE_TEST_SENTINEL"}}"#.utf8)
+    let safeError = GoogleFirebaseAuthClient.firebaseSignInError(from: restrictedDetail, status: 400)
+    check(safeError == .cloudSyncAccessUnavailable && !safeError.localizedDescription.contains("PRIVATE_TEST_SENTINEL"),
+          "cloud access explanation never includes backend response details")
+    check(!safeError.localizedDescription.contains("註冊"),
+          "cloud access wording does not imply a separate app account")
+    check(GoogleFirebaseAuthClient.firebaseSignInError(from: Data(#"{"error":{"message":"USER_DISABLED"}}"#.utf8), status: 400) == .accountDisabled,
+          "disabled accounts are distinguished from closed admission")
+    for code in ["QUOTA_EXCEEDED", "INVALID_IDP_RESPONSE", "OPERATION_NOT_ALLOWED", "NOT_ADMIN_ONLY_OPERATION"] {
+        let data = try JSONSerialization.data(withJSONObject: ["error": ["message": code]])
+        check(GoogleFirebaseAuthClient.firebaseSignInError(from: data, status: 400) == .firebaseSignInFailed(400),
+              "unrelated sign-in failure is not classified as restricted service: \(code)")
+    }
+    check(GoogleFirebaseAuthClient.firebaseSignInError(from: restricted, status: 500) == .firebaseSignInFailed(500),
+          "server failures are not presented as an account eligibility decision")
+    for data in [Data("not-json".utf8), Data(#"{"error":{"message":42}}"#.utf8), Data(repeating: 65, count: 16_385)] {
+        check(GoogleFirebaseAuthClient.firebaseSignInError(from: data, status: 400) == .firebaseSignInFailed(400),
+              "malformed or oversized cloud errors safely retain the HTTP failure")
+    }
 }
 
 do {

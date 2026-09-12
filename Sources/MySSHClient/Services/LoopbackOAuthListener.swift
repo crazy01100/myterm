@@ -245,8 +245,8 @@ final class LoopbackOAuthListener: @unchecked Sendable {
 
     private func sendResponse(success: Bool) {
         guard clientFD >= 0 else { return }
-        let title = success ? "登入已返回 MyTerm" : "登入驗證失敗"
-        let detail = success ? "可以關閉此頁並回到 MyTerm。" : "請關閉此頁，回到 MyTerm 後重新嘗試。"
+        let title = success ? "已收到 Google 回應" : "登入驗證失敗"
+        let detail = success ? "請回到 MyTerm 查看登入結果。此頁可以關閉。" : "請關閉此頁，回到 MyTerm 後重新嘗試。"
         let body = """
         <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>MyTerm</title></head><body style="font-family:-apple-system;margin:48px"><h1>\(title)</h1><p>\(detail)</p></body></html>
         """

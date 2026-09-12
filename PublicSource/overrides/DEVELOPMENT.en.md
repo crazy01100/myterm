@@ -175,3 +175,11 @@ python3.12 -m venv .build/python-runtime
 Alternatively, point `MYTERM_PYTHON` to your installed supported interpreter. The minimum-version check does not replace lifecycle review: check official EoL/EoS status during tool updates. Verification packages use the separate `.build/security-tools` environment. Running setup recreates that reproducible directory with the selected Python, installing pinned wheels with verified hashes. App users do not need Python.
 
 Use `./scripts/project-node.sh` for Node/npm. It selects Node 24 LTS from `MYTERM_NODE`, `.build/node-runtime/bin/node`, or an installed Node 24, and gives subprocesses the same PATH. `./scripts/project-node.sh --npm ci` avoids an EoL odd-numbered system default. Extract the complete official Node 24 distribution into `.build/node-runtime` or select an installed Node 24 executable without replacing global Node. Package engine constraints and `.npmrc` also reject installations on other major versions.
+
+## Build-time sync service notices
+
+Independent distributors may describe their service policy in local `Config/Local/CloudSyncServiceNotice.txt`. It is embedded as `MyTermCloudSyncServiceNotice` only for cloud-configured builds outside Update Lab and is not backend authorization. Without the file, no hosted-service notice appears. Rebuild to change the text; see [Firebase setup](FIREBASE_SETUP.en.md).
+
+Sign-in response tests live in `SelfTests/GoogleFirebaseAuthResponseTests.swift` and run through `scripts/run-tests.sh` as part of the isolated regression suite. An ephemeral URLSession with URLProtocol intercepts every request to test sign-in failures inside successful HTTP responses, missing fields, privacy boundaries, and normal sign-in, without production cloud access or real credentials.
+
+Thirty-minute retry deadline/clock cases live in `SelfTests/GoogleSignInRetryTests.swift`. `CloudAccountRecoveryTests.swift` exercises the real store for OAuth reuse, single-flight, cancellation, switching, expiry, and persistence boundaries. `GoogleFirebaseAuthResponseTests.swift` uses synthetic transport to retry Firebase with the same Google credential, without waiting half an hour or touching production accounts. The full entry point remains `scripts/run-isolated-tests.py`.

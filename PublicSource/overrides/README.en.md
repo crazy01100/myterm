@@ -57,6 +57,8 @@ The linked project guides are available in English, with language links to their
 
 Sync is off by default. To sync hosts, groups, host passwords, and finalized Logs, sign in with Google, enable sync, and set a sync passphrase.
 
+When Google verification succeeds but the sync service has not enabled the account, “重新嘗試” (Try Again) retries the sync-service sign-in directly for up to 30 minutes while the Google credential remains valid. You can also choose “使用其他 Google 帳號” (Use Another Google Account). Expiry, quitting the app, or signing out requires a new Google sign-in.
+
 - Each record is end-to-end encrypted on your Mac with AES-256-GCM before it is sent to Firebase.
 - The sync passphrase derives a key using Argon2id. The master key and decrypted passwords are stored only in each Mac's local encrypted vault.
 - Firebase stores ciphertext and necessary version information; it cannot directly read host contents or passwords.

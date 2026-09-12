@@ -200,6 +200,10 @@ test -f "build/dev/MyTerm Dev.app/Contents/Resources/MyTermCloudConfig.plist"
 
 ### OAuth 成功後 Firebase 登入失敗
 
+Google 驗證完成但同步服務暫未開放帳號時，畫面會提供「重新嘗試」：在最多 30 分鐘且 Google 憑證仍有效期間，直接重試同步服務登入。也可選擇「使用其他 Google 帳號」。逾期、關閉 App 或登出後，需重新登入 Google。
+
+瀏覽器顯示「已收到 Google 回應」只代表授權回應已交回 App，請回到 MyTerm 查看最終結果。若 App 提示需要確認既有身分、額外驗證或帳號已停用，請由同步服務管理者處理；若提示資料格式不正確，不代表本機主機資料遺失，請保留畫面並回報。不要把所有登入失敗都當成尚未開放。
+
 確認 Firebase Authentication 已啟用 Google provider、OAuth Client 屬於同一個 Project ID，且 Firebase API Key 未被限制到無法呼叫 Identity Toolkit／Secure Token API。
 
 ### Firestore 回傳 permission denied
@@ -209,3 +213,9 @@ test -f "build/dev/MyTerm Dev.app/Contents/Resources/MyTermCloudConfig.plist"
 ### 可以提交 API Key 或 Desktop Client Secret 嗎？
 
 桌面 App 無法安全隱藏這些 client-side 設定，因此它們不是 Firestore 的授權邊界；但本專案仍禁止提交實際設定檔。公開 repository 只保留無真實值的範例，正式資料存取必須依靠 Firebase Authentication、Security Rules 與端對端加密。
+
+## 自架服務的使用範圍與提示
+
+自行架設者決定自己的後端使用政策。Firebase Authentication → Settings → User actions 的「Enable create／啟用建立功能」可限制新帳號加入服務；不是要求使用者建立另一組 MyTerm 帳戶。若看到目前帳號未開放的提示，確認服務政策與 Google 帳號。既有帳號使用量仍需管理，並保留 Security Rules；變更後驗證既有登入／同步與新帳號拒絕。
+
+可選的 `Config/Local/CloudSyncServiceNotice.txt` 是發行者自己的非機密服務說明；配置雲端且非 Update Lab 的建置會將它加入 Bundle，顯示於登入區。檔案預設不存在，不包含開發者的代管政策，也不取代後端控制。

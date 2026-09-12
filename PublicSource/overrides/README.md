@@ -55,6 +55,8 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 同步預設關閉。需要時登入 Google 帳號、開啟同步並設定同步密語，MyTerm 才會同步主機、群組、主機密碼與已結束的 Logs 紀錄。
 
+Google 驗證完成但同步服務暫未開放帳號時，畫面會提供「重新嘗試」：在最多 30 分鐘且 Google 憑證仍有效期間，直接重試同步服務登入。也可選擇「使用其他 Google 帳號」。逾期、關閉 App 或登出後，需重新登入 Google。
+
 - 每筆資料在 Mac 上以 AES-256-GCM 端對端加密後才送往 Firebase。
 - 同步密語使用 Argon2id 派生金鑰；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫。
 - Firebase 保存密文與必要的版本資訊，無法直接讀取主機內容或密碼。

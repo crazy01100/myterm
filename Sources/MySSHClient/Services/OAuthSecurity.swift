@@ -140,12 +140,12 @@ enum GoogleIDTokenClaimsValidator {
     /// The token is received directly from Google's TLS token endpoint and is
     /// subsequently verified again by Firebase. This local validation binds the
     /// response to this OAuth request before it leaves the Mac.
-    static func validate(
+    @discardableResult static func validate(
         idToken: String,
         expectedClientID: String,
         expectedNonce: String,
         now: Date = .now
-    ) throws {
+    ) throws -> Date {
         let segments = idToken.split(separator: ".", omittingEmptySubsequences: false)
         guard segments.count == 3,
               let payload = OAuthBase64URL.decode(String(segments[1])),
@@ -164,5 +164,6 @@ enum GoogleIDTokenClaimsValidator {
         guard claims.expiration > now.timeIntervalSince1970 else {
             throw OAuthSecurityError.expiredIDToken
         }
+        return Date(timeIntervalSince1970: claims.expiration)
     }
 }

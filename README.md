@@ -2,6 +2,8 @@
 
 **繁體中文** | [English](README.en.md)
 
+本庫保存 MyTerm 的原始碼、維護紀錄與維護者發布流程。自行建置使用自己的雲端設定；原始碼不附同步服務設定或私鑰。使用預先打包的 App 時，請選擇[最新正式版本](https://github.com/crazy01100/myterm/releases/latest)；歷史版本與 RC 僅供追溯，不建議安裝，安全支援範圍見 [SECURITY.md](SECURITY.md)。
+
 <p>
   <a href="https://openai.com/brand/">
     <picture>
@@ -54,7 +56,11 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 
 ## 選用的跨裝置同步
 
+開發者代管服務暫不開放同步功能；如需使用下列同步能力，請依指南自行架設服務並建置 MyTerm。
+
 同步預設關閉。需要時登入 Google 帳號、開啟同步並設定同步密語，MyTerm 才會同步主機、群組、主機密碼與已結束的 Logs 紀錄。
+
+Google 驗證完成但同步服務暫未開放帳號時，畫面會提供「重新嘗試」：在最多 30 分鐘且 Google 憑證仍有效期間，直接重試同步服務登入。也可選擇「使用其他 Google 帳號」。逾期、關閉 App 或登出後，需重新登入 Google。
 
 - 每筆資料在 Mac 上以 AES-256-GCM 端對端加密後才送往 Firebase。
 - 同步密語使用 Argon2id 派生金鑰；Master Key 與解密後密碼只保存在各台 Mac 的本機加密保管庫。
@@ -68,7 +74,7 @@ MyTerm 是為 **Apple Silicon 與 macOS 26** 設計的原生 SSH 管理工具。
 - 私鑰檔案、私鑰路徑及 `known_hosts` 永遠只保留在各台 Mac。
 - 可停用同步並繼續以純本機模式使用 App。
 
-安裝官方發布版不需要自行建立 Firebase 專案。只有從原始碼建置並希望使用自己的 Google 登入與同步後端時，才需要依照 [Firebase 自架同步設定](FIREBASE_SETUP.md) 完成前置作業；缺少雲端設定不影響純本機功能。
+開發者代管的雲端同步服務使用免費方案，受限於服務額度，目前暫不開放同步功能。如需雲端同步，請依 [專案指南](FIREBASE_SETUP.md) 自行架設服務並建置 MyTerm。本機功能不需要登入 Google 帳號。
 
 ## 安裝需求
 
