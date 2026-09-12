@@ -21,7 +21,7 @@ Requires an authenticated `gh` with appropriate read access, Python 3.12 or newe
 New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
 
 
-`security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the maintainer's private Issue automation; distributors must configure their own risk tracking.
+`security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Public source exports do not include the upstream repository's Issue automation; distributors must configure their own risk tracking.
 
 ## Update grouping and support lifecycle
 

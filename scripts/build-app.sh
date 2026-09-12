@@ -366,6 +366,12 @@ if (( update_lab == 0 )) && [[ -f "$cloud_config" ]]; then
         /usr/bin/plutil -insert "$cloud_key" -string "$cloud_value" "$runtime_cloud_config"
     done
     chmod 0644 "$runtime_cloud_config"
+    # Optional display-only policy for this distributor; not an access control.
+    # Independent source builds have no maintainer-local notice by default.
+    cloud_service_notice="$project_dir/Config/Local/CloudSyncServiceNotice.txt"
+    if [[ -f "$cloud_service_notice" ]]; then
+        /usr/bin/plutil -insert MyTermCloudSyncServiceNotice -string "$(<"$cloud_service_notice")" "$app_dir/Contents/Info.plist"
+    fi
 fi
 dependency_resource_bundles=(SwiftTerm_SwiftTerm.bundle)
 cp "$project_dir/Vendor/SwiftTerm/LICENSE" "$app_dir/Contents/Resources/SwiftTerm-LICENSE.txt"

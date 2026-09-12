@@ -2,6 +2,8 @@
 
 [繁體中文](README.md) | **English**
 
+This repository contains MyTerm source, maintenance history, and the maintainer’s release workflow. Source builds use your own cloud configuration; sync-service settings and private keys are not included. For a packaged app, choose the [latest stable release](https://github.com/crazy01100/myterm/releases/latest). Historical releases and RCs are retained for traceability and are not recommended for installation; see [SECURITY.en.md](SECURITY.en.md) for security support.
+
 <p>
   <a href="https://openai.com/brand/">
     <picture>
@@ -56,7 +58,11 @@ The linked project guides are available in English, with language links to their
 
 ## Optional cross-device sync
 
+Developer-hosted sync is currently unavailable. To use the sync capabilities below, follow the guide to set up your own service and build MyTerm.
+
 Sync is off by default. To sync hosts, groups, host passwords, and finalized Logs, sign in with Google, enable sync, and set a sync passphrase.
+
+When Google verification succeeds but the sync service has not enabled the account, “重新嘗試” (Try Again) retries the sync-service sign-in directly for up to 30 minutes while the Google credential remains valid. You can also choose “使用其他 Google 帳號” (Use Another Google Account). Expiry, quitting the app, or signing out requires a new Google sign-in.
 
 - Each record is end-to-end encrypted on your Mac with AES-256-GCM before it is sent to Firebase.
 - The sync passphrase derives a key using Argon2id. The master key and decrypted passwords are stored only in each Mac's local encrypted vault.
@@ -70,7 +76,7 @@ Sync is off by default. To sync hosts, groups, host passwords, and finalized Log
 - Private-key files, private-key paths, and `known_hosts` always remain local to each Mac.
 - Disable sync at any time and continue using the app locally.
 
-The official release does not require your own Firebase project. Only developers building from source with their own Google sign-in and sync backend need to follow the [Firebase setup guide](FIREBASE_SETUP.en.md). Missing cloud configuration does not affect local features.
+The developer-hosted cloud sync service uses a free plan and, due to its capacity limits, is currently unavailable. To use cloud sync, follow the [project guide](FIREBASE_SETUP.en.md) to set up your own service and build MyTerm. Local features do not require Google sign-in.
 
 ## Requirements and installation
 

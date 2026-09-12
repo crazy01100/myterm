@@ -175,3 +175,11 @@ python3.12 -m venv .build/python-runtime
 也可將 `MYTERM_PYTHON` 指向自己安裝的受支援 Python 執行檔。最低版本門檻不代替生命週期檢查；更新工具時仍需核對官方 EoL／EoS 狀態。驗簽套件另由 `.build/security-tools` 的隔離環境管理，重新執行 setup 會以選定的 Python 重建該可重建目錄，並以固定版本、wheel 及雜湊安裝。App 使用者不需要安装 Python。
 
 Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，依序接受 `MYTERM_NODE`、`.build/node-runtime/bin/node` 或已安裝的 Node 24，並讓子程序沿用相同 PATH。`./scripts/project-node.sh --npm ci` 可避免系統預設 Node 指到已EoL的奇數版本。可將官方 Node 24 發行包完整解壓至 `.build/node-runtime`，或指定已安裝的 Node 24 執行檔；不需覆蓋全域 Node。套件引擎範圍與 `.npmrc` 亦拒絕非24版本的安裝。
+
+## 建置時的同步服務說明
+
+自行發行者可使用本機 `Config/Local/CloudSyncServiceNotice.txt` 說明自己的服務使用範圍。只在已配置雲端且非 Update Lab 的建置嵌入 `MyTermCloudSyncServiceNotice`，不作為後端權限判斷；未提供此檔案時不顯示代管說明。說明變更需重新建置，詳見 [Firebase 設定](FIREBASE_SETUP.md)。
+
+登入回應測試位於 `SelfTests/GoogleFirebaseAuthResponseTests.swift`，由 `scripts/run-tests.sh` 納入完整隔離回歸。測試以不落盤的 URLSession 與 URLProtocol 攔截所有請求，驗證 HTTP 成功內的登入失敗、缺失欄位、隱私邊界及正常登入，不連正式雲端或使用真實憑證。
+
+30 分鐘重試的期限／時鐘案例在 `SelfTests/GoogleSignInRetryTests.swift`；`CloudAccountRecoveryTests.swift` 使用真實 store 驗證免重新 OAuth、單一請求、取消、切換、過期與保存界線；`GoogleFirebaseAuthResponseTests.swift` 以合成傳輸驗證同一 Google 憑證重試 Firebase，不需等待真實半小時或操作正式帳號。完整入口仍為 `scripts/run-isolated-tests.py`。

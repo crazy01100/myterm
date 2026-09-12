@@ -200,6 +200,10 @@ Confirm that `scripts/configure-cloud.sh` ran and that `Config/Local/MyTermCloud
 
 ### Google OAuth succeeds but Firebase sign-in fails
 
+When Google verification succeeds but the sync service has not enabled the account, “重新嘗試” (Try Again) retries the sync-service sign-in directly for up to 30 minutes while the Google credential remains valid. You can also choose “使用其他 Google 帳號” (Use Another Google Account). Expiry, quitting the app, or signing out requires a new Google sign-in.
+
+The browser message “已收到 Google 回應” only confirms that the authorization response reached the app. Check MyTerm for the final result. If the app requires identity confirmation or additional verification, or reports a disabled account, contact the sync service administrator. An invalid-response message does not mean that local host data was lost; retain the message and report it. Do not assume every sign-in failure means admission is closed.
+
 Check that Firebase Authentication has the Google provider enabled, the OAuth client belongs to the same Project ID, and the Firebase API Key allows calls to the Identity Toolkit and Secure Token APIs.
 
 ### Firestore returns permission denied
@@ -209,3 +213,9 @@ Check the Firebase CLI account, verify that Rules were deployed to the intended 
 ### Can I commit the API Key or Desktop Client Secret?
 
 A desktop app cannot securely conceal these client-side settings, so they are not the Firestore authorization boundary. This project nevertheless prohibits committing real configuration files. The shared repository contains only examples without real values; production access must rely on Firebase Authentication, Security Rules, and end-to-end encryption.
+
+## Self-hosted access policy and messages
+
+Self-hosters choose their own backend policy. Firebase Authentication → Settings → User actions → Enable create can restrict new accounts from joining the service; it does not mean users need a separate MyTerm account. An account-access message should prompt a check of the service policy and Google account. Continue managing existing users’ usage and preserving Security Rules; verify existing sign-in/sync and rejection of new accounts after a policy change.
+
+Optional `Config/Local/CloudSyncServiceNotice.txt` holds the distributor’s own non-secret service notice. Cloud-configured builds outside Update Lab embed it in the bundle and show it near sign-in. It is absent by default, does not contain the developer-hosted policy, and does not replace backend controls.

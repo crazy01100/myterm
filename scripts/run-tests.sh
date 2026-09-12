@@ -49,6 +49,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/CloudConfiguration.swift \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
     Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift \
+    Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift \
     Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
     Sources/MySSHClient/Services/KeychainStore.swift \
     Sources/MySSHClient/Services/CloudSessionKeychainStore.swift \
@@ -78,6 +79,21 @@ swiftc \
     SelfTests/OAuthLoopbackTests.swift \
     -o "$test_dir/OAuthLoopbackTests"
 "$test_dir/OAuthLoopbackTests"
+
+swiftc -swift-version 5 -parse-as-library \
+    Sources/MySSHClient/Services/CloudConfiguration.swift \
+    Sources/MySSHClient/Services/OAuthSecurity.swift \
+    Sources/MySSHClient/Services/GoogleFirebaseAuthClient.swift \
+    Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift \
+    SelfTests/GoogleFirebaseAuthResponseTests.swift \
+    -o "$test_dir/GoogleFirebaseAuthResponseTests"
+"$test_dir/GoogleFirebaseAuthResponseTests"
+
+swiftc -swift-version 5 -parse-as-library \
+    Sources/MySSHClient/Services/GoogleSignInRetryCredential.swift \
+    SelfTests/GoogleSignInRetryTests.swift \
+    -o "$test_dir/GoogleSignInRetryTests"
+"$test_dir/GoogleSignInRetryTests"
 
 MYTERM_SECRET_VAULT_TEST_RUN_ID="$$" "$project_dir/scripts/run-crypto-tests.sh"
 zsh "$project_dir/scripts/run-sync-reliability-tests.sh"

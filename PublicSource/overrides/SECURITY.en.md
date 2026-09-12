@@ -8,6 +8,8 @@ Personal regular builds use the existing production data identity and may read M
 
 ## Local secrets
 
+After Google verification succeeds and the service explicitly rejects new-account admission, the validated Google ID token is retained only in process memory for at most 30 minutes, bounded by Google expiry with a 30-second margin. A monotonic clock prevents wall-clock rollback from extending the deadline. Retries do not renew it, and it is never written to disk, Keychain, or diagnostics. Expiry, successful sign-in, sign-out, cancellation, account switching, and process exit release it; persistence of established Firebase sessions is unchanged.
+
 - Google sign-in state, the sync master key, and all host passwords share one local AES-256-GCM encrypted vault.
 - macOS Keychain holds only one random root key, using `WhenUnlockedThisDeviceOnly` accessibility. It does not migrate to another device through a backup.
 - Vault directories and files are accessible only to the current user, and writes use atomic replacement. The host inventory contains no passwords.

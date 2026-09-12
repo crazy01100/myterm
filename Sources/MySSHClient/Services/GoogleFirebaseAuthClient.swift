@@ -15,13 +15,18 @@ struct FirebaseSession: Sendable {
     let expiresAt: Date
 }
 
-enum GoogleFirebaseAuthError: LocalizedError {
+enum GoogleFirebaseAuthError: LocalizedError, Equatable {
     case invalidAuthorizationURL
     case invalidRedirectURI
     case invalidHTTPResponse
     case googleTokenExchangeFailed(Int, String)
     case missingGoogleIDToken
     case firebaseSignInFailed(Int)
+    case cloudSyncAccessUnavailable
+    case accountConfirmationRequired
+    case additionalVerificationRequired
+    case accountDisabled
+    case firebaseSignInRejected
     case firebaseRefreshFailed(Int)
     case invalidResponse
 
@@ -34,6 +39,16 @@ enum GoogleFirebaseAuthError: LocalizedError {
             "Google 登入交換失敗（HTTP \(status)，\(reason)）。"
         case .missingGoogleIDToken: "Google 沒有回傳身分 Token。"
         case .firebaseSignInFailed(let status): "Google 登入驗證失敗（HTTP \(status)）。"
+        case .cloudSyncAccessUnavailable:
+            "此雲端同步服務暫未開放此 Google 帳號使用。既有使用者請確認使用原本的 Google 帳號；如需自行架設同步服務，請參考專案指南。本機功能不受影響。"
+        case .accountConfirmationRequired:
+            "此 Google 帳號需要先確認既有的登入身分，暫時無法完成同步服務登入。請聯絡此同步服務的管理者協助確認。"
+        case .additionalVerificationRequired:
+            "同步服務要求額外的身分驗證，目前 MyTerm 尚無法完成此驗證。請聯絡此同步服務的管理者。"
+        case .accountDisabled:
+            "此帳號已被同步服務停用。請聯絡此同步服務的管理者。"
+        case .firebaseSignInRejected:
+            "同步服務未接受這次登入。請稍後重新嘗試；若持續發生，請聯絡此同步服務的管理者。"
         case .firebaseRefreshFailed(let status): "Google 登入狀態更新失敗（HTTP \(status)）。"
         case .invalidResponse: "登入服務回傳的資料格式不正確。"
         }
@@ -42,12 +57,19 @@ enum GoogleFirebaseAuthError: LocalizedError {
 
 struct GoogleFirebaseAuthClient: Sendable {
     let configuration: CloudConfiguration
+    private let urlSession: URLSession
+
+    init(configuration: CloudConfiguration, urlSession: URLSession = .shared) {
+        self.configuration = configuration
+        self.urlSession = urlSession
+    }
 
     func authorizationURL(
         redirectURI: URL,
         pkce: OAuthPKCE,
         state: String,
-        nonce: String
+        nonce: String,
+        selectAccount: Bool = false
     ) throws -> URL {
         guard redirectURI.scheme == "http", redirectURI.host == "127.0.0.1" else {
             throw GoogleFirebaseAuthError.invalidRedirectURI
@@ -63,6 +85,7 @@ struct GoogleFirebaseAuthClient: Sendable {
             URLQueryItem(name: "state", value: state),
             URLQueryItem(name: "nonce", value: nonce)
         ]
+        if selectAccount { components?.queryItems?.append(URLQueryItem(name: "prompt", value: "select_account")) }
         guard let url = components?.url else { throw GoogleFirebaseAuthError.invalidAuthorizationURL }
         return url
     }
@@ -73,17 +96,33 @@ struct GoogleFirebaseAuthClient: Sendable {
         pkceVerifier: String,
         nonce: String
     ) async throws -> FirebaseSession {
+        let credential = try await prepareSignIn(authorizationCode: authorizationCode, redirectURI: redirectURI,
+                                                  pkceVerifier: pkceVerifier, nonce: nonce)
+        return try await completeSignIn(credential)
+    }
+
+    func prepareSignIn(authorizationCode: String, redirectURI: URL, pkceVerifier: String,
+                       nonce: String) async throws -> GoogleSignInRetryCredential {
         let googleIDToken = try await exchangeGoogleCode(
             authorizationCode,
             redirectURI: redirectURI,
             pkceVerifier: pkceVerifier
         )
-        try GoogleIDTokenClaimsValidator.validate(
+        let expiration = try GoogleIDTokenClaimsValidator.validate(
             idToken: googleIDToken,
             expectedClientID: configuration.googleDesktopClientID,
             expectedNonce: nonce
         )
-        return try await exchangeFirebaseSession(googleIDToken: googleIDToken, requestURI: redirectURI)
+        try Task.checkCancellation()
+        return GoogleSignInRetryCredential(idToken: googleIDToken, clientID: configuration.googleDesktopClientID,
+            projectID: configuration.firebaseProjectID, requestURI: redirectURI, expiresAt: expiration)
+    }
+
+    func completeSignIn(_ credential: GoogleSignInRetryCredential) async throws -> FirebaseSession {
+        try Task.checkCancellation()
+        let token = try credential.tokenForExchange(clientID: configuration.googleDesktopClientID,
+                                                     projectID: configuration.firebaseProjectID)
+        return try await exchangeFirebaseSession(googleIDToken: token, requestURI: credential.requestURI)
     }
 
     func refresh(refreshToken: String) async throws -> FirebaseSession {
@@ -98,7 +137,7 @@ struct GoogleFirebaseAuthClient: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         let status = try statusCode(response)
         guard (200..<300).contains(status) else {
             throw GoogleFirebaseAuthError.firebaseRefreshFailed(status)
@@ -121,7 +160,7 @@ struct GoogleFirebaseAuthClient: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["idToken": idToken])
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         let status = try statusCode(response)
         guard (200..<300).contains(status) else {
             throw GoogleFirebaseAuthError.firebaseRefreshFailed(status)
@@ -154,7 +193,7 @@ struct GoogleFirebaseAuthClient: Sendable {
             URLQueryItem(name: "grant_type", value: "authorization_code"),
             URLQueryItem(name: "redirect_uri", value: redirectURI.absoluteString)
         ])
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         let status = try statusCode(response)
         guard (200..<300).contains(status) else {
             throw GoogleFirebaseAuthError.googleTokenExchangeFailed(
@@ -162,7 +201,9 @@ struct GoogleFirebaseAuthClient: Sendable {
                 Self.googleErrorDiagnostic(from: data)
             )
         }
-        let payload = try JSONDecoder().decode(GoogleTokenResponse.self, from: data)
+        guard let payload = try? JSONDecoder().decode(GoogleTokenResponse.self, from: data) else {
+            throw GoogleFirebaseAuthError.invalidResponse
+        }
         guard let idToken = payload.idToken, !idToken.isEmpty else {
             throw GoogleFirebaseAuthError.missingGoogleIDToken
         }
@@ -187,12 +228,34 @@ struct GoogleFirebaseAuthClient: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         let status = try statusCode(response)
+        return try Self.firebaseSession(from: data, status: status)
+    }
+
+    /// HTTP success is not proof that the identity exchange completed. Inspect
+    /// Firebase's incomplete/error envelopes before decoding or persisting tokens.
+    static func firebaseSession(from data: Data, status: Int) throws -> FirebaseSession {
         guard (200..<300).contains(status) else {
-            throw GoogleFirebaseAuthError.firebaseSignInFailed(status)
+            throw Self.firebaseSignInError(from: data, status: status)
         }
-        let payload = try JSONDecoder().decode(FirebaseSignInResponse.self, from: data)
+        guard data.count <= 262_144,
+              let envelope = try? JSONDecoder().decode(FirebaseSignInEnvelope.self, from: data) else {
+            throw GoogleFirebaseAuthError.invalidResponse
+        }
+        if envelope.needConfirmation == true { throw GoogleFirebaseAuthError.accountConfirmationRequired }
+        if envelope.mfaPendingCredential != nil { throw GoogleFirebaseAuthError.additionalVerificationRequired }
+        if envelope.needEmail == true { throw GoogleFirebaseAuthError.accountConfirmationRequired }
+        if let message = envelope.errorMessage ?? envelope.error?.message {
+            throw knownFirebaseSignInError(message) ?? GoogleFirebaseAuthError.firebaseSignInRejected
+        }
+        guard let payload = try? JSONDecoder().decode(FirebaseSignInResponse.self, from: data),
+              !payload.localID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !payload.idToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !payload.refreshToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let lifetime = TimeInterval(payload.expiresIn), lifetime.isFinite, lifetime > 0, lifetime <= 86_400 else {
+            throw GoogleFirebaseAuthError.invalidResponse
+        }
         return FirebaseSession(
             account: FirebaseAccount(
                 uid: payload.localID,
@@ -201,7 +264,7 @@ struct GoogleFirebaseAuthClient: Sendable {
             ),
             idToken: payload.idToken,
             refreshToken: payload.refreshToken,
-            expiresAt: Date().addingTimeInterval(TimeInterval(payload.expiresIn) ?? 3600)
+            expiresAt: Date().addingTimeInterval(lifetime)
         )
     }
 
@@ -211,6 +274,28 @@ struct GoogleFirebaseAuthClient: Sendable {
         return Data((components.percentEncodedQuery ?? "").utf8)
     }
 
+    /// Interpret known sign-in errors without displaying server-provided text.
+    /// Never display the backend body, which can contain account/token details.
+    static func firebaseSignInError(from data: Data, status: Int) -> GoogleFirebaseAuthError {
+        if (status == 400 || status == 403), data.count <= 16_384,
+           let payload = try? JSONDecoder().decode(FirebaseErrorResponse.self, from: data),
+           let error = knownFirebaseSignInError(payload.error.message) {
+            return error
+        }
+        return .firebaseSignInFailed(status)
+    }
+
+    private static func knownFirebaseSignInError(_ message: String) -> GoogleFirebaseAuthError? {
+        let code = message.split(separator: ":", maxSplits: 1).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        switch code {
+        case "ADMIN_ONLY_OPERATION": return .cloudSyncAccessUnavailable
+        case "EMAIL_EXISTS", "FEDERATED_USER_ID_ALREADY_LINKED": return .accountConfirmationRequired
+        case "USER_DISABLED": return .accountDisabled
+        default: return nil
+        }
+    }
+
     private func statusCode(_ response: URLResponse) throws -> Int {
         guard let response = response as? HTTPURLResponse else {
             throw GoogleFirebaseAuthError.invalidHTTPResponse
@@ -218,39 +303,35 @@ struct GoogleFirebaseAuthClient: Sendable {
         return response.statusCode
     }
 
-    /// Google token errors contain a short OAuth error code and description.
-    /// Only these fields are surfaced; the response body and authorization
-    /// code are never logged or displayed.
+    /// Only allowlisted OAuth codes are surfaced. Provider descriptions can
+    /// contain request/account details and must not become UI diagnostics.
     static func googleErrorDiagnostic(from data: Data) -> String {
-        guard let payload = try? JSONDecoder().decode(GoogleOAuthErrorResponse.self, from: data) else {
+        guard data.count <= 16_384,
+              let payload = try? JSONDecoder().decode(GoogleOAuthErrorResponse.self, from: data) else {
             return "unknown_error"
         }
-        let code = sanitizeDiagnostic(payload.error, fallback: "unknown_error", limit: 64)
-        guard let description = payload.errorDescription else { return code }
-        let safeDescription = sanitizeDiagnostic(description, fallback: "", limit: 180)
-        return safeDescription.isEmpty ? code : "\(code): \(safeDescription)"
+        let allowed = ["invalid_grant", "invalid_client", "unauthorized_client", "invalid_request",
+                       "unsupported_grant_type", "access_denied", "invalid_scope",
+                       "temporarily_unavailable", "server_error"]
+        return allowed.contains(payload.error) ? payload.error : "unknown_error"
     }
+}
 
-    private static func sanitizeDiagnostic(_ value: String, fallback: String, limit: Int) -> String {
-        let visible = value.unicodeScalars.map { scalar in
-            CharacterSet.controlCharacters.contains(scalar) ? " " : String(scalar)
-        }.joined()
-        let collapsed = visible
-            .split(whereSeparator: { $0.isWhitespace })
-            .joined(separator: " ")
-        guard !collapsed.isEmpty else { return fallback }
-        return String(collapsed.prefix(limit))
-    }
+private struct FirebaseErrorResponse: Decodable {
+    struct Detail: Decodable { let message: String }
+    let error: Detail
+}
+
+private struct FirebaseSignInEnvelope: Decodable {
+    let errorMessage: String?
+    let error: FirebaseErrorResponse.Detail?
+    let needConfirmation: Bool?
+    let needEmail: Bool?
+    let mfaPendingCredential: String?
 }
 
 private struct GoogleOAuthErrorResponse: Decodable {
     let error: String
-    let errorDescription: String?
-
-    enum CodingKeys: String, CodingKey {
-        case error
-        case errorDescription = "error_description"
-    }
 }
 
 private struct GoogleTokenResponse: Decodable {

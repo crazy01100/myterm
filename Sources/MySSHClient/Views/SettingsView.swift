@@ -313,7 +313,14 @@ struct SettingsView: View {
             }
 
             Section("Google 帳號") {
+                if let notice = cloudAccountStore.cloudSyncServiceNotice {
+                    Text(notice)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
                 cloudAccountView
+                Link("自行架設雲端同步指南", destination: URL(string: "https://github.com/crazy01100/myterm/blob/main/FIREBASE_SETUP.md")!)
+                    .font(.caption)
             }
 
             Section("跨裝置同步") {
@@ -1012,9 +1019,11 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
             HStack {
-                Button("重新登入") {
-                    cloudAccountStore.retryAfterFailure()
-                    cloudAccountStore.signIn()
+                Button(cloudAccountStore.canRetryGoogleSignIn ? "重新嘗試" : "重新登入") {
+                    cloudAccountStore.retrySignIn()
+                }
+                if cloudAccountStore.canRetryGoogleSignIn {
+                    Button("使用其他 Google 帳號") { cloudAccountStore.signInWithDifferentAccount() }
                 }
                 Button("清除本機登入狀態") { cloudAccountStore.signOut() }
             }

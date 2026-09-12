@@ -46,6 +46,14 @@ Firebase/OAuth/Cloudflare credentials, Sparkle private keys, and code-signing pr
 
 See [Firebase setup](FIREBASE_SETUP.en.md) for the Console, Desktop OAuth, Firestore, configuration generation, Rules deployment, and acceptance steps. Real settings belong in Git-ignored `Config/Local/`. The shared repository contains only examples without real values, Rules, Indexes, and safe deployment tools.
 
+## Upstream repository and independent source exports
+
+`myterm` retains maintenance history, official Releases, and deployment workflows; `myterm-source` is a separately prepared source export. Public-repository preparation does not apply the source-only exclusion list to existing signed releases: the Sparkle public key, public signing baselines, and update-site URL are not private keys and remain necessary to verify the existing distributor. Real cloud configuration, signing private keys, and recovery material remain local.
+
+A checkout without `Config/Local/` does not inherit maintainer cloud settings and has no default update feed. Modified or independently distributed apps should use their own services, update source, and signing identity instead of connecting a custom build to the maintainer’s update chain. Desktop client settings in existing packages cannot serve as server-side secrets; see [Firebase setup](FIREBASE_SETUP.en.md).
+
+History cleanup changes commit/tag identifiers and can affect PR diffs and signed feed source bindings. Do not rewrite history or replace signed assets merely to hide paths, public keys, or ordinary identifiers. Removing truly sensitive material requires a separate review of historical references and the update chain.
+
 ## Daily development workflow
 
 Dev versions follow `target-release-dev.sequence`, such as `1.0.22-dev.1` and `1.0.22-dev.2`. Do not use generic `0.0.0-dev.*` versions for feature-test deliveries. `CFBundleVersion` remains a distinct, increasing timestamp for every build; a version name does not replace Build or channel isolation. Versions in this guide are naming examples and must be adjusted to the actual target when building.
@@ -91,6 +99,8 @@ Commit and push source after feature acceptance. On the primary development Mac,
 ### Firebase development tool compatibility
 
 Development tools require Node.js 24 LTS and Python 3.12 or later. `./scripts/project-node.sh --npm ci` runs the version- and hash-verified `scripts/patch-firebase-stream-json.py`; installations using `--ignore-scripts` must run it explicitly. `./scripts/project-node.sh --npm run test:development-tools` checks the existing overrides, CLI consumers, and depth limits; `./scripts/project-node.sh --npm run test:firestore-rules` uses the local demo emulator. The wrapper verifies the patch again before every CLI launch. Source drift requires review and must not be bypassed. See [security maintenance](SECURITY_MAINTENANCE.en.md) for scope and removal conditions.
+
+The upstream repository also provides `scripts/invite-sync-user.sh --help` for maintainer administration. It requires local Google Cloud CLI and administrator authorization; it is not an app build dependency or an expansion of the existing Firebase CLI wrapper. Run its isolated safety suite with `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`; normal Python test discovery under `Tests/Security` also runs it. Administrator settings, credentials, and private operating notes stay out of Git. This tool is not part of the independent source export.
 
 ### Document languages and synchronized maintenance
 
@@ -291,3 +301,11 @@ python3.12 -m venv .build/python-runtime
 Alternatively, point `MYTERM_PYTHON` to your installed supported interpreter. The minimum-version check does not replace lifecycle review: check official EoL/EoS status during tool updates. Verification packages use the separate `.build/security-tools` environment. Running setup recreates that reproducible directory with the selected Python, installing pinned wheels with verified hashes. App users do not need Python.
 
 Use `./scripts/project-node.sh` for Node/npm. It selects Node 24 LTS from `MYTERM_NODE`, `.build/node-runtime/bin/node`, or an installed Node 24, and gives subprocesses the same PATH. `./scripts/project-node.sh --npm ci` avoids an EoL odd-numbered system default. Extract the complete official Node 24 distribution into `.build/node-runtime` or select an installed Node 24 executable without replacing global Node. Package engine constraints and `.npmrc` also reject installations on other major versions.
+
+## Build-time sync service notices
+
+Developer-hosted sync is closed to new users; existing users retain sync and source builds still support your own cloud service. `Config/Local/CloudSyncServiceNotice.txt` can describe a distributor’s service; it is embedded as `MyTermCloudSyncServiceNotice` only for cloud-configured builds outside Update Lab. Keep the file out of Git; it is not backend authorization. Rebuild to change the notice; older apps do not receive new text automatically. See [Firebase setup](FIREBASE_SETUP.en.md) for setup and verification.
+
+Sign-in response tests live in `SelfTests/GoogleFirebaseAuthResponseTests.swift` and run through `scripts/run-tests.sh` as part of the isolated regression suite. An ephemeral URLSession with URLProtocol intercepts every request to test sign-in failures inside successful HTTP responses, missing fields, privacy boundaries, and normal sign-in, without production cloud access or real credentials.
+
+Thirty-minute retry deadline/clock cases live in `SelfTests/GoogleSignInRetryTests.swift`. `CloudAccountRecoveryTests.swift` exercises the real store for OAuth reuse, single-flight, cancellation, switching, expiry, and persistence boundaries. `GoogleFirebaseAuthResponseTests.swift` uses synthetic transport to retry Firebase with the same Google credential, without waiting half an hour or touching production accounts. The full entry point remains `scripts/run-isolated-tests.py`.

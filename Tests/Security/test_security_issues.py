@@ -65,6 +65,35 @@ class IssueTests(unittest.TestCase):
             self.assertEqual(api.calls,[])
         api=FakeGitHub();api.private=False
         with self.assertRaises(ValueError):s.synchronize(report(),api,True,ENV)
+    def test_public_opt_in_lifecycle(self):
+        api=FakeGitHub();api.private=False;r=report()
+        self.assertEqual(s.synchronize(report(False),api,True,ENV,allow_public=True),[])
+        self.assertEqual(s.synchronize(r,api,True,ENV,allow_public=True)[0]['action'],'create')
+        self.assertEqual(s.synchronize(r,api,True,ENV,allow_public=True),[])
+        s.synchronize(report(False),api,True,ENV,allow_public=True)
+        self.assertEqual(api.issues[0]['state'],'closed')
+        s.synchronize(r,api,True,ENV,allow_public=True)
+        self.assertEqual(api.issues[0]['state'],'open');self.assertEqual(len(api.issues),1)
+    def test_public_opt_in_does_not_allow_untrusted_execution(self):
+        for env in [{},{**ENV,'GITHUB_EVENT_NAME':'pull_request'},{**ENV,'GITHUB_REF':'refs/heads/other'}]:
+            api=FakeGitHub();api.private=False
+            with self.assertRaises(ValueError):s.synchronize(report(),api,True,env,allow_public=True)
+            self.assertEqual(api.calls,[])
+    def test_public_opt_in_preserves_failure_and_report_boundaries(self):
+        api=FakeGitHub();api.private=False;r=report()
+        r['privateNotes']='PRIVATE_TEST_SENTINEL'
+        r['findings'][0]['internalEvidence']='PRIVATE_TEST_SENTINEL'
+        s.synchronize(r,api,True,ENV,allow_public=True)
+        self.assertNotIn('PRIVATE_TEST_SENTINEL',api.issues[0]['body'])
+        invalid=report(False);invalid.update(scanStatus='failed',errors=['offline'])
+        with self.assertRaises(ValueError):s.synchronize(invalid,api,True,ENV,allow_public=True)
+        self.assertEqual(api.issues[0]['state'],'open')
+        api.fail_patch=True
+        with self.assertRaises(RuntimeError):s.synchronize(report(False),api,True,ENV,allow_public=True)
+    def test_unknown_visibility_is_rejected_even_with_opt_in(self):
+        api=FakeGitHub();api.private=None
+        with self.assertRaises(ValueError):s.synchronize(report(),api,True,ENV,allow_public=True)
+        self.assertEqual(api.calls,[])
     def test_human_issue_never_modified(self):
         api=FakeGitHub();s.synchronize(report(),api,True,ENV);api.issues[0]['user']['login']='human';s.synchronize(report(False),api,True,ENV)
         self.assertEqual(api.issues[0]['state'],'open')

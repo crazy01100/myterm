@@ -19,8 +19,13 @@ struct OAuthLoopbackTests {
             ]
             var request = URLRequest(url: components.url!)
             request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-            let (_, response) = try await URLSession.shared.data(for: request)
+            let (page, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                throw LoopbackOAuthError.invalidHTTPRequest
+            }
+            guard let html = String(data: page, encoding: .utf8),
+                  html.contains("已收到 Google 回應"), html.contains("請回到 MyTerm 查看登入結果"),
+                  !html.contains("loopback-code"), !html.contains(state) else {
                 throw LoopbackOAuthError.invalidHTTPRequest
             }
             let callback = try await callbackTask.value

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synchronize completed scans to private, bot-owned risk Issues. No scanning bypass."""
+"""Synchronize completed scans to bot-owned risk Issues; public posting is opt-in."""
 import argparse
 import datetime as dt
 import hashlib
@@ -98,11 +98,13 @@ class GitHub:
         raise ValueError('GitHub pagination limit reached')
 
 
-def synchronize(report, api, apply=False, environ=None):
+def synchronize(report, api, apply=False, environ=None, allow_public=False):
     validate_report(report)
     desired = risks(report)
     metadata = api.request('')
-    if not metadata.get('private'): raise ValueError('Risk Issue automation requires a private repository')
+    if metadata.get('private') is not True:
+        if metadata.get('private') is not False or not allow_public:
+            raise ValueError('Public risk Issues require explicit --allow-public approval')
     if apply:
         env = os.environ if environ is None else environ
         if env.get('GITHUB_ACTIONS')!='true' or env.get('GITHUB_EVENT_NAME') not in ['schedule','workflow_dispatch'] or env.get('GITHUB_REF')!='refs/heads/'+metadata['default_branch']:
@@ -140,10 +142,12 @@ def synchronize(report, api, apply=False, environ=None):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--report',type=Path,required=True);p.add_argument('--apply',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--report',type=Path,required=True);p.add_argument('--apply',action='store_true')
+    p.add_argument('--allow-public',action='store_true',help='Allow reviewed public-advisory metadata in public Issues')
+    args=p.parse_args()
     repo=os.environ.get('GITHUB_REPOSITORY','')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repo): raise ValueError('GITHUB_REPOSITORY is required')
-    report=json.loads(args.report.read_text());actions=synchronize(report,GitHub(repo),args.apply)
+    report=json.loads(args.report.read_text());actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions}
     args.report.with_name('security-issues-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     summary=os.environ.get('GITHUB_STEP_SUMMARY')
