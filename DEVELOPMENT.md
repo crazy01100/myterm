@@ -285,13 +285,12 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 
 不會。`release.sh` 最多只建立 Draft。公開 Release、部署正式更新站及 App 端更新驗收都有獨立的人工確認門檻。
 
-## 私人維護與公開原始碼
+## 維護者發行庫與獨立來源
 
-- 此私人維護庫保留個人版本、既有 Git 歷史、簽署成品與自動部署；`crazy01100/myterm-source` 是獨立的 source-only 專案。公開來源不提供個人 App 成品、雲端設定或更新服務。
-- 維護者以 `scripts/export-public-source.py --output build/public-source/<新的候選名稱>` 匯出；`PublicSource/export-manifest.json` 定義明確檔案清單，`PublicSource/overrides/` 維護公開版文件與工具差異。來源變動導致雜湊不符時，先審閱並更新公開差異與雙語文件，再更新清單；不將整個工作目錄或私人 Git 歷史推到公開庫。
-- 公開前執行 `./scripts/project-python.sh PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。初次建立全新 Git 歷史，之後以公開庫自己的正常提交同步；私人版本發布及更新站部署仍沿用各自流程與授權。
-
-- 公開文件須分清「一般自用 MyTerm.app」「隔離開發 MyTerm Dev.app」與「獨立發行／更新站」；自用入口採現有 build-app.sh 的 candidate 輸出與 verify-app.sh，並解釋安裝、重建更新、共享一般資料身分及 ad-hoc 授權限制。這不取代私人 release.sh／固定簽章／更新驗收流程。
+- `crazy01100/myterm` 是公開的維護者發行庫，保留原有 Git 歷史、簽署成品及部署流程；`crazy01100/myterm-source` 是另行整理的 source-only 專案，不提供維護者 App 成品、雲端設定或更新服務。原庫公開不會自動同步獨立來源庫。
+- 維護者以 `scripts/export-public-source.py --output build/public-source/<新的候選名稱>` 匯出獨立來源候選；`PublicSource/export-manifest.json` 定義明確檔案清單，`PublicSource/overrides/` 維護自架文件與工具差異。來源雜湊不符時，先重新審閱差異與雙語文件，再更新清單；不將整個工作目錄、原庫 `.git`、本機設定或發布成品複製到獨立來源庫。
+- 獨立來源同步前執行 `./scripts/project-python.sh PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。首次輸出建立全新 Git 歷史，之後以獨立來源庫自己的正常提交同步；維護者 App 發布與更新站部署沿用各自流程及授權。
+- 獨立來源文件分清「一般自用 MyTerm.app」「隔離開發 MyTerm Dev.app」與「獨立發行／更新站」；自用入口採現有 build-app.sh 的 candidate 輸出與 verify-app.sh，說明安裝、重建更新、共享一般資料身分及 ad-hoc 授權限制。這不取代維護者 release.sh／固定簽章／更新驗收流程。
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
 
