@@ -140,6 +140,7 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
                       └─ 從外部重新驗證網站、appcast、ZIP 與安全標頭
 ```
 
+- 更新站部署 job 只允許原庫，手動觸發限 main，並綁定 `production`。實際 reviewer／可部署 refs／environment Secrets 由 GitHub 管理設定控制；沒有遠端設定與 repository Secrets 移轉時，不能宣稱已建立部署核准及憑證隔離。配置與改回私人前的方案限制見 [開發指南](DEVELOPMENT.md#正式部署保護)。
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。

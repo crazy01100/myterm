@@ -16,3 +16,5 @@
 更新說明由共用 `scripts/render-release-notes.py` 與專用 `assets/release-notes.css` 呈現；不包含首頁導覽或重複版本標題。只撰寫使用者需要的修正、相容性與操作資訊，測試／維護紀錄另行保存。內容規範見[開發指南](../DEVELOPMENT.md)。已發布的簽署內容不回寫修改。
 
 首頁與隱私說明需區分 App 的同步能力與開發者代管服務的開放範圍：免費方案的代管服務暫不開放新使用者，既有使用者及自架服務仍可使用同步。文案改動只有在依標準流程部署後才會出現在線上，不修改既有已簽署更新說明。
+
+部署 workflow 僅供原庫，手動執行時選 `main`；job 綁定 `production`，環境核准規則及 Secrets 必須由管理員另行設定。舊 tag 如未綁此環境，使用目前 main 指定原 release_tag 重新部署，不改原簽署成品。環境設置、repository Secrets 移轉與方案限制見 [正式部署保護](../DEVELOPMENT.md#正式部署保護)。

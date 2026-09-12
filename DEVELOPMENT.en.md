@@ -228,6 +228,16 @@ After all manual acceptance is complete and the corresponding plan is ready to c
 
 Cleanup accepts only a production version that is GitHub's latest non-Draft, non-prerelease release. It downloads the five assets into a system temporary directory and fully verifies them. It refuses deletion if processes cannot be listed or an app is still running from the checkout's `build/`. It removes only the entire `build/` directory, not `/Applications/MyTerm.app`, Application Support, Keychain, `Config/Local/`, signing/recovery material, or SwiftPM dependency caches.
 
+### Production deployment protection
+
+The update-site workflow runs only in `crazy01100/myterm`. Manual redeployment must select `main` and an existing `release_tag`; release publication can still trigger it from a release tag. The deployment job declares `environment: production`, selects Node 24.21.0, and downloads and verifies existing signed assets before deployment.
+
+An administrator must separately configure required reviewers in GitHub's `production` environment, allow only the `main` branch and `v*` tags, and disallow bypassing protection rules. A sole maintainer may approve deployments they triggered; this is an explicit deployment confirmation, not a second-person review. Declaring an environment does not create approval rules or restrict workflows that do not reference it.
+
+Store `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` as production environment Secrets. An administrator enters the existing values securely, without putting them in source, command records, or Issues. After verifying deployment through that environment, remove repository-level Secrets with the same names so jobs outside production cannot keep using the original credentials. Workflows on older tags may lack the environment binding; redeploy through the current main entry point without changing old tags or signed assets.
+
+These settings must be enabled and verified remotely; source files do not prove enforcement. Before making the repository public or later returning it to private, check whether the current plan supports the required rules and environment Secrets. GitHub Free ignores existing environment protections and Secrets after conversion to private. See [GitHub environment documentation](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments).
+
 ## Signing and secrets
 
 Safe to commit:
