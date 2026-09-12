@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct KnownHostsView: View {
+    let onReturnToHosts: () -> Void
+
     @EnvironmentObject private var knownHostsStore: KnownHostsStore
     @State private var searchText = ""
 
@@ -25,6 +27,9 @@ struct KnownHostsView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
+            Button("返回主機", systemImage: "arrow.left", action: onReturnToHosts)
+                .buttonStyle(.bordered)
+                .fixedSize()
             VStack(alignment: .leading, spacing: 2) {
                 Text("Known Hosts").font(.title2.weight(.semibold))
                 Text(summaryText).font(.caption).foregroundStyle(.secondary)

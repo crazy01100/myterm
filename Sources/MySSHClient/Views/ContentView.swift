@@ -14,8 +14,6 @@ struct ContentView: View {
     @State private var deleteGroupCandidate: HostGroup?
     @State private var libraryWorkspace: LibraryWorkspace = .hosts
     @State private var hostLibrarySelection: HostLibrarySelection = .all
-    @State private var hostLibraryColumnVisibility: NavigationSplitViewVisibility = .detailOnly
-    @State private var isSidebarToggleHovered = false
     @State private var draggedWorkspaceID: TerminalWorkspace.ID?
     @State private var tabDragOriginalSelectionID: TerminalWorkspace.ID?
     @State private var tabDragInsertionIndex: Int?
@@ -29,11 +27,6 @@ struct ContentView: View {
     var body: some View {
         workspaceContent
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                sidebarToggleButton
-            }
-            .sharedBackgroundVisibility(.hidden)
-
             ToolbarItem(placement: .automatic) {
                 workspaceTabBar
             }
@@ -117,37 +110,6 @@ struct ContentView: View {
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    private var sidebarToggleButton: some View {
-        Button {
-            hostLibraryColumnVisibility = isHostLibrarySidebarVisible ? .detailOnly : .all
-        } label: {
-            Image(systemName: "sidebar.left")
-                .font(.system(size: 15, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(AppVisualTheme.chromeForeground)
-                .frame(width: 34, height: 30)
-                .background(
-                    isSidebarToggleHovered
-                        ? AppVisualTheme.chromeSelectedSurface
-                        : AppVisualTheme.chromeSubtleSurface
-                )
-                .clipShape(.rect(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(AppVisualTheme.chromeSecondary.opacity(0.42), lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-        .contentShape(.rect)
-        .onHover { isSidebarToggleHovered = $0 }
-        .help(isHostLibrarySidebarVisible ? "隱藏側邊欄" : "顯示側邊欄")
-        .accessibilityLabel(isHostLibrarySidebarVisible ? "隱藏側邊欄" : "顯示側邊欄")
-    }
-
-    private var isHostLibrarySidebarVisible: Bool {
-        hostLibraryColumnVisibility != .detailOnly
     }
 
     private var workspaceTabBar: some View {
@@ -514,7 +476,6 @@ struct ContentView: View {
         ZStack {
             HostLibraryView(
                 selection: $hostLibrarySelection,
-                columnVisibility: $hostLibraryColumnVisibility,
                 isActive: sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts,
                 onAddHost: addHost,
                 onAddGroup: { parentID in
