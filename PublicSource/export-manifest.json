@@ -37,12 +37,12 @@
     {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "b7b6d5329400fd06d8740b6a2297a241476138f0d1f099c0b78981c084203ddf"
+      "baseSHA256": "58e0cbb1cc1b5a84565ba716c8631251d43d5408e5ecf84591eb37f8b96690f4"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "3211ac736dc861bb602adf2eeeed38a858375d63251997b15a323b78b624aea8"
+      "baseSHA256": "e71cb741fbf35c16c597b7fd329aa2478e9d14ea702c64dbc983ff7a87605e52"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
