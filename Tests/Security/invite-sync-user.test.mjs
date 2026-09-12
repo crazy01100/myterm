@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, symlinkSync, rmSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -184,8 +184,4 @@ test('help and rejected arguments require no cloud configuration or API calls', 
   assert.equal(help.status, 0); assert.match(help.stdout, /--dry-run/);
   const bad = spawnSync(process.execPath, [script.pathname, '--delete', email], { encoding: 'utf8' });
   assert.equal(bad.status, 1); assert.match(bad.stderr, /USAGE/);
-});
-test('independent source export does not include this administrator entry or local settings', () => {
-  const manifest = JSON.parse(readFileSync(new URL('../../PublicSource/export-manifest.json', import.meta.url)));
-  assert.equal(manifest.files.some(f => /invite-sync-user|SyncAdmin|Config\/Local/.test(f.path)), false);
 });

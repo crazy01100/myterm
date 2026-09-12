@@ -46,9 +46,7 @@ Firebase/OAuth/Cloudflare credentials, Sparkle private keys, and code-signing pr
 
 See [Firebase setup](FIREBASE_SETUP.en.md) for the Console, Desktop OAuth, Firestore, configuration generation, Rules deployment, and acceptance steps. Real settings belong in Git-ignored `Config/Local/`. The shared repository contains only examples without real values, Rules, Indexes, and safe deployment tools.
 
-## Upstream repository and independent source exports
-
-`myterm` retains maintenance history, official Releases, and deployment workflows; `myterm-source` is a separately prepared source export. Public-repository preparation does not apply the source-only exclusion list to existing signed releases: the Sparkle public key, public signing baselines, and update-site URL are not private keys and remain necessary to verify the existing distributor. Real cloud configuration, signing private keys, and recovery material remain local.
+## Source builds and distribution boundaries
 
 A checkout without `Config/Local/` does not inherit maintainer cloud settings and has no default update feed. Modified or independently distributed apps should use their own services, update source, and signing identity instead of connecting a custom build to the maintainer’s update chain. Desktop client settings in existing packages cannot serve as server-side secrets; see [Firebase setup](FIREBASE_SETUP.en.md).
 
@@ -284,13 +282,6 @@ It identifies neither development, candidate, nor production and makes it easy t
 ### Does the release script publish immediately?
 
 No. `release.sh` creates at most a Draft. Public release, production update-site deployment, and in-app update acceptance have separate human confirmation gates.
-
-## Maintainer releases and independent source
-
-- `crazy01100/myterm` is the public maintainer release repository, retaining its original Git history, signed assets, and deployment workflows. `crazy01100/myterm-source` is a separately prepared source-only project without maintainer app archives, cloud configuration, or an update service. Making the original repository public does not automatically synchronize the independent source repository.
-- Maintainers export independent source candidates with `scripts/export-public-source.py --output build/public-source/<new-candidate-name>`. `PublicSource/export-manifest.json` defines the explicit file list; `PublicSource/overrides/` maintains self-hosting documentation and tool differences. When a source hash changes, review the differences and both languages before updating the manifest. Do not copy the entire working directory, original repository's `.git`, local configuration, or release artifacts to the independent source repository.
-- Before independent source synchronization, run `./scripts/project-python.sh PublicSource/test_export.py`, service/credential scans, document checks, and a build-only verification without personal settings. Create fresh Git history for the first export, then use the independent repository's own normal commits for later updates. Maintainer app releases and update-site deployments retain their separate workflows and authorization.
-- Independent source guides distinguish regular personal MyTerm.app, isolated MyTerm Dev.app, and independent distribution/update hosting. The personal path uses existing build-app.sh candidate output and verify-app.sh, covering installation, rebuild updates, shared regular data identity, and ad-hoc authorization limitations. It does not replace the maintainer release.sh, pinned-signing, or update-acceptance workflow.
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
 

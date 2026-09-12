@@ -46,9 +46,7 @@ Firebase、OAuth、Cloudflare、Sparkle 私鑰與 code-signing 私鑰都不是�
 
 自架雲端功能的 Firebase Console、Google Desktop OAuth、Firestore、設定產生、Rules 部署與驗收步驟見 [Firebase 自架同步設定](FIREBASE_SETUP.md)。實際設定固定放在被 Git 排除的 `Config/Local/`；公開 repository 只保存無真實值的範例、Rules、Indexes 與安全部署工具。
 
-## 原庫與獨立來源的界線
-
-`myterm` 保存維護歷史、正式 Release 與部署流程；`myterm-source` 是另行整理的來源輸出。原庫公開準備不會把 source-only 排除清單套用到既有簽署成品：Sparkle 公鑰、簽章公開基線與更新網站網址不是私鑰，保留它們才能核對既有發行者。真正的雲端設定、簽署私鑰與復原材料仍在本機。
+## 自行建置與發行界線
 
 沒有 `Config/Local/` 的 checkout 不會帶入維護者雲端設定，也沒有預設更新 feed。修改或獨立發行 App 時應提供自己的服務、更新來源與簽章，不應讓自訂版本接回維護者的更新鏈。現有安裝包內的桌面 client 設定不能作為服務端秘密，界線見 [Firebase 設定](FIREBASE_SETUP.md)。
 
@@ -284,13 +282,6 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 ### 發布腳本會直接公開版本嗎？
 
 不會。`release.sh` 最多只建立 Draft。公開 Release、部署正式更新站及 App 端更新驗收都有獨立的人工確認門檻。
-
-## 維護者發行庫與獨立來源
-
-- `crazy01100/myterm` 是公開的維護者發行庫，保留原有 Git 歷史、簽署成品及部署流程；`crazy01100/myterm-source` 是另行整理的 source-only 專案，不提供維護者 App 成品、雲端設定或更新服務。原庫公開不會自動同步獨立來源庫。
-- 維護者以 `scripts/export-public-source.py --output build/public-source/<新的候選名稱>` 匯出獨立來源候選；`PublicSource/export-manifest.json` 定義明確檔案清單，`PublicSource/overrides/` 維護自架文件與工具差異。來源雜湊不符時，先重新審閱差異與雙語文件，再更新清單；不將整個工作目錄、原庫 `.git`、本機設定或發布成品複製到獨立來源庫。
-- 獨立來源同步前執行 `./scripts/project-python.sh PublicSource/test_export.py`、站點／憑證掃描、文件核對及無個人設定的 build-only 驗證。首次輸出建立全新 Git 歷史，之後以獨立來源庫自己的正常提交同步；維護者 App 發布與更新站部署沿用各自流程及授權。
-- 獨立來源文件分清「一般自用 MyTerm.app」「隔離開發 MyTerm Dev.app」與「獨立發行／更新站」；自用入口採現有 build-app.sh 的 candidate 輸出與 verify-app.sh，說明安裝、重建更新、共享一般資料身分及 ad-hoc 授權限制。這不取代維護者 release.sh／固定簽章／更新驗收流程。
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
 
