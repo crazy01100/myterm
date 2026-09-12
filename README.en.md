@@ -2,8 +2,6 @@
 
 [繁體中文](README.md) | **English**
 
-This repository contains MyTerm source, maintenance history, and the maintainer’s release workflow. Source builds use your own cloud configuration; sync-service settings and private keys are not included. For a packaged app, choose the [latest stable release](https://github.com/crazy01100/myterm/releases/latest). Historical releases and RCs are retained for traceability and are not recommended for installation; see [SECURITY.en.md](SECURITY.en.md) for security support.
-
 <p>
   <a href="https://openai.com/brand/">
     <picture>

@@ -66,12 +66,12 @@
     {
       "path": "README.en.md",
       "overlay": "PublicSource/overrides/README.en.md",
-      "baseSHA256": "bc3298e9394fac37ad648b23aec1e33f486218485f84b23bbf6236065171f5ae"
+      "baseSHA256": "5bee726a76129570fe2bbbc9fa8354559585f463be43eead53288198b17eb56a"
     },
     {
       "path": "README.md",
       "overlay": "PublicSource/overrides/README.md",
-      "baseSHA256": "5558edd42988be87104ce2361a32aca3e6c2826555931cae82699cd2f8b8676b"
+      "baseSHA256": "5dfa436ddd216883cd3dc46c267f1333f1c3dcc7b4689ffec0e9e1013e50ad29"
     },
     {
       "path": "Resources/AppIcon-original.png"
