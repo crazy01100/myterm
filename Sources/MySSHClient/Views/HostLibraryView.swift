@@ -47,10 +47,8 @@ private struct HostCardFramePreferenceKey: PreferenceKey {
 struct HostLibraryView: View {
     @EnvironmentObject private var hostStore: HostStore
     @Binding var selection: HostLibrarySelection
-    @Binding var columnVisibility: NavigationSplitViewVisibility
     @State private var searchText = ""
     @State private var selectedGroupCardID: HostGroup.ID?
-    @State private var hoveredSidebarSelection: HostLibrarySelection?
     @State private var targetedDropGroupID: HostGroup.ID?
     @State private var pendingHostMove: HostGroupMoveRequest?
     @State private var groupCardFrames: [HostGroup.ID: CGRect] = [:]
@@ -135,30 +133,11 @@ struct HostLibraryView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            List {
-                sidebarRow(
-                    title: "Known Hosts",
-                    systemImage: "checkmark.shield",
-                    destination: .knownHosts
-                )
-
-                sidebarRow(
-                    title: "Logs",
-                    systemImage: "clock.arrow.circlepath",
-                    destination: .logs
-                )
-            }
-            .navigationTitle("")
-            .scrollContentBackground(.hidden)
-            .background(AppVisualTheme.sidebarBackground)
-            .toolbar(removing: .sidebarToggle)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
-        } detail: {
+        Group {
             if selection == .knownHosts {
-                KnownHostsView()
+                KnownHostsView(onReturnToHosts: { selection = .all })
             } else if selection == .logs {
-                ConnectionAuditLogView()
+                ConnectionAuditLogView(onReturnToHosts: { selection = .all })
             } else {
                 VStack(spacing: 0) {
                     libraryHeader
@@ -195,24 +174,60 @@ struct HostLibraryView: View {
     }
 
     private var libraryHeader: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                libraryBreadcrumb
-                Text("\(allFilteredHosts.count) 台主機")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        VStack(spacing: 12) {
+            HStack(spacing: 20) {
+                libraryHeading
+                Spacer(minLength: 12)
+                libraryNavigation
             }
-            Spacer()
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("搜尋主機", text: $searchText)
-                    .textFieldStyle(.plain)
-                    .frame(width: 220)
+            Divider()
+            HStack(spacing: 20) {
+                libraryActions
+                Spacer(minLength: 12)
+                librarySearch
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 8))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(AppVisualTheme.raisedSurface)
+    }
 
+    private var libraryHeading: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            libraryBreadcrumb
+            Text("\(allFilteredHosts.count) 台主機")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var libraryNavigation: some View {
+        HStack(spacing: 8) {
+            Button("Known Hosts", systemImage: "checkmark.shield") {
+                selection = .knownHosts
+            }
+            Button("Logs", systemImage: "clock.arrow.circlepath") {
+                selection = .logs
+            }
+        }
+        .buttonStyle(.bordered)
+        .fixedSize()
+    }
+
+    private var librarySearch: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("搜尋主機", text: $searchText)
+                .textFieldStyle(.plain)
+                .frame(width: 220)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 8))
+    }
+
+    private var libraryActions: some View {
+        HStack(spacing: 10) {
             Menu {
                 Button("新增主機", systemImage: "plus.rectangle.on.folder") {
                     onAddHost(selectedDefaultGroupID)
@@ -239,9 +254,7 @@ struct HostLibraryView: View {
             }
             .buttonStyle(.bordered)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(AppVisualTheme.raisedSurface)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
@@ -399,58 +412,6 @@ struct HostLibraryView: View {
 
     private var gridColumns: [GridItem] {
         [GridItem(.adaptive(minimum: 245, maximum: 380), spacing: 14)]
-    }
-
-    private func sidebarRow(
-        title: String,
-        systemImage: String,
-        destination: HostLibrarySelection
-    ) -> some View {
-        let isSelected = selection == destination
-        let isHovered = hoveredSidebarSelection == destination
-
-        return Button {
-            selection = destination
-        } label: {
-            HStack(spacing: 11) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(isSelected ? AppVisualTheme.accent : AppVisualTheme.primaryText)
-                    .frame(width: 21)
-                Text(title)
-                    .foregroundStyle(AppVisualTheme.primaryText)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 11)
-            .padding(.vertical, 9)
-            .contentShape(.rect)
-            .background(
-                isSelected
-                    ? AppVisualTheme.selectedSurface
-                    : isHovered ? AppVisualTheme.hoverSurface : Color.clear,
-                in: .rect(cornerRadius: 9)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 9)
-                    .stroke(
-                        isSelected ? AppVisualTheme.accent.opacity(0.38) : Color.clear,
-                        lineWidth: 1
-                    )
-            }
-        }
-        .buttonStyle(.plain)
-        .listRowInsets(.init(top: 3, leading: 10, bottom: 3, trailing: 10))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        .onHover { isHovering in
-            if isHovering {
-                hoveredSidebarSelection = destination
-            } else if hoveredSidebarSelection == destination {
-                hoveredSidebarSelection = nil
-            }
-        }
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func cardSectionTitle(_ title: String) -> some View {

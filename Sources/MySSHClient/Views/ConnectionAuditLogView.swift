@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ConnectionAuditLogView: View {
+    let onReturnToHosts: () -> Void
+
     @EnvironmentObject private var store: ConnectionAuditStore
     @EnvironmentObject private var syncCoordinator: AutomaticSyncCoordinator
     @EnvironmentObject private var auditSync: AutomaticConnectionAuditSyncStore
@@ -39,6 +41,9 @@ struct ConnectionAuditLogView: View {
 
     private var toolbar: some View {
         HStack(spacing: 14) {
+            Button("返回主機", systemImage: "arrow.left", action: onReturnToHosts)
+                .buttonStyle(.bordered)
+                .fixedSize()
             VStack(alignment: .leading, spacing: 2) {
                 Text("Logs")
                     .font(.title2.bold())
