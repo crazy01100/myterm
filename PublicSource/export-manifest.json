@@ -16,12 +16,12 @@
     {
       "path": "ARCHITECTURE.en.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.en.md",
-      "baseSHA256": "873055b51004b6e917c35e8911d9747fa9dbb6f6621169f1f7ecd04d9e0b3e36"
+      "baseSHA256": "e0f645dba179d3ab5aee9c3c30c7de446e766f22d9cda3a3dc80de567197e298"
     },
     {
       "path": "ARCHITECTURE.md",
       "overlay": "PublicSource/overrides/ARCHITECTURE.md",
-      "baseSHA256": "232f7c9717788b85888a6b6e799eb56e03d542e75859059a77daf43fc742af3b"
+      "baseSHA256": "01d08f15baf41eef6984f53573d1f9c4b045f31952b2fe2e7785bb986756b493"
     },
     {
       "path": "Config/MyTermCloudConfig.example.plist"
@@ -37,12 +37,12 @@
     {
       "path": "DEVELOPMENT.en.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.en.md",
-      "baseSHA256": "58cf7d9447d91969edd475130afe59cc5e0bd8c42f66a01dd7af02eaf41de9d4"
+      "baseSHA256": "b7b6d5329400fd06d8740b6a2297a241476138f0d1f099c0b78981c084203ddf"
     },
     {
       "path": "DEVELOPMENT.md",
       "overlay": "PublicSource/overrides/DEVELOPMENT.md",
-      "baseSHA256": "ec9ddb7cf54c5684daf0dc7f3fedb319c2a6326cc2f343400607a18c6ea9154f"
+      "baseSHA256": "3211ac736dc861bb602adf2eeeed38a858375d63251997b15a323b78b624aea8"
     },
     {
       "path": "FIREBASE_SETUP.en.md",
@@ -145,12 +145,12 @@
     {
       "path": "SECURITY_MAINTENANCE.en.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.en.md",
-      "baseSHA256": "b5a093c1869b9fbfea35b9f18ea05990a205666f7d7f1a545345966ad8ad0ce0"
+      "baseSHA256": "d124aa44460ddb4266002aab39a23850287dbf79a672f100e378490b4926eb16"
     },
     {
       "path": "SECURITY_MAINTENANCE.md",
       "overlay": "PublicSource/overrides/SECURITY_MAINTENANCE.md",
-      "baseSHA256": "2c5e921bc0d51a7396f63fd78c441f0831bc7304a091d09d84bd0cab701c5e9d"
+      "baseSHA256": "df4f06e1f733c40deb7882c57373933f5b507c26333c6ee12464f2e5d5935c46"
     },
     {
       "path": "SelfTests/CloudAccountRecoveryTests.swift"
@@ -997,12 +997,12 @@
     {
       "path": "update-site/README.en.md",
       "overlay": "PublicSource/overrides/update-site/README.en.md",
-      "baseSHA256": "87b12f0577787f8851a31e8a45728360b40527acbd6e8c1bcf9aefdcb62cd261"
+      "baseSHA256": "a31bcc2c9f2b0f47fa29b86512fcda800bc1d55295a02a5747c7c07d3e3c6e54"
     },
     {
       "path": "update-site/README.md",
       "overlay": "PublicSource/overrides/update-site/README.md",
-      "baseSHA256": "c664ad8fb87be2d766ad1f11ee372ec1c748803560140164326140bab4775e3a"
+      "baseSHA256": "ada620a9fdcd9d4eec87cd3ac66d15db8dbae3f815d97aa1d33933b338266b68"
     },
     {
       "path": "update-site/_headers"

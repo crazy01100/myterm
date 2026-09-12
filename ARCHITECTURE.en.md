@@ -144,6 +144,7 @@ Development Mac
                       └─ Externally recheck site, appcast, ZIP, and security headers
 ```
 
+- The update-site deployment job permits only the original repository, limits manual dispatch to main, and references `production`. GitHub administration settings control reviewers, deployable refs, and environment Secrets. Without those settings and migration of repository Secrets, the workflow does not establish deployment approval and credential isolation. See [Development](DEVELOPMENT.en.md#production-deployment-protection) for configuration and plan restrictions when returning to private.
 - GitHub Releases store the production ZIP, `appcast.xml`, release notes, checksums, and manifest.
 - Cloudflare Pages serves installation instructions, release notes, and the Sparkle feed. No Cloudflare Worker is required.
 - Sparkle verifies updates with the Ed25519 public key embedded in the app. Altered, incorrectly signed, or incomplete archives are rejected.

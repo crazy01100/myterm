@@ -96,3 +96,7 @@ The complete suite runs in a fresh temporary source copy with only its Applicati
 Applicable high-risk advisories need prompt assessment and remediation rather than waiting for weekly maintenance. A Sparkle fix reaches users through a rebuilt, signed and released application; changing a lockfile or appcast does not repair installed frameworks. If the update trust chain itself fails, evaluate an independently verified manual distribution path.
 
 Keep pre-release tests, signature checks and maintenance evidence in plans, CI and security Issues, outside ordinary update dialogs. Release notes still disclose user-relevant security fixes, limitations and required actions; see [Development](DEVELOPMENT.en.md) for content policy.
+
+## Deployment permissions and environments
+
+Before public visibility, verify main's required security check, force-push/deletion restrictions, and fork PR workflow approval policy. The update-site workflow's repository/main guard and production binding are source-level conditions; administrators must still configure environment reviewers, deployable refs, and environment Secrets, then validate an actual deployment approval. Do not treat the environment binding as credential isolation while repository-level Cloudflare Secrets remain. See [Development](DEVELOPMENT.en.md#production-deployment-protection) for setup and plan checks before returning to private.

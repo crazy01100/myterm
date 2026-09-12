@@ -21,6 +21,8 @@ concurrency:
 jobs:
   deploy:
     name: Deploy signed release to Cloudflare Pages
+    if: github.repository == 'crazy01100/myterm' && (github.event_name == 'release' || github.ref == 'refs/heads/main')
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
