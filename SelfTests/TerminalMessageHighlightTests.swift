@@ -12,6 +12,7 @@ struct TerminalMessageHighlightTests {
             print("\(condition ? "PASS" : "FAIL"): \(message)")
         }
         let view = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 1000, height: 620))
+        view.lineSpacing = TerminalTypography.lineSpacing
         view.applyTerminalFontSize(16)
         let t = view.getTerminal()
         func load(_ text: String) {

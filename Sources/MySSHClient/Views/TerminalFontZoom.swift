@@ -1,6 +1,10 @@
 import AppKit
 import SwiftTerm
 
+enum TerminalTypography {
+    static let lineSpacing: CGFloat = 1.15
+}
+
 extension LocalProcessTerminalView {
     func applyTerminalFontSize(_ size: Int) {
         let pointSize = CGFloat(size)
