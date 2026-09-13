@@ -36,6 +36,9 @@ struct TerminalContainerView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> LocalProcessTerminalView {
         let terminal = LoginAwareTerminalView(frame: .zero)
+        // Configure cell height before the process starts; changing it on a
+        // live, nonzero frame would enter SwiftTerm's font-reset resize path.
+        terminal.lineSpacing = TerminalTypography.lineSpacing
         terminal.useSteadyCaret()
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive

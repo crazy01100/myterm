@@ -40,6 +40,7 @@ struct TerminalOutputThemeTests {
             print("\(condition ? "PASS" : "FAIL"): \(message)")
         }
         let view = PaletteProbeView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        view.lineSpacing = TerminalTypography.lineSpacing
         view.applyTerminalFontSize(14)
         let reference = PaletteProbeView(frame: view.frame)
         reference.getTerminal().ansi256PaletteStrategy = .xterm
