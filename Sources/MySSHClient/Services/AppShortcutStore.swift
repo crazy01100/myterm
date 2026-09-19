@@ -27,6 +27,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
     case tab8
     case tab9
     case findTerminal
+    case openQuickActions
     case disconnectSession
 
     var id: Self { self }
@@ -57,6 +58,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .tab8: "切換至分頁 8"
         case .tab9: "切換至分頁 9"
         case .findTerminal: "搜尋終端機內容"
+        case .openQuickActions: "快速操作"
         case .disconnectSession: "中斷目前連線"
         }
     }
@@ -66,7 +68,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .copyTerminal, .pasteTerminal, .pasteSavedPassword, .selectAllTerminal, .findTerminal,
              .increaseTerminalFont, .decreaseTerminalFont, .resetTerminalFont:
             .terminal
-        case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession:
+        case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession, .openQuickActions:
             .session
         case .closeTab, .nextTab, .previousTab, .focusOtherPane,
              .tab1, .tab2, .tab3, .tab4, .tab5, .tab6, .tab7, .tab8, .tab9:
@@ -115,6 +117,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .tab8: .command(keyCode: 28, key: "8")
         case .tab9: .command(keyCode: 25, key: "9")
         case .findTerminal: .command(keyCode: 3, key: "F")
+        case .openQuickActions: .command(keyCode: 40, key: "K")
         case .disconnectSession: nil
         }
     }
@@ -270,6 +273,7 @@ enum AppShortcutAssignmentError: LocalizedError, Equatable {
 final class AppShortcutStore: ObservableObject {
     static let storageKey = "customKeyboardShortcuts.v1"
     static let fontZoomMigrationKey = "customKeyboardShortcuts.fontZoomDefaults.v1"
+    static let quickActionsMigrationKey = "customKeyboardShortcuts.quickActionsDefaults.v1"
 
     @Published private(set) var assignments: [AppShortcutAction: AppShortcutDefinition]
     private let defaults: UserDefaults
@@ -290,6 +294,15 @@ final class AppShortcutStore: ObservableObject {
         } else {
             assignments = Self.defaultAssignments
         }
+        if !defaults.bool(forKey: Self.quickActionsMigrationKey) {
+            if assignments[.openQuickActions] == nil,
+               let shortcut = AppShortcutAction.openQuickActions.defaultShortcut,
+               conflictingAction(for: shortcut, action: .openQuickActions) == nil {
+                assignments[.openQuickActions] = shortcut
+            }
+            defaults.set(true, forKey: Self.quickActionsMigrationKey)
+            persist()
+        }
     }
 
     func shortcut(for action: AppShortcutAction) -> AppShortcutDefinition? {
@@ -305,7 +318,8 @@ final class AppShortcutStore: ObservableObject {
 
     func isManagedDefault(_ event: NSEvent) -> Bool {
         Self.defaultAssignments.contains { action, shortcut in
-            action.effectiveShortcuts(for: shortcut).contains { $0.matches(event) }
+            guard action != .openQuickActions else { return false }
+            return action.effectiveShortcuts(for: shortcut).contains { $0.matches(event) }
         }
     }
 
@@ -362,6 +376,10 @@ final class AppShortcutStore: ObservableObject {
     }()
 
     private static func reservedShortcutName(_ shortcut: AppShortcutDefinition) -> String? {
+        if shortcut.modifiers == [.command, .shift] {
+            if shortcut.keyCode == 34 { return "匯入主機資料（⌘⇧I）" }
+            if shortcut.keyCode == 14 { return "匯出主機資料（⌘⇧E）" }
+        }
         guard shortcut.modifiers == [.command] else { return nil }
         return switch shortcut.keyCode {
         case 12: "結束 App（⌘Q）"

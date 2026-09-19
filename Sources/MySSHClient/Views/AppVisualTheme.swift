@@ -20,6 +20,7 @@ enum AppVisualTheme {
     static let inactiveOutline = color(light: 0xB9C7D8, dark: 0x43566F)
     static let activeOutline = color(light: 0x33445E, dark: 0xAFC4DE)
     static let accent = color(light: 0x2F7DE1, dark: 0x65A8FF)
+    static let onAccent = color(light: 0xFFFFFF, dark: 0x101A2C)
     static let primaryText = color(light: 0x17243A, dark: 0xF0F5FC)
     static let secondaryText = color(light: 0x65758A, dark: 0xAAB8CA)
 

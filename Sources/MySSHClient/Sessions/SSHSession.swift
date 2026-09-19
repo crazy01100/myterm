@@ -12,6 +12,7 @@ enum PasswordSaveOfferKind: Equatable {
 final class TerminalSession: ObservableObject, Identifiable {
     let id: UUID
     let kind: TerminalSessionKind
+    let sshOrigin: SSHSessionOrigin
     let host: HostProfile?
     let username: String?
     let serialConfiguration: SerialConfiguration?
@@ -51,7 +52,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     var displayName: String {
         switch kind {
-        case .ssh: host?.displayName ?? "SSH"
+        case .ssh: (sshOrigin == .temporary ? "臨時 · " : "") + (host?.displayName ?? "SSH")
         case .local: "本地 Terminal"
         case .serial: "Serial"
         }
@@ -72,7 +73,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     var canBindPasswordToProfile: Bool {
         guard kind == .ssh, let host, let username else { return false }
-        return host.authenticationMethod == .password && !host.username.isEmpty && username == host.username
+        return sshOrigin.permitsPasswordBinding(host: host, username: username)
     }
 
     var canUseSavedPassword: Bool {
@@ -149,6 +150,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         id: UUID = UUID(),
         host: HostProfile,
         username: String,
+        origin: SSHSessionOrigin = .savedHost,
         onConnectionAttemptStarted: (() -> Void)? = nil,
         onConnectionSucceeded: (() -> Void)? = nil,
         onConnectionCompleted: ((Int32?) -> Void)? = nil,
@@ -156,9 +158,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         onConnectionCancelled: (() -> Void)? = nil
     ) throws {
         let username = try HostProfile.validatedUsername(username)
-        let canBindPassword = host.authenticationMethod == .password
-            && !host.username.isEmpty
-            && username == host.username
+        let canBindPassword = origin.permitsPasswordBinding(host: host, username: username)
         let hasSavedPassword = canBindPassword && KeychainStore.containsPassword(for: host.id)
         let connectionLogURL = try AppPaths.createSSHConnectionLog()
         let arguments: [String]
@@ -174,6 +174,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
         self.id = id
         kind = .ssh
+        sshOrigin = origin
         self.host = host
         self.username = username
         serialConfiguration = nil
@@ -195,6 +196,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     init(localShell: Void = ()) {
         id = UUID()
         kind = .local
+        sshOrigin = .savedHost
         host = nil
         username = nil
         serialConfiguration = nil
@@ -217,6 +219,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         try configuration.prepareDevice()
         id = UUID()
         kind = .serial
+        sshOrigin = .savedHost
         host = nil
         username = nil
         serialConfiguration = configuration
@@ -438,7 +441,8 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     func saveVerifiedPassword() {
-        guard let offerKind = passwordSaveOfferKind,
+        guard canBindPasswordToProfile,
+              let offerKind = passwordSaveOfferKind,
               let host,
               var passwordData = pendingPasswordData else { return }
         defer {
@@ -748,8 +752,8 @@ final class SessionManager: ObservableObject {
     }
 
     @discardableResult
-    func createSSHSession(to host: HostProfile, username: String) throws -> TerminalSession.ID {
-        let session = try makeSSHSession(host: host, username: username)
+    func createSSHSession(to host: HostProfile, username: String, origin: SSHSessionOrigin = .savedHost) throws -> TerminalSession.ID {
+        let session = try makeSSHSession(host: host, username: username, origin: origin)
         presentationNameRegistry.register(sessionID: session.id, baseName: session.displayName)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
@@ -802,13 +806,14 @@ final class SessionManager: ObservableObject {
         markSelectedWorkspaceViewed()
     }
 
-    private func makeSSHSession(host: HostProfile, username: String) throws -> TerminalSession {
+    private func makeSSHSession(host: HostProfile, username: String, origin: SSHSessionOrigin) throws -> TerminalSession {
         let hostID = host.id
         let sessionID = UUID()
         return try TerminalSession(
             id: sessionID,
             host: host,
             username: username,
+            origin: origin,
             onConnectionAttemptStarted: { [weak self] in
                 self?.connectionAuditStore?.begin(
                     sessionID: sessionID,
@@ -817,7 +822,7 @@ final class SessionManager: ObservableObject {
                 )
             },
             onConnectionSucceeded: { [weak self] in
-                self?.onHostConnectionSucceeded?(hostID)
+                if origin == .savedHost { self?.onHostConnectionSucceeded?(hostID) }
                 self?.connectionAuditStore?.markConnected(sessionID: sessionID)
             },
             onConnectionCompleted: { [weak self] exitCode in

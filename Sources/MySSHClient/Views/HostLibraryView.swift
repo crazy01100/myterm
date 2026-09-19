@@ -246,7 +246,7 @@ struct HostLibraryView: View {
             } label: {
                 Label("Terminal", systemImage: "terminal")
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(HostLibraryTerminalButtonStyle())
             Button {
                 onOpenSerial()
             } label: {
@@ -488,6 +488,33 @@ struct HostLibraryView: View {
         } catch {
             hostStore.lastError = error.localizedDescription
         }
+    }
+}
+
+/// Draw both foreground and background explicitly: the native prominent style
+/// can lose its rendering when this host window becomes inactive.
+private struct HostLibraryTerminalButtonStyle: ButtonStyle {
+    @Environment(\.controlActiveState) private var controlActiveState
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        let emphasized = isEnabled && controlActiveState != .inactive
+        return configuration.label
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .foregroundStyle(isEnabled
+                ? (emphasized ? AppVisualTheme.onAccent : AppVisualTheme.primaryText)
+                : AppVisualTheme.secondaryText)
+            .background {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(emphasized ? AppVisualTheme.accent : AppVisualTheme.subtleSurface)
+                    .opacity(configuration.isPressed && isEnabled ? 0.78 : 1)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 5)
+                    .strokeBorder(emphasized ? Color.clear : AppVisualTheme.separator, lineWidth: 1)
+            }
+            .contentShape(.rect(cornerRadius: 5))
     }
 }
 

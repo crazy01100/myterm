@@ -29,7 +29,7 @@ After Google verification succeeds and the service explicitly rejects new-accoun
 - Saved passwords are used only when the session account matches the host's nonempty default username. Switching accounts temporarily does not expose another account's password.
 - Manual Fill Password sends password bytes only to that tab's pseudo-terminal, then immediately clears the temporary mutable buffer.
 - Local Terminal always launches `/bin/zsh`, with the shared SSH environment allow-list plus `SHELL=/bin/zsh`.
-- Platform detection first examines bounded terminal output already displayed to the user. For an unknown platform, it may open a short-lived, noninteractive SSH connection to read `/etc/os-release`, compatible release files, and `uname -a`. It does not use `sudo`, write remotely, or put passwords in arguments or regular files. Failure or timeout leaves the generic icon.
+- Platform detection first examines bounded terminal output already displayed to the user. For a saved host with an unknown platform, it may open a short-lived, noninteractive SSH connection to read `/etc/os-release`, compatible release files, and `uname -a`. It does not use `sudo`, write remotely, or put passwords in arguments or regular files. Failure or timeout leaves the generic icon.
 - Serial accepts only existing `/dev/cu.*` or `/dev/tty.*` character devices. Options are passed as arguments to fixed `/bin/stty` and `/usr/bin/screen` executables without shell string interpolation.
 - The version 0.1 data migration preserves host UUIDs and their Keychain associations, creating an owner-only backup before changing the format.
 - The rename to MyTerm deliberately preserved the original Bundle ID, Keychain services, and Application Support directory so existing passwords remain associated with the same UUIDs.
@@ -41,6 +41,8 @@ After Google verification succeeds and the service explicitly rejects new-accoun
 - Even without credentials, migration output in `Exports/` may disclose host names, IPs, accounts, and internal groups. The entire directory is Git-ignored, output files use `0600` permissions, and release safety checks reject private output not protected by exclusion rules.
 - Custom import filters selected items before analyzing conflicts. It creates only the ancestor groups needed by accepted hosts; skipped or invalid data does not leave empty groups.
 - MyTerm exports use an explicit field allow-list and exclude Keychain passwords, private-key contents, passphrases, tokens, and local private-key paths. Exported JSON is still plaintext and may contain host addresses, usernames, and notes; users must protect it.
+
+- Temporary SSH accepts structured accounts, hosts, and ports as process arguments, not shell commands or arbitrary options. It does not read/write MyTerm saved-host passwords or automatically save hosts; system SSH config/Agent authentication remains available. Host-key confirmation, Logs retention, and existing encrypted Logs sync still apply; this is not an incognito mode.
 
 ## SSH trust
 
@@ -55,7 +57,7 @@ After Google verification succeeds and the service explicitly rejects new-accoun
 - Automatic filling applies only to the first password prompt in a session configured for password authentication. A malicious endpoint that has passed host-key verification remains within that connection's credential trust boundary.
 - Manual filling cannot prove where a prompt originated. Use it only when you are certain you are connected to the correct host and the display is actually requesting a password.
 - The app stores private-key paths as host settings but does not copy private-key contents.
-- Logs cover only interactive SSH started from the host library. Local Terminal, SFTP, Serial, and activity before the feature was enabled do not generate or backfill audit records.
+- Logs cover only interactive SSH started from the host library or temporary Quick Actions. Local Terminal, SFTP, Serial, and activity before the feature was enabled do not generate or backfill audit records.
 - Production releases currently lack Apple Developer ID signing and notarization. A first manual download may require approval in macOS Privacy & Security. The free self-signed certificate has no Apple Team ID, so Keychain may regard different builds as different app identities. Since 1.0.1, one root key limits post-update verification to the app as a whole rather than once per secret or host. In-app updates still verify separate Sparkle Ed25519 signatures.
 - In-app updates require an installation location where the app can be replaced. Sparkle safely stops when running from an archive, read-only image, App Translocation after download, or another temporary location. Place production `MyTerm.app` in Applications.
 - `sudo` / `su` passwords are not submitted automatically. MyTerm enables the fill button or shortcut only at a recognized safe password prompt, keeping final confirmation with the user.

@@ -6,6 +6,7 @@ struct ContentView: View {
     @EnvironmentObject private var sessionManager: SessionManager
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var shortcutStore: AppShortcutStore
+    @StateObject private var quickActions = QuickActionPanelController()
     @State private var hostEditorRequest: HostEditorRequest?
     @State private var groupEditorRequest: GroupEditorRequest?
     @State private var connectionRequest: ConnectionRequest?
@@ -36,6 +37,10 @@ struct ContentView: View {
         .toolbarBackground(.visible, for: .windowToolbar)
         .toolbarColorScheme(.dark, for: .windowToolbar)
         .onAppear(perform: configureSessionObservers)
+        .onAppear(perform: configureQuickActions)
+        .onChange(of: sessionManager.sessions.map(\.id)) { _, _ in configureQuickActions() }
+        .focusedSceneValue(\.openQuickActions, { quickActions.toggle() })
+        .background(QuickActionWindowAnchor(controller: quickActions).frame(width: 0, height: 0))
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
                 .environmentObject(hostStore)
@@ -640,6 +645,8 @@ struct ContentView: View {
 
     private func performShortcut(_ action: AppShortcutAction) -> Bool {
         switch action {
+        case .openQuickActions:
+            quickActions.toggle()
         case .copyTerminal:
             guard let session = sessionManager.selectedSession else { return false }
             session.copyTerminalSelection()
@@ -683,6 +690,73 @@ struct ContentView: View {
             return sessionManager.selectSession(at: index)
         }
         return true
+    }
+
+    private func configureQuickActions() {
+        quickActions.shortcuts = shortcutStore
+        quickActions.source = quickActionItems
+        quickActions.perform = performQuickAction
+        quickActions.canOpen = {
+            hostEditorRequest == nil && groupEditorRequest == nil && connectionRequest == nil
+                && !showingSerialConnection && deleteCandidate == nil && deleteGroupCandidate == nil
+                && !errorBinding.wrappedValue && !noticeBinding.wrappedValue
+        }
+        quickActions.observe(hosts: hostStore, sessions: sessionManager)
+        quickActions.refresh()
+    }
+
+    private func quickActionItems() -> [QuickActionItem] {
+        let sessions = sessionManager.workspaces.flatMap { sessionManager.sessions(in: $0) }
+        let openItems = sessions.map { session in
+            QuickActionItem(id: .session(session.id), section: .sessions,
+                            title: sessionManager.presentationName(for: session),
+                            detail: session.detailDescription + " · " + session.state.label,
+                            hint: sessionManager.selectedSessionID == session.id ? "目前" : "切換",
+                            symbol: session.kind == .serial ? "cable.connector" : "terminal",
+                            keywords: session.host.map { hostStore.groupName(for: $0) } ?? (session.kind == .serial ? "serial 串列 串口" : "本機 本地 local terminal"),
+                            hostID: session.sshOrigin == .savedHost ? session.host?.id : nil,
+                            endpoint: session.host.flatMap { QuickSSHRequest.forEndpoint(username: session.username ?? "", hostname: $0.hostname, port: $0.port) },
+                            platform: session.sshOrigin == .savedHost ? hostStore.profile(id: session.host?.id)?.detectedPlatform : nil)
+        }
+        let hosts = hostStore.hostsByMostRecentConnection(hostStore.hosts).map { host in
+            QuickActionItem(id: .host(host.id), section: .hosts, title: host.displayName,
+                            detail: "\(host.username.isEmpty ? "連線時選擇帳號" : host.username)@\(host.hostname):\(host.port) · \(hostStore.groupName(for: host))",
+                            hint: "連線", symbol: "server.rack", keywords: "", hostID: host.id,
+                            endpoint: QuickSSHRequest.forEndpoint(username: host.username, hostname: host.hostname, port: host.port),
+                            platform: host.detectedPlatform)
+        }
+        return openItems + hosts + QuickActionItem.operations
+    }
+
+    private func performQuickAction(_ destination: QuickActionDestination) {
+        switch destination {
+        case .temporarySSH(let request):
+            do {
+                let host = try request.temporaryProfile()
+                try sessionManager.createSSHSession(to: host, username: request.username, origin: .temporary)
+            } catch { sessionManager.lastError = error.localizedDescription }
+        case .session(let id):
+            guard sessionManager.activate(sessionID: id) else { return }
+            DispatchQueue.main.async {
+                guard let terminal = sessionManager.session(id: id)?.terminalView else { return }
+                terminal.window?.makeFirstResponder(terminal)
+            }
+        case .host(let id):
+            guard let host = hostStore.hosts.first(where: { $0.id == id }) else { return }
+            beginConnection(to: host)
+        case .operation(let operation):
+            switch operation {
+            case .hosts, .knownHosts, .logs:
+                libraryWorkspace = .hosts
+                hostLibrarySelection = operation == .knownHosts ? .knownHosts : operation == .logs ? .logs : .all
+                sessionManager.showHostLibrary()
+            case .sftp:
+                libraryWorkspace = .sftp
+                sessionManager.showHostLibrary()
+            case .terminal: sessionManager.createLocalSession()
+            case .serial: showingSerialConnection = true
+            }
+        }
     }
 }
 
@@ -1070,8 +1144,14 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
             removeMonitor()
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 guard let self, event.window === self.hostView?.window else { return event }
+                guard event.window?.hasQuickActionPanel != true else { return event }
                 guard event.window?.attachedSheet == nil, NSApp.modalWindow == nil else { return event }
                 if let action = self.shortcutStore.action(matching: event) {
+                    if action == .openQuickActions {
+                        guard let window = event.window, window === NSApp.keyWindow,
+                              !QuickActionPanelController.isComposing(in: window) else { return event }
+                        if event.isARepeat { return nil }
+                    }
                     return self.perform(action) ? nil : event
                 }
                 if self.shortcutStore.isManagedDefault(event), self.shouldSuppressManagedDefaults() {
@@ -1088,6 +1168,7 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                       let window = hostView.window,
                       event.window === window,
                       let contentView = window.contentView else { return event }
+                guard !window.hasQuickActionPanel else { return event }
                 let pointInContent = contentView.convert(event.locationInWindow, from: nil)
                 let point = CGPoint(
                     x: pointInContent.x - contentView.bounds.minX,
@@ -1483,6 +1564,7 @@ struct TerminalWorkspaceView: View {
     private func recordPlatform(_ platform: HostPlatform) {
         guard let hostID = session.host?.id else { return }
         connectionAuditStore.recordDetectedPlatform(sessionID: session.id, platform: platform)
+        guard session.sshOrigin == .savedHost else { return }
         do { try hostStore.recordDetectedPlatform(platform, for: hostID) }
         catch { hostStore.lastError = error.localizedDescription }
     }
@@ -1643,8 +1725,10 @@ private struct SSHConnectionExperienceView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Button("編輯主機", action: onEditHost)
-                    .buttonStyle(.bordered)
+                if session.sshOrigin == .savedHost {
+                    Button("編輯主機", action: onEditHost)
+                        .buttonStyle(.bordered)
+                }
 
                 Button("重新連線", action: onRetry)
                     .buttonStyle(.borderedProminent)

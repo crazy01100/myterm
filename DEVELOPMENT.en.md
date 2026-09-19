@@ -60,6 +60,8 @@ Run sync reliability regression tests independently with `zsh scripts/run-sync-r
 
 Manual two-Mac automatic-sync acceptance requires a separate test Google account and the same verified Dev Build. Do not substitute Sync Now for launch, foreground-cycle, or offline-recovery checks. First test launch without opening Settings; only afterward use Account & Sync → Diagnostics → Copy Sync Execution Log to obtain redacted stage evidence. Record both apps' actual identities, triggers, and elapsed times, and keep them active for at least three five-minute cycles. Accelerated single-Mac tests do not establish successful transfer between two Macs.
 
+Quick Action search, result IDs, shortcut migration, temporary SSH address parsing, and password-binding policy cases live in `SelfTests/QuickActionTests.swift`. `SelfTests/main.swift` also checks SSH arguments and the audit-record model for temporary connections. Both run through the isolated entry point below. Panel appearance and focus, IME composition, shortcut recording, main-window drag interactions, and actual SSH authentication, cancellation, and reconnection also require hands-on Dev acceptance.
+
 Run automated tests first:
 
 ```sh

@@ -1549,6 +1549,27 @@ do {
 }
 
 do {
+    let request = QuickSSHRequest.parse("ops@[2001:db8::10]:2222")!
+    let host = try request.temporaryProfile()
+    let arguments = try SSHArgumentBuilder.arguments(for: host)
+    check(arguments.last == "ops@2001:db8::10", "IPv6 destination is passed to ssh without form brackets")
+    check(arguments.prefix(2) == ["-p", "2222"], "temporary connection uses explicit port")
+    check(arguments.contains("StrictHostKeyChecking=ask") && !arguments.contains("PubkeyAuthentication=no"),
+          "temporary connection keeps host-key checking and system authentication")
+    var audit = ConnectionAuditIndex()
+    let sessionID = UUID(), start = Date()
+    audit.begin(sessionID: sessionID, host: host, username: request.username, at: start)
+    check(audit.records.first?.username == "ops" && audit.records.first?.hostID == host.id,
+          "temporary profile produces ordinary audit metadata without inventory membership")
+    _ = audit.markConnected(sessionID: sessionID, at: start.addingTimeInterval(1))
+    _ = audit.finish(sessionID: sessionID, status: .completed, at: start.addingTimeInterval(2), exitCode: 0)
+    audit.begin(sessionID: sessionID, host: host, username: request.username, at: start.addingTimeInterval(3))
+    check(audit.records.count == 2, "temporary reconnect retains distinct audit attempts")
+} catch {
+    check(false, "temporary SSH arguments: \(error)")
+}
+
+do {
     var host = baseHost()
     host.algorithmMode = .custom
     host.customAlgorithms.ciphers = "aes128-ctr bad"

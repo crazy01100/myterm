@@ -58,7 +58,7 @@ struct TerminalContainerView: NSViewRepresentable {
             terminal.onPlatformDetected = { platform in
                 Task { @MainActor in onPlatformDetected(platform) }
             }
-            if let host = session.host,
+            if session.sshOrigin == .savedHost, let host = session.host,
                host.detectedPlatform == nil,
                let username = session.username {
                 context.coordinator.startPlatformProbe(
@@ -206,7 +206,7 @@ struct TerminalContainerView: NSViewRepresentable {
                 matching: [.leftMouseDown, .rightMouseDown]
             ) { [weak self, weak terminal] event in
                 guard let self, let terminal, event.window === terminal.window else { return event }
-                guard self.isVisible else { return event }
+                guard self.isVisible, event.window?.hasQuickActionPanel != true else { return event }
                 let point = terminal.convert(event.locationInWindow, from: nil)
                 guard terminal.bounds.contains(point) else { return event }
                 terminal.window?.makeFirstResponder(terminal)
@@ -228,7 +228,7 @@ struct TerminalContainerView: NSViewRepresentable {
                 matching: [.mouseMoved, .cursorUpdate, .scrollWheel]
             ) { [weak self, weak terminal] event in
                 guard let self, let terminal, event.window === terminal.window else { return event }
-                guard self.isVisible else { return event }
+                guard self.isVisible, event.window?.hasQuickActionPanel != true else { return event }
                 let point = terminal.convert(event.locationInWindow, from: nil)
                 guard terminal.bounds.contains(point) else { return event }
 
@@ -294,6 +294,7 @@ struct TerminalContainerView: NSViewRepresentable {
                 guard let self, let terminal else { return event }
                 guard self.isActive,
                       event.window === terminal.window,
+                      event.window?.hasQuickActionPanel != true,
                       event.modifierFlags.contains(.control),
                       !event.modifierFlags.contains(.command),
                       !event.modifierFlags.contains(.option),

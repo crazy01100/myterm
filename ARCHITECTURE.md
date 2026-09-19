@@ -57,16 +57,19 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
 - `AppShortcutStore` 保存只在 MyTerm 內生效的快捷鍵設定。
+- `QuickActionSearch` 將記憶體中的主機、Session 與固定操作轉為可搜尋結果；`QuickActionPanelController` 使用附屬於主視窗的原生面板隔離輸入，既有主視窗監聽在面板開啟時暫停背景快捷鍵及拖放處理，不重建終端。滑鼠移動與方向鍵共用同一選取 ID；鍵盤操作後，靜止指標不因結果重排／捲動接管選取。僅鍵盤及搜尋更新要求捲動，hover 不捲動列表。執行前重新核對穩定 ID，由 `ContentView` 路由至既有連線／導覽入口。結果中的平台圖示直接取自 HostStore 的 detectedPlatform，並共用 HostPlatformBadge；已儲存主機的開啟 Session 亦讀取 Store 最新結果。未知主機與無已存平台資料的臨時端點保持通用圖示，不依名稱或 IP 推測，也不觸發額外探測。查詢不保存、不同步，不索引終端輸出、備註或機密。快速操作的 ⌘K 預設透過獨立一次性遷移加入，遇衝突保留舊指派，停用後不再次補回。
 - 字體縮放快捷鍵整合於相同 store；預設放大的 equals／plus 及數字鍵盤別名使用同一事件匹配與衝突規則，停用或自訂後釋放預設別名。新增縮放動作透過一次性遷移補入未占用的預設組合，保留既有自訂與停用；單項恢復預設也會檢查衝突。
 - `TerminalWorkspaceCollection` 保存執行期間的視覺分頁順序、作用中窗格、分割方向與比例；每個工作區的不變條件限制為一或兩個 Terminal session，並負責把雙窗格中的任一 session 拆回獨立分頁及收斂原工作區。
 - `TerminalSessionPresentation` 保存不依賴 SwiftUI 或 SwiftTerm 的執行期顯示規則：把 Session 狀態映射為分頁連線燈、依基礎名稱配置不受排序／合併影響的同名 Session 編號，並以 Session UUID 集合聚合背景 Workspace 的未讀輸出。編號與未讀狀態只存在程序記憶體，不改寫主機名稱、Logs、同步或匯出資料。
 - `ConnectionAuditStore` 以獨立 versioned 文件保存互動式 SSH 的主機快照、帳號端點、來源裝置快照、開始／驗證／結束時間與結構化結果。連線開始時已知的平台直接進入快照；若尚未知，該 Terminal Session 後續辨識出的第一個平台可補寫同一筆紀錄，之後不再覆寫，也不會由目前 `HostStore` 動態回填其他歷史紀錄。保存工作在背景序列佇列執行，最多保留 30 天與 5,000 筆；損壞檔案會先隔離備份，App 仍可從空紀錄啟動。這份資料不併入 `HostStore` 或主機匯出。
 - `AutomaticConnectionAuditSyncStore` 在啟用既有同步且 Master Key 可用時，獨立協調 Logs 的下載、去重、加密上傳與到期整理。進行中的連線只留在來源裝置；完成、失敗、取消或啟動恢復為未完整結束後，才將不可變的最終紀錄交給 `ConnectionAuditSyncCodec` 加密並透過 `FirestoreConnectionAuditBackend` 寫入專用集合。網路工作不位於 PTY、鍵盤或終端輸出路徑。
 
+- `QuickSSHRequest` 將帳號／DNS、IPv4 或括號 IPv6／埠解析為有型別的臨時連線結果，不執行 shell 原文；精確端點匹配優先提供現有 Session／主機。`SSHSessionOrigin.temporary` 在初次登入、密碼變更與重連均禁止 MyTerm 密碼綁定；不新增 HostStore 資料或 recency，也不進行額外平台 probe。SSH 狀態與 Logs 沿用原流程；被動平台辨識只補當次 Logs，不寫入主機庫。
+
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
-- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新該主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、短期診斷檔、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
+- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新已儲存主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、短期診斷檔、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
 - `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它同時管理執行期同名編號及背景輸出未讀集合。`LoginAwareTerminalView` 只在真正送入 renderer 的程序輸出邊界回報活動；目前可見 Workspace 的輸出不建立提示，背景 Workspace 只在第一次由已讀轉為未讀時發布狀態，避免大量輸出反覆重繪 toolbar，切回後清除該 Workspace 的 child 狀態。它也把每次 process attempt 的開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`。同一窗格原位重連會沿用 pane session ID，但 `ConnectionAuditIndex` 只把進行中的同 ID attempt 視為冪等；上一筆已最終化後的重連會建立新的 record UUID，因此 Logs 與加密同步仍是逐次連線紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。分隔線的 25%～75% 邊界由 split view 強持有的獨立 `NSSplitViewDelegate` proxy 提供；delegate 不指回 split view 自身，避免 AppKit 在驗證側邊欄選單 action 時形成 responder 查詢遞迴。
 - `TerminalContainerView`／`LoginAwareTerminalView` 保留 SwiftTerm 的原生 terminal buffer 與 TUI mouse reporting：遠端滑鼠模式關閉時，一般及持續輸出不會清除使用者已建立的本機 selection；Vim、tmux 等程式啟用 mouse reporting 後，普通點擊、拖曳與滾輪仍完整送往遠端，Shift＋拖曳沿用 SwiftTerm 的本機選取。終端內容區使用 I-beam，滾動期間暫時隱藏系統指標以避免箭頭／I-beam 交替；文字 caret 以 steady 形狀顯示，遠端同一批 hide/show 只套用最後可見狀態。預設 Vim 未啟用 mouse reporting 時的 alternate-buffer 滾輪 fallback 以 display link 逐幀傳送方向步驟並合併中間回應；實體鍵盤、一般 shell scrollback 與已啟用的遠端滑鼠回報不經此路徑。
@@ -76,7 +79,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - Serial 驗證並連接 `/dev/cu.*` 或 `/dev/tty.*`，參數直接傳給固定系統程式，不經 Shell 字串插值。
 - SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機 FileManager attributes 與遠端 SFTP v3 attributes 已取得的 POSIX permissions 會交由共用 `SFTPPermissionMode` 格式化成 symbolic／八進位權限，列表不會為每個項目增加額外 `stat` 或 SFTP request。視覺化權限矩陣與八進位輸入使用同一狀態，最後仍透過既有本機／遠端 chmod 流程套用，成功後重新載入實際 attributes，未知權限不套用預設值。本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
-- 平台辨識先被動解析終端機輸出；仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
+- 平台辨識先被動解析終端機輸出；已儲存主機中仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
 
 ## 資料保存位置
 
@@ -169,7 +172,7 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 - 只支援 macOS 26 與 Apple Silicon arm64。
 - 私鑰、私鑰路徑及 `known_hosts` 不跨裝置同步。
 - `sudo`／`su` 需要按鈕或快捷鍵，不會自動送出密碼。
-- Logs 只記錄由主機庫建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。跨裝置只同步已結束紀錄，不顯示其他裝置的連線中狀態或即時計時。
+- Logs 只記錄由主機庫或快速操作的臨時連線建立的互動式 SSH 連線中繼資料；不包含本機 Terminal、SFTP、Serial、輸入命令或終端機輸出，也無法補回功能啟用前的歷史紀錄。跨裝置只同步已結束紀錄，不顯示其他裝置的連線中狀態或即時計時。
 - 跨裝置同步由 App 啟動、回到前景、喚醒、本機可同步資料變動、過期 Logs 頁面及前景定期事件觸發，不使用常駐推播；另一台 Mac 的變更會在下一次同步觸發時套用。App 關閉、睡眠或不在作用中時沒有常駐輪詢保證。
 - 目前未使用 Apple Developer ID 與公證，第一次安裝可能出現 macOS 無法驗證開發者的提示。
 
