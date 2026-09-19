@@ -62,6 +62,8 @@ Manual two-Mac automatic-sync acceptance requires a separate test Google account
 
 Quick Action search, result IDs, shortcut migration, temporary SSH address parsing, and password-binding policy cases live in `SelfTests/QuickActionTests.swift`. `SelfTests/main.swift` also checks SSH arguments and the audit-record model for temporary connections. Both run through the isolated entry point below. Panel appearance and focus, IME composition, shortcut recording, main-window drag interactions, and actual SSH authentication, cancellation, and reconnection also require hands-on Dev acceptance.
 
+The fake SFTP peer must also use the project-validated Python runtime: `run-sftp-security-tests.sh` passes the interpreter selected by `project-python.sh` to the Swift tests, including pre-cancelled connections. A missing startup PID fails the test. Do not hard-code a separate system Python inside tests.
+
 Run automated tests first:
 
 ```sh

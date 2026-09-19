@@ -26,6 +26,13 @@ import Darwin
         }
     }
     static func main() throws {
+        guard CommandLine.arguments.count == 3,
+              CommandLine.arguments[2].hasPrefix("/"),
+              FileManager.default.isExecutableFile(atPath: CommandLine.arguments[2]) else {
+            fputs("Use scripts/run-sftp-security-tests.sh with its validated Python runtime.\n", stderr)
+            exit(64)
+        }
+        let pythonURL = URL(fileURLWithPath: CommandLine.arguments[2])
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("MyTerm-SFTP-security-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -41,7 +48,7 @@ import Darwin
             }
             do {
                 let client = try SFTPClient.connectForTesting(
-                    executableURL: URL(fileURLWithPath: "/usr/bin/python3"),
+                    executableURL: pythonURL,
                     arguments: [peer, mode, pidFile.path], cancellation: cancellation,
                     responseTimeout: 0.5, initializationTimeout: 0.5
                 )
@@ -71,12 +78,14 @@ import Darwin
                     Thread.sleep(forTimeInterval: 0.05)
                 }
                 check(Darwin.kill(pid, 0) != 0, "\(mode) child process exits")
+            } else {
+                check(false, "\(mode) fake peer did not record its startup PID")
             }
         }
         let cancellation = SFTPCancellation()
         cancellation.cancel()
         do {
-            _ = try SFTPClient.connectForTesting(executableURL: URL(fileURLWithPath: "/usr/bin/python3"), arguments: [peer, "init_stall"], cancellation: cancellation)
+            _ = try SFTPClient.connectForTesting(executableURL: pythonURL, arguments: [peer, "init_stall"], cancellation: cancellation)
             check(false, "pre-cancelled connection")
         } catch { check(true, "pre-cancelled connection") }
         print("\(passed) SFTP security tests passed, \(failed) failed")

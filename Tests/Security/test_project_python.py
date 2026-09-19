@@ -51,4 +51,55 @@ class ProjectPythonTests(unittest.TestCase):
         self.assertEqual(result.returncode, 69)
         self.assertEqual(result.stdout, '')
 
+    def test_swift_test_peers_do_not_pin_system_python(self):
+        for path in (ROOT/'SelfTests').glob('*.swift'):
+            with self.subTest(path=path.name):
+                self.assertNotRegex(path.read_text(), r'/(?:usr/bin|usr/local/bin)/python[0-9.]*')
+
+    def prepare_sftp_runner(self):
+        runner = self.root/'scripts/run-sftp-security-tests.sh'
+        shutil.copy2(ROOT/'scripts/run-sftp-security-tests.sh', runner)
+        binary_dir = self.root/'fake-bin'
+        binary_dir.mkdir()
+        compiler = binary_dir/'swiftc'
+        compiler.write_text('''#!/bin/sh
+touch "$MYTERM_COMPILER_CALLED"
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = '-o' ]; then shift; output="$1"; break; fi
+  shift
+done
+cat > "$output" <<'SH'
+#!/bin/sh
+printf '%s\\n' "$@" > "$MYTERM_ARGUMENT_CAPTURE"
+SH
+chmod +x "$output"
+''')
+        compiler.chmod(0o755)
+        self.env['PATH'] = str(binary_dir)+os.pathsep+self.env.get('PATH', '')
+        self.env['MYTERM_COMPILER_CALLED'] = str(self.root/'compiler-called')
+        self.env['MYTERM_ARGUMENT_CAPTURE'] = str(self.root/'arguments')
+        return runner
+
+    @unittest.skipUnless(shutil.which('zsh'), 'macOS zsh runner integration')
+    def test_sftp_runner_passes_validated_interpreter_as_one_argument(self):
+        runner = self.prepare_sftp_runner()
+        selected = self.root/'python with spaces'
+        selected.symlink_to(sys.executable)
+        self.env['MYTERM_PYTHON'] = str(selected)
+        result = subprocess.run([str(runner)], env=self.env, text=True, capture_output=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        arguments = (self.root/'arguments').read_text().splitlines()
+        self.assertEqual(len(arguments), 2)
+        self.assertEqual(Path(arguments[0]).resolve(), (self.root/'Tests/Security/fake_sftp.py').resolve())
+        self.assertEqual(arguments[1], str(selected))
+
+    @unittest.skipUnless(shutil.which('zsh'), 'macOS zsh runner integration')
+    def test_sftp_runner_rejects_invalid_runtime_before_compiling(self):
+        runner = self.prepare_sftp_runner()
+        self.env['MYTERM_PYTHON'] = str(self.root/'missing-python')
+        result = subprocess.run([str(runner)], env=self.env, text=True, capture_output=True, timeout=15)
+        self.assertEqual(result.returncode, 69, result.stderr)
+        self.assertFalse((self.root/'compiler-called').exists())
+        self.assertFalse((self.root/'arguments').exists())
+
 if __name__ == '__main__': unittest.main()

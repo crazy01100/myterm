@@ -62,6 +62,8 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 
 快速操作的搜尋、結果 ID、快捷鍵遷移、臨時 SSH 位址解析與密碼綁定政策案例位於 `SelfTests/QuickActionTests.swift`；`SelfTests/main.swift` 另驗證 SSH 參數及臨時連線的稽核紀錄模型，由下列隔離入口一併執行。面板外觀／焦點、中文組字、快捷鍵錄製、主視窗拖放，以及實際 SSH 驗證／取消／重新連線，仍須在 Dev 進行互動驗收。
 
+假 SFTP 伺服器也必須使用專案驗證過的 Python：`run-sftp-security-tests.sh` 將 `project-python.sh` 選出的直譯器路徑傳給 Swift 測試，包含預先取消案例；缺少啟動 PID 會使測試失敗。不要在測試內另行寫死系統 Python。
+
 先執行自動測試：
 
 ```sh
