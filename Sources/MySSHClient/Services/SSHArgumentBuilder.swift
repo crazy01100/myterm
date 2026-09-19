@@ -64,7 +64,11 @@ enum SSHArgumentBuilder {
             arguments += ["-v", "-E", connectionLogURL.path]
         }
 
-        arguments.append("\(username)@\(host.hostname)")
+        // Brackets disambiguate IPv6 in forms, but ssh's hostname argument
+        // expects the literal without brackets (unlike an scp URI).
+        let hostname = host.hostname.hasPrefix("[") && host.hostname.hasSuffix("]")
+            ? String(host.hostname.dropFirst().dropLast()) : host.hostname
+        arguments.append("\(username)@\(hostname)")
         return arguments
     }
 

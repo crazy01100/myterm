@@ -66,6 +66,7 @@ struct MySSHClientApp: App {
                 .disabled(!appUpdaterStore.canCheckForUpdates)
             }
             DataTransferCommands(coordinator: dataTransferCoordinator)
+            QuickActionCommands(shortcuts: shortcutStore)
         }
 
         Settings {

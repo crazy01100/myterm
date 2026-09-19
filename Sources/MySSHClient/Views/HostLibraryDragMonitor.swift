@@ -73,6 +73,7 @@ struct HostLibraryDragMonitor: NSViewRepresentable {
             ) { [weak self] event in
                 guard let self, let hostView = self.hostView,
                       event.window === hostView.window else { return event }
+                guard event.window?.hasQuickActionPanel != true else { self.reset(); return event }
                 guard self.isEnabled else {
                     self.reset()
                     return event

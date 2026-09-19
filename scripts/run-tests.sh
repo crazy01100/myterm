@@ -31,6 +31,7 @@ trap 'rm -rf "$test_dir"' EXIT
 cd "$project_dir"
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Models/QuickSSHRequest.swift \
     Sources/MySSHClient/Models/ConnectionAuditRecord.swift \
     Sources/MySSHClient/Models/HostGroupMove.swift \
     Sources/MySSHClient/Models/HostTransferDocument.swift \
@@ -72,6 +73,17 @@ swiftc -D MYTERM_SELF_TESTS \
 MYTERM_SECRET_VAULT_KEYCHAIN_SERVICE="tw.local.MySSHClient.tests.$$.core" \
 MYTERM_SECRET_VAULT_FILE="$test_dir/core-secret-vault.json" \
     "$test_dir/MySSHClientSelfTests"
+
+swiftc -swift-version 5 -parse-as-library \
+    Sources/MySSHClient/Models/TerminalSessionState.swift \
+    Sources/MySSHClient/Models/TerminalSessionPresentation.swift \
+    Sources/MySSHClient/Models/QuickAction.swift \
+    Sources/MySSHClient/Models/QuickSSHRequest.swift \
+    Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Services/AppShortcutStore.swift \
+    SelfTests/QuickActionTests.swift \
+    -o "$test_dir/QuickActionTests"
+"$test_dir/QuickActionTests"
 
 swiftc \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
