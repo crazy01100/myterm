@@ -359,12 +359,12 @@ struct HostLibraryView: View {
                                     onConnectHost(host)
                                 }
                                 .contextMenu {
-                                    Button("連線") { onConnectHost(host) }
-                                    Button("使用其他帳號連線") { onConnectOtherAccount(host) }
+                                    Button("連線", systemImage: "terminal") { onConnectHost(host) }
+                                    Button("使用其他帳號連線", systemImage: "person.crop.circle") { onConnectOtherAccount(host) }
                                     Button("開啟 SFTP", systemImage: "folder") { onOpenSFTP(host) }
                                     Divider()
-                                    Button("編輯") { onEditHost(host) }
-                                    Button("刪除", role: .destructive) { onDeleteHost(host) }
+                                    Button("編輯", systemImage: "pencil") { onEditHost(host) }
+                                    Button("刪除", systemImage: "trash", role: .destructive) { onDeleteHost(host) }
                                 }
                                 .background {
                                     GeometryReader { proxy in

@@ -64,6 +64,7 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 
 主機頁 SFTP 入口的目標重用、切換確認、帳號輸入取消及 inventory／連線狀態變動測試位於 `SelfTests/SFTPHostOpeningTests.swift`，由相同隔離入口執行。測試使用真實協調器與合成連線狀態，不連遠端或讀取憑證；實際傳輸保護、目錄保留與共享工作區操作仍須在 Dev 驗收。
 
+SFTP傳輸取消／暫存覆蓋／單一排程與時間模型的回歸可執行 `zsh scripts/run-sftp-transfer-tests.sh`，亦納入完整隔離入口。假伺服器只操作UUID暫存根目錄，測試涵蓋不支援extension、錯誤版本、取消後同連線可用、未取得暫存目錄所有權時不清理、commit回應遺失與process退出；可用時亦以本機原生 OpenSSH sftp-server 測試暫存資料的替換與遞迴傳輸，不建立遠端 SSH 連線。真正的大檔傳輸、取消、覆蓋提示及全寬傳輸區仍須在Dev人工驗收。
 假 SFTP 伺服器也必須使用專案驗證過的 Python：`run-sftp-security-tests.sh` 將 `project-python.sh` 選出的直譯器路徑傳給 Swift 測試，包含預先取消案例；缺少啟動 PID 會使測試失敗。不要在測試內另行寫死系統 Python。
 
 先執行自動測試：

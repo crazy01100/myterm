@@ -197,6 +197,23 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     private var generation = UUID()
     private var pendingOverwriteOperation: PendingOverwriteOperation?
 
+    private struct TransferWork {
+        enum Operation {
+            case upload(URL, String, Bool)
+            case download(SFTPDirectoryEntry, String, URL, Bool)
+        }
+        let id: UUID
+        let generation: UUID
+        let operation: Operation
+        let completion: () -> Void
+    }
+    private var pendingTransfers: [TransferWork] = []
+    private var activeTransferID: UUID?
+    private var transferCancellation: SFTPTransferCancellation?
+
+    var hasActiveTransfers: Bool { transferItems.contains { !$0.state.isFinished } }
+    var canForceStopTransfers: Bool { state != .disconnected && hasActiveTransfers }
+
     private enum PendingOverwriteOperation {
         case upload(
             urls: [URL],
@@ -212,6 +229,18 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
         )
     }
 
+#if MYTERM_SELF_TESTS
+    func installTestConnection(_ connection: SFTPClient, host: HostProfile) {
+        disconnect()
+        client = connection
+        connectedHost = host
+        connectedUsername = host.username
+        currentPath = "/"
+        homePath = "/"
+        state = .connected
+    }
+#endif
+
     var visibleEntries: [SFTPDirectoryEntry] {
         showHiddenFiles ? entries : entries.filter { !$0.isHidden }
     }
@@ -219,12 +248,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     var openingSnapshot: SFTPConnectionSnapshot {
         let active = state == .connected || state == .connecting
         let target = active ? connectedHost.map { SFTPConnectionTarget(host: $0, username: connectedUsername) } : nil
-        let transfersPending = transferItems.contains {
-            switch $0.state {
-            case .waiting, .transferring: true
-            case .completed, .failed: false
-            }
-        }
+        let transfersPending = hasActiveTransfers
         return SFTPConnectionSnapshot(target: target, generation: generation,
             isBusy: transfersPending || isFileOperationInProgress || overwriteRequest != nil || pendingOverwriteOperation != nil,
             description: connectedHost.map { "\($0.displayName)（\(connectedUsername)@\($0.hostname):\($0.port)）" } ?? "SFTP")
@@ -265,6 +289,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
                 entries = result.2
                 selectedNames.removeAll()
                 state = .connected
+                startNextTransfer()
             } catch {
                 guard self.generation == generation else { return }
                 client = nil
@@ -308,14 +333,8 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
         connectionCancellation = nil
         client?.close()
         client = nil
-        for index in transferItems.indices {
-            switch transferItems[index].state {
-            case .waiting, .transferring:
-                transferItems[index].state = .failed(SFTPConnectionError.cancelled.localizedDescription)
-            case .completed, .failed:
-                break
-            }
-        }
+        cancelAllTransfers()
+        pendingTransfers.removeAll()
         connectedHost = nil
         connectedUsername = ""
         homePath = ""
@@ -382,85 +401,34 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     }
 
     func upload(localURLs: [URL], to destinationDirectory: String? = nil) {
-        guard let client, state == .connected, !localURLs.isEmpty else { return }
+        guard client != nil, state == .connected, !localURLs.isEmpty,
+              !isFileOperationInProgress, overwriteRequest == nil else { return }
         let remoteDirectory = destinationDirectory ?? currentPath
-        let sessionID = generation
-        let names = localURLs.map(\.lastPathComponent)
-        isFileOperationInProgress = true
-        Task {
-            do {
-                let conflicts = try await Task.detached(priority: .userInitiated) {
-                    try client.existingItemNames(names, in: remoteDirectory)
-                }.value
-                guard generation == sessionID else { return }
-                isFileOperationInProgress = false
-                if conflicts.isEmpty {
-                    performUpload(
-                        localURLs: localURLs,
-                        to: remoteDirectory,
-                        overwrite: false
-                    )
-                } else {
-                    pendingOverwriteOperation = .upload(
-                        urls: localURLs,
-                        remoteDirectory: remoteDirectory,
-                        sessionID: sessionID
-                    )
-                    overwriteRequest = SFTPOverwriteRequest(
-                        id: UUID(),
-                        direction: .upload,
-                        names: conflicts.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending })
-                    )
-                }
-            } catch {
-                guard generation == sessionID else { return }
-                isFileOperationInProgress = false
-                errorMessage = error.localizedDescription
-            }
+        guard remoteDirectory == currentPath else {
+            errorMessage = "請先開啟要上傳的遠端目錄，再加入傳輸。"
+            return
+        }
+        // Do not queue a blocking remote preflight behind a large transfer: every
+        // requested transfer must become visible/cancellable immediately. The
+        // client rechecks the actual destination before publication.
+        let names = Set(localURLs.map(\.lastPathComponent))
+        let conflicts = entries.filter { names.contains($0.name) }.map(\.name)
+        if conflicts.isEmpty {
+            performUpload(localURLs: localURLs, to: remoteDirectory, overwrite: false)
+        } else {
+            pendingOverwriteOperation = .upload(urls: localURLs, remoteDirectory: remoteDirectory, sessionID: generation)
+            overwriteRequest = SFTPOverwriteRequest(id: UUID(), direction: .upload, names: conflicts.sorted())
         }
     }
 
-    private func performUpload(
-        localURLs: [URL],
-        to remoteDirectory: String,
-        overwrite: Bool
-    ) {
-        guard let client, state == .connected, !localURLs.isEmpty else { return }
-        let jobs = localURLs.map { url in
-            SFTPTransferItem(
-                id: UUID(), direction: .upload, name: url.lastPathComponent,
-                completedBytes: 0, totalBytes: nil, state: .waiting
-            )
+    private func performUpload(localURLs: [URL], to remoteDirectory: String, overwrite: Bool) {
+        guard client != nil, state == .connected else { return }
+        for url in localURLs {
+            enqueueTransfer(direction: .upload, name: url.lastPathComponent,
+                source: url.path, destination: Self.appending(url.lastPathComponent, to: remoteDirectory),
+                total: nil, operation: .upload(url, remoteDirectory, overwrite), completion: {})
         }
-        transferItems.append(contentsOf: jobs)
-        let sessionID = generation
-        Task {
-            for (url, job) in zip(localURLs, jobs) {
-                guard generation == sessionID else { return }
-                updateTransfer(job.id, state: .transferring)
-                do {
-                    try await Task.detached(priority: .userInitiated) { [weak self] in
-                        try client.uploadItem(
-                            at: url,
-                            to: remoteDirectory,
-                            overwrite: overwrite
-                        ) { completed, total in
-                            DispatchQueue.main.async {
-                                guard let self, self.generation == sessionID else { return }
-                                self.updateTransfer(job.id, completed: completed, total: total)
-                            }
-                        }
-                    }.value
-                    guard generation == sessionID else { return }
-                    updateTransfer(job.id, state: .completed)
-                } catch {
-                    guard generation == sessionID else { return }
-                    updateTransfer(job.id, state: .failed(error.localizedDescription))
-                    if errorMessage == nil { errorMessage = error.localizedDescription }
-                }
-            }
-            reload()
-        }
+        startNextTransfer()
     }
 
     func download(
@@ -468,7 +436,8 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
         to localDirectory: URL,
         completion: @escaping () -> Void = {}
     ) {
-        guard state == .connected, !entries.isEmpty else { return }
+        guard state == .connected, !entries.isEmpty,
+              !isFileOperationInProgress, overwriteRequest == nil else { return }
         let remoteDirectory = currentPath
         let conflicts = entries.map(\.name).filter {
             FileManager.default.fileExists(
@@ -500,51 +469,145 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     }
 
     private func performDownload(
-        entries: [SFTPDirectoryEntry],
-        from remoteDirectory: String,
-        to localDirectory: URL,
-        overwrite: Bool,
-        completion: @escaping () -> Void
+        entries: [SFTPDirectoryEntry], from remoteDirectory: String,
+        to localDirectory: URL, overwrite: Bool, completion: @escaping () -> Void
     ) {
-        guard let client, state == .connected, !entries.isEmpty else { return }
-        let jobs = entries.map { entry in
-            SFTPTransferItem(
-                id: UUID(), direction: .download, name: entry.name,
-                completedBytes: 0,
-                totalBytes: entry.isDirectory ? nil : entry.attributes.size,
-                state: .waiting
-            )
+        guard client != nil, state == .connected else { return }
+        for entry in entries {
+            enqueueTransfer(direction: .download, name: entry.name,
+                source: Self.appending(entry.name, to: remoteDirectory),
+                destination: localDirectory.appending(path: entry.name).path,
+                total: entry.isDirectory ? nil : entry.attributes.size,
+                operation: .download(entry, remoteDirectory, localDirectory, overwrite), completion: completion)
         }
-        transferItems.append(contentsOf: jobs)
-        let sessionID = generation
+        startNextTransfer()
+    }
+
+    private func enqueueTransfer(direction: SFTPTransferDirection, name: String, source: String,
+                                 destination: String, total: UInt64?, operation: TransferWork.Operation,
+                                 completion: @escaping () -> Void) {
+        let id = UUID()
+        var item = SFTPTransferItem(id: id, direction: direction, name: name,
+            completedBytes: 0, totalBytes: total, state: .waiting)
+        item.targetDescription = connectedHost.map { "\($0.displayName) · \(connectedUsername)@\($0.hostname):\($0.port)" } ?? "SFTP"
+        item.sourcePath = source
+        item.destinationPath = destination
+        transferItems.append(item)
+        pendingTransfers.append(TransferWork(id: id, generation: generation, operation: operation, completion: completion))
+    }
+
+    func cancelTransfer(_ id: UUID) {
+        guard let index = transferItems.firstIndex(where: { $0.id == id }) else { return }
+        if activeTransferID == id {
+            if transferCancellation?.cancel() == true { transferItems[index].state = .cancelling }
+        } else if transferItems[index].state == .waiting {
+            pendingTransfers.removeAll { $0.id == id }
+            finishTransfer(id, state: .cancelled)
+            trimTransferHistory()
+        }
+    }
+
+    func cancelAllTransfers() {
+        pendingOverwriteOperation = nil
+        overwriteRequest = nil
+        for id in transferItems.filter({ !$0.state.isFinished }).map(\.id) { cancelTransfer(id) }
+    }
+
+    private func startNextTransfer() {
+        guard activeTransferID == nil, let client, state == .connected,
+              !isFileOperationInProgress, overwriteRequest == nil else { return }
+        pendingTransfers.removeAll { $0.generation != generation }
+        guard !pendingTransfers.isEmpty else { return }
+        let work = pendingTransfers.removeFirst()
+        let cancellation = SFTPTransferCancellation()
+        activeTransferID = work.id
+        transferCancellation = cancellation
+        if let index = transferItems.firstIndex(where: { $0.id == work.id }) {
+            transferItems[index].state = .transferring
+            transferItems[index].timing.start(now: ProcessInfo.processInfo.systemUptime, date: Date())
+        }
         Task {
-            for (entry, job) in zip(entries, jobs) {
-                guard generation == sessionID else { return }
-                updateTransfer(job.id, state: .transferring)
-                do {
-                    try await Task.detached(priority: .userInitiated) { [weak self] in
-                        try client.downloadItem(
-                            entry,
-                            from: remoteDirectory,
-                            to: localDirectory,
-                            overwrite: overwrite
-                        ) { completed, total in
-                            DispatchQueue.main.async {
-                                guard let self, self.generation == sessionID else { return }
-                                self.updateTransfer(job.id, completed: completed, total: total)
-                            }
+            var failure: Error?
+            do {
+                let finalProgress = try await Task.detached(priority: .userInitiated) { [weak self] in
+                    var lastUpdate = -Double.infinity
+                    var finalBytes: UInt64 = 0
+                    var finalTotal: UInt64?
+                    let progress: (UInt64, UInt64?) -> Void = { completed, total in
+                        finalBytes = completed; finalTotal = total
+                        let now = ProcessInfo.processInfo.systemUptime
+                        guard completed == 0 || total == completed || now - lastUpdate >= 0.2 else { return }
+                        lastUpdate = now
+                        DispatchQueue.main.async { [weak self] in
+                            self?.updateTransfer(work.id, completed: completed, total: total)
                         }
-                    }.value
-                    guard generation == sessionID else { return }
-                    updateTransfer(job.id, state: .completed)
-                } catch {
-                    guard generation == sessionID else { return }
-                    updateTransfer(job.id, state: .failed(error.localizedDescription))
-                    if errorMessage == nil { errorMessage = error.localizedDescription }
+                    }
+                    switch work.operation {
+                    case .upload(let url, let remoteDirectory, let overwrite):
+                        try client.uploadItem(at: url, to: remoteDirectory, overwrite: overwrite,
+                            cancellation: cancellation, progress: progress)
+                    case .download(let entry, let remoteDirectory, let localDirectory, let overwrite):
+                        try client.downloadItem(entry, from: remoteDirectory, to: localDirectory,
+                            overwrite: overwrite, cancellation: cancellation, progress: progress)
+                    }
+                    return (finalBytes, finalTotal)
+                }.value
+                updateTransfer(work.id, completed: finalProgress.0, total: finalProgress.1)
+            } catch { failure = error }
+            if let failure {
+                if case SFTPConnectionError.cancelled = failure {
+                    finishTransfer(work.id, state: .cancelled)
+                } else if failure is SFTPTransferError {
+                    if case SFTPTransferError.unsafeOverwrite = failure {
+                        finishTransfer(work.id, state: .failed(failure.localizedDescription))
+                    } else {
+                        finishTransfer(work.id, state: .needsAttention(failure.localizedDescription))
+                        // Ambiguous transport/publication state must not feed the next job.
+                        if generation == work.generation { disconnect() }
+                    }
+                } else {
+                    finishTransfer(work.id, state: .failed(Self.friendlyMessage(for: failure)))
+                    if let error = failure as? SFTPProtocolError, generation == work.generation {
+                        switch error {
+                        case .serverStatus: break
+                        default: disconnect()
+                        }
+                    }
+                    if let error = failure as? SFTPConnectionError,
+                       generation == work.generation {
+                        switch error {
+                        case .timedOut, .connectionClosed: disconnect()
+                        default: break
+                        }
+                    }
                 }
+            } else {
+                finishTransfer(work.id, state: .completed)
             }
-            completion()
+            if activeTransferID == work.id {
+                activeTransferID = nil
+                transferCancellation = nil
+            }
+            if generation == work.generation { work.completion() }
+            trimTransferHistory()
+            startNextTransfer()
+            if generation == work.generation, !hasActiveTransfers { reload() }
         }
+    }
+
+    private func finishTransfer(_ id: UUID, state: SFTPTransferState) {
+        guard let index = transferItems.firstIndex(where: { $0.id == id }) else { return }
+        transferItems[index].state = state
+        transferItems[index].timing.finish(now: ProcessInfo.processInfo.systemUptime, date: Date())
+        if state == .completed, let total = transferItems[index].totalBytes {
+            transferItems[index].completedBytes = total
+        }
+    }
+
+    private func trimTransferHistory() {
+        let finished = transferItems.filter { $0.state.isFinished }
+        let evicted = Set(finished.prefix(max(0, finished.count - 200)).map(\.id))
+        transferItems.removeAll { evicted.contains($0.id) }
     }
 
     func confirmOverwrite() {
@@ -579,6 +642,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     func cancelOverwrite() {
         pendingOverwriteOperation = nil
         overwriteRequest = nil
+        startNextTransfer()
     }
 
     func createDirectory(named input: String) {
@@ -664,10 +728,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
     }
 
     func clearCompletedTransfers() {
-        transferItems.removeAll {
-            if case .completed = $0.state { return true }
-            return false
-        }
+        transferItems.removeAll { $0.state.isFinished }
     }
 
     private func load(path: String) {
@@ -684,9 +745,11 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
                 entries = result
                 selectedNames.removeAll()
                 state = .connected
+                startNextTransfer()
             } catch {
                 guard self.generation == generation else { return }
                 state = .connected
+                startNextTransfer()
                 errorMessage = Self.friendlyMessage(for: error)
             }
         }
@@ -717,8 +780,12 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection 
         total: UInt64? = nil,
         state: SFTPTransferState? = nil
     ) {
-        guard let index = transferItems.firstIndex(where: { $0.id == id }) else { return }
-        if let completed { transferItems[index].completedBytes = completed }
+        guard let index = transferItems.firstIndex(where: { $0.id == id }),
+              !transferItems[index].state.isFinished else { return }
+        if let completed {
+            transferItems[index].completedBytes = completed
+            transferItems[index].timing.record(bytes: completed, now: ProcessInfo.processInfo.systemUptime)
+        }
         if let total { transferItems[index].totalBytes = total }
         if let state { transferItems[index].state = state }
     }

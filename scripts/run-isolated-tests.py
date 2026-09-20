@@ -28,3 +28,4 @@ with tempfile.TemporaryDirectory(prefix='MyTerm-isolated-tests-',dir='/private/t
     env = {**os.environ, 'MYTERM_PYTHON': sys.executable, 'PATH': str(Path(sys.executable).parent) + os.pathsep + os.environ.get('PATH', '')}
     subprocess.run([str(root/'scripts/run-tests.sh')],cwd=root,check=True,env=env)
     subprocess.run([str(root/'scripts/run-sftp-security-tests.sh')],cwd=root,check=True,env=env)
+    subprocess.run(['zsh',str(root/'scripts/run-sftp-transfer-tests.sh')],cwd=root,check=True,env=env)
