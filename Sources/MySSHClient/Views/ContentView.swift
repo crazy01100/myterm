@@ -7,6 +7,8 @@ struct ContentView: View {
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var shortcutStore: AppShortcutStore
     @StateObject private var quickActions = QuickActionPanelController()
+    @StateObject private var sftpRemoteStore = SFTPRemoteBrowserStore()
+    @StateObject private var sftpOpening = SFTPHostOpeningController()
     @State private var hostEditorRequest: HostEditorRequest?
     @State private var groupEditorRequest: GroupEditorRequest?
     @State private var connectionRequest: ConnectionRequest?
@@ -27,6 +29,7 @@ struct ContentView: View {
 
     var body: some View {
         workspaceContent
+        .modifier(SFTPHostOpeningPresentation(controller: sftpOpening, connection: sftpRemoteStore, onOpen: showSFTP))
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 workspaceTabBar
@@ -36,6 +39,7 @@ struct ContentView: View {
         .toolbarBackground(AppVisualTheme.chromeBackground, for: .windowToolbar)
         .toolbarBackground(.visible, for: .windowToolbar)
         .toolbarColorScheme(.dark, for: .windowToolbar)
+        .background(WorkspaceToolbarConfiguration().frame(width: 0, height: 0))
         .onAppear(perform: configureSessionObservers)
         .onAppear(perform: configureQuickActions)
         .onChange(of: sessionManager.sessions.map(\.id)) { _, _ in configureQuickActions() }
@@ -477,6 +481,11 @@ struct ContentView: View {
         return sessionManager.workspaces.count
     }
 
+    private func showSFTP() {
+        sessionManager.showHostLibrary()
+        libraryWorkspace = .sftp
+    }
+
     private var workspaceContent: some View {
         ZStack {
             HostLibraryView(
@@ -489,6 +498,9 @@ struct ContentView: View {
                 onEditHost: edit,
                 onConnectHost: beginConnection,
                 onConnectOtherAccount: askForUsername,
+                onOpenSFTP: { host in
+                    sftpOpening.begin(host: host, hosts: hostStore.hosts, connection: sftpRemoteStore, show: showSFTP)
+                },
                 onDeleteHost: { deleteCandidate = $0 },
                 onRenameGroup: {
                     groupEditorRequest = GroupEditorRequest(group: $0, defaultParentID: nil)
@@ -500,7 +512,7 @@ struct ContentView: View {
             .opacity(sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts ? 1 : 0)
             .allowsHitTesting(sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts)
 
-            SFTPWorkspaceView {
+            SFTPWorkspaceView(remoteStore: sftpRemoteStore) {
                 libraryWorkspace = .hosts
                 hostLibrarySelection = .all
             }

@@ -3,12 +3,14 @@ import SwiftUI
 struct ConnectionUsernameView: View {
     @Environment(\.dismiss) private var dismiss
     let host: HostProfile
+    let isSFTP: Bool
     let onConnect: (String) throws -> Void
     @State private var username: String
     @State private var errorMessage: String?
 
-    init(host: HostProfile, initialUsername: String, onConnect: @escaping (String) throws -> Void) {
+    init(host: HostProfile, initialUsername: String, isSFTP: Bool = false, onConnect: @escaping (String) throws -> Void) {
         self.host = host
+        self.isSFTP = isSFTP
         self.onConnect = onConnect
         _username = State(initialValue: initialUsername)
     }
@@ -29,7 +31,7 @@ struct ConnectionUsernameView: View {
             TextField("本次使用者名稱", text: $username)
                 .textFieldStyle(.roundedBorder)
             if host.authenticationMethod == .password {
-                Text(isDefaultAccount
+                Text(isSFTP ? "SFTP 使用這台主機已儲存的密碼；若尚未保存密碼，請先透過 SSH 連線保存，或改用私鑰／SSH Agent。" : isDefaultAccount
                      ? "將使用這台主機在本機加密保管庫中儲存的預設帳號密碼。"
                      : "其他帳號不會套用預設帳號的密碼；請在終端提示時輸入。")
                     .font(.caption)

@@ -85,6 +85,13 @@ swiftc -swift-version 5 -parse-as-library \
     -o "$test_dir/QuickActionTests"
 "$test_dir/QuickActionTests"
 
+swiftc -swift-version 5 -parse-as-library \
+    Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Services/SFTPHostOpeningController.swift \
+    SelfTests/SFTPHostOpeningTests.swift \
+    -o "$test_dir/SFTPHostOpeningTests"
+"$test_dir/SFTPHostOpeningTests"
+
 swiftc \
     Sources/MySSHClient/Services/OAuthSecurity.swift \
     Sources/MySSHClient/Services/LoopbackOAuthListener.swift \
