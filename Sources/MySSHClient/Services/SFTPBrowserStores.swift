@@ -171,7 +171,7 @@ final class LocalFileBrowserStore: ObservableObject {
 }
 
 @MainActor
-final class SFTPRemoteBrowserStore: ObservableObject {
+final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection {
     enum State: Equatable {
         case disconnected
         case connecting
@@ -214,6 +214,20 @@ final class SFTPRemoteBrowserStore: ObservableObject {
 
     var visibleEntries: [SFTPDirectoryEntry] {
         showHiddenFiles ? entries : entries.filter { !$0.isHidden }
+    }
+
+    var openingSnapshot: SFTPConnectionSnapshot {
+        let active = state == .connected || state == .connecting
+        let target = active ? connectedHost.map { SFTPConnectionTarget(host: $0, username: connectedUsername) } : nil
+        let transfersPending = transferItems.contains {
+            switch $0.state {
+            case .waiting, .transferring: true
+            case .completed, .failed: false
+            }
+        }
+        return SFTPConnectionSnapshot(target: target, generation: generation,
+            isBusy: transfersPending || isFileOperationInProgress || overwriteRequest != nil || pendingOverwriteOperation != nil,
+            description: connectedHost.map { "\($0.displayName)（\(connectedUsername)@\($0.hostname):\($0.port)）" } ?? "SFTP")
     }
 
     func connect(to host: HostProfile, username: String) {

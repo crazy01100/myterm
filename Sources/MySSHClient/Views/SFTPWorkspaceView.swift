@@ -3,9 +3,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SFTPWorkspaceView: View {
+    @ObservedObject var remoteStore: SFTPRemoteBrowserStore
     let onClose: () -> Void
     @StateObject private var localStore = LocalFileBrowserStore()
-    @StateObject private var remoteStore = SFTPRemoteBrowserStore()
 
     var body: some View {
         GeometryReader { geometry in
@@ -735,7 +735,7 @@ private struct SFTPHostSelector: View {
         }
         .background(AppVisualTheme.contentBackground)
         .sheet(item: $usernameHost) { host in
-            ConnectionUsernameView(host: host, initialUsername: "") { username in
+            ConnectionUsernameView(host: host, initialUsername: "", isSFTP: true) { username in
                 onConnect(host, username)
             }
         }
