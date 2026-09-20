@@ -272,15 +272,28 @@ enum SFTPTransferDirection: Equatable, Sendable {
 enum SFTPTransferState: Equatable, Sendable {
     case waiting
     case transferring
+    case cancelling
+    case cancelled
     case completed
     case failed(String)
+    case needsAttention(String)
+
+    var isFinished: Bool {
+        switch self {
+        case .waiting, .transferring, .cancelling: false
+        case .cancelled, .completed, .failed, .needsAttention: true
+        }
+    }
 
     var title: String {
         switch self {
         case .waiting: "等待中"
         case .transferring: "傳輸中"
+        case .cancelling: "正在取消"
+        case .cancelled: "已取消"
         case .completed: "完成"
         case .failed(let message): "失敗：\(message)"
+        case .needsAttention(let message): "待確認：\(message)"
         }
     }
 }
@@ -292,9 +305,79 @@ struct SFTPTransferItem: Identifiable, Equatable, Sendable {
     var completedBytes: UInt64
     var totalBytes: UInt64?
     var state: SFTPTransferState
+    var targetDescription = ""
+    var sourcePath = ""
+    var destinationPath = ""
+    var timing = SFTPTransferTiming()
 
     var fractionCompleted: Double? {
         guard let totalBytes, totalBytes > 0 else { return nil }
         return min(1, Double(completedBytes) / Double(totalBytes))
+    }
+
+    // Completion means the final file operation succeeded, not just that all bytes were sent.
+    var progressPercentage: Double? {
+        guard totalBytes != nil else { return nil }
+        if state == .completed { return 100 }
+        guard let fractionCompleted else { return nil }
+        return min(99.9, (fractionCompleted * 1_000).rounded() / 10)
+    }
+
+    var progressDescription: String {
+        guard let totalBytes else { return "總大小未知" }
+        if state == .transferring, completedBytes >= totalBytes { return "正在完成" }
+        guard let progressPercentage else { return "處理中" }
+        return String(format: "%.1f%%", progressPercentage)
+    }
+}
+
+struct SFTPTransferTiming: Equatable, Sendable {
+    struct Sample: Equatable, Sendable {
+        let time: TimeInterval
+        let bytes: UInt64
+    }
+    private(set) var startedAt: Date?
+    private(set) var endedAt: Date?
+    private(set) var startUptime: TimeInterval?
+    private(set) var endUptime: TimeInterval?
+    private(set) var samples: [Sample] = []
+
+    mutating func start(now: TimeInterval, date: Date) {
+        guard startUptime == nil else { return }
+        startUptime = now; startedAt = date
+        samples = [Sample(time: now, bytes: 0)]
+    }
+
+    mutating func record(bytes: UInt64, now: TimeInterval) {
+        guard endUptime == nil, let last = samples.last,
+              now >= last.time, bytes >= last.bytes else { return }
+        // At most ten samples per second, retaining a short moving window.
+        guard now - last.time >= 0.1 else { return }
+        samples.append(Sample(time: now, bytes: bytes))
+        while samples.count > 2, samples[1].time < now - 3 { samples.removeFirst() }
+    }
+
+    mutating func finish(now: TimeInterval, date: Date) {
+        guard endUptime == nil else { return }
+        endUptime = now; endedAt = date
+    }
+
+    func elapsed(at now: TimeInterval) -> TimeInterval {
+        guard let startUptime else { return 0 }
+        return max(0, (endUptime ?? now) - startUptime)
+    }
+
+    func speed(at now: TimeInterval) -> Double? {
+        guard endUptime == nil, let first = samples.first, let last = samples.last else { return nil }
+        if now - last.time > 2 { return 0 }
+        let duration = last.time - first.time
+        guard duration >= 0.25 else { return nil }
+        return Double(last.bytes - first.bytes) / duration
+    }
+
+    func remaining(bytes: UInt64, total: UInt64?, now: TimeInterval) -> TimeInterval? {
+        guard let total, total > bytes, let rate = speed(at: now), rate > 0 else { return nil }
+        let result = Double(total - bytes) / rate
+        return result.isFinite ? result : nil
     }
 }

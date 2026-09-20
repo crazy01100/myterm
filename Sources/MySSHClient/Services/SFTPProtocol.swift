@@ -199,6 +199,23 @@ enum SFTPProtocolCodec {
         // Remaining bytes are optional extension name/value pairs.
     }
 
+    static func supportsPOSIXRename(_ packet: Data) throws -> Bool {
+        try parseVersion(packet)
+        var reader = SFTPPacketReader(packet)
+        _ = try reader.readUInt8()
+        _ = try reader.readUInt32()
+        var supported = false
+        var count = 0
+        while reader.remainingCount > 0 {
+            count += 1
+            guard count <= 1_024 else { throw SFTPProtocolError.resourceLimit }
+            let name = try reader.readString()
+            let version = try reader.readString()
+            if name == "posix-rename@openssh.com", version == "1" { supported = true }
+        }
+        return supported
+    }
+
     static func responseReader(_ packet: Data, expectedRequestID: UInt32) throws -> (UInt8, SFTPPacketReader) {
         var reader = SFTPPacketReader(packet)
         let type = try reader.readUInt8()

@@ -1,6 +1,52 @@
 import Darwin
 import Foundation
 
+/// Operation cancellation is checked only between complete protocol requests.
+/// Once publication starts, cancelling must not report a committed file as undone.
+final class SFTPTransferCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private var committing = false
+
+    @discardableResult func cancel() -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        guard !committing else { return false }
+        cancelled = true
+        return true
+    }
+
+    func check() throws {
+        lock.lock(); let value = cancelled; lock.unlock()
+        if value { throw SFTPConnectionError.cancelled }
+    }
+
+    func beginCommit() throws {
+        lock.lock(); defer { lock.unlock() }
+        if cancelled { throw SFTPConnectionError.cancelled }
+        committing = true
+    }
+}
+
+enum SFTPTransferError: LocalizedError {
+    case unsafeOverwrite
+    case cleanupRequired(path: String, reason: String)
+    case outcomeUnknown(destination: String, temporaryPath: String)
+    case publishedCleanupRequired(destination: String, temporaryPath: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .unsafeOverwrite:
+            "此目標無法安全覆蓋。請改用新名稱；同名資料夾請先進入資料夾，再傳輸個別檔案。"
+        case .cleanupRequired(let path, let reason):
+            "\(reason) 暫存項目可能仍存在：\(path)。請重新連線後檢查；原目標未被本次傳輸替換。"
+        case .outcomeUnknown(let destination, let temporaryPath):
+            "伺服器未確認最後的替換結果。請檢查 \(destination) 及暫存位置 \(temporaryPath)，不要直接重試覆蓋。"
+        case .publishedCleanupRequired(let destination, let temporaryPath):
+            "\(destination) 已傳輸完成，但暫存資料夾未能清除：\(temporaryPath)。請重新連線後檢查。"
+        }
+    }
+}
+
 enum SFTPConnectionError: LocalizedError {
     case cancelled
     case timedOut
@@ -313,9 +359,11 @@ final class SFTPClient: @unchecked Sendable {
     private let session: SFTPProcessSession
     private var nextRequestID: UInt32 = 1
     private let operationLock = NSLock()
+    private let supportsAtomicOverwrite: Bool
 
-    private init(session: SFTPProcessSession) {
+    private init(session: SFTPProcessSession, supportsAtomicOverwrite: Bool = false) {
         self.session = session
+        self.supportsAtomicOverwrite = supportsAtomicOverwrite
     }
 
     static func connect(to host: HostProfile, username: String, cancellation: SFTPCancellation? = nil) throws -> SFTPClient {
@@ -343,16 +391,17 @@ final class SFTPClient: @unchecked Sendable {
         }
 
         let processSession: SFTPProcessSession
+        let supportsAtomicOverwrite: Bool
         do {
             processSession = try SFTPProcessSession(arguments: arguments, environment: environment, cancellation: cancellation)
             try processSession.write(SFTPProtocolCodec.initializationPacket())
-            try SFTPProtocolCodec.parseVersion(processSession.readPacket())
+            supportsAtomicOverwrite = try SFTPProtocolCodec.supportsPOSIXRename(processSession.readPacket())
             passwordPipe?.cleanup()
         } catch {
             passwordPipe?.cleanup()
             throw error
         }
-        return SFTPClient(session: processSession)
+        return SFTPClient(session: processSession, supportsAtomicOverwrite: supportsAtomicOverwrite)
     }
 
 #if MYTERM_SELF_TESTS
@@ -373,8 +422,8 @@ final class SFTPClient: @unchecked Sendable {
         )
         do {
             try session.write(SFTPProtocolCodec.initializationPacket())
-            try SFTPProtocolCodec.parseVersion(session.readPacket())
-            return SFTPClient(session: session)
+            let supported = try SFTPProtocolCodec.supportsPOSIXRename(session.readPacket())
+            return SFTPClient(session: session, supportsAtomicOverwrite: supported)
         } catch {
             session.close()
             throw error
@@ -445,20 +494,79 @@ final class SFTPClient: @unchecked Sendable {
         at localURL: URL,
         to remoteDirectory: String,
         overwrite: Bool = false,
+        cancellation: SFTPTransferCancellation? = nil,
         progress: @escaping (UInt64, UInt64?) -> Void
     ) throws {
         try synchronized {
-            var completed: UInt64 = 0
+            try cancellation?.check()
+            let name = localURL.lastPathComponent
+            try Self.validatePathComponent(name)
+            let destination = Self.appending(name, to: remoteDirectory)
             let values = try localURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
-            let total = values.isDirectory == true ? nil : values.fileSize.map(UInt64.init)
-            try uploadItemUnlocked(
-                localURL,
-                remotePath: Self.appending(localURL.lastPathComponent, to: remoteDirectory),
-                overwriteExisting: overwrite,
-                completed: &completed,
-                total: total,
-                progress: progress
-            )
+            guard values.isSymbolicLink != true else { throw SFTPFileOperationError.symbolicLinkTransferUnsupported(name) }
+            let existing = try attributesUnlocked(at: destination)
+            if let existing {
+                guard overwrite else { throw SFTPFileOperationError.destinationExists(name) }
+                guard supportsAtomicOverwrite, existing.kind == .regularFile, values.isDirectory != true else {
+                    throw SFTPTransferError.unsafeOverwrite
+                }
+            }
+            // Exclusive mkdir establishes ownership before any cleanup is allowed.
+            let container = Self.appending(".myterm-upload-" + UUID().uuidString, to: remoteDirectory)
+            let stage = Self.appending(name, to: container)
+            do {
+                try requireOK(request(type: SFTPPacketType.makeDirectory) {
+                    $0.append(string: container); $0.appendPermissions(0o700)
+                })
+            } catch let error as SFTPProtocolError {
+                // An explicit failure never grants ownership (including a collision).
+                if case .serverStatus = error { throw error }
+                throw SFTPTransferError.cleanupRequired(path: container, reason: error.localizedDescription)
+            } catch {
+                throw SFTPTransferError.cleanupRequired(path: container, reason: error.localizedDescription)
+            }
+            var committed = false
+            do {
+                var completed: UInt64 = 0
+                let total = values.isDirectory == true ? nil : values.fileSize.map(UInt64.init)
+                progress(0, total)
+                try uploadItemUnlocked(localURL, remotePath: stage, overwriteExisting: false,
+                    completed: &completed, total: total, cancellation: cancellation, progress: progress)
+                try cancellation?.check()
+                // Recheck type at publication time; never delete an existing target.
+                let current = try attributesUnlocked(at: destination)
+                if let current {
+                    guard overwrite else { throw SFTPFileOperationError.destinationExists(name) }
+                    guard supportsAtomicOverwrite, current.kind == .regularFile, values.isDirectory != true else {
+                        throw SFTPTransferError.unsafeOverwrite
+                    }
+                }
+                try cancellation?.beginCommit()
+                do {
+                    try requireOK(request(type: current == nil ? SFTPPacketType.rename : 200) {
+                        if current != nil { $0.append(string: "posix-rename@openssh.com") }
+                        $0.append(string: stage); $0.append(string: destination)
+                    })
+                } catch let error as SFTPProtocolError {
+                    if case .serverStatus = error { throw error }
+                    throw SFTPTransferError.outcomeUnknown(destination: destination, temporaryPath: container)
+                } catch {
+                    throw SFTPTransferError.outcomeUnknown(destination: destination, temporaryPath: container)
+                }
+                committed = true
+                // Only the empty container remains. Never roll back the published file.
+                try requireOK(request(type: SFTPPacketType.removeDirectory) { $0.append(string: container) })
+            } catch {
+                if case SFTPTransferError.outcomeUnknown = error { throw error }
+                if committed {
+                    throw SFTPTransferError.publishedCleanupRequired(destination: destination, temporaryPath: container)
+                }
+                do { try removeRecursivelyUnlocked(path: container, kind: .directory) }
+                catch {
+                    throw SFTPTransferError.cleanupRequired(path: container, reason: "傳輸未完成。")
+                }
+                throw error
+            }
         }
     }
 
@@ -467,40 +575,32 @@ final class SFTPClient: @unchecked Sendable {
         from remoteDirectory: String,
         to localDirectory: URL,
         overwrite: Bool = false,
+        cancellation: SFTPTransferCancellation? = nil,
         progress: @escaping (UInt64, UInt64?) -> Void
     ) throws {
         try synchronized {
+            try cancellation?.check()
             try Self.validatePathComponent(entry.name)
-            var completed: UInt64 = 0
             let total = entry.isDirectory ? nil : entry.attributes.size
             let remotePath = Self.appending(entry.name, to: remoteDirectory)
-            let localURL = localDirectory.appending(path: entry.name)
-            if overwrite, FileManager.default.fileExists(atPath: localURL.path) {
-                let replacementURL = localDirectory
-                    .appending(path: ".myterm-replacement-\(UUID().uuidString)")
-                do {
-                    try downloadItemUnlocked(
-                        entry,
-                        remotePath: remotePath,
-                        localURL: replacementURL,
-                        completed: &completed,
-                        total: total,
-                        progress: progress
-                    )
-                    try Self.replaceLocalItem(at: localURL, with: replacementURL)
-                } catch {
-                    try? FileManager.default.removeItem(at: replacementURL)
-                    throw error
-                }
+            let destination = localDirectory.appending(path: entry.name)
+            if !overwrite, FileManager.default.fileExists(atPath: destination.path) {
+                throw SFTPFileOperationError.destinationExists(entry.name)
+            }
+            let container = localDirectory.appending(path: ".myterm-download-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: container, withIntermediateDirectories: false,
+                attributes: [.posixPermissions: 0o700])
+            defer { try? FileManager.default.removeItem(at: container) }
+            let replacement = container.appending(path: entry.name)
+            var completed: UInt64 = 0
+            progress(0, total)
+            try downloadItemUnlocked(entry, remotePath: remotePath, localURL: replacement,
+                completed: &completed, total: total, cancellation: cancellation, progress: progress)
+            try cancellation?.beginCommit()
+            if overwrite, FileManager.default.fileExists(atPath: destination.path) {
+                try Self.replaceLocalItem(at: destination, with: replacement)
             } else {
-                try downloadItemUnlocked(
-                    entry,
-                    remotePath: remotePath,
-                    localURL: localURL,
-                    completed: &completed,
-                    total: total,
-                    progress: progress
-                )
+                try FileManager.default.moveItem(at: replacement, to: destination)
             }
         }
     }
@@ -669,17 +769,17 @@ final class SFTPClient: @unchecked Sendable {
         overwriteExisting: Bool,
         completed: inout UInt64,
         total: UInt64?,
+        cancellation: SFTPTransferCancellation?,
         progress: (UInt64, UInt64?) -> Void,
         depth: Int = 0
     ) throws {
         guard depth <= 64 else { throw SFTPProtocolError.resourceLimit }
+        try cancellation?.check()
         let values = try localURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
         if values.isSymbolicLink == true {
             throw SFTPFileOperationError.symbolicLinkTransferUnsupported(localURL.lastPathComponent)
         }
-        if overwriteExisting, let existing = try attributesUnlocked(at: remotePath) {
-            try removeRecursivelyUnlocked(path: remotePath, kind: existing.kind)
-        }
+        guard !overwriteExisting else { throw SFTPTransferError.unsafeOverwrite }
         if values.isDirectory == true {
             try requireMissingUnlocked(remotePath)
             let response = try request(type: SFTPPacketType.makeDirectory) {
@@ -700,6 +800,7 @@ final class SFTPClient: @unchecked Sendable {
                         overwriteExisting: false,
                         completed: &completed,
                         total: total,
+                        cancellation: cancellation,
                         progress: progress,
                         depth: depth + 1
                     )
@@ -721,6 +822,7 @@ final class SFTPClient: @unchecked Sendable {
             let openedHandle = try openFileUnlocked(path: remotePath, flags: 0x0000_002A)
             handle = openedHandle
             while true {
+                try cancellation?.check()
                 let chunk = try localHandle.read(upToCount: 64 * 1_024) ?? Data()
                 if chunk.isEmpty { break }
                 try writeFileUnlocked(handle: openedHandle, offset: offset, data: chunk)
@@ -749,10 +851,12 @@ final class SFTPClient: @unchecked Sendable {
         localURL: URL,
         completed: inout UInt64,
         total: UInt64?,
+        cancellation: SFTPTransferCancellation?,
         progress: (UInt64, UInt64?) -> Void,
         depth: Int = 0
     ) throws {
         guard depth <= 64 else { throw SFTPProtocolError.resourceLimit }
+        try cancellation?.check()
         try Self.validatePathComponent(entry.name)
         guard !FileManager.default.fileExists(atPath: localURL.path) else {
             throw SFTPFileOperationError.destinationExists(entry.name)
@@ -775,6 +879,7 @@ final class SFTPClient: @unchecked Sendable {
                         localURL: localURL.appending(path: child.name),
                         completed: &completed,
                         total: total,
+                        cancellation: cancellation,
                         progress: progress,
                         depth: depth + 1
                     )
@@ -800,6 +905,7 @@ final class SFTPClient: @unchecked Sendable {
                 let openedLocalHandle = try FileHandle(forWritingTo: temporaryURL)
                 localHandle = openedLocalHandle
                 while let chunk = try readFileUnlocked(handle: remoteHandle, offset: offset, length: 64 * 1_024) {
+                    try cancellation?.check()
                     try openedLocalHandle.write(contentsOf: chunk)
                     let (nextOffset, overflow) = offset.addingReportingOverflow(UInt64(chunk.count))
                     guard !overflow else { throw SFTPProtocolError.malformedPacket }

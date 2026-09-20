@@ -80,6 +80,9 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - SFTP 實作檔案瀏覽、傳輸、覆蓋確認與基本檔案管理；本機 FileManager attributes 與遠端 SFTP v3 attributes 已取得的 POSIX permissions 會交由共用 `SFTPPermissionMode` 格式化成 symbolic／八進位權限，列表不會為每個項目增加額外 `stat` 或 SFTP request。視覺化權限矩陣與八進位輸入使用同一狀態，最後仍透過既有本機／遠端 chmod 流程套用，成功後重新載入實際 attributes，未知權限不套用預設值。本機與遠端檔案拖放使用 App bundle 明確宣告、符合 `public.data` 的私有資料型別，候選與發布驗證會拒絕缺少宣告的封裝。主機庫分類移動則完全在目前 MyTerm 視窗內依滑鼠事件與卡片矩形處理，不建立可供其他 App 傳入的拖放 payload。認證設定沿用相同主機資料與本機加密保管庫邊界。本機瀏覽器會解析可導覽的符號連結，因此 OneDrive 等 File Provider 目錄可留在 MyTerm 內操作。
 - 主視窗的 WorkspaceToolbarConfiguration 固定原生工具列承載模式並停用系統圖像／文字模式切換；分頁本身的圖示與標題由自訂 view 保留。配置僅套用所在主視窗，不改工具列身分、分頁排序、拖曳或其他視窗。
 - 主機卡片的「開啟 SFTP」由 ContentView 路由到 SFTPHostOpeningController；ContentView 持有穩定的遠端 browser store，SFTPWorkspaceView 觀察該實例，本機 browser store 仍留在原工作區。SFTPHostOpeningPresentation 負責帳號輸入及切換提示。重用依保存主機 ID、實際／預設帳號與連線設定判斷；相同活躍目標只切換畫面，保留目錄與傳輸。換目標前檢查傳輸／檔案操作／覆蓋狀態，確認後再核對最新 inventory、連線 generation 與忙碌狀態，避免過期請求中斷工作或連錯主機。取消不斷線；不新增臨時 SSH 的 SFTP，也不追蹤 shell 目錄。
+- SFTPRemoteBrowserStore 以單一佇列依序執行上／下載，工作保存連線generation、原始主機與來源／目的目錄；加入上傳時使用目前目錄快照提示衝突，client在實際執行／發布前重新檢查，不把阻塞的遠端preflight藏在活動傳輸後面。SFTPTransferCancellation只在完整協定要求的邊界檢查，commit開始後拒絕晚到取消；強制斷線使用原連線取消入口。等待中直接移除；正在取消仍算busy，結束狀態不再阻擋主機切換。
+- 上傳以成功建立的獨立0700暫存目錄建立清理所有權；不刪原目標，完成後對新目標用標準rename，覆蓋一般檔案則要求伺服器公告posix-rename@openssh.com版本1。同名遠端資料夾或不支援的覆蓋拒絕。下載在同一本機目錄的獨立暫存容器準備，成功後才搬移／替換；取消不發布半成品。commit送出後失去回應與cleanup失敗分別保留待確認資訊，不猜測回滾或自動重試。
+- SFTPWorkspaceView在雙欄下方持有全寬傳輸清單，遠端pane不再擁有傳輸列。傳輸列以明確定量樣式繪製實際比例，SFTPTransferItem提供百分比及收尾狀態，未知總量不冒充定量進度。SFTPTransferTiming以單調時鐘及短時間bytes樣本估算速率／ETA，wall clock僅供顯示結束時間，進度更新合併約每0.2秒、UI每0.5秒更新。未知總量不先掃描目錄；最多200筆已結束紀錄留於記憶體，活動工作不受清除／淘汰影響，不持久化或同步。
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
 - 平台辨識先被動解析終端機輸出；已儲存主機中仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
 

@@ -64,6 +64,7 @@ Quick Action search, result IDs, shortcut migration, temporary SSH address parsi
 
 Saved-host SFTP opening tests live in `SelfTests/SFTPHostOpeningTests.swift` and run through the same isolated entry point. They exercise the real coordinator with synthetic connection state for target reuse, switch confirmation, username cancellation, and inventory/connection changes, without remote connections or credentials. Transfer protection, directory preservation, and shared workspace interactions also require Dev acceptance.
 
+Run `zsh scripts/run-sftp-transfer-tests.sh` for transfer cancellation, staging/replacement, single-queue scheduling, and timing regression tests; the complete isolated entry point includes them. The fake peer is confined to a UUID temporary root. Cases cover missing/wrong extension versions, channel reuse after cancellation, no cleanup without staging ownership, lost commit replies, and process exit. When available, the local native OpenSSH sftp-server also verifies replacement and recursive transfers using temporary data, without remote SSH connections. Real large-file transfers, cancellation, overwrite prompts, and the full-width transfer list still require Dev acceptance.
 The fake SFTP peer must also use the project-validated Python runtime: `run-sftp-security-tests.sh` passes the interpreter selected by `project-python.sh` to the Swift tests, including pre-cancelled connections. A missing startup PID fails the test. Do not hard-code a separate system Python inside tests.
 
 Run automated tests first:

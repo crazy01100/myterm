@@ -8,13 +8,19 @@ struct SFTPWorkspaceView: View {
     @StateObject private var localStore = LocalFileBrowserStore()
 
     var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                LocalSFTPFilePane(store: localStore, remoteStore: remoteStore, onClose: onClose)
-                    .frame(width: max(420, geometry.size.width * 0.5))
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                HStack(spacing: 0) {
+                    LocalSFTPFilePane(store: localStore, remoteStore: remoteStore, onClose: onClose)
+                        .frame(width: max(420, geometry.size.width * 0.5))
+                    Divider()
+                    RemoteSFTPFilePane(store: remoteStore, localStore: localStore, onClose: onClose)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            if !remoteStore.transferItems.isEmpty {
                 Divider()
-                RemoteSFTPFilePane(store: remoteStore, localStore: localStore, onClose: onClose)
-                    .frame(maxWidth: .infinity)
+                SFTPTransferQueueBar(store: remoteStore)
             }
         }
         .background(AppVisualTheme.contentBackground)
@@ -414,10 +420,6 @@ private struct RemoteSFTPFilePane: View {
                 if isDropTargeted {
                     SFTPDropTargetOverlay(title: "上傳到目前遠端資料夾")
                 }
-            }
-            if !store.transferItems.isEmpty {
-                Divider()
-                SFTPTransferQueueBar(items: store.transferItems, onClear: store.clearCompletedTransfers)
             }
         }
     }
@@ -1122,56 +1124,175 @@ private struct SFTPPermissionSheet: View {
 }
 
 private struct SFTPTransferQueueBar: View {
-    let items: [SFTPTransferItem]
-    let onClear: () -> Void
+    @ObservedObject var store: SFTPRemoteBrowserStore
+    @State private var collapsed = false
+    @State private var confirmingStop = false
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             HStack {
-                Label("傳輸", systemImage: "arrow.left.arrow.right")
-                    .font(.callout.weight(.semibold))
+                Button { collapsed.toggle() } label: {
+                    Label("傳輸（\(store.transferItems.count)）", systemImage: collapsed ? "chevron.right" : "chevron.down")
+                }
+                .buttonStyle(.plain)
                 Spacer()
-                Button("清除已完成", action: onClear)
-                    .buttonStyle(.borderless).font(.callout)
+                if store.hasActiveTransfers {
+                    Button("取消全部", action: store.cancelAllTransfers)
+                    Button("中斷 SFTP…") { confirmingStop = true }
+                        .disabled(!store.canForceStopTransfers)
+                }
+                Button("清除已結束", action: store.clearCompletedTransfers)
+                    .disabled(!store.transferItems.contains { $0.state.isFinished })
             }
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(items) { item in
-                        HStack(spacing: 7) {
-                            Image(systemName: item.direction.symbol)
-                                .foregroundStyle(transferColor(item.state))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name).lineLimit(1)
-                                Text(item.state.title).foregroundStyle(.secondary).lineLimit(1)
-                            }
-                            .font(.caption)
-                            if let progress = item.fractionCompleted,
-                               item.state == .transferring {
-                                ProgressView(value: progress).frame(width: 58)
-                            } else if item.state == .transferring {
-                                ProgressView().controlSize(.mini)
+            .font(.callout)
+            if !collapsed {
+                TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(store.transferItems) { item in
+                                SFTPTransferRow(item: item, now: ProcessInfo.processInfo.systemUptime) { store.cancelTransfer(item.id) }
+                                Divider()
                             }
                         }
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 6)
-                        .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 7))
-                        .frame(maxWidth: 250)
                     }
                 }
+                .frame(height: min(210, CGFloat(store.transferItems.count) * 80))
             }
-            .scrollIndicators(.hidden)
         }
-        .padding(9)
+        .padding(10)
         .background(AppVisualTheme.raisedSurface)
+        .alert("中斷 SFTP 並停止所有傳輸？", isPresented: $confirmingStop) {
+            Button("返回", role: .cancel) { }
+            Button("中斷並停止", role: .destructive) { store.disconnect() }
+        } message: {
+            Text("這會中斷目前 SFTP 連線與尚未完成的傳輸。遠端可能留下暫存項目，已送出的最後替換也可能需要重新連線確認。SSH 終端不受影響。")
+        }
+    }
+}
+
+private struct SFTPTransferRow: View {
+    let item: SFTPTransferItem
+    let now: TimeInterval
+    let cancel: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: item.direction.symbol).foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(item.name).font(.callout.weight(.medium)).lineLimit(1)
+                    Text(item.direction.title).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Text(item.state.title).font(.caption).foregroundStyle(color).lineLimit(2)
+                }
+                Text(item.targetDescription).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        progressSummary
+                        transferDetails
+                        Spacer(minLength: 8)
+                        Text(timeDescription).fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack { progressSummary; Spacer(minLength: 0) }
+                        HStack {
+                            transferDetails
+                            Spacer(minLength: 8)
+                            Text(timeDescription)
+                        }
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
+            if !item.state.isFinished {
+                Button(action: cancel) { Image(systemName: "xmark.circle") }
+                    .buttonStyle(.borderless)
+                    .disabled(item.state == .cancelling)
+                    .help("取消此筆傳輸")
+                    .accessibilityLabel("取消 \(item.name)")
+            }
+        }
+        .padding(.vertical, 8)
+        .help("來源：\(item.sourcePath)\n目的地：\(item.destinationPath)\n\(item.state.title)")
     }
 
-    private func transferColor(_ state: SFTPTransferState) -> Color {
-        switch state {
+    private var progressSummary: some View {
+        HStack(spacing: 8) {
+            Text(byteDescription).fixedSize()
+            if !item.state.isFinished, item.state != .waiting,
+               let fraction = item.fractionCompleted {
+                ProgressView(value: fraction, total: 1)
+                    .progressViewStyle(SFTPDeterminateProgressStyle())
+                    .frame(width: 120)
+                    .accessibilityLabel("傳輸進度")
+                    .accessibilityValue(item.progressDescription)
+            }
+            Text(item.progressDescription).monospacedDigit().fixedSize()
+        }
+    }
+
+    @ViewBuilder private var transferDetails: some View {
+        if !item.state.isFinished, item.state != .waiting {
+            Text(speedDescription).fixedSize()
+            Text(remainingDescription).fixedSize()
+        }
+    }
+
+    private var color: Color {
+        switch item.state {
         case .completed: .green
         case .failed: .red
-        case .waiting: .secondary
+        case .needsAttention: .orange
+        case .cancelled, .cancelling, .waiting: .secondary
         case .transferring: .accentColor
         }
+    }
+    private func bytes(_ value: UInt64) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(clamping: value), countStyle: .file)
+    }
+    private var byteDescription: String {
+        item.totalBytes.map { "\(bytes(item.completedBytes)) / \(bytes($0))" } ?? bytes(item.completedBytes)
+    }
+    private var speedDescription: String {
+        guard let speed = item.timing.speed(at: now) else { return "速度計算中" }
+        if speed <= 0 { return "等待回應" }
+        return "\(bytes(UInt64(min(speed, Double(UInt64.max / 2)))))/秒"
+    }
+    private var remainingDescription: String {
+        guard item.totalBytes != nil else { return "剩餘時間無法估算" }
+        guard let remaining = item.timing.remaining(bytes: item.completedBytes, total: item.totalBytes, now: now) else {
+            return item.fractionCompleted == 1 ? "正在完成" : "剩餘時間計算中"
+        }
+        return "約剩 \(duration(remaining))"
+    }
+    private func duration(_ value: TimeInterval) -> String {
+        let seconds = Int(min(31_536_000, max(0, value.rounded(.up))))
+        if seconds < 60 { return "\(seconds) 秒" }
+        if seconds < 3600 { return "\(seconds / 60) 分 \(seconds % 60) 秒" }
+        return "\(seconds / 3600) 小時 \((seconds % 3600) / 60) 分"
+    }
+    private var timeDescription: String {
+        if let end = item.timing.endedAt {
+            let label = item.state == .completed ? "完成於" : "結束於"
+            let time = end.formatted(date: Calendar.current.isDateInToday(end) ? .omitted : .numeric, time: .standard)
+            return "\(label) \(time) · 耗時 \(duration(item.timing.elapsed(at: now)))"
+        }
+        return item.state == .waiting ? "等待中" : "已用 \(duration(item.timing.elapsed(at: now)))"
+    }
+}
+
+// Draw only the measured fraction; native animated highlights obscure small percentages.
+private struct SFTPDeterminateProgressStyle: ProgressViewStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        GeometryReader { geometry in
+            Capsule().fill(Color.secondary.opacity(0.2))
+                .overlay(alignment: .leading) {
+                    Rectangle().fill(Color.accentColor)
+                        .frame(width: geometry.size.width * (configuration.fractionCompleted ?? 0))
+                }
+                .clipShape(Capsule())
+        }
+        .frame(height: 6)
     }
 }
 
