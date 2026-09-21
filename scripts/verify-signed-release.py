@@ -105,7 +105,10 @@ def verify(directory, public_key, version, base_url, build=None, expected_commit
     notes = one(item, SP+'releaseNotesLink')
     require(notes.text == base_url+f'/releases/{version}.html', 'Notes URL mismatch')
     content = notes_content(files['release-notes.html'])
-    require(notes.get('length') == str(len(content)), 'Notes length mismatch')
+    # Old signed releases have only length. If both forms exist, neither may
+    # contradict the bytes or leave old/new updaters with different metadata.
+    lengths = [notes.get(name) for name in ('length', SP+'length') if name in notes.attrib]
+    require(bool(lengths) and all(value == str(len(content)) for value in lengths), 'Notes length mismatch')
     key.verify(decode64(notes.get(SP+'edSignature', ''), 64), content)
     commit = one(item, MT+'sourceCommit').text
     require(commit and re.fullmatch(r'[0-9a-f]{40}|[0-9a-f]{64}', commit), 'Invalid signed source commit')

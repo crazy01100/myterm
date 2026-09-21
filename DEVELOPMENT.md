@@ -328,3 +328,5 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 登入回應測試位於 `SelfTests/GoogleFirebaseAuthResponseTests.swift`，由 `scripts/run-tests.sh` 納入完整隔離回歸。測試以不落盤的 URLSession 與 URLProtocol 攔截所有請求，驗證 HTTP 成功內的登入失敗、缺失欄位、隱私邊界及正常登入，不連正式雲端或使用真實憑證。
 
 30 分鐘重試的期限／時鐘案例在 `SelfTests/GoogleSignInRetryTests.swift`；`CloudAccountRecoveryTests.swift` 使用真實 store 驗證免重新 OAuth、單一請求、取消、切換、過期與保存界線；`GoogleFirebaseAuthResponseTests.swift` 以合成傳輸驗證同一 Google 憑證重試 Firebase，不需等待真實半小時或操作正式帳號。完整入口仍為 `scripts/run-isolated-tests.py`。
+
+發布工具會依Package.resolved核對Sparkle artifact版本，優先使用.build-app，只有版本符合才退回.build。若找不到相符工具，重新執行目前版本建置，不刪改簽章基線或跳過驗證。

@@ -100,3 +100,5 @@ Firebase CLI 固定為 `15.30.2`，以 npm override 使用官方已修補的 `st
 ## 部署權限與環境
 
 公開前應核對 main 的必要安全檢查、禁止 force push／刪除與 fork PR 執行核准政策。更新站 workflow 的原庫／main 限制與 production 綁定只是來源層的條件；管理員仍須設定環境 reviewer、可部署 refs 及環境 Secrets，完成實際部署核准驗收。repository 層級的 Cloudflare Secrets 未移除前，不把 environment 綁定當成憑證隔離。詳細步驟與改回私人前的方案檢查見 [開發指南](DEVELOPMENT.md#正式部署保護)。
+
+新產生的更新說明連結同時包含相同的 `length` 與 `sparkle:length`，相容舊版及 Sparkle 2.10 的讀取方式。驗證器保留已簽署歷史格式的驗證，但任一長度不符或兩欄矛盾即拒絕。簽署工具只能取自 framework 版本符合 `Package.resolved` 的 SwiftPM artifact，不能因舊快取存在而混用工具。

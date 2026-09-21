@@ -100,3 +100,5 @@ Keep pre-release tests, signature checks and maintenance evidence in plans, CI a
 ## Deployment permissions and environments
 
 Before public visibility, verify main's required security check, force-push/deletion restrictions, and fork PR workflow approval policy. The update-site workflow's repository/main guard and production binding are source-level conditions; administrators must still configure environment reviewers, deployable refs, and environment Secrets, then validate an actual deployment approval. Do not treat the environment binding as credential isolation while repository-level Cloudflare Secrets remain. See [Development](DEVELOPMENT.en.md#production-deployment-protection) for setup and plan checks before returning to private.
+
+New release-note links carry equal `length` and `sparkle:length` attributes for older updaters and Sparkle 2.10. The verifier retains support for signed historical metadata, but rejects any incorrect or conflicting length. Signing tools must come from a SwiftPM artifact whose framework version matches `Package.resolved`; stale caches cannot select tools from another version.

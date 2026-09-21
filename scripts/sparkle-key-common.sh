@@ -10,18 +10,34 @@ find_sparkle_tool() {
     local tool_name="$2"
     local candidate
     local candidates=(
-        "$project_dir"/.build/artifacts/**/bin/"$tool_name"(N)
-        "$project_dir"/.build-app/artifacts/**/bin/"$tool_name"(N)
+        "$project_dir"/.build-app/artifacts/sparkle/Sparkle/bin/"$tool_name"
+        "$project_dir"/.build/artifacts/sparkle/Sparkle/bin/"$tool_name"
     )
 
     for candidate in "${candidates[@]}"; do
-        if [[ -x "$candidate" ]]; then
+        # Both SwiftPM caches may coexist across upgrades. Only use a tool
+        # from the artifact whose framework matches the current locked version.
+        if [[ -x "$candidate" ]] && "$project_dir/scripts/project-python.sh" - \
+            "$project_dir/Package.resolved" "${candidate:h:h}" <<'PY'
+import json, plistlib, sys
+from pathlib import Path
+try:
+    pins = json.loads(Path(sys.argv[1]).read_text())['pins']
+    versions = [p['state']['version'] for p in pins if p['identity'] == 'sparkle']
+    infos = list(Path(sys.argv[2]).glob('Sparkle.xcframework/macos-*/Sparkle.framework/Resources/Info.plist'))
+    valid = len(versions) == 1 and bool(infos) and all(
+        plistlib.loads(p.read_bytes()).get('CFBundleShortVersionString') == versions[0] for p in infos)
+except (OSError, ValueError, KeyError):
+    valid = False
+sys.exit(0 if valid else 1)
+PY
+        then
             print -r -- "$candidate"
             return 0
         fi
     done
 
-    print -u2 -- "找不到 Sparkle 工具 $tool_name；請先執行一次正式候選建置。"
+    print -u2 -- "找不到符合 Package.resolved 的 Sparkle 工具 $tool_name；請先執行目前版本的建置。"
     return 1
 }
 

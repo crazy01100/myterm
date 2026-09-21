@@ -59,6 +59,32 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises((ValueError,v.InvalidSignature,ET.ParseError)):self.verify(**kw)
 
     def test_valid(self):self.assertEqual(self.verify()['build'],'999')
+    def test_namespaced_and_dual_notes_lengths(self):
+        for legacy in [False, True]:
+            root=ET.fromstring(self.content);note=root.find('./channel/item/'+v.SP+'releaseNotesLink')
+            note.set(v.SP+'length',str(len((self.assets/'release-notes.html').read_bytes())))
+            if not legacy:note.attrib.pop('length',None)
+            else:note.set('length',note.get(v.SP+'length'))
+            self.content=ET.tostring(root);self.sign_feed()
+            self.assertEqual(self.verify()['version'],self.version)
+
+    def test_conflicting_or_missing_notes_lengths_rejected(self):
+        original=self.content
+        for attrs in [{'length':'1',v.SP+'length':'20'},{'length':'20',v.SP+'length':'1'},{}]:
+            root=ET.fromstring(original);note=root.find('./channel/item/'+v.SP+'releaseNotesLink')
+            note.attrib.pop('length',None);note.attrib.pop(v.SP+'length',None)
+            note.attrib.update(attrs)
+            self.content=ET.tostring(root);self.sign_feed();self.reject()
+
+    def test_binder_emits_equal_old_and_new_notes_lengths(self):
+        feed=self.root/'unsigned.xml';feed.write_bytes(self.content)
+        notes=self.assets/'release-notes.html'
+        subprocess.run([os.sys.executable,str(ROOT/'scripts/bind-release-metadata.py'),
+            '--feed',str(feed),'--notes',str(notes),'--signature',self.sig(notes.read_bytes()),
+            '--base-url','https://updates.example.test','--version',self.version,'--commit',self.commit],check=True)
+        node=ET.parse(feed).find('./channel/item/'+v.SP+'releaseNotesLink')
+        self.assertEqual(node.get('length'),str(notes.stat().st_size))
+        self.assertEqual(node.get(v.SP+'length'),node.get('length'))
     def test_wrong_key(self):self.reject(key=base64.b64encode(b'x'*32).decode())
     def test_changed_archive_even_with_updated_hashes(self):
         (self.assets/self.archive).write_bytes(b'inert archive fixturE');self.hashes();self.reject()
