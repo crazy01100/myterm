@@ -57,6 +57,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     @Published private(set) var message = "尚未同步"
     @Published private(set) var lastSuccessfulSyncAt: Date?
     @Published private(set) var metadataOutcome: SyncAttemptOutcome?
+    @Published private(set) var snippetsOutcome: SyncAttemptOutcome?
     @Published private(set) var logsOutcome: SyncAttemptOutcome?
     @Published private(set) var isRunning = false
     @Published private(set) var isEnabled = false
@@ -65,6 +66,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     private var prepare: (() -> Void)?
     private var metadata: Operation?
     private var logs: Operation?
+    private var snippets: Operation = { _ in .disabled }
     private var task: Task<Void, Never>?
     private var periodicTask: Task<Void, Never>?
     private var sessionRecoveryTask: Task<Void, Never>?
@@ -96,7 +98,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     func configure(context: @escaping () -> Context, prepare: @escaping () -> Void,
                    canRecoverSession: @escaping () -> Bool = { false },
                    recoverSession: @escaping () async -> Void = {},
-                   metadata: @escaping Operation, logs: @escaping Operation) {
+                   metadata: @escaping Operation, logs: @escaping Operation, snippets: @escaping Operation = { _ in .disabled }) {
         guard self.context == nil else { return }
         self.context = context
         self.prepare = prepare
@@ -104,6 +106,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
         self.recoverSession = recoverSession
         self.metadata = metadata
         self.logs = logs
+        self.snippets = snippets
         journal.record(.lifecycle, .preparing)
     }
 
@@ -135,6 +138,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
             pending = nil
             metadataOutcome = nil
             logsOutcome = nil
+            snippetsOutcome = nil
             deferAutomaticChanges = false
         }
         isEnabled = snapshot.enabled
@@ -166,7 +170,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
         let thisGeneration = generation
         let roundID = UUID()
         isRunning = true
-        message = trigger == .localChange ? "已排入同步" : "正在同步主機、密碼與 Logs…"
+        message = trigger == .localChange ? "已排入同步" : "正在同步…"
         task = Task { [weak self, sleep, timing] in
             guard let self else { return }
             if trigger == .localChange {
@@ -180,20 +184,23 @@ final class AutomaticSyncCoordinator: ObservableObject {
                 return
             }
             self.journal.record(.coordinator, .started, trigger: trigger, roundID: roundID)
-            let (metadataResult, logsResult) = await SyncRoundContext.$id.withValue(roundID) {
+            let (metadataResult, logsResult, snippetsResult) = await SyncRoundContext.$id.withValue(roundID) {
                 async let first = metadata(trigger)
                 async let second = logs(trigger)
-                return await (first, second)
+                async let third = self.snippets(trigger)
+                return await (first, second, third)
             }
-            // Wait for both operations to release their resources even after cancellation.
+            // Wait for all operations to release their resources even after cancellation.
             guard !Task.isCancelled, thisGeneration == self.generation, context() == snapshot else {
                 self.finishCancelled(contextChanged: thisGeneration != self.generation)
                 return
             }
             self.metadataOutcome = metadataResult
             self.logsOutcome = logsResult
-            self.deferAutomaticChanges = metadataResult != .completed || logsResult != .completed
-            if metadataResult == .completed && logsResult == .completed {
+            self.snippetsOutcome = snippetsResult
+            let allCompleted = metadataResult == .completed && logsResult == .completed && (snippetsResult == .completed || snippetsResult == .disabled)
+            self.deferAutomaticChanges = !allCompleted
+            if allCompleted {
                 let date = self.now()
                 self.lastSuccessfulSyncAt = date
                 self.defaults.set(date, forKey: "cloudSync.round.lastSuccess.v1." + snapshot.scope)
@@ -209,7 +216,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
             self.isRunning = false
             if let pending = self.pending {
                 self.pending = nil
-                if (metadataResult == .completed && logsResult == .completed) || Self.isRecoveryTrigger(pending) {
+                if allCompleted || Self.isRecoveryTrigger(pending) {
                     self.request(pending)
                 }
             }

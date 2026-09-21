@@ -218,3 +218,11 @@ Google 驗證完成但同步服務暫未開放帳號時，畫面會提供「重�
 ### 可以提交 API Key 或 Desktop Client Secret 嗎？
 
 桌面 App 無法安全隱藏這些 client-side 設定，因此它們不是 Firestore 的授權邊界；但本專案仍禁止提交實際設定檔。公開 repository 只保留無真實值的範例，正式資料存取必須依靠 Firebase Authentication、Security Rules 與端對端加密。
+
+## 常用指令同步規則
+
+常用指令使用獨立的`users/<UID>/commandSnippets/<UUID>`集合，內容在Mac端加密；主機、密碼與Logs的集合不變。升級來源後，使用既有`./scripts/deploy-firestore.sh --project <你的Firebase專案ID>`流程部署這份儲存庫的Rules，再使用新版App的同步總開關。不要把集合開放成公開讀寫。
+
+在兩台已登入同一測試帳號、使用相同同步密語的新版MyTerm上，開啟設定中唯一的跨裝置同步開關；常用指令會自動納入，不需要另一個按鈕。以無機密的測試片段驗證新增、修改、刪除及離線衝突。尚未部署新Rules時，指令保留在本機並顯示未同步，原同步集合仍可使用；舊版App不會讀寫指令集合。
+
+Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號revision、直接刪除及刪除後復活。App另有處理容量上限，不能把這些驗證視為Firebase整體額度或費用上限。需要回退時保留雲端密文與刪除標記，不以清空集合恢復服務。

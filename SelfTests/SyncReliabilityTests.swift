@@ -66,6 +66,21 @@ struct SyncReliabilityTests {
             var shouldFailLogs = true
             var shouldWaitMetadata = false
             var prepared = false
+            var snippetOutcome: SyncAttemptOutcome = .failed("synthetic snippet failure")
+            let three = AutomaticSyncCoordinator(defaults: defaults, journal: journal)
+            three.configure(context: { .init(scope: "three", enabled: true) }, prepare: {},
+                metadata: { _ in .completed }, logs: { _ in .completed }, snippets: { _ in snippetOutcome })
+            three.request(.manual)
+            try await waitUntil { !three.isRunning }
+            check(three.lastSuccessfulSyncAt == nil && three.message == "同步尚未全部完成", "snippet failure prevents whole-round success")
+            snippetOutcome = .disabled
+            three.request(.manual)
+            try await waitUntil { !three.isRunning }
+            check(three.lastSuccessfulSyncAt != nil, "absent optional worker preserves coordinator compatibility")
+            snippetOutcome = .completed
+            three.request(.manual)
+            try await waitUntil { !three.isRunning }
+            check(three.snippetsOutcome == .completed && three.message == "同步完成", "three workers participate in whole-round success")
             let timing = AutomaticSyncCoordinator.Timing(periodic: 0.08, debounce: 0.01, stale: 60)
             let coordinator = AutomaticSyncCoordinator(defaults: defaults, timing: timing, journal: journal)
             coordinator.configure(context: { .init(scope: scope, enabled: enabled) }, prepare: { prepared = true }, metadata: { _ in

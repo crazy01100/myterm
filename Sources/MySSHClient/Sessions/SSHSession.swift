@@ -34,6 +34,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     @Published private(set) var connectionFailure: SSHConnectionFailureKind?
     @Published private(set) var hasSavedPassword = false
     @Published private(set) var isPasswordPromptActive = false
+    @Published private(set) var inputAttemptID = UUID()
     @Published private(set) var passwordSaveOfferKind: PasswordSaveOfferKind?
     weak var terminalView: LocalProcessTerminalView?
     private var pendingPasswordData: Data?
@@ -238,6 +239,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     func attach(terminal: LocalProcessTerminalView) {
+        inputAttemptID = UUID()
         terminalView = terminal
         if kind == .ssh {
             if !didStartConnectionAudit {
@@ -279,6 +281,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
 
         connectionLogURL = nextLogURL
+        inputAttemptID = UUID()
         arguments = nextArguments
         connectionLogOffset = 0
         authenticationLogDetector = SSHAuthenticationLogDetector()
@@ -310,6 +313,20 @@ final class TerminalSession: ObservableObject, Identifiable {
             execName: execName,
             currentDirectory: currentDirectory
         )
+        terminal.window?.makeFirstResponder(terminal)
+    }
+
+    var canReceiveSnippet: Bool {
+        kind != .serial && state == .connected && !isPasswordPromptActive
+            && (terminalView as? LoginAwareTerminalView)?.canReceiveSnippet == true
+    }
+
+    func insertSnippet(_ snippet: CommandSnippet, target: SnippetTargetIdentity) throws {
+        guard snippet.canInsert else { throw CommandSnippetError.unsafeInput }
+        guard target.sessionID == id, target.attemptID == inputAttemptID, canReceiveSnippet,
+              let terminal = terminalView as? LoginAwareTerminalView else { throw CommandSnippetError.unavailableTarget }
+        let bytes = Array(snippet.command.utf8)
+        terminal.send(source: terminal, data: bytes[...])
         terminal.window?.makeFirstResponder(terminal)
     }
 
@@ -674,6 +691,7 @@ enum TerminalReconnectError: LocalizedError {
 final class SessionManager: ObservableObject {
     @Published private(set) var sessions: [TerminalSession] = []
     @Published private var workspaceState = TerminalWorkspaceCollection()
+    @Published private(set) var snippetTargetSelection = SnippetTargetSelection()
     @Published private(set) var unreadOutputSessionIDs: Set<TerminalSession.ID> = []
     @Published var lastError: String?
     private var presentationNameRegistry = TerminalSessionPresentationNameRegistry()
@@ -691,7 +709,7 @@ final class SessionManager: ObservableObject {
             if let newValue {
                 _ = selectWorkspace(newValue)
             } else {
-                workspaceState.showLibrary()
+                showHostLibrary()
             }
         }
     }
@@ -702,7 +720,7 @@ final class SessionManager: ObservableObject {
             if let newValue {
                 _ = activate(sessionID: newValue)
             } else {
-                workspaceState.showLibrary()
+                showHostLibrary()
             }
         }
     }
@@ -748,6 +766,7 @@ final class SessionManager: ObservableObject {
     }
 
     func showHostLibrary() {
+        snippetTargetSelection.select(nil)
         workspaceState.showLibrary()
     }
 
@@ -785,6 +804,7 @@ final class SessionManager: ObservableObject {
             return false
         }
         do {
+            snippetTargetSelection.invalidate(sessionID: session.id)
             try session.reconnectInPlace()
             lastError = nil
             return true
@@ -796,6 +816,7 @@ final class SessionManager: ObservableObject {
     }
 
     func close(_ session: TerminalSession) {
+        snippetTargetSelection.invalidate(sessionID: session.id)
         session.disconnect()
         presentationNameRegistry.remove(sessionID: session.id)
         if outputActivityIndex.remove(sessionID: session.id) {
@@ -861,13 +882,13 @@ final class SessionManager: ObservableObject {
 
     func selectSession(at index: Int) -> Bool {
         let didSelect = workspaceState.selectWorkspace(at: index)
-        if didSelect { markSelectedWorkspaceViewed() }
+        if didSelect { markSelectedWorkspaceViewed(); captureSnippetTarget() }
         return didSelect
     }
 
     func selectAdjacentSession(offset: Int) -> Bool {
         let didSelect = workspaceState.selectAdjacentWorkspace(offset: offset)
-        if didSelect { markSelectedWorkspaceViewed() }
+        if didSelect { markSelectedWorkspaceViewed(); captureSnippetTarget() }
         return didSelect
     }
 
@@ -877,15 +898,22 @@ final class SessionManager: ObservableObject {
         marksOutputViewed: Bool = true
     ) -> Bool {
         let didSelect = workspaceState.selectWorkspace(id: workspaceID)
-        if didSelect && marksOutputViewed { markSelectedWorkspaceViewed() }
+        if didSelect && marksOutputViewed { markSelectedWorkspaceViewed(); captureSnippetTarget() }
         return didSelect
     }
 
     @discardableResult
     func activate(sessionID: TerminalSession.ID) -> Bool {
         let didActivate = workspaceState.activate(sessionID: sessionID)
-        if didActivate { markSelectedWorkspaceViewed() }
+        if didActivate { markSelectedWorkspaceViewed(); captureSnippetTarget() }
         return didActivate
+    }
+
+    private func captureSnippetTarget() {
+        let target = selectedSession.flatMap { session in
+            session.kind == .serial ? nil : SnippetTargetIdentity(sessionID: session.id, attemptID: session.inputAttemptID)
+        }
+        if snippetTargetSelection.target != target { snippetTargetSelection.select(target) }
     }
 
     @discardableResult
@@ -943,7 +971,7 @@ final class SessionManager: ObservableObject {
     @discardableResult
     func focusOtherPane() -> Bool {
         let didFocus = workspaceState.focusOtherPane()
-        if didFocus { markSelectedWorkspaceViewed() }
+        if didFocus { markSelectedWorkspaceViewed(); captureSnippetTarget() }
         return didFocus
     }
 

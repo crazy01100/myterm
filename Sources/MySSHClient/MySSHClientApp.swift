@@ -9,6 +9,7 @@ struct MySSHClientApp: App {
     @StateObject private var automaticConnectionAuditSyncStore = AutomaticConnectionAuditSyncStore()
     @StateObject private var dataTransferCoordinator = DataTransferCoordinator()
     @StateObject private var shortcutStore = AppShortcutStore()
+    @StateObject private var snippetStore = CommandSnippetStore()
     @StateObject private var syncSettingsStore = SyncSettingsStore()
     @StateObject private var cloudAccountStore = CloudAccountStore()
     @StateObject private var vaultSetupStore = VaultSetupStore()
@@ -36,7 +37,8 @@ struct MySSHClientApp: App {
                 vaultSetupStore: vaultSetupStore,
                 automaticMetadataSyncStore: automaticMetadataSyncStore,
                 automaticConnectionAuditSyncStore: automaticConnectionAuditSyncStore,
-                automaticSyncCoordinator: automaticSyncCoordinator
+                automaticSyncCoordinator: automaticSyncCoordinator,
+                snippetStore: snippetStore
             )
                 .environmentObject(hostStore)
                 .environmentObject(knownHostsStore)
@@ -45,6 +47,7 @@ struct MySSHClientApp: App {
                 .environmentObject(automaticConnectionAuditSyncStore)
                 .environmentObject(automaticSyncCoordinator)
                 .environmentObject(shortcutStore)
+                .environmentObject(snippetStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
                 .environmentObject(vaultSetupStore)
@@ -67,12 +70,14 @@ struct MySSHClientApp: App {
             }
             DataTransferCommands(coordinator: dataTransferCoordinator)
             QuickActionCommands(shortcuts: shortcutStore)
+            SnippetLibraryCommands(shortcuts: shortcutStore)
         }
 
         Settings {
             SettingsView()
                 .environmentObject(hostStore)
                 .environmentObject(dataTransferCoordinator)
+                .environmentObject(snippetStore)
                 .environmentObject(shortcutStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
@@ -145,6 +150,7 @@ private struct AppRootView: View {
     @ObservedObject var automaticMetadataSyncStore: AutomaticMetadataSyncStore
     @ObservedObject var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
     @ObservedObject var automaticSyncCoordinator: AutomaticSyncCoordinator
+    @ObservedObject var snippetStore: CommandSnippetStore
 
     var body: some View {
         ContentView()
@@ -190,6 +196,7 @@ private struct AppRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: .myTermPasswordDidChange)) { _ in
                 requestSync(.localChange)
             }
+            .onChange(of: snippetStore.changeRevision) { _, _ in requestSync(.localChange) }
             .onChange(of: connectionAuditStore.synchronizationRevision) { _, _ in
                 requestSync(.localChange)
             }
@@ -252,6 +259,9 @@ private struct AppRootView: View {
             let uid = cloudAccountStore.state.signedInAccount?.uid ?? "signed-out"
             return .init(scope: MetadataSyncBaselineStore.ownerDigest(uid), enabled: syncSettingsStore.metadataSyncEnabled)
         }, prepare: {
+            if let uid = cloudAccountStore.state.signedInAccount?.uid, let project = cloudAccountStore.firebaseProjectID {
+                snippetStore.bindScope(SnippetSyncPolicy.scope(project: project, uid: uid))
+            } else { snippetStore.bindScope(nil) }
             vaultSetupStore.prepareForAutomaticSync(account: cloudAccountStore.state.signedInAccount)
             automaticMetadataSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
             automaticConnectionAuditSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
@@ -266,6 +276,8 @@ private struct AppRootView: View {
         }, logs: { trigger in
             await automaticConnectionAuditSyncStore.synchronize(trigger: trigger, auditStore: connectionAuditStore,
                 settings: syncSettingsStore, accountStore: cloudAccountStore, vaultSetupStore: vaultSetupStore)
+        }, snippets: { _ in
+            await AutomaticSnippetSync.synchronize(store: snippetStore, settings: syncSettingsStore, accountStore: cloudAccountStore, vault: vaultSetupStore)
         })
     }
 }

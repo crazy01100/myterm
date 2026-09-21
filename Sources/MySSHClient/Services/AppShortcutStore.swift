@@ -28,6 +28,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
     case tab9
     case findTerminal
     case openQuickActions
+    case openSnippetLibrary
     case disconnectSession
 
     var id: Self { self }
@@ -59,6 +60,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .tab9: "切換至分頁 9"
         case .findTerminal: "搜尋終端機內容"
         case .openQuickActions: "快速操作"
+        case .openSnippetLibrary: "常用指令庫"
         case .disconnectSession: "中斷目前連線"
         }
     }
@@ -68,7 +70,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .copyTerminal, .pasteTerminal, .pasteSavedPassword, .selectAllTerminal, .findTerminal,
              .increaseTerminalFont, .decreaseTerminalFont, .resetTerminalFont:
             .terminal
-        case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession, .openQuickActions:
+        case .openHosts, .openLocalTerminal, .openSerial, .disconnectSession, .openQuickActions, .openSnippetLibrary:
             .session
         case .closeTab, .nextTab, .previousTab, .focusOtherPane,
              .tab1, .tab2, .tab3, .tab4, .tab5, .tab6, .tab7, .tab8, .tab9:
@@ -118,6 +120,7 @@ enum AppShortcutAction: String, CaseIterable, Codable, Identifiable {
         case .tab9: .command(keyCode: 25, key: "9")
         case .findTerminal: .command(keyCode: 3, key: "F")
         case .openQuickActions: .command(keyCode: 40, key: "K")
+        case .openSnippetLibrary: nil
         case .disconnectSession: nil
         }
     }

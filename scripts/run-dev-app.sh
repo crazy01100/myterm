@@ -15,7 +15,8 @@ Usage: scripts/run-dev-app.sh --version VERSION --build BUILD [options]
 
 Safely closes only build/dev/MyTerm Dev.app, rebuilds it in the fixed
 development location, verifies the bundle, then launches and identifies the
-actual running process. /Applications/MyTerm.app is never touched.
+actual running process. Stops if production is running; the user must close it
+manually. /Applications/MyTerm.app is never touched.
 
 Options:
   --build-date DATE  Optional display date
@@ -100,6 +101,13 @@ refresh_dev_pids() {
     return 0
 }
 
+check_production_stopped() {
+    "$project_dir/scripts/project-python.sh" "$project_dir/scripts/check-dev-launch.py"
+}
+
+# Fail before stopping the old Dev or building. Never terminate production.
+check_production_stopped
+
 typeset -a running_pids
 foreign_processes="$(foreign_myterm_processes)"
 if [[ -n "$foreign_processes" ]]; then
@@ -147,6 +155,8 @@ if (( build_only == 1 )); then
     exit 0
 fi
 
+# Recheck after the build: production may have been opened in the meantime.
+check_production_stopped
 /usr/bin/open -n "$dev_app"
 for _ in {1..50}; do
     refresh_dev_pids

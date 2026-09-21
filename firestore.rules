@@ -117,6 +117,54 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    function isValidEncryptedSnippetRecord() {
+      return request.resource.data.keys().hasOnly([
+          'recordType',
+          'ciphertext',
+          'nonce',
+          'authenticationTag',
+          'keyVersion',
+          'formatVersion',
+          'revision',
+          'modifiedAt',
+          'modifiedByDeviceID',
+          'deleted'
+        ])
+        && request.resource.data.recordType == 'commandSnippet'
+        && request.resource.data.ciphertext is bytes
+        && request.resource.data.ciphertext.size() <= 131072
+        && request.resource.data.nonce is bytes
+        && request.resource.data.nonce.size() == 12
+        && request.resource.data.authenticationTag is bytes
+        && request.resource.data.authenticationTag.size() == 16
+        && request.resource.data.keyVersion == 1
+        && request.resource.data.formatVersion == 1
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 1
+        && request.resource.data.revision < 9223372036854775807
+        && request.resource.data.modifiedAt is timestamp
+        && request.resource.data.modifiedByDeviceID is string
+        && request.resource.data.modifiedByDeviceID.size() == 36
+        && request.resource.data.deleted is bool
+        && ((request.resource.data.deleted == true
+              && request.resource.data.ciphertext.size() == 0)
+            || (request.resource.data.deleted == false
+              && request.resource.data.ciphertext.size() > 0));
+    }
+
+    // Independent collection keeps older clients' vault readers compatible.
+    match /users/{userId}/commandSnippets/{documentId} {
+      allow get, list: if isOwner(userId);
+      allow create: if documentId.matches('[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+        && isOwner(userId) && isValidEncryptedSnippetRecord()
+        && request.resource.data.revision == 1;
+      allow update: if isOwner(userId) && isValidEncryptedSnippetRecord()
+        && request.resource.data.recordType == resource.data.recordType
+        && request.resource.data.revision == resource.data.revision + 1
+        && (!resource.data.deleted || request.resource.data.deleted);
+      // Tombstones are retained. Physical deletion and resurrection are denied.
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

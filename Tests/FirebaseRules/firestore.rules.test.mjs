@@ -28,7 +28,7 @@ test.before(async () => {
     projectId,
     firestore: {
       host: "127.0.0.1",
-      port: 8080,
+      port: Number(process.env.FIRESTORE_EMULATOR_HOST?.split(":").at(-1) || 8080),
       rules,
     },
   });
@@ -208,3 +208,33 @@ function validConnectionAuditRecord(
     formatVersion: 1,
   };
 }
+
+
+test("常用指令隔離集合：owner、版本、刪除與密文界線", async () => {
+  const db = testEnvironment.authenticatedContext("snippet-alice").firestore();
+  const id = "70000000-2000-3000-4000-500000000001";
+  const ref = doc(db, `users/snippet-alice/commandSnippets/${id}`);
+  const valid = (deleted = false, revision = 1) => validMetadataRecord("commandSnippet", deleted, revision);
+  await assertFails(setDoc(ref, { ...valid(), command: "plaintext" }));
+  await assertFails(setDoc(ref, { ...valid(), ciphertext: Bytes.fromUint8Array(new Uint8Array(131073)) }));
+  await assertFails(setDoc(ref, { ...valid(), formatVersion: 2 }));
+  await assertFails(setDoc(ref, { ...valid(), nonce: Bytes.fromUint8Array(new Uint8Array(11)) }));
+  await assertFails(setDoc(ref, valid(false, 2)));
+  await assertSucceeds(setDoc(ref, valid()));
+  await assertSucceeds(getDocs(collection(db, "users/snippet-alice/commandSnippets")));
+  await assertFails(setDoc(ref, valid(false, 1)));
+  await assertFails(setDoc(ref, valid(false, 3)));
+  await assertFails(setDoc(ref, { ...valid(false, 2), recordType: "host" }));
+  await assertSucceeds(setDoc(ref, valid(false, 2)));
+  await assertSucceeds(setDoc(ref, valid(true, 3)));
+  await assertFails(setDoc(ref, valid(false, 4)));
+  await assertFails(deleteDoc(ref));
+  const other = testEnvironment.authenticatedContext("snippet-bob").firestore();
+  await assertFails(getDoc(doc(other, `users/snippet-alice/commandSnippets/${id}`)));
+  await assertFails(setDoc(doc(other, `users/snippet-alice/commandSnippets/${id}`), valid(true, 4)));
+  const anon = testEnvironment.unauthenticatedContext().firestore();
+  await assertFails(getDocs(collection(anon, "users/snippet-alice/commandSnippets")));
+  await assertFails(setDoc(doc(anon, `users/snippet-alice/commandSnippets/${id}`), valid()));
+  await assertFails(setDoc(doc(db, `users/snippet-alice/vault/${id}`), valid()));
+  await assertSucceeds(setDoc(doc(db, `users/snippet-alice/vault/${id}`), validMetadataRecord("host")));
+});

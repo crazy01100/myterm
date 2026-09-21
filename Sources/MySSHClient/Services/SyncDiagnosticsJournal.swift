@@ -3,7 +3,7 @@ import Foundation
 /// Allow-listed operational events only. No free-form messages, URLs, identifiers or payloads.
 @MainActor
 final class SyncDiagnosticsJournal {
-    enum Component: String, Codable { case coordinator, metadata, logs, persistence, lifecycle }
+    enum Component: String, Codable { case coordinator, metadata, logs, snippets, persistence, lifecycle }
     enum Event: String, Codable {
         case requested, queued, started, completed, incomplete, cancelled, retryScheduled, timedOut
         case accountUnavailable, vaultUnavailable, keyUnavailable, disabled
