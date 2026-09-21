@@ -16,7 +16,9 @@ a=p.parse_args();tree=ET.parse(a.feed);item=tree.getroot().find('./channel/item'
 assert item is not None
 for name in [f'{{{SP}}}releaseNotesLink',f'{{{MT}}}sourceCommit',f'{{{MT}}}dependencies']:
  for old in item.findall(name):item.remove(old)
-notes=ET.SubElement(item,f'{{{SP}}}releaseNotesLink',{'length':str(a.notes.stat().st_size),f'{{{SP}}}edSignature':a.signature})
+# 2.10 reads sparkle:length; retain the legacy attribute for older updaters.
+notes_size=str(a.notes.stat().st_size)
+notes=ET.SubElement(item,f'{{{SP}}}releaseNotesLink',{'length':notes_size,f'{{{SP}}}length':notes_size,f'{{{SP}}}edSignature':a.signature})
 notes.text=a.base_url.rstrip('/')+f'/releases/{a.version}.html'
 ET.SubElement(item,f'{{{MT}}}sourceCommit').text=a.commit
 ET.SubElement(item,f'{{{MT}}}dependencies').text=json.dumps(module.inventory(),sort_keys=True)
