@@ -47,7 +47,7 @@ def digest(data):
 
 
 def apply(root=ROOT, check=False, patches=PATCHES):
-    for package, version in [('firebase-tools', '15.30.0'), ('stream-json', '3.6.0')]:
+    for package, version in [('firebase-tools', '15.30.2'), ('stream-json', '3.6.0')]:
         path = root / 'node_modules' / package / 'package.json'
         if json.loads(path.read_text())['version'] != version:
             raise ValueError(f'{package}: version drift; review upstream before updating the adapter')
