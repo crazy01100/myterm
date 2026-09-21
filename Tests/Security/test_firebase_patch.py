@@ -15,7 +15,7 @@ class FirebasePatchTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for name, version in [('firebase-tools','15.30.0'),('stream-json','3.6.0')]:
+        for name, version in [('firebase-tools','15.30.2'),('stream-json','3.6.0')]:
             folder = self.root/'node_modules'/name
             folder.mkdir(parents=True)
             (folder/'package.json').write_text(json.dumps({'version':version}))

@@ -57,7 +57,7 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.30.0`，以 npm override 使用官方已修補的 `stream-json` `3.6.0`。`scripts/patch-firebase-stream-json.py` 在 npm postinstall 將三個 CLI 消費端的舊介面映射到新版 Node 串流 API；先核對兩個套件版本與三份檔案的 SHA-256，全部符合才修改，重跑可驗證已套用結果。版本、輸入或輸出漂移一律拒絕，不保留此公告的期限例外。`firebase-tools.sh` 每次啟動也先驗證補丁；若使用 `./scripts/project-node.sh --npm ci --ignore-scripts`，須先手動執行該修補腳本，再執行 `./scripts/project-node.sh --npm run test:development-tools`。測試涵蓋真實消費端載入、分段 JSON、CLI 原有資料語意、過深輸入拒絕與補丁漂移。上游 Firebase CLI 原生支援已修補相依後，應在相同回歸測試通過後移除 override 與相容補丁；不得只更改版本或雜湊繞過檢查。
+Firebase CLI 固定為 `15.30.2`，以 npm override 使用官方已修補的 `stream-json` `3.6.0`。`scripts/patch-firebase-stream-json.py` 在 npm postinstall 將三個 CLI 消費端的舊介面映射到新版 Node 串流 API；先核對兩個套件版本與三份檔案的 SHA-256，全部符合才修改，重跑可驗證已套用結果。版本、輸入或輸出漂移一律拒絕，不保留此公告的期限例外。`firebase-tools.sh` 每次啟動也先驗證補丁；若使用 `./scripts/project-node.sh --npm ci --ignore-scripts`，須先手動執行該修補腳本，再執行 `./scripts/project-node.sh --npm run test:development-tools`。測試涵蓋真實消費端載入、分段 JSON、CLI 原有資料語意、過深輸入拒絕與補丁漂移。上游 Firebase CLI 原生支援已修補相依後，應在相同回歸測試通過後移除 override 與相容補丁；不得只更改版本或雜湊繞過檢查。
 
 ## 公開金鑰發布驗證
 
