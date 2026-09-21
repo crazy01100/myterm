@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -77,14 +78,34 @@ class ReleaseTests(unittest.TestCase):
             self.content=ET.tostring(root);self.sign_feed();self.reject()
 
     def test_binder_emits_equal_old_and_new_notes_lengths(self):
+        # Run the real binder/inventory against an isolated resolved-source fixture,
+        # so a clean CI checkout does not need the developer's Swift build cache.
+        project=self.root/'project';scripts=project/'scripts';scripts.mkdir(parents=True)
+        for name in ['bind-release-metadata.py','dependency-inventory.py']:
+            shutil.copyfile(ROOT/'scripts'/name,scripts/name)
+        revision='b'*40
+        (project/'Package.resolved').write_text(json.dumps({'pins':[{
+            'identity':'swift-sodium','location':'https://example.test/swift-sodium.git',
+            'state':{'version':'1.0.0','revision':revision}}]}))
+        vendor=project/'Vendor/SwiftTerm';vendor.mkdir(parents=True)
+        (vendor/'UPSTREAM.md').write_text('Revision: `'+revision+'`')
+        config=project/'Config/Security';config.mkdir(parents=True)
+        (config/'native-components.json').write_text(json.dumps({'libsodium':{
+            'swiftSodiumRevision':revision,'version':'1.0.0'}}))
+        header=project/'.build/checkouts/swift-sodium/Clibsodium.xcframework/macos-arm64_arm64e_x86_64/Headers/Clibsodium/sodium/version.h'
+        header.parent.mkdir(parents=True)
+        header.write_text('#define SODIUM_VERSION_STRING "1.0.0"\n')
         feed=self.root/'unsigned.xml';feed.write_bytes(self.content)
         notes=self.assets/'release-notes.html'
-        subprocess.run([os.sys.executable,str(ROOT/'scripts/bind-release-metadata.py'),
+        subprocess.run([os.sys.executable,str(scripts/'bind-release-metadata.py'),
             '--feed',str(feed),'--notes',str(notes),'--signature',self.sig(notes.read_bytes()),
             '--base-url','https://updates.example.test','--version',self.version,'--commit',self.commit],check=True)
         node=ET.parse(feed).find('./channel/item/'+v.SP+'releaseNotesLink')
         self.assertEqual(node.get('length'),str(notes.stat().st_size))
         self.assertEqual(node.get(v.SP+'length'),node.get('length'))
+        dependencies=json.loads(ET.parse(feed).find('./channel/item/'+v.MT+'dependencies').text)
+        self.assertEqual(len(dependencies),3)
+        self.assertIn({'ecosystem':'native','name':'https://github.com/jedisct1/libsodium','version':'1.0.0'},dependencies)
     def test_wrong_key(self):self.reject(key=base64.b64encode(b'x'*32).decode())
     def test_changed_archive_even_with_updated_hashes(self):
         (self.assets/self.archive).write_bytes(b'inert archive fixturE');self.hashes();self.reject()
