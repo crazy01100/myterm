@@ -54,6 +54,12 @@ Git 歷史清理會改變 commit／tag 的識別，並可能影響 PR 差異與�
 
 ## 日常開發流程
 
+啟動MyTerm Dev前必須先確認正式版已退出。若`/Applications/MyTerm.app`仍在執行，立即停止Dev流程並提醒「退出所有工作並關閉正式版本」，由使用者自行關閉；工具不得代為終止正式版。使用者回覆後仍須重新查核程序，不靠等待或口頭確認推定已退出。
+
+`run-dev-app.sh`在任何Dev關閉／建置動作前及建置後即將啟動前，均透過`check-dev-launch.py`唯讀核對程序；查詢失敗亦停止。不得用直接open、Finder或會自動啟動App的Computer Use繞過。外部測試Mac也應先由使用者關閉正式版；這是開發啟動順序，不是App路徑限制。可在等待期間執行不啟動App的隔離測試。
+
+門檻回歸使用`./scripts/project-python.sh Tests/Security/test_dev_launch_gate.py`，包含暫存runner實測正式版阻擋及建置期間開啟正式版的情境，不啟動或終止真實正式App。
+
 Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.22-dev.2`；不要以通用 `0.0.0-dev.*` 代替功能測試交付版本。`CFBundleVersion` 仍使用每次建置獨立且遞增的時間戳，版本名稱不取代 Build 或通道隔離。本文版本僅為命名範例，實際建置時須依當次目標版本調整。
 
 同步可靠性回歸可獨立執行 `zsh scripts/run-sync-reliability-tests.sh`，完整 `scripts/run-tests.sh` 亦包含它。測試使用臨時目錄、獨立 UserDefaults、人工後端結果及縮短的排程時間，驗證真實協調層的單一週期、帳號世代與 JSON 保存失敗恢復，不連正式雲端。另以真實 `CloudAccountStore` 配合僅存在測試執行檔的合成登入／Keychain 依賴，驗證離線冷啟動、週期前不重試、下一輪登入及資料同步、single-flight、停用／登出／憑證失效與舊回應丟棄。加密測試另驗證既有保管庫可在未開啟 Settings 時初始化。
@@ -65,6 +71,12 @@ Dev 版本採「預計正式版本-dev.序號」，例如 `1.0.22-dev.1`、`1.0.
 主機頁 SFTP 入口的目標重用、切換確認、帳號輸入取消及 inventory／連線狀態變動測試位於 `SelfTests/SFTPHostOpeningTests.swift`，由相同隔離入口執行。測試使用真實協調器與合成連線狀態，不連遠端或讀取憑證；實際傳輸保護、目錄保留與共享工作區操作仍須在 Dev 驗收。
 
 SFTP傳輸取消／暫存覆蓋／單一排程與時間模型的回歸可執行 `zsh scripts/run-sftp-transfer-tests.sh`，亦納入完整隔離入口。假伺服器只操作UUID暫存根目錄，測試涵蓋不支援extension、錯誤版本、取消後同連線可用、未取得暫存目錄所有權時不清理、commit回應遺失與process退出；可用時亦以本機原生 OpenSSH sftp-server 測試暫存資料的替換與遞迴傳輸，不建立遠端 SSH 連線。真正的大檔傳輸、取消、覆蓋提示及全寬傳輸區仍須在Dev人工驗收。
+終端模式防護另由完整隔離入口執行SnippetTerminalModeTests，使用真正SwiftTerm renderer驗證普通buffer的游標隱藏／恢復、分段序列、替代buffer、滑鼠模式、shell誤擋與soft reset。真人須重測top／vim進入與退出；不得把布林值模型測試當成實際程式驗收。
+
+常用指令庫隔離檢查：`zsh scripts/run-command-snippet-tests.sh`，亦納入完整隔離入口；以暫存資料驗證保存／重開／保存失敗、損壞檔保留、輸入限制、目標世代及快捷鍵。實際Dev須驗收右側面板開關、左右／上下分割目標自動跟隨、搜尋／預覽不改目標、關閉／重連失效與重新點選恢復、重排／合併／拆分、PTY resize、單行僅填入不執行、多行複製及文字欄位的原生複製貼上。
+
+指令同步專項使用`zsh scripts/run-snippet-sync-tests.sh`，亦納入完整隔離入口，使用兩份獨立本機資料、合成金鑰、記憶體雲端及攔截的REST回應驗證衝突、CAS前置條件、斷線重試、帳號切換與遷移。Rules另以`./scripts/project-node.sh --npm run test:firestore-rules`驗證；若8080被使用，使用獨立暫存設定與可用本機埠，測試讀取FIRESTORE_EMULATOR_HOST，不停止他人的程序。先部署相容的新增Rules，再發布App；部署前須核對目標專案及差異。雙Mac驗收包含新增／修改／刪除、離線衝突、重開保存與舊版原同步共存，不能以記憶體測試取代。
+
 假 SFTP 伺服器也必須使用專案驗證過的 Python：`run-sftp-security-tests.sh` 將 `project-python.sh` 選出的直譯器路徑傳給 Swift 測試，包含預先取消案例；缺少啟動 PID 會使測試失敗。不要在測試內另行寫死系統 Python。
 
 先執行自動測試：

@@ -8,7 +8,7 @@ enum QuickActionDestination: Hashable {
 }
 
 enum QuickActionOperation: String, CaseIterable {
-    case hosts, sftp, terminal, serial, knownHosts, logs
+    case hosts, sftp, terminal, serial, knownHosts, logs, snippets
 
     var title: String {
         switch self {
@@ -18,6 +18,7 @@ enum QuickActionOperation: String, CaseIterable {
         case .serial: "開啟 Serial 設定"
         case .knownHosts: "查看 Known Hosts"
         case .logs: "查看 Logs"
+        case .snippets: "開啟常用指令庫"
         }
     }
     var keywords: String {
@@ -28,6 +29,7 @@ enum QuickActionOperation: String, CaseIterable {
         case .serial: "serial 串列 串口"
         case .knownHosts: "known hosts 指紋 信任"
         case .logs: "logs log 連線 紀錄 記錄 歷史"
+        case .snippets: "snippet command 常用 指令庫 指令"
         }
     }
     var symbol: String {
@@ -38,6 +40,7 @@ enum QuickActionOperation: String, CaseIterable {
         case .serial: "cable.connector"
         case .knownHosts: "checkmark.shield"
         case .logs: "clock.arrow.circlepath"
+        case .snippets: "curlybraces"
         }
     }
 }

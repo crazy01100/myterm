@@ -14,6 +14,9 @@ enum AppPaths {
     }()
 
     static var hostsFile: URL { rootDirectory.appending(path: "hosts.json") }
+    static var commandSnippetsFile: URL {
+        rootDirectory.appending(path: "Command Snippets", directoryHint: .isDirectory).appending(path: "snippets.json")
+    }
     static var hostConnectionRecencyFile: URL {
         rootDirectory.appending(path: "host-connection-recency.json")
     }

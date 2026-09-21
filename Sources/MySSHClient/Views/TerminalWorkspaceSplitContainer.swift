@@ -8,6 +8,7 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
     let hostStore: HostStore
     let connectionAuditStore: ConnectionAuditStore
     let onActivate: (TerminalSession.ID) -> Void
+    let onOpenSnippets: (TerminalSession.ID) -> Void
     let onOutputActivity: (TerminalSession.ID) -> Void
     let onToggleSplit: (TerminalWorkspace.ID) -> Void
     let onClose: (TerminalSession) -> Void
@@ -27,6 +28,7 @@ struct TerminalWorkspaceSplitContainer: NSViewRepresentable {
             hostStore: hostStore,
             connectionAuditStore: connectionAuditStore,
             onActivate: onActivate,
+            onOpenSnippets: onOpenSnippets,
             onOutputActivity: onOutputActivity,
             onToggleSplit: onToggleSplit,
             onClose: onClose,
@@ -71,6 +73,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
         hostStore: HostStore,
         connectionAuditStore: ConnectionAuditStore,
         onActivate: @escaping (TerminalSession.ID) -> Void,
+        onOpenSnippets: @escaping (TerminalSession.ID) -> Void,
         onOutputActivity: @escaping (TerminalSession.ID) -> Void,
         onToggleSplit: @escaping (TerminalWorkspace.ID) -> Void,
         onClose: @escaping (TerminalSession) -> Void,
@@ -109,6 +112,7 @@ final class TerminalWorkspaceCanvasNSView: NSView {
                 splitAxis: presentation.splitAxis,
                 paneIndex: presentation.paneIndex,
                 onActivate: { onActivate(session.id) },
+                onOpenSnippets: { onOpenSnippets(session.id) },
                 onOutputActivity: { onOutputActivity(session.id) },
                 onToggleSplit: {
                     if let selectedWorkspaceID { onToggleSplit(selectedWorkspaceID) }
@@ -167,6 +171,7 @@ private struct TerminalPaneHostingRoot: View {
     let splitAxis: TerminalWorkspaceSplitAxis?
     let paneIndex: Int?
     let onActivate: () -> Void
+    let onOpenSnippets: () -> Void
     let onOutputActivity: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
@@ -183,6 +188,7 @@ private struct TerminalPaneHostingRoot: View {
             splitAxis: splitAxis,
             paneIndex: paneIndex,
             onActivate: onActivate,
+            onOpenSnippets: onOpenSnippets,
             onOutputActivity: onOutputActivity,
             onToggleSplit: onToggleSplit,
             onClose: onClose,

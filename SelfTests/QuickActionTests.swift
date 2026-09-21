@@ -38,11 +38,12 @@ struct QuickActionTests {
         check(QuickActionSearch.results(inventory, query: "測試 網頁").map(\.id) == [other.id], "nested group keywords locate unopened host")
         check(QuickActionSearch.results(inventory, query: "missing").isEmpty, "no results do not invent a destination")
         check(QuickActionSearch.results(inventory, query: "下載").map(\.id) == [.operation(.sftp)], "operation aliases find SFTP")
-        check(QuickActionSearch.results(inventory, query: "\n\t").count == 8, "empty query retains sections without duplicate hosts")
+        check(QuickActionSearch.results(inventory, query: "\n\t").count == 9, "empty query retains sections without duplicate hosts")
         check(QuickActionSearch.results([duplicate, other], query: "web").count == 2, "closing session restores host result")
         check(QuickActionSearch.results([other], query: "192.0.2.10").isEmpty, "removed host is not replaced by same-name host")
         let prefix = QuickActionItem(id: .host(UUID()), section: .hosts, title: "Web staging", detail: "", hint: "", symbol: "", keywords: "")
         check(QuickActionSearch.results([prefix, other], query: "web").first?.id == other.id, "exact title precedes prefix")
+        check(QuickActionSearch.results(inventory, query: "指令庫").map(\.id) == [.operation(.snippets)], "snippet library is discoverable without executing a command")
         let suite = "MyTerm.QuickActions.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }

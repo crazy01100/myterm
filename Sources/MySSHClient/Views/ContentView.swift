@@ -6,6 +6,17 @@ struct ContentView: View {
     @EnvironmentObject private var sessionManager: SessionManager
     @EnvironmentObject private var connectionAuditStore: ConnectionAuditStore
     @EnvironmentObject private var shortcutStore: AppShortcutStore
+    @EnvironmentObject private var snippetStore: CommandSnippetStore
+    @State private var showingSnippets = false
+    private var snippetTarget: SnippetTargetIdentity? {
+        sessionManager.snippetTargetSelection.visibleTarget(currentSessionID: sessionManager.selectedSessionID)
+    }
+    private var snippetTargetName: String {
+        guard let target = snippetTarget, let session = sessionManager.session(id: target.sessionID) else {
+            return "請點選 SSH 或本機終端窗格"
+        }
+        return sessionManager.presentationName(for: session) + " · " + session.detailDescription
+    }
     @StateObject private var quickActions = QuickActionPanelController()
     @StateObject private var sftpRemoteStore = SFTPRemoteBrowserStore()
     @StateObject private var sftpOpening = SFTPHostOpeningController()
@@ -28,7 +39,18 @@ struct ContentView: View {
     @State private var paneDetachInsertionIndex: Int?
 
     var body: some View {
-        workspaceContent
+        HStack(spacing: 0) {
+            workspaceContent
+            if showingSnippets {
+                Divider()
+                CommandSnippetLibraryView(store: snippetStore, target: snippetTarget, targetName: snippetTargetName,
+                    targetSession: snippetTarget.flatMap { sessionManager.session(id: $0.sessionID) },
+                    currentSessionID: sessionManager.selectedSessionID,
+                    onInsert: { [displayedTarget = snippetTarget] snippet in
+                        try insertSnippet(snippet, displayedTarget: displayedTarget)
+                    }, onClose: { showingSnippets = false })
+            }
+        }
         .modifier(SFTPHostOpeningPresentation(controller: sftpOpening, connection: sftpRemoteStore, onOpen: showSFTP))
         .toolbar {
             ToolbarItem(placement: .automatic) {
@@ -44,6 +66,7 @@ struct ContentView: View {
         .onAppear(perform: configureQuickActions)
         .onChange(of: sessionManager.sessions.map(\.id)) { _, _ in configureQuickActions() }
         .focusedSceneValue(\.openQuickActions, { quickActions.toggle() })
+        .focusedSceneValue(\.openSnippetLibrary, { openSnippets(for: sessionManager.selectedSessionID) })
         .background(QuickActionWindowAnchor(controller: quickActions).frame(width: 0, height: 0))
         .sheet(item: $hostEditorRequest) { request in
             HostEditorView(profile: request.profile, defaultGroupID: request.defaultGroupID)
@@ -532,6 +555,7 @@ struct ContentView: View {
                         hostStore: hostStore,
                         connectionAuditStore: connectionAuditStore,
                         onActivate: { sessionManager.activate(sessionID: $0) },
+                        onOpenSnippets: { openSnippets(for: $0) },
                         onOutputActivity: { sessionManager.recordOutputActivity(for: $0) },
                         onToggleSplit: { sessionManager.toggleSplitAxis(for: $0) },
                         onClose: { sessionManager.close($0) },
@@ -655,8 +679,33 @@ struct ContentView: View {
         sessionManager.connectionAuditStore = connectionAuditStore
     }
 
+    private func openSnippets(for sessionID: UUID?) {
+        if let sessionID, let session = sessionManager.session(id: sessionID), session.kind != .serial {
+            sessionManager.activate(sessionID: sessionID)
+        }
+        showingSnippets = true
+    }
+
+    private func insertSnippet(_ snippet: CommandSnippet, displayedTarget: SnippetTargetIdentity?) throws {
+        guard snippetStore.snippets.first(where: { $0.id == snippet.id }) == snippet else { throw SnippetSyncError.changed }
+        guard let target = displayedTarget, target == snippetTarget,
+              target.sessionID == sessionManager.selectedSessionID,
+              let session = sessionManager.session(id: target.sessionID),
+              target.permits(currentSessionID: sessionManager.selectedSessionID,
+                             currentAttemptID: session.inputAttemptID, connected: session.state == .connected,
+                             supported: session.kind != .serial, passwordPrompt: session.isPasswordPromptActive,
+                             alternateScreen: false) else { throw CommandSnippetError.unavailableTarget }
+        // Session and renderer recheck input state at the last synchronous boundary.
+        try session.insertSnippet(snippet, target: target)
+        showingSnippets = false
+    }
+
     private func performShortcut(_ action: AppShortcutAction) -> Bool {
+        if showingSnippets, action.category == .terminal,
+           NSApp.keyWindow?.firstResponder is NSTextView { return false }
         switch action {
+        case .openSnippetLibrary:
+            openSnippets(for: sessionManager.selectedSessionID)
         case .openQuickActions:
             quickActions.toggle()
         case .copyTerminal:
@@ -767,6 +816,7 @@ struct ContentView: View {
                 sessionManager.showHostLibrary()
             case .terminal: sessionManager.createLocalSession()
             case .serial: showingSerialConnection = true
+            case .snippets: openSnippets(for: sessionManager.selectedSessionID)
             }
         }
     }
@@ -1159,7 +1209,7 @@ private struct AppShortcutMonitorView: NSViewRepresentable {
                 guard event.window?.hasQuickActionPanel != true else { return event }
                 guard event.window?.attachedSheet == nil, NSApp.modalWindow == nil else { return event }
                 if let action = self.shortcutStore.action(matching: event) {
-                    if action == .openQuickActions {
+                    if action == .openQuickActions || action == .openSnippetLibrary {
                         guard let window = event.window, window === NSApp.keyWindow,
                               !QuickActionPanelController.isComposing(in: window) else { return event }
                         if event.isARepeat { return nil }
@@ -1362,6 +1412,7 @@ struct TerminalWorkspaceView: View {
     let splitAxis: TerminalWorkspaceSplitAxis?
     let paneIndex: Int?
     let onActivate: () -> Void
+    let onOpenSnippets: () -> Void
     let onOutputActivity: () -> Void
     let onToggleSplit: () -> Void
     let onClose: () -> Void
@@ -1430,6 +1481,12 @@ struct TerminalWorkspaceView: View {
                         .help(session.canSafelyUseSavedPassword
                               ? "將本機保管庫密碼送進目前偵測到的密碼提示，不使用剪貼簿"
                               : "只有偵測到密碼提示時才可填入")
+                    }
+                    if session.kind != .serial {
+                        Button(action: onOpenSnippets) { Image(systemName: "curlybraces") }
+                            .buttonStyle(.borderless)
+                            .help("開啟常用指令庫，以此窗格為填入目標")
+                            .accessibilityLabel("常用指令庫：" + presentationName)
                     }
                     Menu {
                         Button("中斷並關閉", role: .destructive) { onClose() }

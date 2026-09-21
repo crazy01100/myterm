@@ -86,10 +86,25 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - SFTP 路徑使用響應式 breadcrumb：空間足夠時顯示完整層級，空間不足時保留前後關鍵目錄並以 `…` 選單收合中段，不使用會遮住文字的水平捲軸。
 - 平台辨識先被動解析終端機輸出；已儲存主機中仍未知的平台可在不執行遠端修改的前提下，以背景 SSH probe 讀取作業系統資訊。辨識結果保存於主機資料，供主機庫、SFTP 選擇器、連線分頁與終端機窗格共用 SVG 平台徽章；同一 Terminal Session 對應的 Logs 快照若仍未知，也會只補寫第一次可信結果。
 
+### 常用指令庫
+
+`CommandSnippetStore`為App共用的本機資料來源，透過`AppPaths.commandSnippetsFile`保存獨立schema；目錄0700、替換檔0600，完整寫入與同步後原子rename，保存成功才更新記憶體狀態。上限500筆、每筆指令16KB、文件16MiB；損壞、重複ID或不支援schema保留原檔並停止編輯，修復後可重新讀取。schema 2把各專案／UID範圍的內容、baseline、待送變更及內部帳號遷移標記一起原子保存；schema 1在首次寫入時保留UUID及內容遷移。指令不納入HostStore或主機匯出。
+
+`CommandSnippetLibraryView`位於`ContentView`工作區右側，只縮小既有終端畫布，不重新建立Session或AppKit pane host。標題按鈕經`TerminalWorkspaceSplitContainer`回呼指定目標；選單／Quick Actions／快捷鍵共用入口。SessionManager的SnippetTargetSelection只在明確點選或鍵盤導覽時擷取Session UUID與attempt UUID；指令庫自動跟隨該選取，搜尋／預覽不改目標。關閉或重連使舊目標失效，版面收斂不自動改投剩餘窗格；主機／SFTP頁不可填入隱藏終端。填入動作攜帶畫面顯示的目標快照，要求仍與目前選取及連線attempt一致。`TerminalSession`與`LoginAwareTerminalView`在送出邊界再次檢查process、可見性、密碼提示及終端模式。SnippetGuardedTerminalView沿用原本游標顯示批次更新，但同步記錄協定的游標隱藏／恢復；替代buffer、隱藏游標或滑鼠回報模式時禁止填入，按鈕与送出邊界共用。一般application-cursor／bracketed-paste模式不單獨阻擋，避免誤擋shell。這些訊號是保守防護，無法辨識所有互動程式；自行隱藏游標的shell也會暫停填入，直到恢復游標。單行拒絕換行／控制字元，走既有send且不寫剪貼簿、不附Enter；多行只有明確複製。提示辨識不能保證涵蓋所有互動程式，使用者仍須確認輸入位置。
+
+`SnippetSyncEngine`執行逐筆三方合併；`CommandSnippetSyncCodec`沿用Master Key與AEAD，以專案／UID、record ID、類型及revision綁定密文。`FirestoreSnippetBackend`只讀寫`users/<UID>/commandSnippets/<UUID>`，保留精確updateTime前置條件，新增限不存在的UUID。舊`vault`及`connectionLogs`格式不變。
+
+`AutomaticSnippetSync`接入既有`AutomaticSyncCoordinator`，共用手動、回前景、喚醒、本機變更與五分鐘前景排程。唯一同步總開關開啟後，指令自動初始化帳號範圍並參與同步；內部遷移標記不是另一個開關，指令失敗時整輪不報全部成功。停用保留本機內容；登出不收送，換帳號不帶入前帳號內容。遠端套用與網路回應均檢查帳號及世代。
+
+衝突採保留副本並等待使用者確認；副本ID依內容與baseline穩定產生，避免重試重複。刪除保留tombstone，不復活原UUID。每範圍最多500筆可見指令及6,000筆含tombstone紀錄，最多32個本機範圍，整份檔案仍限16MiB；滿額時停止操作並保留資料。每筆密文128KiB，網路頁50筆／10MiB、最多120頁／累計32MiB。這些是App處理界線，Rules只強制逐筆owner、欄位、revision及大小，並非帳號總量或費用上限。
+
+同步不操作終端；編輯或填入時重新比對原內容，遠端修改不能靜默覆蓋草稿或送入未預覽的內容。
+
 ## 資料保存位置
 
 | 資料 | 保存位置 | 是否跨裝置 |
 |---|---|---|
+| 常用指令與同步狀態 | `Command Snippets/snippets.json`（本機明文、依帳號範圍隔離） | 總開關啟用後端對端加密同步；不含執行狀態 |
 | 主機與群組 | Application Support 內的權限限制檔案 | 啟用同步時，以密文同步 |
 | 主機最近成功連線時間 | Application Support 內權限 `0600` 的獨立檔案；只含主機 UUID 與時間 | 不同步、不匯出 |
 | SSH 連線稽核 Logs | Application Support 內權限 `0600` 的 `connection-audit-log.json`；包含連線當下的主機、帳號端點、來源裝置、時間及結果，最多 30 天與 5,000 筆 | 啟用同步時，只把已結束紀錄以密文同步；不匯出 |
@@ -104,13 +119,13 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 ## 端對端加密同步
 
-`AutomaticSyncCoordinator` 是日常同步排程入口，先由 `VaultSetupStore.prepareForAutomaticSync` 在帳號還原後初始化既有本機保管庫，不依賴 Settings scene 出現。協調層並行呼叫獨立的 metadata／password 及 Logs worker，等待兩部分結果；衝突等待確認不阻止 Logs，但不能算整輪成功。主機／密碼及 Logs 仍保留原有加密與資料集合。
+`AutomaticSyncCoordinator` 是日常同步排程入口，先由 `VaultSetupStore.prepareForAutomaticSync` 在帳號還原後初始化既有本機保管庫，不依賴 Settings scene 出現。協調層並行呼叫獨立的 metadata／password、Logs及指令worker，等待全部結果；衝突等待確認不阻止 Logs，但不能算整輪成功。主機／密碼及 Logs 仍保留原有加密與資料集合。
 
 AppKit 作用中／非作用中事件控制唯一的前景 5 分鐘同步週期，另接受啟動、喚醒、本機變動及過期 Logs 頁面的要求。本機變動合併約 1.2 秒；執行中合併下一輪要求，不反覆延後目前工作。暫時失敗等待既有週期或明確的回前景／喚醒／手動入口，不設短間隔退避計時器；失敗後的一般資料／狀態變更不會形成緊密重試。整輪 120 秒逾時只取消並等待兩 worker 釋放，不另排重試。停用／帳號變更取消舊世代；worker 在網路回應與本機套用邊界檢查取消，舊世代不能發布新帳號的成功結果。
 
 `CloudAccountStore` 的登入還原使用 single-flight 任務與 initial／retryableFailure／blocked／restored 狀態；只有暫時網路或服務錯誤可在後續同步週期再試。`SyncSettingsStore.sessionRecoveryEnabled` 記住最後已知帳號的同步啟用選擇，即使登入暫時不可用也能決定是否允許恢復；它不會在未登入時啟用資料同步。協調層於五分鐘、回前景、喚醒或手動要求時先執行符合條件的登入恢復，成功後接續同步；availability 回呼不會遞迴發出登入請求。主動登出、停用、無憑證或永久失效不進行週期性登入恢復；啟動時原有的單次 session 還原不依賴同步啟用。Google ID Token 更新沿用共用單一更新任務；登入世代檢查拒絕登出後才到達的舊回應。
 
-`ConnectionAuditStore` 保留尚未保存的修訂，即使下載紀錄已在記憶體去重也能重試磁碟寫入；Logs worker 等待 `persistForSync` 成功才標記完成。各 worker 與整輪成功時間按帳號摘要保存於通道專用 UserDefaults；設定的日常同步區只顯示整體狀態與單一整輪成功時間，不列分項明細。取消、部分失敗與尚未成功不能當作全部完成。`SyncDiagnosticsJournal` 只在本機保存 allow-list 的有界同步執行事件，不加入同步資料或既有連線稽核；設定內的診斷工具預設收合。
+`ConnectionAuditStore` 保留尚未保存的修訂，即使下載紀錄已在記憶體去重也能重試磁碟寫入；Logs worker 等待 `persistForSync` 成功才標記完成。整輪成功時間按帳號摘要保存於通道專用 UserDefaults；設定的日常同步區只顯示整體狀態與單一整輪成功時間，指令庫另顯示待處理狀態。取消、部分失敗與尚未成功不能當作全部完成。`SyncDiagnosticsJournal` 只在本機保存 allow-list 的有界同步執行事件，不加入同步資料或既有連線稽核；設定內的診斷工具預設收合。
 
 同步是選用功能，資料流如下：
 

@@ -368,7 +368,7 @@ struct TerminalContainerView: NSViewRepresentable {
 /// Watches only the SSH authentication phase. Saved passwords remain one-shot.
 /// When no password exists, repeated login prompts replace the prior captured
 /// attempt until OpenSSH independently confirms successful authentication.
-final class LoginAwareTerminalView: LocalProcessTerminalView {
+final class LoginAwareTerminalView: SnippetGuardedTerminalView {
     var onLoginPasswordPrompt: (() -> Void)?
     var onLoginPasswordSubmitted: ((Data) -> Void)?
     var onLoginPasswordCaptureCancelled: (() -> Void)?
@@ -384,6 +384,12 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     var onReconnectRequested: (() -> Void)?
     private var promptDetector = LoginPasswordPromptDetector()
     private var passwordPromptStateDetector = PasswordPromptStateDetector()
+    private var snippetInputGuard = SnippetInputPromptGuard()
+
+    var canReceiveSnippet: Bool {
+        process.running && window != nil && !isHiddenOrHasHiddenAncestor
+            && !snippetInputGuard.isBlocked && allowsSnippetInTerminalMode
+    }
     private var platformDetector = HostPlatformDetector()
     private var passwordCapture = LoginPasswordCapture()
     private var passwordChangeCapture = PasswordChangeCapture()
@@ -411,8 +417,6 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     private lazy var scrollFrameDisplayLinkTarget = ScrollFrameDisplayLinkTarget(owner: self)
     private var scrollFrameDisplayLink: CADisplayLink?
     private var scrollResponseDeadline: DispatchTime?
-    private var pendingCaretVisibility: Bool?
-    private var pendingCaretVisibilityFlush: DispatchWorkItem?
     private let interruptedOutputTailLimit = 16 * 1024
     private let interruptedOutputMaximumDelay: UInt64 = 500_000_000
     private var isLoginPasswordPromptMonitoringEnabled = true
@@ -445,7 +449,6 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     deinit {
         pendingMouseWheelFlush?.cancel()
         scrollFrameDisplayLink?.invalidate()
-        pendingCaretVisibilityFlush?.cancel()
         passwordCapture.cancel()
         passwordChangeCapture.cancel()
         for index in interruptedOutputTail.indices { interruptedOutputTail[index] = 0 }
@@ -474,36 +477,6 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         super.cursorStyleChanged(source: source, newStyle: steadyStyle)
     }
 
-    override func showCursor(source: Terminal) {
-        scheduleCaretVisibility(true, source: source)
-    }
-
-    override func hideCursor(source: Terminal) {
-        scheduleCaretVisibility(false, source: source)
-    }
-
-    private func scheduleCaretVisibility(_ isVisible: Bool, source: Terminal) {
-        pendingCaretVisibility = isVisible
-        guard pendingCaretVisibilityFlush == nil else { return }
-        let workItem = DispatchWorkItem { [weak self, weak source] in
-            guard let source else { return }
-            self?.applyPendingCaretVisibility(source: source)
-        }
-        pendingCaretVisibilityFlush = workItem
-        DispatchQueue.main.async(execute: workItem)
-    }
-
-    private func applyPendingCaretVisibility(source: Terminal) {
-        guard let isVisible = pendingCaretVisibility else { return }
-        pendingCaretVisibility = nil
-        pendingCaretVisibilityFlush = nil
-        if isVisible {
-            super.showCursor(source: source)
-        } else {
-            super.hideCursor(source: source)
-        }
-    }
-
     func stopLoginPasswordPromptMonitoring() {
         isLoginPasswordPromptMonitoringEnabled = false
         passwordCapture.cancel()
@@ -522,6 +495,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
         passwordChangeCapture.cancel()
         promptDetector = LoginPasswordPromptDetector()
         passwordPromptStateDetector = PasswordPromptStateDetector()
+        snippetInputGuard = SnippetInputPromptGuard()
         platformDetector = HostPlatformDetector()
         passwordCapture = LoginPasswordCapture()
         passwordChangeCapture = PasswordChangeCapture()
@@ -558,6 +532,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     }
 
     override func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        snippetInputGuard.userInput(data)
         if !process.running,
            TerminalReconnectPolicy.isReturnInput(data),
            shouldReconnectOnReturn?() == true {
@@ -731,6 +706,7 @@ final class LoginAwareTerminalView: LocalProcessTerminalView {
     }
 
     private func deliverReceivedData(_ slice: ArraySlice<UInt8>) {
+        snippetInputGuard.receive(slice)
         super.dataReceived(slice: slice)
         if !slice.isEmpty {
             onOutputActivity?()

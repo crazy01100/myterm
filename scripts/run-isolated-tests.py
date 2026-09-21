@@ -29,3 +29,5 @@ with tempfile.TemporaryDirectory(prefix='MyTerm-isolated-tests-',dir='/private/t
     subprocess.run([str(root/'scripts/run-tests.sh')],cwd=root,check=True,env=env)
     subprocess.run([str(root/'scripts/run-sftp-security-tests.sh')],cwd=root,check=True,env=env)
     subprocess.run(['zsh',str(root/'scripts/run-sftp-transfer-tests.sh')],cwd=root,check=True,env=env)
+    subprocess.run(['zsh',str(root/'scripts/run-command-snippet-tests.sh')],cwd=root,check=True,env=env)
+    subprocess.run(['zsh',str(root/'scripts/run-snippet-sync-tests.sh')],cwd=root,check=True,env=env)

@@ -218,3 +218,11 @@ Check the Firebase CLI account, verify that Rules were deployed to the intended 
 ### Can I commit the API Key or Desktop Client Secret?
 
 A desktop app cannot securely conceal these client-side settings, so they are not the Firestore authorization boundary. This project nevertheless prohibits committing real configuration files. The shared repository contains only examples without real values; production access must rely on Firebase Authentication, Security Rules, and end-to-end encryption.
+
+## Command snippet sync rules
+
+Snippets use an independent `users/<UID>/commandSnippets/<UUID>` collection with content encrypted on the Mac. Host, password and Logs collections are unchanged. After updating the source, deploy this repository's Rules using the existing `./scripts/deploy-firestore.sh --project <your-firebase-project-id>` workflow before using the updated app's unified sync switch. Never grant public collection access.
+
+On two updated Macs using the same test account and sync passphrase, enable the single cross-device sync switch in Settings; snippets are included automatically with no separate activation. Use non-sensitive fixtures to verify create, edit, delete and offline conflicts. Before new Rules are deployed, snippets remain local with an incomplete-sync message; existing sync collections remain usable. Older apps do not read or write the snippet collection.
+
+Rules reject cross-UID access, extra plaintext fields, ciphertext over 128 KiB, skipped revisions, physical deletion and resurrection. Additional client capacity checks are not Firebase-wide quota or billing limits. For rollback, preserve encrypted records and tombstones rather than clearing the collection.
