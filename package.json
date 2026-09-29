@@ -8,8 +8,7 @@
     "emulators": "./scripts/firebase-tools.sh emulators:start --project demo-myterm --only auth,firestore",
     "test:firestore-rules": "./scripts/firebase-tools.sh emulators:exec --project demo-myterm --only firestore \"node --test Tests/FirebaseRules/firestore.rules.test.mjs\"",
     "deploy:firestore": "./scripts/deploy-firestore.sh",
-    "postinstall": "./scripts/project-python.sh scripts/patch-firebase-stream-json.py",
-    "test:development-tools": "./scripts/project-node.sh --test Tests/Security/development-tools.test.cjs Tests/Security/firebase-stream-json.test.cjs"
+    "test:development-tools": "./scripts/project-node.sh --test Tests/Security/development-tools.test.cjs Tests/Security/firebase-stream-json.test.cjs Tests/Security/firebase-installation.test.cjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
@@ -22,10 +21,6 @@
   "overrides": {
     "@google-cloud/pubsub": {
       "@opentelemetry/core": "2.11.0"
-    },
-    "firebase-tools": {
-      "csv-parse": "7.0.2",
-      "stream-json": "3.6.0"
     },
     "gaxios@6.7.1": {
       "uuid": "11.1.1"

@@ -7,25 +7,43 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'../..');
 const local=createRequire(path.join(root,'package.json'));
 const cli=createRequire(local.resolve('firebase-tools/package.json'));
-const Chain=cli('stream-chain');
-const {parserStream}=cli('stream-json');
+const {chain}=cli('stream-chain');
+const {parser}=cli('stream-json');
 const {pick}=cli('stream-json/filters/pick.js');
 const {streamArray}=cli('stream-json/streamers/stream-array.js');
 const {streamObject}=cli('stream-json/streamers/stream-object.js');
 function input(value,size){const bytes=Buffer.from(JSON.stringify(value));return Readable.from(Array.from({length:Math.ceil(bytes.length/size)},(_,i)=>bytes.subarray(i*size,(i+1)*size)));}
-function collect(stages){return new Promise((resolve,reject)=>{const out=[];new Chain(stages).on('data',v=>out.push(v)).on('error',reject).on('end',()=>resolve(out));});}
+function collect(stages){return new Promise((resolve,reject)=>{const out=[];chain(stages).on('data',v=>out.push(v)).on('error',reject).on('end',()=>resolve(out));});}
 
-test('installed CLI has the reviewed compatibility patch and loads its consumers',()=>{
- const checked=spawnSync(path.join(root,'scripts/project-python.sh'),[path.join(root,'scripts/patch-firebase-stream-json.py'),'--check'],{encoding:'utf8',timeout:10000});
+test('installed upstream CLI matches the lockfile and loads its consumers',()=>{
+ const checked=spawnSync(process.execPath,[path.join(root,'scripts/verify-firebase-tools.cjs')],{encoding:'utf8',timeout:10000});
  assert.equal(checked.status,0,checked.stderr);
  for(const module of ['commands/auth-import','database/import','frameworks/next/index'])assert.doesNotThrow(()=>cli('./lib/'+module+'.js'));
 });
 
 test('Auth JSON extraction preserves chunked Unicode, arrays, nulls and numbers',async()=>{
  for(const size of [1,7,4096])for(const users of [[],[{localId:'x',displayName:'中文🧪',disabled:false}], [{n:0,a:[true,null,{b:'c'}]},{n:-125000}]]){
-  const actual=await collect([input({metadata:{ignored:1},users,other:['skip']},size),pick.withParserAsStream({filter:/^users$/}),streamArray.asStream()]);
+  const actual=await collect([input({metadata:{ignored:1},users,other:['skip']},size),pick.withParser({filter:/^users$/}),streamArray()]);
   assert.deepEqual(actual,users.map((value,key)=>({key,value})));
  }
+});
+
+test('actual Auth importer parses JSON and CSV without sending users to Firebase',async t=>{
+ const fs=require('node:fs');const os=require('node:os');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'myterm-auth-import-'));
+ t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+ const accountImporter=cli('./lib/accountImporter.js');
+ const calls=[];t.mock.method(accountImporter,'serialImportUsers',async(...args)=>calls.push(args));
+ const action=cli('./lib/commands/auth-import.js').command.actionFn;
+ const opts={project:'demo-myterm'};
+ for(const [extension,content] of [['json',JSON.stringify({users:[{localId:'fixture',email:'fixture@example.invalid'}]})],['csv','fixture,fixture@example.invalid\n']]){
+  const file=path.join(dir,'users.'+extension);fs.writeFileSync(file,content);
+  await action(file,opts);
+  assert.equal(calls.at(-1)[2][0][0].localId,'fixture');
+ }
+ assert.equal(calls.length,2);
+ const file=path.join(dir,'bad.json');fs.writeFileSync(file,'{"users":[');
+ await assert.rejects(action(file,opts));assert.equal(calls.length,2);
 });
 
 test('Next.js dependency extraction preserves the CLI parser options',async()=>{
@@ -33,7 +51,7 @@ test('Next.js dependency extraction preserves the CLI parser options',async()=>{
  // were verified against its original stream-json 1.9.1 pipeline.
  const cases=[ [{},[]], [{alpha:{version:'1',dependencies:{beta:{version:'2'}}}},[{key:'alpha',value:{dependencies:{beta:{}}}}]], [{'套件':{version:'1',optional:false,extra:[1,null]}},[{key:'套件',value:{optional:false,extra:[null]}}]] ];
  for(const size of [1,7,4096])for(const [dependencies,expected] of cases){
-  const actual=await collect([input({name:'test',dependencies},size),parserStream({packValues:false,packKeys:true,streamValues:false}),pick.asStream({filter:'dependencies'}),streamObject.asStream()]);
+  const actual=await collect([input({name:'test',dependencies},size),parser({packValues:false,packKeys:true,streamValues:false}),pick({filter:'dependencies'}),streamObject()]);
   assert.deepEqual(actual,expected);
  }
 });
@@ -52,7 +70,7 @@ test('actual DatabaseImporter retains filtered request data without a network',a
 });
 
 test('malformed JSON remains rejected',async()=>{
- for(const source of ['{"users":[','{"users":[1,]}','not json'])await assert.rejects(collect([Readable.from([source]),pick.withParserAsStream({filter:/^users$/}),streamArray.asStream()]));
+ for(const source of ['{"users":[','{"users":[1,]}','not json'])await assert.rejects(collect([Readable.from([source]),pick.withParser({filter:/^users$/}),streamArray()]));
 });
 
 test('all vulnerable filter families reject excessive depth within a bounded process',()=>{
