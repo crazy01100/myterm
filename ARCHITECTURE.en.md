@@ -210,7 +210,7 @@ Monitoring maps complete successful scans to bot-owned Issues using `sync-securi
 
 `render-release-notes.py` is the shared release-note HTML generator for private/public distributions. It preserves text escaping and authored sections while normalizing the version heading. Dedicated release-notes.css handles narrow light/dark presentation; HTML remains signed and verified through the existing pipeline and contains no website navigation.
 
-The Firebase development-tool adapter in `scripts/patch-firebase-stream-json.py` maps stream-json Node stream APIs during npm installation; the CLI wrapper checks pinned versions and file hashes before launch. It does not change App data flows. The dependency depth limit and repository command restrictions remain in place; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+Firebase development tools natively support the patched `stream-json` APIs; installation no longer rewrites third-party source files. `scripts/verify-firebase-tools.cjs` checks the exact CLI version, manifest/lockfile agreement, and resolved stream dependencies without writing files, before wrapper launch and in CI. `npm ci` provides lockfile-based installation and archive integrity verification. This development-tool boundary does not change App data flows. Depth limits, the command allow-list, and advisory scanning remain; see [security maintenance](SECURITY_MAINTENANCE.en.md).
 
 `scripts/project-python.sh` selects Python for administration, tests, and release scripts from an explicit supported executable, the project environment, or PATH. It rejects versions below 3.12 without replacing system Python. `setup-security-tools.sh` uses the same selection to recreate an isolated verification venv; this tooling is not packaged in the App.
 

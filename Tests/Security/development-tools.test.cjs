@@ -27,3 +27,24 @@ test('qs preserves ordinary input and blocks prototype keys',()=>{
  const qs=local('qs');assert.deepEqual(qs.parse('x=1&x=2'),{x:['1','2']});
  assert.equal(Object.hasOwn(qs.parse('__proto__[polluted]=yes'),'__proto__'),false);
 });
+test('IP classification recognizes the full link-local and local-use NAT64 ranges',()=>{
+ const {Address6}=local('ip-address');
+ for(const ip of ['fe80::1','fea0::1','febf:ffff::1'])assert.equal(new Address6(ip).isLinkLocal(),true);
+ assert.equal(new Address6('2001:db8::1').isLinkLocal(),false);
+ assert.equal(new Address6('64:ff9b:1::1').isPrivate(),true);
+ assert.equal(new Address6('2001:4860:4860::8888').isPrivate(),false);
+});
+test('Morgan quoted fields escape quotes, backslashes and newlines',()=>{
+ const morgan=local('morgan');const value='agent"\\\r\ninjected';
+ const result=morgan.compile('\":req[user-agent]\"')(morgan,{headers:{'user-agent':value}},{});
+ assert.equal(result,JSON.stringify(value));
+});
+test('Firebase Undici preserves request handling without external traffic',async()=>{
+ const cli=createRequire(local.resolve('firebase-tools/package.json'));
+ const {MockAgent,request}=cli('undici');const agent=new MockAgent();agent.disableNetConnect();
+ try {
+  agent.get('https://example.invalid').intercept({path:'/test',method:'GET'}).reply(200,{ok:true},{headers:{'content-type':'application/json'}});
+  const response=await request('https://example.invalid/test',{dispatcher:agent});
+  assert.equal(response.statusCode,200);assert.deepEqual(await response.body.json(),{ok:true});agent.assertNoPendingInterceptors();
+ } finally {await agent.close();}
+});

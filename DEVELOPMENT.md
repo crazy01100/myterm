@@ -115,7 +115,7 @@ SFTP傳輸取消／暫存覆蓋／單一排程與時間模型的回歸可執行 
 
 ### Firebase 開發工具相容性
 
-開發工具需要 Node.js 24 LTS及 Python 3.12 以上。`./scripts/project-node.sh --npm ci` 會執行經版本與雜湊驗證的 `scripts/patch-firebase-stream-json.py`；若使用 `--ignore-scripts`，須明確執行修補腳本。`./scripts/project-node.sh --npm run test:development-tools` 驗證既有覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。每次 CLI 啟動前再次核對補丁，來源漂移必須重新審閱，不能跳過。範圍與撤除條件見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+開發工具需要 Node.js 24 LTS及 Python 3.12 以上。使用 `./scripts/project-node.sh --npm ci` 依鎖檔安裝；Firebase CLI 已原生支援修補後的串流套件，不再改寫安裝內容。每次 CLI 啟動前，`scripts/verify-firebase-tools.cjs` 唯讀核對 CLI 與實際解析到的串流相依是否符合鎖檔；不一致時重新執行 `npm ci`。`./scripts/project-node.sh --npm run test:development-tools` 驗證安裝一致性、保留的覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。詳細安全界線見 [安全維護指南](SECURITY_MAINTENANCE.md)。
 
 原庫另有維護者管理入口 `scripts/invite-sync-user.sh --help`，需本機 Google Cloud CLI 與管理員授權，不是 App 建置依賴或既有 Firebase CLI wrapper 的擴權。隔離安全測試為 `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`，也由既有 `Tests/Security` Python 測試探索納入。管理設定、憑證與私人操作紀錄不進 Git；此工具未納入獨立來源輸出。
 
