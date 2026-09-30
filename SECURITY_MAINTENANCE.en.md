@@ -16,6 +16,8 @@ Only operational errors in queries, tests, reports or Issue writes fail the dail
 
 Issue write permission is limited to scheduled/manual monitoring on the default branch of `crazy01100/myterm`, never PRs. Forks do not automatically run this monitor job. The tool rejects public repositories by default; this workflow explicitly opts in with `--allow-public` for reviewed public-advisory metadata. Records contain public advisory and dependency metadata and acceptance status, not hosts, credentials or user data. `scanStatus` and `lastSuccessfulScanAt` describe scan health; a previous success older than 48 hours is flagged on the next run. A schedule cannot immediately alert about its own failure to run. Upstream versions remain in reports; ordinary new versions without matching advisories are tracked through Dependabot proposals rather than risk Issues.
 
+npm dependencies are checked against both `npm audit` and the GitHub Advisory Database. Public advisories are queried in batches for every locked package/version, then merged by advisory and component. This covers differences in feed update timing without restricting checks to recent advisories. Any failed batch leaves the scan incomplete and cannot authorize Issue closure.
+
 ```sh
 ./scripts/project-python.sh scripts/security-audit.py --output build/security-report.json
 ./scripts/project-python.sh scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
@@ -59,7 +61,7 @@ The maintainer or agent performing the remediation writes the summary from actua
 
 ## Development dependency compatibility overrides
 
-Current npm overrides preserve Firebase's CSV stream, PubSub trace-context propagator, Gaxios CommonJS UUID and qs APIs. Versions are exact; `Tests/Security/development-tools.test.cjs` and Firestore Emulator tests cover the consuming paths. Remove overrides when parent constraints allow safe versions, and review them at least monthly rather than accumulating unmaintained forced versions.
+Current npm overrides cover the PubSub trace-context propagator, Gaxios CommonJS UUID, qs, `@grpc/grpc-js 1.14.5`, and `glob 13.0.6`. gRPC unifies patched versions across Firebase and Google gax; glob replaces the unsupported free 10.x line used by Firebase file discovery and its archiving, cleanup, and controller-loading dependencies. Versions are pinned exactly. Tests cover actual consumers, loopback gRPC, and the isolated Firestore Emulator; `firebase-glob.test.cjs` covers dotfiles, exclusions, symlinks, sync/async/stream APIs, and temporary-file operations. Remove overrides when parent constraints permit supported, patched versions, and review them at least monthly.
 
 `scripts/firebase-tools.sh` permits only Firestore Rules/indexes deployment, local Auth/Firestore emulators under `demo-myterm`, and basic sign-in/project queries. Deployment requires explicit `--project` and Firestore `--only` options. Emulators require loopback configuration; `emulators:exec` accepts only this repository's fixed Rules test command. Auth import, Hosting, alternate configuration files and arbitrary emulator subprocess commands are rejected. This restricts the repository entry point; it cannot prevent a local owner from directly invoking the CLI in `node_modules`.
 

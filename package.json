@@ -8,7 +8,7 @@
     "emulators": "./scripts/firebase-tools.sh emulators:start --project demo-myterm --only auth,firestore",
     "test:firestore-rules": "./scripts/firebase-tools.sh emulators:exec --project demo-myterm --only firestore \"node --test Tests/FirebaseRules/firestore.rules.test.mjs\"",
     "deploy:firestore": "./scripts/deploy-firestore.sh",
-    "test:development-tools": "./scripts/project-node.sh --test Tests/Security/development-tools.test.cjs Tests/Security/firebase-stream-json.test.cjs Tests/Security/firebase-installation.test.cjs Tests/Security/dependency-advisories.test.cjs"
+    "test:development-tools": "./scripts/project-node.sh --test Tests/Security/development-tools.test.cjs Tests/Security/firebase-stream-json.test.cjs Tests/Security/firebase-installation.test.cjs Tests/Security/dependency-advisories.test.cjs Tests/Security/firebase-glob.test.cjs"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
@@ -25,6 +25,8 @@
     "gaxios@6.7.1": {
       "uuid": "11.1.1"
     },
-    "qs": "6.16.0"
+    "qs": "6.16.0",
+    "@grpc/grpc-js": "1.14.5",
+    "glob": "13.0.6"
   }
 }

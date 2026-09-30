@@ -10,6 +10,8 @@ import re
 import subprocess
 import sys
 import urllib.request
+from urllib.parse import urlencode
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -120,6 +122,34 @@ def scan_runtime(items,scope,report,cache):
             report['errors'].append(str(error))
 
 
+def github_npm_advisories(packages):
+    # npm's audit feed can lag behind GitHub-reviewed advisories. Query all
+    # installed package/version identities in bounded public batches as well.
+    identities=sorted({key.rsplit('node_modules/',1)[-1]+'@'+item['version']
+                       for key,item in packages.items() if key and 'version' in item})
+    batches=[identities[i:i+40] for i in range(0,len(identities),40)]
+    def fetch(batch):
+        endpoint='/advisories?'+urlencode({'ecosystem':'npm','affects':','.join(batch),'per_page':100})
+        result=subprocess.run(['gh','api','--paginate','--slurp',endpoint],capture_output=True,text=True,timeout=120)
+        if result.returncode or len(result.stdout)>16*1024*1024:
+            raise ValueError('GitHub npm advisory lookup failed')
+        pages=json.loads(result.stdout)
+        if not isinstance(pages,list) or not pages or any(not isinstance(page,list) for page in pages):
+            raise ValueError('Invalid GitHub advisory pages')
+        return [item for page in pages for item in page]
+    found={}
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for rows in pool.map(fetch,batches):
+            for row in rows:
+                if not isinstance(row,dict):raise ValueError('Invalid GitHub advisory entry')
+                if row.get('withdrawn_at'):continue
+                if (any(not isinstance(row.get(key),str) or not row[key] for key in ['ghsa_id','severity','html_url'])
+                    or not isinstance(row.get('vulnerabilities'),list) or not row['vulnerabilities']):
+                    raise ValueError('Incomplete GitHub advisory entry')
+                found[row['ghsa_id']]=row
+    return list(found.values())
+
+
 def scan_npm(report):
     result=subprocess.run([str(ROOT/'scripts/project-node.sh'),'--npm','audit','--package-lock-only','--ignore-scripts','--json'],cwd=ROOT,capture_output=True,text=True,timeout=180,env={**os.environ,'npm_config_cache':str(ROOT/'.npm-cache')})
     data=json.loads(result.stdout)
@@ -140,6 +170,28 @@ def scan_npm(report):
                     if findings[key]['status']=='needs-review':finding['status']='needs-review'
                     finding['version']=','.join(sorted(set(versions+findings[key]['version'].split(','))))
                 findings[key]=finding
+    versions_by_name={}
+    for key,item in packages.items():
+        if key and 'version' in item:
+            versions_by_name.setdefault(key.rsplit('node_modules/',1)[-1],set()).add(item['version'])
+    for advisory in github_npm_advisories(packages):
+        cache[advisory['ghsa_id']]=advisory
+        for vulnerability in advisory.get('vulnerabilities',[]):
+            package=vulnerability.get('package',{});name=package.get('name')
+            if package.get('ecosystem')!='npm' or name not in versions_by_name:continue
+            matches={v:affected(v,vulnerability.get('vulnerable_version_range','')) for v in versions_by_name[name]}
+            versions=sorted(v for v,match in matches.items() if match is not False)
+            if not versions:continue
+            finding={'id':advisory['ghsa_id'],'component':name,'version':','.join(versions),'scope':'development',
+                     'severity':'moderate' if advisory['severity']=='medium' else advisory['severity'],
+                     'status':'needs-review' if any(matches[v] is None for v in versions) else 'affected',
+                     'url':advisory['html_url']}
+            key=(finding['id'],name)
+            if key in findings:
+                finding['version']=','.join(sorted(set(versions+findings[key]['version'].split(','))))
+                if findings[key]['status']=='needs-review':finding['status']='needs-review'
+            findings[key]=finding
+    report['npmAdvisorySources']=['npm audit','GitHub Advisory Database (all locked package versions)']
     for finding in findings.values():
         report['findings'].append(details.enrich(finding,gh,affected,cache=cache))
 

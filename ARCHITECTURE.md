@@ -206,6 +206,8 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 
 安全報告的 npm 修補版與相依路徑由 `security-risk-context.py` 補齊；`Config/Security/impact-assessments.json` 保存綁定來源雜湊與版本的逐案評估，失效後回到待確認且不豁免安全 gate。`security-issue-format.py` 統一精簡格式、台灣時間、公開欄位快照與歷史遷移；Issue 同步先驗證完整報告及準備所有變更，再以原有權限邊界寫入。
 
+開發相依掃描同時查詢 npm audit 與 GitHub Advisory Database 的全鎖檔版本範圍，按公告／元件合併；任一資料源或批次失敗都保留失敗狀態，不以部分結果解除風險。
+
 `render-release-notes.py` 是私人／公開發布共用的更新說明 HTML 產生器，保留文字 escaping 與原段落內容，統一版本標題。專用 release-notes.css 只負責窄幅深淺色呈現；HTML 仍在既有流程中簽署並驗證，不包含網站導覽。
 
 Firebase 開發工具原生支援修補後的 `stream-json` 串流介面，安裝時不再改寫第三方來源。`scripts/verify-firebase-tools.cjs` 在 CLI wrapper 啟動及 CI 時唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的串流相依；`npm ci` 負責依鎖檔安裝及套件完整性驗證。此開發工具邊界不改 App 資料流，深度限制、命令 allow-list 與安全掃描保留；細節見 [安全維護指南](SECURITY_MAINTENANCE.md)。

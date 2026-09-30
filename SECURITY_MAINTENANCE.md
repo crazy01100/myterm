@@ -16,6 +16,8 @@
 
 Issue 寫入權限只供 `crazy01100/myterm` 預設分支的排程／手動監測，PR 無此權限；fork 不會自動執行此監測 job。工具預設拒絕公開庫寫入，本庫 workflow 以 `--allow-public` 明確允許已審閱的公開公告資訊。紀錄只包含公開公告、相依版本與接受狀態，不包含主機、憑證或使用者資料。`scanStatus` 與 `lastSuccessfulScanAt` 記錄掃描健康；前次成功距今超過 48 小時會在下一次檢查提示。排程完全不執行時無法靠自己即時報警。上游版本資訊仍保存在掃描報告；沒有命中的一般新版由 Dependabot 提案追蹤，不為每個新版建立風險 Issue。
 
+npm 相依同時比對 `npm audit` 與 GitHub Advisory Database：以鎖檔內所有套件／版本分批查詢公開公告，再按公告與元件合併。這可補足兩個資料來源更新時間不同造成的漏報；不限近期公告。任一批次失敗仍視為掃描不完整，不能據此解除 Issue。
+
 ```sh
 ./scripts/project-python.sh scripts/security-audit.py --output build/security-report.json
 ./scripts/project-python.sh scripts/security-audit.py --include-release OWNER/REPOSITORY --output build/security-report.json
@@ -59,7 +61,7 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 ## 開發工具的相容性覆寫
 
-目前的 npm overrides 分別維持 Firebase CSV 串流、PubSub trace-context propagator、Gaxios CommonJS UUID 與 qs API。版本精確固定；`Tests/Security/development-tools.test.cjs` 和 Firestore Emulator 測試驗證實際使用路徑。上層相依允許安全版本後應移除覆寫，至少每月重新審閱，不能持續累積無人維護的強制版本。
+目前 npm overrides 包含 PubSub trace-context propagator、Gaxios CommonJS UUID、qs、`@grpc/grpc-js 1.14.5` 與 `glob 13.0.6`。gRPC 統一修補 Firebase／Google gax 的受影響分支；glob 取代已停止免費維護的 10.x，適用於 Firebase 檔案搜尋及其壓縮、清理、controller 載入相依。版本精確固定，測試涵蓋實際消費端、loopback gRPC 與隔離 Firestore Emulator；`firebase-glob.test.cjs` 驗證隱藏檔、排除規則、符號連結、同步／非同步／串流及暫存檔案操作。上層相依允許受支援且安全的版本後應移除覆寫，至少每月重新審閱。
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
