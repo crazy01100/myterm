@@ -304,6 +304,8 @@ No. `release.sh` creates at most a Draft. Public release, production update-site
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
+Manual security monitoring can enable `refresh_issue_format` to refresh existing bot Issues. See the security maintenance guide for dependency paths, case-specific impact reviews, and preservation of timestamps and comments. This option does not change risk resolution or release gates.
+
 <a id="python-runtime"></a>
 ## Python tool environment
 

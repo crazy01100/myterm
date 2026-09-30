@@ -1,6 +1,11 @@
 name: MyTerm security monitor
 on:
   workflow_dispatch:
+    inputs:
+      refresh_issue_format:
+        description: Refresh existing bot Issue formatting while preserving history
+        type: boolean
+        default: false
   schedule:
     - cron: '23 1 * * *'
 permissions:
@@ -50,7 +55,12 @@ jobs:
             --previous build/previous-security-report.json \
             --output build/security-report.json
       - name: Record published advisory risks in Issues
-        run: python3 scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply
+        env:
+          REFRESH_ISSUE_FORMAT: ${{ inputs.refresh_issue_format }}
+        run: |
+          args=()
+          if [[ "$REFRESH_ISSUE_FORMAT" == "true" ]]; then args+=(--refresh-format); fi
+          python3 scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
       - name: Save monitor evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

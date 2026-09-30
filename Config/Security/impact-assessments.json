@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "assessments": [
+    {
+      "id": "GHSA-6j4f-fj2g-mc7p",
+      "component": "brace-expansion",
+      "scope": "development",
+      "versions": [
+        "1.1.18",
+        "2.1.4"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → minimatch／glob → brace-expansion",
+      "reason": "檔案整理會把 ignoreStrings 傳入模式比對；專案 wrapper 限制為 Firestore／本機 Emulator，尚未完整排除共用路徑接收病態模式。正式 App 未封裝此套件。",
+      "reviewedCommit": "eda103150b0f9e62f2970c5ffae5bd5276af0b90",
+      "reviewedAt": "2026-09-30T17:24:43.555538+00:00",
+      "inputs": {
+        "package-lock.json": "4e9d78dc5cbf79986b6adf04947c2695eba5d442d1589032e494e54bc30c9059",
+        "package.json": "0d711425b77e2212c8fa4a6540c0416d8982e8894a6e2448116f74f7796ddf3c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "2f6f5cb156e613b262adfbcde7d10152e669e2efa39d8f68f07066acb86f10c0",
+        "node_modules/firebase-tools/lib/fsAsync.js": "c8989264cfe50f902dfd1015a4c060ff36e114cbf24ac63dc5e254284a3ab3a2",
+        "node_modules/firebase-tools/lib/listFiles.js": "f6ec2fb7387434a950238deb6c5e9c12412019287cff51a8964532e1b685ff55"
+      },
+      "evidence": [
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/fsAsync.ts",
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/listFiles.ts"
+      ],
+      "historicalScanTimes": [
+        "2026-09-30T06:49:07.731345+00:00"
+      ]
+    },
+    {
+      "id": "GHSA-qhr7-859c-m2p7",
+      "component": "brace-expansion",
+      "scope": "development",
+      "versions": [
+        "1.1.18",
+        "2.1.4"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → minimatch／glob → brace-expansion",
+      "reason": "檔案整理會把 ignoreStrings 傳入模式比對；專案 wrapper 限制為 Firestore／本機 Emulator，尚未完整排除共用路徑接收病態模式。正式 App 未封裝此套件。",
+      "reviewedCommit": "eda103150b0f9e62f2970c5ffae5bd5276af0b90",
+      "reviewedAt": "2026-09-30T17:24:43.555881+00:00",
+      "inputs": {
+        "package-lock.json": "4e9d78dc5cbf79986b6adf04947c2695eba5d442d1589032e494e54bc30c9059",
+        "package.json": "0d711425b77e2212c8fa4a6540c0416d8982e8894a6e2448116f74f7796ddf3c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "2f6f5cb156e613b262adfbcde7d10152e669e2efa39d8f68f07066acb86f10c0",
+        "node_modules/firebase-tools/lib/fsAsync.js": "c8989264cfe50f902dfd1015a4c060ff36e114cbf24ac63dc5e254284a3ab3a2",
+        "node_modules/firebase-tools/lib/listFiles.js": "f6ec2fb7387434a950238deb6c5e9c12412019287cff51a8964532e1b685ff55"
+      },
+      "evidence": [
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/fsAsync.ts",
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/listFiles.ts"
+      ],
+      "historicalScanTimes": [
+        "2026-09-30T06:49:07.731345+00:00"
+      ]
+    },
+    {
+      "id": "GHSA-q2hr-2g5m-vwhr",
+      "component": "brace-expansion",
+      "scope": "development",
+      "versions": [
+        "1.1.18",
+        "2.1.4"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → minimatch／glob → brace-expansion",
+      "reason": "檔案整理會把 ignoreStrings 傳入模式比對；專案 wrapper 限制為 Firestore／本機 Emulator，尚未完整排除共用路徑接收病態模式。正式 App 未封裝此套件。",
+      "reviewedCommit": "eda103150b0f9e62f2970c5ffae5bd5276af0b90",
+      "reviewedAt": "2026-09-30T17:24:43.555883+00:00",
+      "inputs": {
+        "package-lock.json": "4e9d78dc5cbf79986b6adf04947c2695eba5d442d1589032e494e54bc30c9059",
+        "package.json": "0d711425b77e2212c8fa4a6540c0416d8982e8894a6e2448116f74f7796ddf3c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "2f6f5cb156e613b262adfbcde7d10152e669e2efa39d8f68f07066acb86f10c0",
+        "node_modules/firebase-tools/lib/fsAsync.js": "c8989264cfe50f902dfd1015a4c060ff36e114cbf24ac63dc5e254284a3ab3a2",
+        "node_modules/firebase-tools/lib/listFiles.js": "f6ec2fb7387434a950238deb6c5e9c12412019287cff51a8964532e1b685ff55"
+      },
+      "evidence": [
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/fsAsync.ts",
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/listFiles.ts"
+      ],
+      "historicalScanTimes": [
+        "2026-09-30T06:49:07.731345+00:00"
+      ]
+    },
+    {
+      "id": "GHSA-hrr3-gc8f-f4qj",
+      "component": "fast-uri",
+      "scope": "development",
+      "versions": [
+        "3.1.7"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI 設定驗證 → Ajv → fast-uri",
+      "reason": "設定驗證使用 Firebase 套件內建 schema；尚未確認受影響的 URI 正規化會進入主機信任判斷。正式 App 未封裝此套件。",
+      "reviewedCommit": "eda103150b0f9e62f2970c5ffae5bd5276af0b90",
+      "reviewedAt": "2026-09-30T17:24:43.555884+00:00",
+      "inputs": {
+        "package-lock.json": "4e9d78dc5cbf79986b6adf04947c2695eba5d442d1589032e494e54bc30c9059",
+        "package.json": "0d711425b77e2212c8fa4a6540c0416d8982e8894a6e2448116f74f7796ddf3c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "2f6f5cb156e613b262adfbcde7d10152e669e2efa39d8f68f07066acb86f10c0",
+        "node_modules/firebase-tools/lib/firebaseConfigValidate.js": "a7e8cba121f3c66af6779dc08f1fdd0d6e77a387260a90d6ab426153983319f3",
+        "node_modules/ajv/dist/runtime/uri.js": "d1d61baf97ed87d7310df847a78ed73d19c8cc003207bf5aaec977500bdb1578"
+      },
+      "evidence": [
+        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/firebaseConfigValidate.ts"
+      ],
+      "historicalScanTimes": [
+        "2026-09-30T06:49:07.731345+00:00"
+      ]
+    }
+  ]
+}

@@ -126,10 +126,22 @@ def scan_npm(report):
     if data.get('error') or 'metadata' not in data:raise ValueError('npm audit unavailable')
     report['npmCounts']=data['metadata']['vulnerabilities']
     packages=json.loads((ROOT/'package-lock.json').read_text())['packages']
+    details_spec=importlib.util.spec_from_file_location('risk_context',ROOT/'scripts/security-risk-context.py')
+    details=importlib.util.module_from_spec(details_spec);details_spec.loader.exec_module(details)
+    cache={};findings={}
     for node in data.get('vulnerabilities',{}).values():
         for advisory in node['via']:
             if isinstance(advisory,dict):
-                report['findings'].append({'id':advisory['url'].split('/')[-1],'component':advisory['name'],'version':','.join(sorted({packages[n]['version'] for n in node['nodes']})),'scope':'development','severity':advisory['severity'],'status':'affected','url':advisory['url']})
+                versions=sorted({packages[n]['version'] for n in node['nodes'] if affected(packages[n]['version'],advisory.get('range','')) is not False})
+                if not versions: continue
+                finding={'id':advisory['url'].split('/')[-1],'component':advisory['name'],'version':','.join(versions),'scope':'development','severity':advisory['severity'],'status':'needs-review' if any(affected(v,advisory.get('range','')) is None for v in versions) else 'affected','url':advisory['url']}
+                key=(finding['id'],finding['component'])
+                if key in findings:
+                    if findings[key]['status']=='needs-review':finding['status']='needs-review'
+                    finding['version']=','.join(sorted(set(versions+findings[key]['version'].split(','))))
+                findings[key]=finding
+    for finding in findings.values():
+        report['findings'].append(details.enrich(finding,gh,affected,cache=cache))
 
 
 def scan_verifier(report):
