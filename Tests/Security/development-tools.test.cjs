@@ -48,3 +48,18 @@ test('Firebase Undici preserves request handling without external traffic',async
   assert.equal(response.statusCode,200);assert.deepEqual(await response.body.json(),{ok:true});agent.assertNoPendingInterceptors();
  } finally {await agent.close();}
 });
+test('Google gax creates a working gRPC client with explicit local credentials',async t=>{
+ const gax=local('google-gax');const resolver=createRequire(local.resolve('google-gax'));
+ const grpc=resolver('@grpc/grpc-js');const serialize=x=>Buffer.from(JSON.stringify(x));const deserialize=x=>JSON.parse(x.toString());
+ const service={echo:{path:'/myterm.Test/Echo',requestStream:false,responseStream:false,requestSerialize:serialize,requestDeserialize:deserialize,responseSerialize:serialize,responseDeserialize:deserialize}};
+ const server=new grpc.Server();server.addService(service,{echo:(call,done)=>done(null,{value:call.request.value})});
+ t.after(()=>server.forceShutdown());
+ const port=await new Promise((resolve,reject)=>server.bindAsync('127.0.0.1:0',grpc.ServerCredentials.createInsecure(),(error,port)=>error?reject(error):resolve(port)));
+ const factory=new gax.GrpcClient({auth:{getUniverseDomain:async()=> 'googleapis.com'}});
+ // Keep this fixture independent of local ADC and client-certificate settings.
+ factory._detectClientCertificate=async()=>[undefined,undefined];
+ const Client=grpc.makeGenericClientConstructor(service,'Test');
+ const client=await factory.createStub(Client,{servicePath:'127.0.0.1',port,sslCreds:grpc.credentials.createInsecure()});t.after(()=>client.close());
+ const response=await new Promise((resolve,reject)=>client.echo({value:'fixture'},{deadline:Date.now()+5000},(error,value)=>error?reject(error):resolve(value)));
+ assert.deepEqual(response,{value:'fixture'});
+});
