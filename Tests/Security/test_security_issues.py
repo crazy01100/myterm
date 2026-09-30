@@ -115,4 +115,47 @@ class IssueTests(unittest.TestCase):
             r=report();r['findings'][0]['scope']='current-source'
             with patch.object(a,'run',return_value=r),patch('sys.argv',['audit','--output',str(path)]):self.assertEqual(a.main(),1)
 
+
+class FormatMigrationTests(unittest.TestCase):
+    def legacy(self,api,r,closed=False):
+        s.synchronize(r,api,True,ENV)
+        f=r['findings'][0];key=s.digest([f[k] for k in ['id','component','scope']])
+        api.issues[0]['body']=f'''<!-- myterm-security-risk:v1 key={key} digest={'a'*64} -->
+## 掃描已完成，以下風險需要追蹤。此紀錄不代表監測程式故障。
+
+- **公告**：{f['id']}
+- **元件**：{f['component']}
+- **受影響範圍**：已發布 App
+- **版本／revision**：{f['version']}
+- **判斷**：版本命中；不代表已驗證攻擊可達
+- **上游修補資訊**：請依公告確認相容的修補版本
+- **正式版本**：v1.0.21
+
+[查看上游公告]({f['url']})
+
+建議動作：核對公告前提與相容修補，更新受影響相依並執行相稱測試；未修復的例外不得自動展延。
+
+本次紀錄的掃描時間：2026-09-30T18:02:03+00:00
+'''
+        if closed:
+            api.issues[0]['state']='closed';api.issues[0]['body']+='\n## 解除紀錄\n本次完整來源／正式版掃描已不再命中此風險。時間：2026-10-01T01:02:03+00:00。不代表所有使用者裝置均已更新。'
+    def test_format_only_preserves_time_without_comment(self):
+        api=FakeGitHub();r=report();self.legacy(api,r)
+        s.synchronize(r,api,True,ENV)
+        self.assertEqual(api.comments,[]);self.assertIn('2026-10-01 02:02:03',api.issues[0]['body'])
+        self.assertEqual(s.synchronize(r,api,True,ENV),[])
+    def test_closed_migration_never_reopens_and_preserves_resolutions(self):
+        api=FakeGitHub();r=report();self.legacy(api,r,True);api.comments=[{'body':'human context','user':{'login':'human'}}]
+        s.synchronize(report(False),api,True,ENV,refresh_format=True)
+        self.assertEqual(api.issues[0]['state'],'closed');self.assertIn('2026-10-01 09:02:03',api.issues[0]['body']);self.assertEqual(len(api.comments),1)
+        self.assertEqual(s.synchronize(report(False),api,True,ENV,refresh_format=True),[])
+    def test_unknown_legacy_addition_preserved(self):
+        api=FakeGitHub();r=report();self.legacy(api,r);api.issues[0]['body']+='Human-added context'
+        old=copy.deepcopy(api.issues);actions=s.synchronize(report(False),api,True,ENV,refresh_format=True)
+        self.assertEqual(actions[0]['action'],'needs-review');self.assertEqual(api.issues,old)
+    def test_enrichment_failure_cannot_close(self):
+        api=FakeGitHub();r=report();self.legacy(api,r)
+        with self.assertRaises(ValueError):s.synchronize(report(False),api,True,ENV,enrich=lambda _:(_ for _ in ()).throw(ValueError('offline')))
+        self.assertEqual(api.issues[0]['state'],'open')
+
 if __name__=='__main__':unittest.main()

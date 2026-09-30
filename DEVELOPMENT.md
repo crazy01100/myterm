@@ -304,6 +304,8 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
 
+手動執行安全監測時，可啟用 `refresh_issue_format` 整理既有 Bot Issue。自動相依路徑與逐案影響評估、原始時間及留言保留方式見安全維護指南；此選項不變更漏洞解除或發布門檻。
+
 <a id="python-runtime"></a>
 ## Python 工具環境
 

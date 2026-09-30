@@ -3,6 +3,7 @@
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import html
 import json
 import os
@@ -54,27 +55,13 @@ def risks(report):
     return result
 
 
-def render(key, f, report, resolved=False):
-    fingerprint = digest({'risk':f, 'resolved':resolved})
-    marker = f'<!-- myterm-security-risk:v1 key={key} digest={fingerprint} -->\n'
-    level = LEVELS.get(f['severity'], '待確認')
-    title = f"[{level}] {f['component']}：{SCOPES[f['scope']]}安全風險（{f['id']}）"
-    if len(title) > 240: raise ValueError('Issue title too long')
-    state = '本次完整掃描已不再命中；保留歷史供追蹤。' if resolved else '掃描已完成，以下風險需要追蹤。此紀錄不代表監測程式故障。'
-    rows = [('公告',f['id']),('元件',f['component']),('受影響範圍',SCOPES[f['scope']]),('版本／revision',f['version']),('判斷', '版本命中；不代表已驗證攻擊可達' if f['status']=='affected' else '適用範圍尚待人工確認'),('上游修補資訊',f.get('fixedVersion') or '請依公告確認相容的修補版本')]
-    if f.get('releaseTag'): rows.append(('正式版本',f['releaseTag']))
-    if f.get('exceptionExpiresAt'):
-        rows += [('暫時例外','有效，仍須追蹤修復' if f.get('acceptedRisk') else '已到期或無效，恢復發布阻擋'),('例外期限',f['exceptionExpiresAt'])]
-    body = marker+'## '+state+'\n\n'+'\n'.join('- **'+k+'**：'+safe(v) for k,v in rows)
-    body += '\n\n[查看上游公告]('+f['url']+')\n\n'
-    if resolved:
-        body += '解除只表示本次監測範圍已不再命中，不證明所有使用者裝置均已更新。'
-    elif f['scope']=='released-app':
-        body += '建議動作：確認修補版本，經建置、簽章與發布驗收後，讓使用者更新 App。只更新 main 不會修復已發布版本。'
-    else:
-        body += '建議動作：核對公告前提與相容修補，更新受影響相依並執行相稱測試；未修復的例外不得自動展延。'
-    body += '\n\n本次紀錄的掃描時間：'+safe(report['checkedAt'])+'\n'
-    return title, body
+def load(name):
+    spec=importlib.util.spec_from_file_location(name,Path(__file__).with_name(name+'.py'))
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+
+
+fmt=load('security-issue-format')
+render=fmt.render
 
 
 class GitHub:
@@ -98,7 +85,7 @@ class GitHub:
         raise ValueError('GitHub pagination limit reached')
 
 
-def synchronize(report, api, apply=False, environ=None, allow_public=False):
+def synchronize(report, api, apply=False, environ=None, allow_public=False, refresh_format=False, enrich=None):
     validate_report(report)
     desired = risks(report)
     metadata = api.request('')
@@ -115,39 +102,74 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False):
         if 'pull_request' in issue or issue.get('user',{}).get('login')!=BOT or not match: continue
         if match[1] in managed: raise ValueError('Duplicate managed Issues require review')
         managed[match[1]] = issue
-    actions = []
-    for key,f in desired.items():
-        title,body = render(key,f,report)
-        issue = managed.get(key)
-        if issue is None:
-            action = {'action':'create','key':key,'title':title}
-            if apply: action['number'] = api.request('issues','POST',{'title':title,'body':body})['number']
-            actions.append(action)
-        elif MARKER.match(issue['body'])[2] != MARKER.match(body)[2] or issue['state']!='open':
-            actions.append({'action':'update','number':issue['number'],'key':key})
-            if apply:
-                change_marker = '<!-- myterm-security-change:'+digest([issue['body'],body.split('\n\n本次紀錄')[0]])+' -->'
-                comments = api.pages(f"issues/{issue['number']}/comments")
-                if not any(c.get('user',{}).get('login')==BOT and change_marker in (c.get('body') or '') for c in comments):
-                    api.request(f"issues/{issue['number']}/comments",'POST',{'body':change_marker+'\n風險狀態有變更：\n\n'+body})
-                api.request(f"issues/{issue['number']}",'PATCH',{'title':title,'body':body,'state':'open'})
-    # Only a fully validated, successful scan can clear bot-owned risks.
+    # Prepare every write first: a malformed record or enrichment failure must not
+    # partially migrate/close Issues. Unknown legacy additions are explicitly skipped.
+    actions=[];operations=[]
     for key,issue in managed.items():
-        if key in desired or issue['state']=='closed': continue
-        actions.append({'action':'resolve','number':issue['number'],'key':key})
-        if apply:
-            note = '\n\n## 解除紀錄\n本次完整來源／正式版掃描已不再命中此風險。時間：'+safe(report['checkedAt'])+'。不代表所有使用者裝置均已更新。'
-            api.request(f"issues/{issue['number']}",'PATCH',{'body':issue['body']+note,'state':'closed','state_reason':'completed'})
+        if key not in desired and issue['state']=='closed' and not refresh_format:continue
+        try: old=fmt.parse_issue(issue)
+        except (ValueError,KeyError,TypeError) as error:
+            actions.append({'action':'needs-review','number':issue['number'],'reason':'Unrecognized Issue format; preserved'})
+            continue
+        if digest([old['finding'][k] for k in ['id','component','scope']]) != key:
+            raise ValueError('Issue snapshot identity differs from its marker')
+        f=desired.pop(key,None)
+        if f is not None:
+            changed=fmt.semantic(old['finding'])!=fmt.semantic(f) or issue['state']!='open'
+            current_report=report if changed else {'checkedAt':old['checkedAt']}
+            title,body=render(key,f,current_report)
+            if body==issue['body'] and title==issue['title'] and issue['state']=='open':continue
+            action='update' if changed else 'format'
+            comment=None
+            if changed:
+                change_marker='<!-- myterm-security-change:'+digest([issue['body'],fmt.semantic(f)])+' -->'
+                comment=change_marker+'\n前次風險紀錄：\n\n'+issue['body']
+            operations.append((issue,{'title':title,'body':body,'state':'open'},comment))
+        else:
+            f=old['finding']
+            if enrich:f=enrich({**f,'observedAt':old['checkedAt']})
+            historical={'schemaVersion':1,'scanStatus':'complete','errors':[],'releaseTag':report['releaseTag'],
+                        'checkedAt':report['checkedAt'],'findings':[f]}
+            validate_report(historical)
+            resolved=issue['state']=='open'
+            resolutions=old['resolutions']+([report['checkedAt']] if resolved else [])
+            title,body=render(key,f,{'checkedAt':old['checkedAt']},resolutions=resolutions)
+            # A closed record without a known resolution time is never assigned one.
+            change={'title':title,'body':body}
+            if resolved:change.update(state='closed',state_reason='completed')
+            if body==issue['body'] and title==issue['title'] and not resolved:continue
+            action='resolve' if resolved else 'format'
+            operations.append((issue,change,None))
+        actions.append({'action':action,'number':issue['number'],'key':key})
+    for key,f in desired.items():
+        if key in managed:continue  # An unrecognized managed record must not be duplicated.
+        title,body=render(key,f,report)
+        action={'action':'create','key':key,'title':title};actions.append(action)
+        operations.append((None,{'title':title,'body':body},action))
+    if apply:
+        for issue,change,comment in operations:
+            if issue is None:
+                comment['number']=api.request('issues','POST',change)['number'];continue
+            if comment:
+                change_marker=comment.split('\n',1)[0]
+                comments=api.pages(f"issues/{issue['number']}/comments")
+                if not any(c.get('user',{}).get('login')==BOT and change_marker in (c.get('body') or '') for c in comments):
+                    api.request(f"issues/{issue['number']}/comments",'POST',{'body':comment})
+            api.request(f"issues/{issue['number']}",'PATCH',change)
     return actions
 
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--report',type=Path,required=True);p.add_argument('--apply',action='store_true')
     p.add_argument('--allow-public',action='store_true',help='Allow reviewed public-advisory metadata in public Issues')
+    p.add_argument('--refresh-format',action='store_true',help='Refresh managed historical records without changing their state')
     args=p.parse_args()
     repo=os.environ.get('GITHUB_REPOSITORY','')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repo): raise ValueError('GITHUB_REPOSITORY is required')
-    report=json.loads(args.report.read_text());actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public)
+    report=json.loads(args.report.read_text())
+    audit=load('security-audit');context=load('security-risk-context');cache={}
+    enrich=lambda finding:context.enrich(finding,audit.gh,audit.affected,historical=True,cache=cache)
+    actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions}
     args.report.with_name('security-issues-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     summary=os.environ.get('GITHUB_STEP_SUMMARY')
