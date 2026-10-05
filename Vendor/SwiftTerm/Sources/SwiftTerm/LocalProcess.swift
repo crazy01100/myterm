@@ -223,7 +223,7 @@ public class LocalProcess {
             let ddata = DispatchData(bytes: ptr)
             let copyCount = ddata.count
             if debugIO {
-                print ("[SEND-\(copy)] Queuing data to client: \(data) ")
+                print ("[SEND-\(copy)] Queuing bytes=\(copyCount)")
             }
 
             DispatchIO.write(toFileDescriptor: childfd, data: ddata, runningHandlerOn: DispatchQueue.global(qos: .userInitiated), handler:  { [weak self] dd, errno in

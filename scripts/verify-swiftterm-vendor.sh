@@ -18,10 +18,10 @@ diff <(cd "$snapshot" && find Sources/SwiftTerm -type f | LC_ALL=C sort) \
 cmp "$snapshot/LICENSE" "$vendor/LICENSE"
 while IFS= read -r file; do
     case "$file" in
-        Sources/SwiftTerm/Mac/MacTerminalView.swift|Sources/SwiftTerm/Apple/AppleTerminalView.swift)
+        Sources/SwiftTerm/Mac/MacTerminalView.swift|Sources/SwiftTerm/Apple/AppleTerminalView.swift|Sources/SwiftTerm/LocalProcess.swift)
             diff -u "$snapshot/$file" "$vendor/$file" || [[ $? == 1 ]]
             ;;
         *) cmp "$snapshot/$file" "$vendor/$file" ;;
     esac
 done < <(cd "$snapshot" && find Sources/SwiftTerm -type f | LC_ALL=C sort)
-echo "Vendor file list, unchanged sources and license verified; review the two renderer diffs above."
+echo "Vendor file list, unchanged sources and license verified; review the two renderer and LocalProcess diffs above."

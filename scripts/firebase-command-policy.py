@@ -5,11 +5,34 @@ This is not a sandbox against a local owner invoking firebase-tools directly.
 It prevents accidentally reaching unsupported import/hosting paths.
 """
 import json
+import os
 from pathlib import Path
 import re
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+
+def validate_rules_watch_paths(config, root):
+    # Chokidar 3 expands braces in its watch path. A Rules filename is a
+    # literal path, so reject brace syntax before Firebase loads the watcher.
+    # Include the project directory and symlink target, not just the basename.
+    entries = config.get('firestore', {})
+    if isinstance(entries, dict):
+        entries = [entries]
+    if not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries):
+        raise ValueError('Invalid Firestore configuration')
+    for entry in entries:
+        value = entry.get('rules')
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value or '\x00' in value:
+            raise ValueError('Firestore rules must name a local file')
+        # Firebase Config.path uses normalize(join(projectDir, rules)), where
+        # an initial slash in rules does not discard the project directory.
+        path = Path(os.path.normpath(str(root.absolute()) + '/' + value))
+        for candidate in [str(root.absolute()), value, str(path), str(path.resolve())]:
+            if '{' in candidate or '}' in candidate:
+                raise ValueError('Firestore Emulator rules paths and project directories must not contain braces')
 
 def validate(args,root=ROOT):
     if args in [['--version'],['--help'],['help'],['login'],['login','--no-localhost'],['logout'],['login:list'],['projects:list']]:
@@ -44,6 +67,8 @@ def validate(args,root=ROOT):
         for target in targets:
             if config.get('emulators',{}).get(target,{}).get('host','127.0.0.1') not in ['127.0.0.1','localhost','::1']:
                 raise ValueError('Emulators must remain bound to loopback')
+        if 'firestore' in targets:
+            validate_rules_watch_paths(config, root)
 
 if __name__=='__main__':
     try:validate(sys.argv[1:])

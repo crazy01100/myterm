@@ -20,4 +20,36 @@ class FirebasePolicyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);(root/'firebase.json').write_text(json.dumps({'emulators':{'firestore':{'host':'0.0.0.0'}}}))
             with self.assertRaises(ValueError):p.validate(['emulators:start','--project','demo-myterm','--only','firestore'],root)
+    def test_rules_paths_reject_braces_before_cli(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            for value in ['{a,b}.rules','{'*4500+'x'+'}'*4500,'a/../{bad}.rules']:
+                with self.subTest(value=value[:40]),self.assertRaises(ValueError):
+                    p.validate_rules_watch_paths({'firestore':{'rules':value}},root)
+            with self.assertRaises(ValueError):
+                p.validate_rules_watch_paths({'firestore':[{'rules':'safe.rules'},{'rules':'{a,b}.rules'}]},root)
+    def test_project_and_symlink_names_checked(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            with self.assertRaises(ValueError):
+                p.validate_rules_watch_paths({'firestore':{'rules':'/file.rules'}},root/'{bad}')
+            target=root/'{target}';target.mkdir();(target/'file.rules').write_text('fixture')
+            (root/'safe').symlink_to(target,target_is_directory=True)
+            with self.assertRaises(ValueError):
+                p.validate_rules_watch_paths({'firestore':{'rules':'safe/file.rules'}},root)
+    def test_normal_rules_paths_and_auth_only_remain_available(self):
+        with tempfile.TemporaryDirectory(prefix='MyTerm space ') as d:
+            root=Path(d)
+            p.validate_rules_watch_paths({'firestore':{'rules':'規則 (local)/firestore.rules'}},root)
+            p.validate_rules_watch_paths({'firestore':[{'rules':'firestore.rules'}]},root)
+            (root/'firebase.json').write_text(json.dumps({'firestore':{'rules':'{bad}.rules'}}))
+            p.validate(['emulators:start','--project','demo-myterm','--only','auth'],root)
+            for command in ['emulators:start','emulators:exec']:
+                args=[command,'--project','demo-myterm','--only','firestore']
+                if command=='emulators:exec':args+=['node --test Tests/FirebaseRules/firestore.rules.test.mjs']
+                with self.assertRaises(ValueError):p.validate(args,root)
+    def test_invalid_rules_config_rejected(self):
+        for config in [{'firestore':'invalid'},{'firestore':[1]},{'firestore':{'rules':[]}}]:
+            with self.assertRaises(ValueError):p.validate_rules_watch_paths(config,ROOT)
+
 if __name__=='__main__':unittest.main()

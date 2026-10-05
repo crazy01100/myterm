@@ -120,6 +120,13 @@ zsh "$project_dir/scripts/run-sync-reliability-tests.sh"
 # The crypto suite above already built the locked SwiftTerm dependency. Link
 # its real AppKit renderer to verify that font changes do not reset TUI state.
 terminal_build_dir="$(swift build -c debug --show-bin-path)"
+swiftc -parse-as-library \
+    -I "$terminal_build_dir/Modules" \
+    SelfTests/LocalProcessLoggingTests.swift \
+    "$terminal_build_dir"/SwiftTerm.build/*.o \
+    -o "$test_dir/LocalProcessLoggingTests"
+"$test_dir/LocalProcessLoggingTests"
+
 swiftc \
     -I "$terminal_build_dir/Modules" \
     Sources/MySSHClient/Views/SnippetGuardedTerminalView.swift \
