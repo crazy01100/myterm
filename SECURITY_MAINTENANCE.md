@@ -54,9 +54,10 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 ### 已評估保留：json-ptr 3.1.1
 
 - **決策日期／確認者**：2026-10-01，由專案維護者明確確認。
-- **範圍與用途**：目前 `firebase-tools 15.31.0 → exegesis 4.3.0 → json-ptr 3.1.1`；主要供本機 Auth Emulator 解析 API 規格與 JSON 參照。Firebase 共用模組亦可能載入它；不封裝於 MyTerm App，不參與正式 App 的 Google 登入或同步。
+- **範圍與用途**：目前 `firebase-tools 15.32.1 → exegesis 4.3.0 → json-ptr 3.1.1`；主要供本機 Auth Emulator 解析 API 規格與 JSON 參照。Firebase 共用模組亦可能載入它；不封裝於 MyTerm App，不參與正式 App 的 Google 登入或同步。
 - **查核依據**：[npm 已標示停止維護](https://www.npmjs.com/package/json-ptr)。2026-10-01 的 GitHub Advisory 版本比對及 npm audit 未命中 3.1.1；歷史[高風險](https://github.com/advisories/GHSA-x5r6-x823-9848)／[另一筆高風險紀錄](https://github.com/advisories/GHSA-rrqv-vjrw-hrcr)與[中風險](https://github.com/advisories/GHSA-8gwj-8hxc-285w)公告分別在 2.1.0 與 3.0.0 修補。查核當時最新版 Firebase CLI 15.32.1 仍有這條相依，未找到官方針對停止維護狀態的明確安全背書。
 - **處理決策與理由**：保留官方相依組合；目前沒有確認到急迫漏洞，自行替換會增加相容性與後續維護負擔。不替換、不加入自訂相容層，也不進行替換原型或小範圍測試；不設定反覆展延期限。停止維護狀態仍保留，不標示為已修復或受支援。
+- **2026-10-05重新核對**：Firebase CLI15.32.1的Auth Emulator入口來源及exegesis／json-ptr版本未變，用途及暴露範圍相同，沿用既有保留決策，未進行替換測試。
 - **持續追蹤**：沿用既有漏洞監測；發現影響目前版本的新公告、實際相容性問題、上游移除／替代方案，或套件版本、使用方式、暴露範圍改變時重新評估。本決策不豁免新告警或發布安全門檻。
 
 ## 安全 Issue 的修正摘要
@@ -77,7 +78,7 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.31.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
+Firebase CLI 固定為 `15.32.1`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
 
 ### braces 未修補漏洞的入口緩解
 

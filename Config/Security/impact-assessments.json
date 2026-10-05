@@ -128,25 +128,26 @@
       ],
       "status": "needs-review",
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
-      "reason": "已在Node24的深層expand測資確認堆疊錯誤。專案入口已加入規則路徑／專案目錄／symlink大括號拒絕；直接執行CLI或檢查後修改不受此限制。套件尚未修補，實際外部輸入能否抵達本專案路徑仍未證明；正式App不包含此套件。",
+      "reason": "Firebase CLI15.32.1的Firestore controller、Rules watcher及chokidar／braces展開程式與前次評估相同。Node24深層expand可發生堆疊錯誤；專案入口仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。",
       "inputs": {
-        "package-lock.json": "6ce7c634c64a1a110d12fd653e26cdc5270643df9788b07b3f7d80023fa4c2c0",
-        "package.json": "2f6c0405111df5d18e70942524ea03d074b6f228fec1ef06d423401247125160",
+        "package-lock.json": "1730a2219da895fff8eb1c191c93da3c4c4121562d9588d57529d76bc7f6da1c",
+        "package.json": "5d39eb15960913b04705d94c002418ddb105ca5ac803cff1e9bd918855c536aa",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
         "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
         "node_modules/firebase-tools/lib/emulator/firestoreEmulator.js": "242e2d443427838ea720e6b646c3f57e522b6789271837d79c05108a94cde00e",
         "node_modules/firebase-tools/lib/emulator/controller.js": "86a3411bbb68a6e6c031e79f921b545045618471fd373e16cf6621f67011a946",
         "node_modules/chokidar/index.js": "18ce2effe87d6379aa1d3756e5694c57c72cf97804056d688499a2bffcec66fd",
-        "node_modules/braces/lib/expand.js": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7"
+        "node_modules/braces/lib/expand.js": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7",
+        "node_modules/firebase-tools/lib/config.js": "e0ffd09b3d65c180bd3e0a342801c8a014b211c47893566a6a64874b38480c04"
       },
       "evidence": [
-        "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/emulator/firestoreEmulator.ts",
+        "https://github.com/firebase/firebase-tools/blob/v15.32.1/src/emulator/firestoreEmulator.ts",
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "afcdb6069fa9b97126b484ffad4f0678276df266",
-      "reviewedAt": "2026-10-05T03:53:16.525903+00:00"
+      "reviewedCommit": "dc72194921f7ae9cfed224c6f60368d610f6043b",
+      "reviewedAt": "2026-10-05T09:01:14.722631+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",
