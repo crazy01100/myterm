@@ -1,4 +1,15 @@
 {
   "schemaVersion": 1,
-  "exceptions": []
+  "exceptions": [
+    {
+      "id": "GHSA-vfj7-8cjw-p6xm",
+      "component": "braces",
+      "version": "3.0.3",
+      "scope": "development",
+      "acceptedBy": "project maintainer",
+      "acceptedAt": "2026-10-05T11:51:42+08:00",
+      "expiresAt": "2026-10-19T23:59:59+08:00",
+      "reason": "Maintainer accepted this development-only exception after wrapper validation rejects braces in Firestore Rules watch paths and project/symlink paths. Direct CLI use or changes after validation remain outside that mitigation. Issue #43 stays open until an official fix is installed and verified; no automatic extension."
+    }
+  ]
 }

@@ -43,6 +43,8 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 
 The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.
 
+Firestore Emulator Rules paths, project directories, and symlink targets must not contain `{`/`}`. The project wrapper rejects them before startup to mitigate the unpatched braces advisory. Use a path without braces if rejected; do not bypass the wrapper. Normal automatic Rules reloads remain available. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
+
 ## 1. Create a Firebase project
 
 1. Create a project in the Firebase Console, or add Firebase to a Google Cloud project you administer.

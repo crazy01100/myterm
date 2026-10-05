@@ -47,3 +47,9 @@ test('exegesis controller loader retains nested aliases',t=>{
  const controllers=loadControllersSync(dir,'sub/*.js',file=>({file}));
  assert.equal(controllers['sub/nested'].file,path.join(dir,'sub/nested.js'));assert.equal(controllers['sub/nested.js'],controllers['sub/nested']);
 });
+test('Firestore-style literal Rules watcher still reloads after file edits',{timeout:8000},async t=>{
+ const dir=fixture(t);const file=path.join(dir,'規則 (local).rules');fs.writeFileSync(file,'first');
+ const watcher=cli('chokidar').watch(file,{persistent:true,ignoreInitial:true});t.after(()=>watcher.close());
+ await once(watcher,'ready');const changed=once(watcher,'change');fs.writeFileSync(file,'second');
+ const [updated]=await changed;assert.equal(updated,file);assert.equal(fs.readFileSync(updated,'utf8'),'second');
+});

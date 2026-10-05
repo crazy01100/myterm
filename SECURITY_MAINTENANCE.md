@@ -73,11 +73,19 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 ## 開發工具的相容性覆寫
 
-目前 npm overrides 包含 PubSub trace-context propagator、Gaxios CommonJS UUID、qs、`@grpc/grpc-js 1.14.5` 與 `glob 13.0.6`。gRPC 統一修補 Firebase／Google gax 的受影響分支；glob 取代已停止免費維護的 10.x，適用於 Firebase 檔案搜尋及其壓縮、清理、controller 載入相依。版本精確固定，測試涵蓋實際消費端、loopback gRPC 與隔離 Firestore Emulator；`firebase-glob.test.cjs` 驗證隱藏檔、排除規則、符號連結、同步／非同步／串流及暫存檔案操作。上層相依允許受支援且安全的版本後應移除覆寫，至少每月重新審閱。
+目前 npm overrides 包含 PubSub trace-context propagator、Gaxios CommonJS UUID、qs、`@grpc/grpc-js 1.14.5`、`glob 13.0.6` 與 get-uri 專用的 `basic-ftp 6.2.2`。gRPC 統一修補 Firebase／Google gax 的受影響分支；glob 取代已停止免費維護的 10.x，適用於 Firebase 檔案搜尋及其壓縮、清理、controller 載入相依。版本精確固定，測試涵蓋實際消費端、loopback gRPC 與隔離 Firestore Emulator；`firebase-glob.test.cjs` 驗證隱藏檔、排除規則、符號連結、同步／非同步／串流及暫存檔案操作。上層相依允許受支援且安全的版本後應移除覆寫，至少每月重新審閱。
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
 Firebase CLI 固定為 `15.31.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
+
+### braces 未修補漏洞的入口緩解
+
+`braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
+
+[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在緩解後保持開啟。須等官方修補版發布、專案實際升級且相容性測試與完整掃描通過，才可標示修復並結案；屆時重評是否移除臨時限制。影響評估不豁免 gate，任何漏洞例外須另獲明確接受。 維護者已明確接受僅此 development 範圍的 `braces 3.0.3` 告警，期限至 2026-10-19 23:59:59（UTC+8），精確紀錄位於 `Config/Security/exceptions.json`。期滿不自動展延，期間持續顯示於監測且不關閉 Issue。
+
+`basic-ftp` 的修補版本只覆寫 get-uri 的消費端；保留 6.x 預設拒絕不同傳輸主機的保護。回歸涵蓋實際 loopback FTP 下載、MDTM／目錄後備查詢、缺檔、中止及有界惡意清單；get-uri 原有拒絕缺少可靠時間戳的 Unix LIST 行為維持。此相依不屬於 MyTerm SFTP。
 
 ## 公開金鑰發布驗證
 
