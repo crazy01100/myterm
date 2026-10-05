@@ -46,6 +46,8 @@ After Google verification succeeds and the service explicitly rejects new-accoun
 
 ## SSH trust
 
+Terminal send diagnostics record only event counters and byte counts, never raw password or other input bytes.
+
 - Connections use the system `/usr/bin/ssh`; MyTerm does not implement the cryptographic protocol itself.
 - Host keys are stored in an app-specific `known_hosts` file with `0600` permissions.
 - `StrictHostKeyChecking=ask` requires confirmation for new hosts and blocks changed keys.
