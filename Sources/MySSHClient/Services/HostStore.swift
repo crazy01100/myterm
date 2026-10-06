@@ -35,8 +35,10 @@ final class HostStore: ObservableObject {
     @Published var selectedHostID: HostProfile.ID?
     @Published var lastError: String?
     @Published var lastNotice: String?
+    private let connectionRecencyFileURL: URL
 
     init() {
+        connectionRecencyFileURL = AppPaths.hostConnectionRecencyFile
         do {
             try AppPaths.prepare()
             try load()
@@ -50,6 +52,15 @@ final class HostStore: ObservableObject {
             lastError = error.localizedDescription
         }
     }
+
+    #if MYTERM_SELF_TESTS
+    /// Test the real recency persistence without opening the user's inventory.
+    init(testHosts: [HostProfile], recencyFileURL: URL) throws {
+        connectionRecencyFileURL = recencyFileURL
+        hosts = testHosts
+        try loadConnectionRecency()
+    }
+    #endif
 
     func save(_ profile: HostProfile, password: String?) throws {
         var profile = try profile.validated()
@@ -182,6 +193,17 @@ final class HostStore: ObservableObject {
         var updated = connectionRecency
         updated.prune(validHostIDs: Set(hosts.map(\.id)))
         updated.recordSuccessfulConnection(for: hostID, at: date)
+        guard updated != connectionRecency else { return }
+        try persistConnectionRecency(updated)
+        connectionRecency = updated
+    }
+
+    func mergeConnectionRecency(from records: [ConnectionAuditRecord]) throws {
+        var updated = connectionRecency
+        updated.mergeSuccessfulConnections(from: records, validHostIDs: Set(hosts.map(\.id)))
+        guard updated != connectionRecency else { return }
+        // Publish only after the atomic write succeeds. A later reconciliation
+        // can retry the same Logs if persistence fails.
         try persistConnectionRecency(updated)
         connectionRecency = updated
     }
@@ -329,7 +351,10 @@ final class HostStore: ObservableObject {
     }
 
     @discardableResult
-    func applyVerifiedCloudMerge(_ document: InventoryDocument) throws -> URL {
+    func applyVerifiedCloudMerge(
+        _ document: InventoryDocument,
+        notifyOnSuccess: Bool = true
+    ) throws -> URL {
         try MetadataMergedInventoryValidator.validate(document)
         let backupURL = try createSyncRestoreBackup()
         let previousGroups = groups
@@ -364,8 +389,15 @@ final class HostStore: ObservableObject {
                 )
             }
         }
-        lastNotice = (["已從端對端加密同步套用雲端變更；套用前資料已備份。"] + cleanupNotices)
-            .joined(separator: "\n")
+        if notifyOnSuccess {
+            lastNotice = (["已從端對端加密同步套用雲端變更；套用前資料已備份。"] + cleanupNotices)
+                .joined(separator: "\n")
+        } else if !cleanupNotices.isEmpty {
+            // Background success is silent, but actionable cleanup warnings
+            // must remain visible, including an earlier undismissed notice.
+            lastNotice = ([lastNotice].compactMap { $0 } + cleanupNotices)
+                .joined(separator: "\n")
+        }
         return backupURL
     }
 
@@ -524,10 +556,10 @@ final class HostStore: ObservableObject {
     }
 
     private func loadConnectionRecency() throws {
-        guard FileManager.default.fileExists(atPath: AppPaths.hostConnectionRecencyFile.path) else {
+        guard FileManager.default.fileExists(atPath: connectionRecencyFileURL.path) else {
             return
         }
-        let data = try Data(contentsOf: AppPaths.hostConnectionRecencyFile)
+        let data = try Data(contentsOf: connectionRecencyFileURL)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         var loaded = try decoder.decode(HostConnectionRecencyIndex.self, from: data)
@@ -545,12 +577,12 @@ final class HostStore: ObservableObject {
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(index)
         try data.write(
-            to: AppPaths.hostConnectionRecencyFile,
+            to: connectionRecencyFileURL,
             options: [.atomic, .completeFileProtection]
         )
         try FileManager.default.setAttributes(
             [.posixPermissions: 0o600],
-            ofItemAtPath: AppPaths.hostConnectionRecencyFile.path
+            ofItemAtPath: connectionRecencyFileURL.path
         )
     }
 

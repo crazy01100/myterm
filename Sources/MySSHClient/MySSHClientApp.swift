@@ -173,6 +173,7 @@ private struct AppRootView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                 configureSync()
+                reconcileHostRecency()
                 automaticSyncCoordinator.setActive(true)
             }
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.willResignActiveNotification)) { _ in
@@ -183,9 +184,12 @@ private struct AppRootView: View {
             }
             .onAppear {
                 configureSync()
+                reconcileHostRecency()
                 requestSync(.foreground)
             }
             .onChange(of: hostStore.hosts) { _, _ in
+                // Logs may already be present when the matching hosts arrive.
+                reconcileHostRecency()
                 guard !automaticMetadataSyncStore.isApplyingRemoteChanges else { return }
                 requestSync(.localChange)
             }
@@ -199,6 +203,10 @@ private struct AppRootView: View {
             .onChange(of: snippetStore.changeRevision) { _, _ in requestSync(.localChange) }
             .onChange(of: connectionAuditStore.synchronizationRevision) { _, _ in
                 requestSync(.localChange)
+            }
+            .onChange(of: connectionAuditStore.records) { _, _ in
+                // Remote merges intentionally do not bump synchronizationRevision.
+                reconcileHostRecency()
             }
             .onChange(of: syncSettingsStore.metadataSyncEnabled) { _, enabled in
                 if enabled { requestSync(.availability) }
@@ -252,6 +260,14 @@ private struct AppRootView: View {
 
     private func requestSync(_ trigger: AutomaticSyncTrigger) {
         automaticSyncCoordinator.request(trigger)
+    }
+
+    private func reconcileHostRecency() {
+        do {
+            try hostStore.mergeConnectionRecency(from: connectionAuditStore.records)
+        } catch {
+            NSLog("MyTerm host connection recency reconciliation failed: %@", error.localizedDescription)
+        }
     }
 
     private func configureSync() {

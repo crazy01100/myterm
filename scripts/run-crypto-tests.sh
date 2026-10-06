@@ -41,11 +41,15 @@ swiftc \
     -Xcc "$sodium_headers" \
     Sources/MySSHClient/Models/SyncModels.swift \
     Sources/MySSHClient/Models/HostProfile.swift \
+    Sources/MySSHClient/Models/HostGroupMove.swift \
+    Sources/MySSHClient/Models/HostTransferDocument.swift \
     Sources/MySSHClient/Models/ConnectionAuditRecord.swift \
     Sources/MySSHClient/Models/InventoryDocument.swift \
     Sources/MySSHClient/Models/FirestoreMetadataSnapshot.swift \
     Sources/MySSHClient/Models/VaultCryptoModels.swift \
     Sources/MySSHClient/Services/AppPaths.swift \
+    Sources/MySSHClient/Services/HostStore.swift \
+    Sources/MySSHClient/Services/HostConnectionRecency.swift \
     Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
     Sources/MySSHClient/Services/KeychainStore.swift \
     Sources/MySSHClient/Services/VaultMasterKeyStore.swift \
@@ -66,6 +70,8 @@ swiftc \
     Sources/MySSHClient/Services/MetadataSyncBaselineStore.swift \
     Sources/MySSHClient/Services/MetadataManualSync.swift \
     Sources/MySSHClient/Services/MetadataSyncPreview.swift \
+    SelfTests/HostRecencySyncTests.swift \
+    SelfTests/HostSyncNoticeTests.swift \
     SelfTests/VaultCryptoTests.swift \
     "$crypto_build_dir"/Sodium.build/*.o \
     "$crypto_build_dir"/_Clibsodium.build/*.o \

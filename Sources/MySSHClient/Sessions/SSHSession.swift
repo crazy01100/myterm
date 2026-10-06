@@ -696,7 +696,7 @@ final class SessionManager: ObservableObject {
     @Published var lastError: String?
     private var presentationNameRegistry = TerminalSessionPresentationNameRegistry()
     private var outputActivityIndex = TerminalOutputActivityIndex()
-    var onHostConnectionSucceeded: ((HostProfile.ID) -> Void)?
+    var onHostConnectionSucceeded: ((HostProfile.ID, Date) -> Void)?
     weak var connectionAuditStore: ConnectionAuditStore?
 
     var workspaces: [TerminalWorkspace] {
@@ -843,8 +843,9 @@ final class SessionManager: ObservableObject {
                 )
             },
             onConnectionSucceeded: { [weak self] in
-                if origin == .savedHost { self?.onHostConnectionSucceeded?(hostID) }
-                self?.connectionAuditStore?.markConnected(sessionID: sessionID)
+                let connectedAt = Date()
+                self?.connectionAuditStore?.markConnected(sessionID: sessionID, at: connectedAt)
+                if origin == .savedHost { self?.onHostConnectionSucceeded?(hostID, connectedAt) }
             },
             onConnectionCompleted: { [weak self] exitCode in
                 self?.connectionAuditStore?.finishCompleted(

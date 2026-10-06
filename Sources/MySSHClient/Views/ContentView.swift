@@ -668,10 +668,10 @@ struct ContentView: View {
 
     private func configureSessionObservers() {
         let hostStore = hostStore
-        sessionManager.onHostConnectionSucceeded = { [weak hostStore] hostID in
+        sessionManager.onHostConnectionSucceeded = { [weak hostStore] hostID, connectedAt in
             guard let hostStore else { return }
             do {
-                try hostStore.recordSuccessfulConnection(for: hostID)
+                try hostStore.recordSuccessfulConnection(for: hostID, at: connectedAt)
             } catch {
                 NSLog("MyTerm host connection recency save failed: %@", error.localizedDescription)
             }

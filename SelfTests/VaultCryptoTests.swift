@@ -111,6 +111,8 @@ let fixedDate = Date(timeIntervalSince1970: 1_786_118_400)
 @main
 enum VaultCryptoTestRunner {
 @MainActor static func main() {
+    runHostRecencySyncTests { condition, name in check(condition, name) }
+    runHostSyncNoticeTests { condition, name in check(condition, name) }
 do {
     let masterKey = try VaultMasterKey(rawRepresentation: Data(0..<32), version: 1)
     let context = VaultRecordContext(

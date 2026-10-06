@@ -407,7 +407,7 @@ final class AutomaticMetadataSyncStore: ObservableObject {
             if !remoteApplyIDs.isEmpty {
                 isApplyingRemoteChanges = true
                 defer { isApplyingRemoteChanges = false }
-                _ = try hostStore.applyVerifiedCloudMerge(finalDocument)
+                _ = try hostStore.applyVerifiedCloudMerge(finalDocument, notifyOnSuccess: false)
             }
             try baselineStore.save(baseline, ownerUID: account.uid)
 
