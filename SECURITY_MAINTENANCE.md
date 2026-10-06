@@ -80,6 +80,8 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 Firebase CLI 固定為 `15.32.1`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
 
+`compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
+
 ### braces 未修補漏洞的入口緩解
 
 `braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。

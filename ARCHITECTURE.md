@@ -53,6 +53,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 ### 主機與本機資料
 
 - `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區只在目前可見、未進入分類且沒有待確認搬移時啟用 `HostLibraryDragMonitor`；主機頁被 Terminal 等功能遮住、切入分類或開啟確認時會停止追蹤，避免不可見卡片攔截其他畫面的拖曳。啟用時 monitor 在目前視窗追蹤由主機卡片開始的拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。
+- `HostConnectionRecencyIndex` 按主機 UUID 合併本機與已取得 Logs 的 `connectedAt`，只取較新時間，忽略未成功驗證與不存在的主機；成功後中斷仍保留成功時間。SessionManager 為本機排序與稽核傳入同一個成功時間。AppRootView 在啟動／前景、Logs records 或主機清單變更時補入（遠端合併不增加 synchronizationRevision），不修改主機 updatedAt 或觸發新的同步迴圈；寫入成功後才發布排序，失敗可在後續資料／前景事件重試。索引保留已得知時間，不因 Logs 到期倒退；只靠既有30天Logs無法還原從未收到的更早跨裝置歷史。主機頁、群組、搜尋與快速操作共用此排序，SFTP選擇器不變。
 - `LocalSecretVaultStore` 將登入狀態、同步 Master Key 與主機密碼保存於同一個 AES-GCM 本機保管庫；只有一把隨機根金鑰留在 macOS Keychain。正式、development 與 update-lab 通道使用不同保管庫根金鑰；只有 production 可執行早期正式 session 的相容遷移，隔離通道不讀取 production 的舊 refresh token。
 - `KeychainStore` 仍以主機 UUID 定位密碼，但只操作統一保管庫，主機資料本身不含密碼。
 - `KnownHostsStore` 管理 MyTerm 專用 SSH 信任檔；使用者另可手動載入本機 `~/.ssh/known_hosts` 快照。
@@ -96,6 +97,8 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 
 `AutomaticSnippetSync`接入既有`AutomaticSyncCoordinator`，共用手動、回前景、喚醒、本機變更與五分鐘前景排程。唯一同步總開關開啟後，指令自動初始化帳號範圍並參與同步；內部遷移標記不是另一個開關，指令失敗時整輪不報全部成功。停用保留本機內容；登出不收送，換帳號不帶入前帳號內容。遠端套用與網路回應均檢查帳號及世代。
 
+自動同步呼叫HostStore.applyVerifiedCloudMerge時使用notifyOnSuccess=false，省略一般成功notice；既有備份、保存與回讀驗證照常執行。有Keychain清理問題仍發出警告，沒有新警告的成功不清掉既有notice。手動進階合併維持預設成功回饋，失敗狀態／重試與衝突確認不變。
+
 衝突採保留副本並等待使用者確認；副本ID依內容與baseline穩定產生，避免重試重複。刪除保留tombstone，不復活原UUID。每範圍最多500筆可見指令及6,000筆含tombstone紀錄，最多32個本機範圍，整份檔案仍限16MiB；滿額時停止操作並保留資料。每筆密文128KiB，網路頁50筆／10MiB、最多120頁／累計32MiB。這些是App處理界線，Rules只強制逐筆owner、欄位、revision及大小，並非帳號總量或費用上限。
 
 同步不操作終端；編輯或填入時重新比對原內容，遠端修改不能靜默覆蓋草稿或送入未預覽的內容。
@@ -106,7 +109,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 |---|---|---|
 | 常用指令與同步狀態 | `Command Snippets/snippets.json`（本機明文、依帳號範圍隔離） | 總開關啟用後端對端加密同步；不含執行狀態 |
 | 主機與群組 | Application Support 內的權限限制檔案 | 啟用同步時，以密文同步 |
-| 主機最近成功連線時間 | Application Support 內權限 `0600` 的獨立檔案；只含主機 UUID 與時間 | 不同步、不匯出 |
+| 主機最近成功連線時間 | Application Support 內權限 `0600` 的獨立檔案；只含主機 UUID 與時間 | 索引檔不直接同步或匯出；從已同步 Logs 的成功連線時間補入 |
 | SSH 連線稽核 Logs | Application Support 內權限 `0600` 的 `connection-audit-log.json`；包含連線當下的主機、帳號端點、來源裝置、時間及結果，最多 30 天與 5,000 筆 | 啟用同步時，只把已結束紀錄以密文同步；不匯出 |
 | 主機密碼 | AES-GCM 本機保管庫；根金鑰為 `WhenUnlockedThisDeviceOnly` Keychain 項目 | 啟用同步時再端對端加密；目的 Mac 解密後寫入其本機保管庫 |
 | Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |

@@ -98,8 +98,8 @@ final class ConnectionAuditStore: ObservableObject {
         publishAndPersist()
     }
 
-    func markConnected(sessionID: UUID) {
-        guard index.markConnected(sessionID: sessionID, at: now()) else { return }
+    func markConnected(sessionID: UUID, at date: Date? = nil) {
+        guard index.markConnected(sessionID: sessionID, at: date ?? now()) else { return }
         publishAndPersist()
     }
 

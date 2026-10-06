@@ -16,7 +16,24 @@ struct HostConnectionRecencyIndex: Codable, Equatable {
         for hostID: HostProfile.ID,
         at date: Date = .now
     ) {
+        guard date.timeIntervalSince1970.isFinite,
+              lastConnectedAt(for: hostID).map({ date > $0 }) ?? true else { return }
         lastConnectedAtByHostID[hostID.uuidString] = date
+    }
+
+    /// Logs may arrive before the host inventory or in an arbitrary order.
+    /// Retain the newest authenticated time, even after Logs retention expires.
+    mutating func mergeSuccessfulConnections(
+        from records: [ConnectionAuditRecord],
+        validHostIDs: Set<HostProfile.ID>
+    ) {
+        prune(validHostIDs: validHostIDs)
+        for record in records {
+            guard validHostIDs.contains(record.hostID),
+                  record.connectionProtocol == "ssh",
+                  let connectedAt = record.connectedAt else { continue }
+            recordSuccessfulConnection(for: record.hostID, at: connectedAt)
+        }
     }
 
     mutating func remove(hostID: HostProfile.ID) {
