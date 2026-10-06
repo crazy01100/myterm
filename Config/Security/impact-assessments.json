@@ -130,8 +130,8 @@
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
       "reason": "Firebase CLI15.32.1的Firestore controller、Rules watcher及chokidar／braces展開程式與前次評估相同。Node24深層expand可發生堆疊錯誤；專案入口仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。",
       "inputs": {
-        "package-lock.json": "1730a2219da895fff8eb1c191c93da3c4c4121562d9588d57529d76bc7f6da1c",
-        "package.json": "5d39eb15960913b04705d94c002418ddb105ca5ac803cff1e9bd918855c536aa",
+        "package-lock.json": "d135eaadc3bf1c99f679933ae33582f7c48b4aaf5adca3dde6d71a9c7fbcbb63",
+        "package.json": "a96cf106fe1726cb633f03e5df9cb24187622eb30b116a4e324c232cfb9e9ea9",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
         "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
@@ -146,8 +146,8 @@
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "dc72194921f7ae9cfed224c6f60368d610f6043b",
-      "reviewedAt": "2026-10-05T09:01:14.722631+00:00"
+      "reviewedCommit": "4a0a7893543640febcf04166dae06ddaf1a0e2b6",
+      "reviewedAt": "2026-10-06T05:51:40.568291+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",
@@ -174,6 +174,69 @@
       "evidence": [
         "https://github.com/advisories/GHSA-c475-qrg2-pj4r",
         "https://github.com/firebase/firebase-tools/blob/v15.31.0/src/apiv2.ts"
+      ]
+    },
+    {
+      "id": "GHSA-vc2v-76pw-4v95",
+      "component": "compression",
+      "scope": "development",
+      "versions": [
+        "1.8.1"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → superstatic → HTTP回應壓縮",
+      "reason": "superstatic只在啟用compression／gzip時掛載壓縮middleware，提前斷線可到達受影響清理路徑；專案wrapper拒絕Hosting，未確認日常允許操作會啟用此路徑。直接執行CLI不受限制。套件不封裝於MyTerm App。",
+      "reviewedCommit": "4a0a7893543640febcf04166dae06ddaf1a0e2b6",
+      "reviewedAt": "2026-10-06T05:48:43.032737+00:00",
+      "historicalScanTimes": [
+        "2026-10-06T05:41:23.654004+00:00"
+      ],
+      "inputs": {
+        "package.json": "5d39eb15960913b04705d94c002418ddb105ca5ac803cff1e9bd918855c536aa",
+        "package-lock.json": "1730a2219da895fff8eb1c191c93da3c4c4121562d9588d57529d76bc7f6da1c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "node_modules/superstatic/lib/superstatic.js": "ba436c2d8f2c3d6ff4e2616369c6094f3b453b4c2ffbb9d0a3bbda8f6b0fe4f9",
+        "node_modules/superstatic/lib/responder.js": "55ed0539f4f52897eef2845cc880ea2556946a12669357502a7043de0e37076f",
+        "node_modules/compression/index.js": "b303ae0ce09150c5c459936741cc56aac602ffa113f84ca5a67bb464b5b6c9eb"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-vc2v-76pw-4v95",
+        "https://github.com/firebase/firebase-tools/tree/v15.32.1/src/emulator"
+      ]
+    },
+    {
+      "id": "GHSA-jqcg-44mw-7w3h",
+      "component": "proxy-addr",
+      "scope": "development",
+      "versions": [
+        "2.0.7"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI／MCP SDK → Express 4／5 → req.ip／req.ips代理信任判斷",
+      "reason": "公告要求特定IPv4-mapped IPv6信任子網配置；本機Auth與MCP入口未設定該子網，Express預設不信任代理。Functions runtime雖啟用trust proxy，屬布林true且被wrapper排除，與公告子網條件不同。未確認允許路徑滿足利用條件；直接使用其他CLI功能須另評。套件不封裝於App。",
+      "reviewedCommit": "4a0a7893543640febcf04166dae06ddaf1a0e2b6",
+      "reviewedAt": "2026-10-06T05:48:43.034627+00:00",
+      "historicalScanTimes": [
+        "2026-10-06T05:41:23.654004+00:00"
+      ],
+      "inputs": {
+        "package.json": "5d39eb15960913b04705d94c002418ddb105ca5ac803cff1e9bd918855c536aa",
+        "package-lock.json": "1730a2219da895fff8eb1c191c93da3c4c4121562d9588d57529d76bc7f6da1c",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "node_modules/express/lib/application.js": "5901b32f609ba349351bf7406dbdc0c4c57b77ce6f7215ea67ccca5ac2a28e88",
+        "node_modules/express/lib/request.js": "64ac10752c0516d789cb0698bb433586d4ce3b46f7f06ee3cb2880762b8bda40",
+        "node_modules/proxy-addr/index.js": "c586f959f09961edc6e261d9404455fce40998a221f71d44833bb4b12796c33c",
+        "node_modules/firebase-tools/lib/emulator/auth/server.js": "40f4d7c16aca84829ee502f4bfebc84fb50ad2893650011f268c0b6e1f27c1a7",
+        "node_modules/firebase-tools/lib/emulator/functionsEmulatorRuntime.js": "224e604c745fd538ce13b56ea651aa9c955cd32b8e629d8e118f6564c6f9c50a",
+        "node_modules/@modelcontextprotocol/sdk/dist/cjs/server/express.js": "ae3e854a837bd131f95978d9543a6259058b01771705d3025814dace3fb20e98"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-jqcg-44mw-7w3h",
+        "https://github.com/firebase/firebase-tools/tree/v15.32.1/src/emulator"
       ]
     }
   ]
