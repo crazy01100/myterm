@@ -82,6 +82,8 @@ Firebase CLI 固定為 `15.32.1`，上游已原生支援安全版本的 `stream-
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
+`@modelcontextprotocol/sdk 1.31.0`沿Firebase CLI原相容範圍鎖定，不新增覆寫。Firebase只使用SDK伺服器端，專案入口亦禁止MCP指令，未使用GHSA-6qxp-vccf-f47h影響的HTTP OAuth客戶端；此判斷不涵蓋其他獨立MCP客戶端。`firebase-mcp-sdk.test.cjs`以合成資料驗證Server／stdio握手、工具列舉及OAuth issuer不符時拒絕送出憑證，沒有真實登入或服務連線。日後若引入HTTP OAuth客戶端，仍須依公告處理issuer／expectedIssuer及舊憑證，不能只依賴版本更新。
+
 ### braces 未修補漏洞的入口緩解
 
 `braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
