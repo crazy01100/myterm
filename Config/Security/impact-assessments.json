@@ -130,8 +130,8 @@
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
       "reason": "Firebase CLI15.32.1的Firestore controller、Rules watcher及chokidar／braces展開程式與前次評估相同。Node24深層expand可發生堆疊錯誤；專案入口仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。",
       "inputs": {
-        "package-lock.json": "d135eaadc3bf1c99f679933ae33582f7c48b4aaf5adca3dde6d71a9c7fbcbb63",
-        "package.json": "a96cf106fe1726cb633f03e5df9cb24187622eb30b116a4e324c232cfb9e9ea9",
+        "package-lock.json": "e1b9347409ec3696c95bd067dd54639ce078166f9a38e229f3896e44a38d232d",
+        "package.json": "c9d38ab5f7a2f83b645c57d3edc4e48843ee20161aa71fb3ba4f4caba04d3819",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
         "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
@@ -146,8 +146,8 @@
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "4a0a7893543640febcf04166dae06ddaf1a0e2b6",
-      "reviewedAt": "2026-10-06T05:51:40.568291+00:00"
+      "reviewedCommit": "1fa05f7927ad94fcd745a20bf9313a3a2802af17",
+      "reviewedAt": "2026-10-07T12:16:20.443161+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",
@@ -237,6 +237,35 @@
       "evidence": [
         "https://github.com/advisories/GHSA-jqcg-44mw-7w3h",
         "https://github.com/firebase/firebase-tools/tree/v15.32.1/src/emulator"
+      ]
+    },
+    {
+      "id": "GHSA-6qxp-vccf-f47h",
+      "component": "@modelcontextprotocol/sdk",
+      "scope": "development",
+      "versions": [
+        "1.30.0"
+      ],
+      "status": "not-affected",
+      "usage": "Firebase CLI15.32.1 → MCP Server／SSEServerTransport／StdioServerTransport；專案入口禁止mcp",
+      "reason": "已核對Firebase CLI的SDK匯入及專案scripts／Tests，沒有HTTP OAuth client、authProvider或withOAuth用法；Firebase使用伺服器端，公告明列不受影響。專案wrapper另拒絕mcp。SDK不封裝於MyTerm App。結論限定此來源與使用範圍，不涵蓋其他獨立MCP客戶端，仍升級官方修補版解除版本命中。",
+      "reviewedCommit": "1fa05f7927ad94fcd745a20bf9313a3a2802af17",
+      "reviewedAt": "2026-10-07T12:13:48.099180+00:00",
+      "historicalScanTimes": [
+        "2026-10-07T07:18:12.357197+00:00"
+      ],
+      "inputs": {
+        "package-lock.json": "d135eaadc3bf1c99f679933ae33582f7c48b4aaf5adca3dde6d71a9c7fbcbb63",
+        "package.json": "a96cf106fe1726cb633f03e5df9cb24187622eb30b116a4e324c232cfb9e9ea9",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/logging-transport.js": "95aa787c74c03ef692c8c7e2079ca4cbdc10bd7706263a278362e7524dc663b2",
+        "node_modules/firebase-tools/lib/commands/mcp.js": "660fde89861fcaa4c97542481d8b898c45d34ba7f18696f963385bf3ccf2fcc3",
+        "node_modules/@modelcontextprotocol/sdk/dist/cjs/client/auth.js": "03124cd02429c00e03433d94caedc15db969729ed74802d9e6dcd71cf4904c2a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-6qxp-vccf-f47h",
+        "https://github.com/firebase/firebase-tools/blob/v15.32.1/src/mcp/index.ts"
       ]
     }
   ]
