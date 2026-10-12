@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct MySSHClientApp: App {
+    @NSApplicationDelegateAdaptor(SFTPEditQuitGuard.self) private var editQuitGuard
     @StateObject private var hostStore = HostStore()
     @StateObject private var knownHostsStore = KnownHostsStore()
     @StateObject private var sessionManager = SessionManager()

@@ -1,5 +1,42 @@
 import Foundation
 
+/// Content and the attributes that SFTP v3 can verify. ACLs/xattrs are not
+/// represented by this protocol; enabling save-back requires explicit consent.
+struct SFTPEditRevision: Codable, Equatable, Sendable {
+    let digest: String
+    let size: UInt64
+    let userID: UInt32
+    let groupID: UInt32
+    let permissions: UInt32
+
+    func replacingContent(digest: String, size: UInt64) -> Self {
+        Self(digest: digest, size: size, userID: userID, groupID: groupID, permissions: permissions)
+    }
+}
+
+enum SFTPEditError: LocalizedError {
+    case operationInProgress
+    case conflict
+    case unsupportedMetadata
+    case unstableFile
+    case differentConnection
+
+    var errorDescription: String? {
+        switch self {
+        case .operationInProgress: "正在處理另一項 SFTP 檔案操作，請稍後再開啟。"
+        case .conflict: "遠端檔案已變更或不存在，請確認後再回存。本機副本已保留。"
+        case .unsupportedMetadata: "無法保留此檔案的一般權限、擁有者或群組，或檔案含特殊權限。已停止回存並保留本機副本。"
+        case .unstableFile: "檔案仍在變更、暫時不存在或已不是一般檔案，尚未回存。"
+        case .differentConnection: "請連線到原主機與帳號，並確認連線設定及信任資料未變更後再恢復回存。"
+        }
+    }
+}
+
+enum SFTPPreparationPhase: String, Equatable, Sendable {
+    case download = "下載編輯副本"
+    case verification = "核對遠端內容"
+}
+
 struct SFTPLocalDragPayload: Codable, Equatable, Sendable {
     let paths: [String]
 }
@@ -308,6 +345,7 @@ struct SFTPTransferItem: Identifiable, Equatable, Sendable {
     var targetDescription = ""
     var sourcePath = ""
     var destinationPath = ""
+    var preparationPhase: SFTPPreparationPhase?
     var timing = SFTPTransferTiming()
 
     var fractionCompleted: Double? {

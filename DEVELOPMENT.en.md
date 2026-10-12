@@ -79,7 +79,13 @@ Run `zsh scripts/run-snippet-sync-tests.sh` for snippet sync coverage; the full 
 
 The fake SFTP peer must also use the project-validated Python runtime: `run-sftp-security-tests.sh` passes the interpreter selected by `project-python.sh` to the Swift tests, including pre-cancelled connections. A missing startup PID fails the test. Do not hard-code a separate system Python inside tests.
 
+Run `zsh scripts/run-sftp-edit-tests.sh` for external-editor save-back tests, also included in the complete isolated entry point below. Native local SFTP subprocesses, a fake peer and isolated drafts exercise content conflicts, permissions, successive saves, disconnect/restart and uncertain-result recovery without connecting to real hosts. Default-app/Open With launching, real editor saves, quit prompts and shared SFTP interactions still require manual Dev acceptance with disposable files.
+
+Cache lifecycle tests cover explicit close/switch, final disk verification, identical size/mtime and atomic replacement, other connections and legacy jobs, unfinished-work summaries, cancelling close, uncertain outcomes, journal write failures and interrupted cleanup/restart/retry. Cleanup tests use only disposable drafts created by the test process, never existing Dev or production data.
+
 Run automated tests first:
+
+Preparation tests also cover slow download/verification progress, cancellation in both phases, cross-window deduplication, busy messages, reopening on the same connection after cancellation, and cancelling local-copy-only downloads. A sparse 4 GB fixture and local fake server exercise disconnecting blocked reads without downloading user logs.
 
 ```sh
 ./scripts/project-python.sh scripts/run-isolated-tests.py

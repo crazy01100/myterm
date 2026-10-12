@@ -29,7 +29,11 @@ while True:
             out = bytes([104]) + i + u(1) + s(b'/test') + s(b'') + u(0)
         elif t == 7:
             raw, _ = string(p,5); target=path(raw)
-            if target.exists(): out=bytes([105])+i+u(5)+struct.pack('>Q',target.stat().st_size)+u(target.stat().st_mode)
+            if target.exists():
+                st = target.stat()
+                if mode.startswith('edit_'):
+                    out=bytes([105])+i+u(15)+struct.pack('>QIIIII',st.st_size,st.st_uid,st.st_gid,st.st_mode,int(st.st_atime),int(st.st_mtime))
+                else: out=bytes([105])+i+u(5)+struct.pack('>Q',st.st_size)+u(st.st_mode)
             else: out=status(i,2)
         elif t == 14:
             raw,_=string(p,5); target=path(raw); target.mkdir(mode=0o700)
@@ -60,7 +64,8 @@ while True:
             out=status(i,0)
         elif t == 5:
             key,offset=string(p,5); position=struct.unpack('>Q',p[offset:offset+8])[0]; size=struct.unpack('>I',p[offset+8:offset+12])[0]
-            handles[key].seek(position); data=handles[key].read(size); time.sleep(.02)
+            handles[key].seek(position); data=handles[key].read(size)
+            time.sleep(5 if mode == 'edit_stall' else .02)
             out=bytes([103])+i+s(data) if data else status(i,1)
         elif t == 4:
             key,_=string(p,5); handle=handles.pop(key)
