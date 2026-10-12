@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import CryptoKit
 
 /// Operation cancellation is checked only between complete protocol requests.
 /// Once publication starts, cancelling must not report a committed file as undone.
@@ -495,6 +496,7 @@ final class SFTPClient: @unchecked Sendable {
         to remoteDirectory: String,
         overwrite: Bool = false,
         cancellation: SFTPTransferCancellation? = nil,
+        editingBaseline: SFTPEditRevision? = nil,
         progress: @escaping (UInt64, UInt64?) -> Void
     ) throws {
         try synchronized {
@@ -505,6 +507,12 @@ final class SFTPClient: @unchecked Sendable {
             let values = try localURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
             guard values.isSymbolicLink != true else { throw SFTPFileOperationError.symbolicLinkTransferUnsupported(name) }
             let existing = try attributesUnlocked(at: destination)
+            if let editingBaseline {
+                guard overwrite, supportsAtomicOverwrite else { throw SFTPTransferError.unsafeOverwrite }
+                guard try editingRevisionUnlocked(at: destination, cancellation: cancellation) == editingBaseline else {
+                    throw SFTPEditError.conflict
+                }
+            }
             if let existing {
                 guard overwrite else { throw SFTPFileOperationError.destinationExists(name) }
                 guard supportsAtomicOverwrite, existing.kind == .regularFile, values.isDirectory != true else {
@@ -533,8 +541,28 @@ final class SFTPClient: @unchecked Sendable {
                 try uploadItemUnlocked(localURL, remotePath: stage, overwriteExisting: false,
                     completed: &completed, total: total, cancellation: cancellation, progress: progress)
                 try cancellation?.check()
+                if let editingBaseline {
+                    // Set and verify the new inode before it can replace the original.
+                    // No fallback to truncating the old inode is permitted.
+                    try requireOK(request(type: SFTPPacketType.setstat) {
+                        $0.append(string: stage)
+                        $0.append(UInt32(6))
+                        $0.append(editingBaseline.userID); $0.append(editingBaseline.groupID)
+                        $0.append(editingBaseline.permissions)
+                    })
+                    guard let prepared = try attributesUnlocked(at: stage),
+                          prepared.userID == editingBaseline.userID,
+                          prepared.groupID == editingBaseline.groupID,
+                          prepared.permissions.map({ $0 & 0o7777 }) == editingBaseline.permissions else {
+                        throw SFTPEditError.unsupportedMetadata
+                    }
+                    guard try editingRevisionUnlocked(at: destination, cancellation: cancellation) == editingBaseline else {
+                        throw SFTPEditError.conflict
+                    }
+                }
                 // Recheck type at publication time; never delete an existing target.
                 let current = try attributesUnlocked(at: destination)
+                if editingBaseline != nil, current == nil { throw SFTPEditError.conflict }
                 if let current {
                     guard overwrite else { throw SFTPFileOperationError.destinationExists(name) }
                     guard supportsAtomicOverwrite, current.kind == .regularFile, values.isDirectory != true else {
@@ -605,9 +633,87 @@ final class SFTPClient: @unchecked Sendable {
         }
     }
 
+    func editingRevision(at path: String, cancellation: SFTPTransferCancellation? = nil,
+                         progress: ((UInt64, UInt64) -> Void)? = nil) throws -> SFTPEditRevision {
+        try synchronized { try editingRevisionUnlocked(at: path, cancellation: cancellation, progress: progress) }
+    }
+
+    /// The caller creates the private work directory. A second remote read
+    /// confirms that the delivered local bytes match the recorded baseline.
+    func downloadEditingCopy(at path: String, to localURL: URL,
+                             cancellation: SFTPTransferCancellation? = nil,
+                             progress: @escaping (SFTPPreparationPhase, UInt64, UInt64?) -> Void = { _, _, _ in }) throws -> SFTPEditRevision {
+        try synchronized {
+            try cancellation?.check()
+            guard supportsAtomicOverwrite else { throw SFTPTransferError.unsafeOverwrite }
+            // Combined progress includes both full reads, so download completion
+            // cannot appear to finish preparation before verification has run.
+            func total(_ size: UInt64) -> UInt64? {
+                let (value, overflow) = size.multipliedReportingOverflow(by: 2)
+                return overflow ? nil : value
+            }
+            let baseline = try editingRevisionUnlocked(at: path, copyTo: localURL, cancellation: cancellation) {
+                progress(.download, $0, total($1))
+            }
+            try cancellation?.check()
+            let checked = try editingRevisionUnlocked(at: path, cancellation: cancellation) { bytes, size in
+                let (combined, overflow) = baseline.size.addingReportingOverflow(bytes)
+                let (allBytes, totalOverflow) = baseline.size.addingReportingOverflow(size)
+                progress(.verification, overflow ? UInt64.max : combined, totalOverflow ? nil : allBytes)
+            }
+            try cancellation?.check()
+            guard checked == baseline else { throw SFTPEditError.conflict }
+            return baseline
+        }
+    }
+
+    private func editingRevisionUnlocked(at path: String, copyTo: URL? = nil,
+                                         cancellation: SFTPTransferCancellation? = nil,
+                                         progress: ((UInt64, UInt64) -> Void)? = nil) throws -> SFTPEditRevision {
+        try cancellation?.check()
+        guard let before = try attributesUnlocked(at: path), before.kind == .regularFile else {
+            throw SFTPEditError.conflict
+        }
+        guard let uid = before.userID, let gid = before.groupID, let mode = before.permissions,
+              mode & 0o7000 == 0, let size = before.size else { throw SFTPEditError.unsupportedMetadata }
+        progress?(0, size)
+        var output: FileHandle?
+        if let copyTo {
+            // Exclusive creation: never overwrite a retained draft or follow a link.
+            let fd = open(copyTo.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+            guard fd >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            output = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        }
+        defer { try? output?.close() }
+        let handle = try openFileUnlocked(path: path, flags: 1)
+        var closed = false
+        defer { if !closed { try? closeHandle(handle) } }
+        var digest = SHA256(), count: UInt64 = 0
+        while true {
+            try cancellation?.check()
+            guard let bytes = try readFileUnlocked(handle: handle, offset: count, length: 64 * 1024) else { break }
+            guard !bytes.isEmpty, UInt64(bytes.count) <= size - min(size, count) else { throw SFTPEditError.conflict }
+            digest.update(data: bytes)
+            try output?.write(contentsOf: bytes)
+            count += UInt64(bytes.count)
+            progress?(count, size)
+        }
+        try cancellation?.check()
+        try closeHandle(handle); closed = true
+        guard count == size, let after = try attributesUnlocked(at: path),
+              before.size == after.size, before.modificationTime == after.modificationTime,
+              before.permissions == after.permissions, before.userID == after.userID,
+              before.groupID == after.groupID else { throw SFTPEditError.conflict }
+        try output?.synchronize()
+        return SFTPEditRevision(digest: digest.finalize().map { String(format: "%02x", $0) }.joined(),
+                               size: size, userID: uid, groupID: gid, permissions: mode & 0o777)
+    }
+
     func downloadTemporaryCopy(
         _ entry: SFTPDirectoryEntry,
-        from remoteDirectory: String
+        from remoteDirectory: String,
+        cancellation: SFTPTransferCancellation? = nil,
+        progress: @escaping (UInt64, UInt64?) -> Void = { _, _ in }
     ) throws -> URL {
         guard !entry.isDirectory else { throw SFTPFileOperationError.notARegularFile(entry.name) }
         let directory = FileManager.default.temporaryDirectory
@@ -619,7 +725,8 @@ final class SFTPClient: @unchecked Sendable {
             attributes: [.posixPermissions: 0o700]
         )
         do {
-            try downloadItem(entry, from: remoteDirectory, to: directory) { _, _ in }
+            try downloadItem(entry, from: remoteDirectory, to: directory, cancellation: cancellation, progress: progress)
+            try cancellation?.check()
             return directory.appending(path: entry.name)
         } catch {
             try? FileManager.default.removeItem(at: directory)

@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 /// Connection identity excludes presentation metadata and all secret values.
-struct SFTPConnectionTarget: Equatable {
+struct SFTPConnectionTarget: Codable, Equatable {
     let hostID: UUID
     let hostname: String
     let port: Int
@@ -36,7 +36,14 @@ struct SFTPConnectionSnapshot {
 @MainActor
 protocol SFTPHostOpeningConnection: AnyObject {
     var openingSnapshot: SFTPConnectionSnapshot { get }
+    var canRequestSwitchWhileBusy: Bool { get }
+    func requestSwitch(to host: HostProfile, username: String)
     func connect(to host: HostProfile, username: String)
+}
+
+extension SFTPHostOpeningConnection {
+    var canRequestSwitchWhileBusy: Bool { false }
+    func requestSwitch(to host: HostProfile, username: String) { connect(to: host, username: username) }
 }
 
 /// Coordinates only saved-host opening. All decisions and the final connect
@@ -128,7 +135,7 @@ final class SFTPHostOpeningController: ObservableObject {
             show()
             return
         }
-        guard !current.isBusy else {
+        guard !current.isBusy || connection.canRequestSwitchWhileBusy else {
             notice = "SFTP 仍有傳輸或檔案操作尚未完成。請先完成目前操作，再開啟其他主機。"
             return
         }
@@ -138,7 +145,8 @@ final class SFTPHostOpeningController: ObservableObject {
                 previousDescription: current.description)
             return
         }
-        connection.connect(to: host, username: request.username)
+        if current.target != nil { connection.requestSwitch(to: host, username: request.username) }
+        else { connection.connect(to: host, username: request.username) }
         show()
     }
 }

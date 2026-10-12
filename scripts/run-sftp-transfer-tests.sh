@@ -10,6 +10,7 @@ swiftc -swift-version 5 -parse-as-library -D MYTERM_SELF_TESTS \
  Sources/MySSHClient/Services/AppPaths.swift Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
  Sources/MySSHClient/Services/KeychainStore.swift Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
  Sources/MySSHClient/Services/SFTPProtocol.swift Sources/MySSHClient/Services/SFTPClient.swift \
+ Sources/MySSHClient/Services/SFTPEditCacheCleanup.swift Sources/MySSHClient/Services/SFTPEditFileMonitor.swift Sources/MySSHClient/Services/SFTPExternalEditStore.swift \
  Sources/MySSHClient/Services/SFTPHostOpeningController.swift Sources/MySSHClient/Services/SFTPBrowserStores.swift \
  SelfTests/SFTPTransferTests.swift -o "$test_dir/tests"
 "$test_dir/tests" "$python_executable" "$project_dir/Tests/Security/fake_sftp_transfer.py"

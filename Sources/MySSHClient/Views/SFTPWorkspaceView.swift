@@ -18,10 +18,7 @@ struct SFTPWorkspaceView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            if !remoteStore.transferItems.isEmpty {
-                Divider()
-                SFTPTransferQueueBar(store: remoteStore)
-            }
+            SFTPTransferQueueBar(store: remoteStore, edits: remoteStore.editStore)
         }
         .background(AppVisualTheme.contentBackground)
         .alert("本機檔案操作失敗", isPresented: localErrorBinding) {
@@ -157,8 +154,7 @@ private struct LocalSFTPFilePane: View {
                 Button("全選", systemImage: "checkmark.circle") { store.selectAllVisible() }
                 Divider()
                 Button("關閉 SFTP", systemImage: "xmark", role: .destructive) {
-                    remoteStore.disconnect()
-                    onClose()
+                    remoteStore.requestEnd(completion: onClose)
                 }
             } label: {
                 Label("操作", systemImage: "ellipsis.circle")
@@ -500,8 +496,7 @@ private struct RemoteSFTPFilePane: View {
                 Button("全選", systemImage: "checkmark.circle") { store.selectAllVisible() }
                 Divider()
                 Button("關閉 SFTP", systemImage: "xmark", role: .destructive) {
-                    store.disconnect()
-                    onClose()
+                    store.requestEnd(completion: onClose)
                 }
             } label: {
                 Label("操作", systemImage: "ellipsis.circle")
@@ -548,17 +543,68 @@ private struct RemoteSFTPFilePane: View {
     }
 
     private func openRemote(_ entry: SFTPDirectoryEntry, withApplication: Bool) {
-        store.prepareTemporaryCopy(of: entry) { result in
-            switch result {
-            case .success(let url):
-                if withApplication, let appURL = SFTPApplicationPicker.chooseApplication() {
-                    SFTPApplicationPicker.open(url, with: appURL)
-                } else if !withApplication {
-                    NSWorkspace.shared.open(url)
+        if store.revealPreparingCopy(of: entry) { return }
+        guard entry.attributes.kind == .regularFile else {
+            store.errorMessage = "僅能以本機 App 編輯一般檔案；符號連結與特殊檔案不支援回存。"
+            return
+        }
+        let generation = store.editingGeneration
+        let appURL = withApplication ? SFTPApplicationPicker.chooseApplication() : nil
+        if withApplication && appURL == nil { return }
+        let existing = store.existingEdit(for: entry)
+        let active = existing.map { [.watching, .waiting, .uploading].contains($0.state) } ?? false
+        var saveBack = true
+        if existing == nil || existing?.state == .stopped {
+            let alert = NSAlert()
+            alert.messageText = "啟用自動回存？"
+            alert.informativeText = "\(store.connectedHost?.displayName ?? "SFTP")\n\(remoteItemPath(for: entry))\n\n本機 App 儲存（含自動儲存）後，將替換這份遠端檔案。保留一般權限、擁有者及群組；無法保留額外權限（ACL）與延伸屬性。\n\n僅追蹤交付的副本；另存其他路徑不會回傳。請先儲存再關閉 SFTP；主動關閉或切換主機會結束此次編輯並清理已完成的快取，之後外部 App 的儲存不再回傳。未完成或異常中斷的副本會保留。"
+            alert.addButton(withTitle: "啟用自動回存")
+            alert.addButton(withTitle: "僅開啟本機副本")
+            alert.addButton(withTitle: "取消")
+            let response = alert.runModal()
+            if response == .alertThirdButtonReturn { return }
+            saveBack = response == .alertFirstButtonReturn
+        }
+        guard store.editingGeneration == generation else { return }
+        if !saveBack {
+            if let existing {
+                openEditor(store.editStore.localURL(existing), application: appURL, work: nil, resume: false)
+            } else {
+                store.prepareTemporaryCopy(of: entry) { result in
+                    switch result {
+                    case .success(let url): openEditor(url, application: appURL, work: nil, resume: false)
+                    case .failure(let error): reportOpeningError(error)
+                    }
                 }
-            case .failure(let error):
-                store.errorMessage = error.localizedDescription
             }
+            return
+        }
+        store.prepareEditingCopy(of: entry) { result in
+            switch result {
+            case .success(let work):
+                openEditor(store.editStore.localURL(work), application: appURL, work: work, resume: !active)
+            case .failure(let error): reportOpeningError(error)
+            }
+        }
+    }
+
+    private func reportOpeningError(_ error: Error) {
+        if case SFTPConnectionError.cancelled = error { return }
+        store.errorMessage = error.localizedDescription
+    }
+
+    private func openEditor(_ url: URL, application: URL?, work: SFTPEditWork?, resume: Bool) {
+        let opened: (NSRunningApplication?, Error?) -> Void = { _, error in
+            Task { @MainActor in
+                if let error { store.errorMessage = error.localizedDescription; return }
+                if let work, resume { store.resumeEdit(work.id) }
+            }
+        }
+        if let application {
+            NSWorkspace.shared.open([url], withApplicationAt: application,
+                                    configuration: NSWorkspace.OpenConfiguration(), completionHandler: opened)
+        } else {
+            NSWorkspace.shared.open(url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: opened)
         }
     }
 
@@ -1125,14 +1171,17 @@ private struct SFTPPermissionSheet: View {
 
 private struct SFTPTransferQueueBar: View {
     @ObservedObject var store: SFTPRemoteBrowserStore
+    @ObservedObject var edits: SFTPExternalEditStore
     @State private var collapsed = false
     @State private var confirmingStop = false
 
     var body: some View {
+        if !store.transferItems.isEmpty || !edits.works.isEmpty {
+        Divider()
         VStack(spacing: 8) {
             HStack {
                 Button { collapsed.toggle() } label: {
-                    Label("傳輸（\(store.transferItems.count)）", systemImage: collapsed ? "chevron.right" : "chevron.down")
+                    Label(edits.works.isEmpty ? "傳輸（\(store.transferItems.count)）" : "傳輸與編輯（\(store.transferItems.count + edits.works.count)）", systemImage: collapsed ? "chevron.right" : "chevron.down")
                 }
                 .buttonStyle(.plain)
                 Spacer()
@@ -1149,6 +1198,10 @@ private struct SFTPTransferQueueBar: View {
                 TimelineView(.periodic(from: .now, by: 0.5)) { _ in
                     ScrollView {
                         LazyVStack(spacing: 0) {
+                            ForEach(edits.works) { work in
+                                editRow(work)
+                                Divider()
+                            }
                             ForEach(store.transferItems) { item in
                                 SFTPTransferRow(item: item, now: ProcessInfo.processInfo.systemUptime) { store.cancelTransfer(item.id) }
                                 Divider()
@@ -1156,17 +1209,71 @@ private struct SFTPTransferQueueBar: View {
                         }
                     }
                 }
-                .frame(height: min(210, CGFloat(store.transferItems.count) * 80))
+                .frame(height: min(210, CGFloat(store.transferItems.count + edits.works.count) * 88))
             }
         }
         .padding(10)
         .background(AppVisualTheme.raisedSurface)
+        .onChange(of: store.preparationRevealToken) { _, _ in collapsed = false }
         .alert("中斷 SFTP 並停止所有傳輸？", isPresented: $confirmingStop) {
             Button("返回", role: .cancel) { }
             Button("中斷並停止", role: .destructive) { store.disconnect() }
         } message: {
             Text("這會中斷目前 SFTP 連線與尚未完成的傳輸。遠端可能留下暫存項目，已送出的最後替換也可能需要重新連線確認。SSH 終端不受影響。")
         }
+        .alert("編輯回存", isPresented: Binding(get: { edits.errorMessage != nil }, set: { if !$0 { edits.errorMessage = nil } })) {
+            Button("好") { edits.errorMessage = nil }
+        } message: { Text(edits.errorMessage ?? "") }
+        }
+    }
+
+    private func editRow(_ work: SFTPEditWork) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "doc.badge.gearshape").foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack { Text(work.name).fontWeight(.semibold); Text(work.state.title).foregroundStyle(.secondary) }
+                Text(work.targetDescription).font(.caption).foregroundStyle(.secondary)
+                Text(work.remotePath).font(.caption).textSelection(.enabled)
+                if let message = work.message { Text(message).font(.caption).foregroundStyle(.secondary) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button("本機副本") {
+                let file = edits.localURL(work)
+                NSWorkspace.shared.activateFileViewerSelecting([FileManager.default.fileExists(atPath: file.path) ? file : edits.directory(work.id)])
+            }
+            if work.cleanupStarted == true {
+                Button("重試清理") { edits.retryCleanup(work.id) }
+            }
+            if work.cleanupStarted != true && ![.watching, .waiting, .uploading].contains(work.state) {
+                if edits.canConfirmConflict(work.id) {
+                    Button("確認變更…") {
+                        let alert = NSAlert()
+                        alert.messageText = "以本機副本覆蓋遠端變更？"
+                        alert.informativeText = "\(work.targetDescription)\n\(work.remotePath)\n\n遠端內容已改變。覆蓋後將使用本機已儲存的內容；取消會保留本機副本並暫停回存。"
+                        alert.addButton(withTitle: "取消")
+                        alert.addButton(withTitle: "覆蓋遠端變更")
+                        if alert.runModal() == .alertSecondButtonReturn { edits.acceptConflict(work.id) }
+                    }
+                } else {
+                    Button("恢復／重試") { store.resumeEdit(work.id) }
+                        .disabled(store.editingTarget != work.target)
+                }
+            }
+            if work.state != .stopped && work.cleanupStarted != true {
+                Button("停止回存") {
+                    if work.hasUnsavedChanges {
+                        let alert = NSAlert()
+                        alert.messageText = "停止回存並保留本機副本？"
+                        alert.informativeText = "\(work.name) 尚有未確認回存的變更。停止後不再傳送後續儲存，已開始的最後替換可能完成。"
+                        alert.addButton(withTitle: "返回"); alert.addButton(withTitle: "停止回存")
+                        guard alert.runModal() == .alertSecondButtonReturn else { return }
+                    }
+                    edits.stop(work.id)
+                }
+            }
+        }
+        .font(.callout)
+        .padding(.vertical, 8)
     }
 }
 
@@ -1185,7 +1292,8 @@ private struct SFTPTransferRow: View {
                     Spacer()
                     Text(item.state.title).font(.caption).foregroundStyle(color).lineLimit(2)
                 }
-                Text(item.targetDescription).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(item.preparationPhase.map { "\($0.rawValue) · \(item.targetDescription)" } ?? item.targetDescription)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 ViewThatFits(in: .horizontal) {
                     HStack {
                         progressSummary
@@ -1218,7 +1326,7 @@ private struct SFTPTransferRow: View {
 
     private var progressSummary: some View {
         HStack(spacing: 8) {
-            Text(byteDescription).fixedSize()
+            Text(item.preparationPhase == nil ? byteDescription : "累計讀取 \(byteDescription)").fixedSize()
             if !item.state.isFinished, item.state != .waiting,
                let fraction = item.fractionCompleted {
                 ProgressView(value: fraction, total: 1)

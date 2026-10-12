@@ -65,6 +65,7 @@ struct ContentView: View {
         .onAppear(perform: configureSessionObservers)
         .onAppear(perform: configureQuickActions)
         .onChange(of: sessionManager.sessions.map(\.id)) { _, _ in configureQuickActions() }
+        .modifier(SFTPEditInventoryObserver(store: sftpRemoteStore))
         .focusedSceneValue(\.openQuickActions, { quickActions.toggle() })
         .focusedSceneValue(\.openSnippetLibrary, { openSnippets(for: sessionManager.selectedSessionID) })
         .background(QuickActionWindowAnchor(controller: quickActions).frame(width: 0, height: 0))
