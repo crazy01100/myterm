@@ -2,10 +2,19 @@ import Foundation
 
 @MainActor
 final class LocalFileBrowserStore: ObservableObject {
-    @Published private(set) var currentURL: URL
-    @Published private(set) var entries: [LocalFileEntry] = []
+    @Published private(set) var currentURL: URL {
+        didSet { if currentURL != oldValue { searchQuery = "" } }
+    }
+    @Published private(set) var entries: [LocalFileEntry] = [] { didSet { rebuildSortedEntries() } }
+    @Published private(set) var visibleEntries: [LocalFileEntry] = []
+    private var sortedEntries: [LocalFileEntry] = []
     @Published private(set) var isLoading = false
-    @Published var showHiddenFiles = false
+    @Published var showHiddenFiles = false { didSet { rebuildVisibleEntries() } }
+    @Published var searchQuery = "" { didSet { rebuildVisibleEntries() } }
+    @Published var sorting: SFTPListSort {
+        didSet { sorting.save(to: sortPreferences, pane: "local"); rebuildSortedEntries() }
+    }
+    private let sortPreferences: UserDefaults?
     @Published var selectedURLs: Set<URL> = []
     @Published var errorMessage: String?
 
@@ -13,13 +22,24 @@ final class LocalFileBrowserStore: ObservableObject {
     private var forwardHistory: [URL] = []
     private var loadGeneration = UUID()
 
-    init(fileManager: FileManager = .default) {
+    init(fileManager: FileManager = .default, sortPreferences: UserDefaults? = SFTPListSort.defaultPreferences) {
+        self.sortPreferences = sortPreferences
+        sorting = .load(from: sortPreferences, pane: "local")
         currentURL = fileManager.homeDirectoryForCurrentUser.standardizedFileURL
         reload()
     }
 
-    var visibleEntries: [LocalFileEntry] {
-        showHiddenFiles ? entries : entries.filter { !$0.isHidden }
+    private func rebuildSortedEntries() {
+        sortedEntries = entries.map { ($0, SFTPListItem($0)) }
+            .sorted { sorting.precedes($0.1, $1.1) }.map { $0.0 }
+        rebuildVisibleEntries()
+    }
+
+    private func rebuildVisibleEntries() {
+        visibleEntries = sortedEntries.filter {
+            (showHiddenFiles || !$0.isHidden) && SFTPFilenameSearch.matches($0.name, query: searchQuery)
+        }
+        selectedURLs.formIntersection(Set(visibleEntries.map(\.url)))
     }
 
     var canGoBack: Bool { !backHistory.isEmpty }
@@ -93,7 +113,7 @@ final class LocalFileBrowserStore: ObservableObject {
     }
 
     var selectedEntries: [LocalFileEntry] {
-        entries.filter { selectedURLs.contains($0.url) }
+        visibleEntries.filter { selectedURLs.contains($0.url) }
     }
 
     func dragPayload(for entry: LocalFileEntry) -> SFTPLocalDragPayload {
@@ -105,7 +125,7 @@ final class LocalFileBrowserStore: ObservableObject {
 
     func entries(for payloads: [SFTPLocalDragPayload]) -> [LocalFileEntry] {
         let requestedPaths = Set(payloads.flatMap(\.paths))
-        return entries.filter { requestedPaths.contains($0.url.standardizedFileURL.path) }
+        return visibleEntries.filter { requestedPaths.contains($0.url.standardizedFileURL.path) }
     }
 
     func createDirectory(named input: String) throws {
@@ -153,12 +173,6 @@ final class LocalFileBrowserStore: ObservableObject {
         return try FileManager.default
             .contentsOfDirectory(at: url, includingPropertiesForKeys: nil, options: [])
             .map { try LocalFileEntry.inspect($0) }
-            .sorted {
-                if $0.isNavigableDirectory != $1.isNavigableDirectory {
-                    return $0.isNavigableDirectory
-                }
-                return $0.name.localizedStandardCompare($1.name) == .orderedAscending
-            }
     }
 
     nonisolated private static func validatedName(_ input: String) throws -> String {
@@ -183,9 +197,18 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     @Published private(set) var connectedHost: HostProfile?
     @Published private(set) var connectedUsername = ""
     @Published private(set) var homePath = ""
-    @Published private(set) var currentPath = ""
-    @Published private(set) var entries: [SFTPDirectoryEntry] = []
-    @Published var showHiddenFiles = false
+    @Published private(set) var currentPath = "" {
+        didSet { if currentPath != oldValue { searchQuery = "" } }
+    }
+    @Published private(set) var entries: [SFTPDirectoryEntry] = [] { didSet { rebuildSortedEntries() } }
+    @Published private(set) var visibleEntries: [SFTPDirectoryEntry] = []
+    private var sortedEntries: [SFTPDirectoryEntry] = []
+    @Published var showHiddenFiles = false { didSet { rebuildVisibleEntries() } }
+    @Published var searchQuery = "" { didSet { rebuildVisibleEntries() } }
+    @Published var sorting: SFTPListSort {
+        didSet { sorting.save(to: sortPreferences, pane: "remote"); rebuildSortedEntries() }
+    }
+    private let sortPreferences: UserDefaults?
     @Published var selectedNames: Set<String> = []
     @Published var errorMessage: String?
     @Published private(set) var transferItems: [SFTPTransferItem] = []
@@ -212,7 +235,10 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     var canRequestSwitchWhileBusy: Bool { endingStatus == nil }
 
 
-    init(editStore: SFTPExternalEditStore? = nil, editingTrust: (() throws -> String)? = nil) {
+    init(editStore: SFTPExternalEditStore? = nil, editingTrust: (() throws -> String)? = nil,
+         sortPreferences: UserDefaults? = SFTPListSort.defaultPreferences) {
+        self.sortPreferences = sortPreferences
+        sorting = .load(from: sortPreferences, pane: "remote")
 #if MYTERM_SELF_TESTS
         self.editStore = editStore ?? SFTPExternalEditStore(root: FileManager.default.temporaryDirectory.appendingPathComponent("MyTerm-unused-edit-tests-\(UUID())"))
 #else
@@ -315,8 +341,17 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     }
 #endif
 
-    var visibleEntries: [SFTPDirectoryEntry] {
-        showHiddenFiles ? entries : entries.filter { !$0.isHidden }
+    private func rebuildSortedEntries() {
+        sortedEntries = entries.map { ($0, SFTPListItem($0)) }
+            .sorted { sorting.precedes($0.1, $1.1) }.map { $0.0 }
+        rebuildVisibleEntries()
+    }
+
+    private func rebuildVisibleEntries() {
+        visibleEntries = sortedEntries.filter {
+            (showHiddenFiles || !$0.isHidden) && SFTPFilenameSearch.matches($0.name, query: searchQuery)
+        }
+        selectedNames.formIntersection(Set(visibleEntries.map(\.name)))
     }
 
     var openingSnapshot: SFTPConnectionSnapshot {
@@ -349,7 +384,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
                         let path = try client.realPath(".")
                         let entries = try client.listDirectory(path)
                         client.completeInitialization()
-                        return (client, path, Self.sorted(entries))
+                        return (client, path, entries)
                     } catch {
                         client.close()
                         throw error
@@ -510,7 +545,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     }
 
     var selectedEntries: [SFTPDirectoryEntry] {
-        entries.filter { selectedNames.contains($0.name) }
+        visibleEntries.filter { selectedNames.contains($0.name) }
     }
 
     func dragPayload(for entry: SFTPDirectoryEntry) -> SFTPRemoteDragPayload {
@@ -1031,7 +1066,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
         Task {
             do {
                 let result = try await Task.detached(priority: .userInitiated) {
-                    Self.sorted(try client.listDirectory(path))
+                    try client.listDirectory(path)
                 }.value
                 guard self.generation == generation else { return }
                 currentPath = path
@@ -1094,13 +1129,6 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
             throw SFTPFileOperationError.unsafeName(name)
         }
         return name
-    }
-
-    nonisolated private static func sorted(_ entries: [SFTPDirectoryEntry]) -> [SFTPDirectoryEntry] {
-        entries.sorted {
-            if $0.isDirectory != $1.isDirectory { return $0.isDirectory }
-            return $0.name.localizedStandardCompare($1.name) == .orderedAscending
-        }
     }
 
     private static func friendlyMessage(for error: Error) -> String {

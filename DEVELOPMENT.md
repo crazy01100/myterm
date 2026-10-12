@@ -119,6 +119,8 @@ SFTP外部編輯回存的專項測試為 `zsh scripts/run-sftp-edit-tests.sh`，
 
 功能驗證完成後，再提交並推送原始碼。在主要開發 Mac 不要把 `build/dev/MyTerm Dev.app` 搬到系統的 `/Applications`，也不要用測試版覆蓋正式版；這不限制外部測試 Mac 使用前述建議的使用者目錄 `~/Applications/MyTerm Dev.app`。
 
+SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並已納入標準隔離測試入口。使用獨立 UserDefaults、暫存檔案及假 SFTP 子程序，驗證四欄排序、缺值／同值、Unicode 搜尋、選取收斂、目錄切換及左右偏好保存；實際欄頭點擊、深淺色標示、窄窗與拖放仍需 Dev 驗收。
+
 ### Firebase 開發工具相容性
 
 開發工具需要 Node.js 24 LTS及 Python 3.12 以上。使用 `./scripts/project-node.sh --npm ci` 依鎖檔安裝；Firebase CLI 已原生支援修補後的串流套件，不再改寫安裝內容。每次 CLI 啟動前，`scripts/verify-firebase-tools.cjs` 唯讀核對 CLI 與實際解析到的串流相依是否符合鎖檔；不一致時重新執行 `npm ci`。`./scripts/project-node.sh --npm run test:development-tools` 驗證安裝一致性、保留的覆寫、CLI 消費端與深度限制；`./scripts/project-node.sh --npm run test:firestore-rules` 使用本機 demo Emulator。詳細安全界線見 [安全維護指南](SECURITY_MAINTENANCE.md)。

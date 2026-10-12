@@ -1,5 +1,113 @@
 import Foundation
 
+enum SFTPListColumn: String, Codable, CaseIterable, Sendable {
+    case name, modified, size, kind
+    var title: String {
+        switch self {
+        case .name: "名稱"
+        case .modified: "修改日期"
+        case .size: "大小"
+        case .kind: "類型"
+        }
+    }
+}
+
+struct SFTPListSort: Codable, Equatable, Sendable {
+    var column: SFTPListColumn = .name
+    var ascending = true
+
+    mutating func select(_ column: SFTPListColumn) {
+        if self.column == column { ascending.toggle() }
+        else {
+            self.column = column
+            ascending = column == .name || column == .kind
+        }
+    }
+
+    static var defaultPreferences: UserDefaults? {
+#if MYTERM_SELF_TESTS
+        nil
+#else
+        .standard
+#endif
+    }
+
+    static func load(from defaults: UserDefaults?, pane: String) -> Self {
+        guard let data = defaults?.data(forKey: "sftp.list.sort.\(pane)"),
+              let value = try? JSONDecoder().decode(Self.self, from: data) else { return Self() }
+        return value
+    }
+
+    func save(to defaults: UserDefaults?, pane: String) {
+        guard let data = try? JSONEncoder().encode(self) else { return }
+        defaults?.set(data, forKey: "sftp.list.sort.\(pane)")
+    }
+
+    // Unknown values stay last in either direction. Ties always use natural
+    // name order, then exact identity, so metadata ties do not cause row jumps.
+    func precedes(_ lhs: SFTPListItem, _ rhs: SFTPListItem) -> Bool {
+        if lhs.directory != rhs.directory { return lhs.directory }
+        var result: ComparisonResult
+        switch column {
+        case .name: result = lhs.name.localizedStandardCompare(rhs.name)
+        case .kind: result = lhs.kind.localizedStandardCompare(rhs.kind)
+        case .modified:
+            if (lhs.modified == nil) != (rhs.modified == nil) { return lhs.modified != nil }
+            result = compare(lhs.modified, rhs.modified)
+        case .size:
+            if (lhs.size == nil) != (rhs.size == nil) { return lhs.size != nil }
+            result = compare(lhs.size, rhs.size)
+        }
+        if result != .orderedSame { return ascending ? result == .orderedAscending : result == .orderedDescending }
+        let nameOrder = lhs.name.localizedStandardCompare(rhs.name)
+        if nameOrder != .orderedSame { return nameOrder == .orderedAscending }
+        return lhs.identity < rhs.identity
+    }
+
+    private func compare<T: Comparable>(_ lhs: T?, _ rhs: T?) -> ComparisonResult {
+        guard let lhs, let rhs else { return .orderedSame }
+        return lhs == rhs ? .orderedSame : (lhs < rhs ? .orderedAscending : .orderedDescending)
+    }
+}
+
+struct SFTPListItem {
+    let name: String
+    let identity: String
+    let directory: Bool
+    let modified: Date?
+    let size: UInt64?
+    let kind: String
+
+    init(_ entry: LocalFileEntry) {
+        name = entry.name; identity = entry.url.path; directory = entry.isNavigableDirectory
+        modified = entry.modificationDate; size = directory ? nil : entry.size; kind = entry.kindTitle
+    }
+    init(_ entry: SFTPDirectoryEntry) {
+        name = entry.name; identity = entry.name; directory = entry.isDirectory
+        modified = entry.attributes.modificationTime; size = directory ? nil : entry.attributes.size
+        kind = entry.attributes.kind.title
+    }
+}
+
+enum SFTPFilenameSearch {
+    static func matches(_ name: String, query: String) -> Bool {
+        query.isEmpty || name.range(of: query, options: [.caseInsensitive]) != nil
+    }
+
+    static func ranges(in name: String, query: String) -> [Range<String.Index>] {
+        guard !query.isEmpty else { return [] }
+        var result: [Range<String.Index>] = []
+        var start = name.startIndex
+        while start < name.endIndex,
+              let range = name.range(of: query, options: [.caseInsensitive], range: start..<name.endIndex),
+              range.upperBound > start {
+            result.append(range)
+            start = range.upperBound
+        }
+        return result
+    }
+}
+
 /// Content and the attributes that SFTP v3 can verify. ACLs/xattrs are not
 /// represented by this protocol; enabling save-back requires explicit consent.
 struct SFTPEditRevision: Codable, Equatable, Sendable {
