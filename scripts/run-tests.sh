@@ -162,3 +162,5 @@ swiftc \
     "$terminal_build_dir"/SwiftTerm.build/*.o \
     -o "$test_dir/TerminalMessageHighlightTests"
 "$test_dir/TerminalMessageHighlightTests"
+
+"$project_dir/scripts/run-sftp-list-tests.sh"

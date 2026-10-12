@@ -78,7 +78,7 @@ private struct LocalSFTPFilePane: View {
             Divider()
             localPathBar
             Divider()
-            SFTPFileListHeader()
+            SFTPFileListHeader(sorting: $store.sorting)
             Divider()
             fileList
         }
@@ -126,6 +126,7 @@ private struct LocalSFTPFilePane: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
+            SFTPFileSearchField(query: $store.searchQuery)
             if store.isLoading { ProgressView().controlSize(.small) }
             Menu {
                 Button("開啟") { openSelected() }.disabled(store.selectedURLs.count != 1)
@@ -223,7 +224,8 @@ private struct LocalSFTPFilePane: View {
         }
         .overlay {
             if !store.isLoading && store.visibleEntries.isEmpty {
-                ContentUnavailableView("這個資料夾是空的", systemImage: "folder")
+                ContentUnavailableView(store.searchQuery.isEmpty ? "這個資料夾是空的" : "找不到符合的項目",
+                                       systemImage: store.searchQuery.isEmpty ? "folder" : "magnifyingglass")
             }
         }
         .overlay {
@@ -240,7 +242,7 @@ private struct LocalSFTPFilePane: View {
                 extending: NSEvent.modifierFlags.contains(.command)
             )
         } label: {
-            LocalFileRow(entry: entry, isSelected: store.selectedURLs.contains(entry.url))
+            LocalFileRow(entry: entry, isSelected: store.selectedURLs.contains(entry.url), query: store.searchQuery)
                 .contentShape(.rect)
         }
             .buttonStyle(.plain)
@@ -384,7 +386,7 @@ private struct RemoteSFTPFilePane: View {
             Divider()
             remotePathBar
             Divider()
-            SFTPFileListHeader()
+            SFTPFileListHeader(sorting: $store.sorting)
             Divider()
             ScrollView {
                 LazyVStack(spacing: 0) {
@@ -409,7 +411,8 @@ private struct RemoteSFTPFilePane: View {
             }
             .overlay {
                 if store.visibleEntries.isEmpty {
-                    ContentUnavailableView("這個遠端資料夾是空的", systemImage: "folder")
+                    ContentUnavailableView(store.searchQuery.isEmpty ? "這個遠端資料夾是空的" : "找不到符合的項目",
+                                           systemImage: store.searchQuery.isEmpty ? "folder" : "magnifyingglass")
                 }
             }
             .overlay {
@@ -427,7 +430,7 @@ private struct RemoteSFTPFilePane: View {
                 extending: NSEvent.modifierFlags.contains(.command)
             )
         } label: {
-            RemoteFileRow(entry: entry, isSelected: store.selectedNames.contains(entry.name))
+            RemoteFileRow(entry: entry, isSelected: store.selectedNames.contains(entry.name), query: store.searchQuery)
                 .contentShape(.rect)
         }
             .buttonStyle(.plain)
@@ -459,6 +462,7 @@ private struct RemoteSFTPFilePane: View {
                 }
             }
             Spacer()
+            SFTPFileSearchField(query: $store.searchQuery)
             if store.isFileOperationInProgress { ProgressView().controlSize(.small) }
             Menu {
                 Button("開啟") {
@@ -1745,25 +1749,94 @@ private struct SFTPDropTargetOverlay: View {
     }
 }
 
+private struct SFTPFileSearchField: View {
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("搜尋此資料夾", text: $query)
+                .textFieldStyle(.plain)
+                .accessibilityLabel("搜尋此資料夾的檔案名稱")
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("清除搜尋")
+                .accessibilityLabel("清除搜尋")
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 8)
+        .frame(minWidth: 100, idealWidth: 155, maxWidth: 190, minHeight: 28)
+        .background(AppVisualTheme.subtleSurface, in: .rect(cornerRadius: 6))
+    }
+}
+
 private struct SFTPFileListHeader: View {
+    @Binding var sorting: SFTPListSort
+
     var body: some View {
         HStack(spacing: 8) {
-            Text("名稱").frame(maxWidth: .infinity, alignment: .leading)
-            Text("修改日期").frame(width: 132, alignment: .leading)
-            Text("大小").frame(width: 78, alignment: .trailing)
-            Text("類型").frame(width: 62, alignment: .leading)
+            column(.name).frame(maxWidth: .infinity, alignment: .leading)
+            column(.modified).frame(width: 132, alignment: .leading)
+            column(.size, alignment: .trailing).frame(width: 78, alignment: .trailing)
+            column(.kind).frame(width: 62, alignment: .leading)
         }
         .font(.callout.weight(.semibold))
-        .foregroundStyle(.secondary)
         .padding(.horizontal, 12)
         .frame(height: 40)
         .background(AppVisualTheme.subtleSurface)
+    }
+
+    private func column(_ column: SFTPListColumn, alignment: Alignment = .leading) -> some View {
+        Button { sorting.select(column) } label: {
+            HStack(spacing: 3) {
+                Text(column.title)
+                if sorting.column == column {
+                    Image(systemName: sorting.ascending ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+            }
+            .foregroundStyle(sorting.column == column ? Color.primary : Color.secondary)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: alignment)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .help("依\(column.title)排序；再次點擊反轉順序")
+        .accessibilityLabel("依\(column.title)排序")
+        .accessibilityValue(sorting.column == column ? (sorting.ascending ? "遞增" : "遞減") : "未選取")
+    }
+}
+
+private struct SFTPHighlightedFilename: View {
+    let name: String
+    let query: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Text(highlighted).font(.body).lineLimit(1)
+    }
+
+    private var highlighted: AttributedString {
+        var result = AttributedString(name)
+        for range in SFTPFilenameSearch.ranges(in: name, query: query) {
+            guard let lower = AttributedString.Index(range.lowerBound, within: result),
+                  let upper = AttributedString.Index(range.upperBound, within: result) else { continue }
+            result[lower..<upper].foregroundColor = colorScheme == .dark
+                ? Color(red: 1, green: 0.60, blue: 0.43)
+                : Color(red: 0.64, green: 0.18, blue: 0.02)
+            result[lower..<upper].font = .body.bold()
+        }
+        return result
     }
 }
 
 private struct LocalFileRow: View {
     let entry: LocalFileEntry
     let isSelected: Bool
+    let query: String
     @State private var isHovered = false
 
     var body: some View {
@@ -1773,7 +1846,7 @@ private struct LocalFileRow: View {
                     .foregroundStyle(entry.isNavigableDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.name).font(.body).lineLimit(1)
+                    SFTPHighlightedFilename(name: entry.name, query: query)
                     Text(permissionDisplayText)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)
@@ -1825,6 +1898,7 @@ private struct LocalFileRow: View {
 private struct RemoteFileRow: View {
     let entry: SFTPDirectoryEntry
     let isSelected: Bool
+    let query: String
     @State private var isHovered = false
 
     var body: some View {
@@ -1834,7 +1908,7 @@ private struct RemoteFileRow: View {
                     .foregroundStyle(entry.isDirectory ? Color.accentColor : .secondary)
                     .frame(width: 20)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(entry.name).font(.body).lineLimit(1)
+                    SFTPHighlightedFilename(name: entry.name, query: query)
                     Text(permissionDisplayText)
                         .font(.system(.caption, design: .monospaced))
                         .foregroundStyle(.secondary)

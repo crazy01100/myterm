@@ -119,6 +119,8 @@ Documentation, comment, or instruction-only changes do not require building or l
 
 Commit and push source after feature acceptance. On the primary development Mac, do not move `build/dev/MyTerm Dev.app` into system `/Applications` or use it to replace production. This does not prevent external test Macs from using the recommended per-user `~/Applications/MyTerm Dev.app` location.
 
+Run `zsh scripts/run-sftp-list-tests.sh` for sorting/search regression, also included in the standard isolated test entry point. Isolated UserDefaults, temporary files and a fake SFTP subprocess cover four-column sorting, missing/tied values, Unicode search, selection pruning, navigation and independent pane preferences. Header clicks, light/dark highlights, narrow windows and drag-and-drop still require Dev acceptance.
+
 ### Firebase development tool compatibility
 
 Development tools require Node.js 24 LTS and Python 3.12 or later. Install from the lockfile with `./scripts/project-node.sh --npm ci`. Firebase CLI natively supports the patched stream dependencies; installed source files are no longer rewritten. Before each CLI launch, `scripts/verify-firebase-tools.cjs` checks that the CLI and its resolved stream dependencies match the lockfile without modifying them; reinstall with `npm ci` if they differ. `./scripts/project-node.sh --npm run test:development-tools` verifies installation consistency, retained overrides, real CLI consumers, and depth limits. `./scripts/project-node.sh --npm run test:firestore-rules` uses the local demo emulator. See [security maintenance](SECURITY_MAINTENANCE.en.md) for the security boundaries.
