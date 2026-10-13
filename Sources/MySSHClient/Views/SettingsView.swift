@@ -324,7 +324,7 @@ struct SettingsView: View {
             }
 
             Section("跨裝置同步") {
-                Toggle("同步主機、群組、密碼、連線紀錄與常用指令", isOn: Binding(
+                Toggle("同步主機、群組、密碼、連線紀錄、常用指令與遠端書籤", isOn: Binding(
                     get: { syncSettingsStore.metadataSyncEnabled },
                     set: { enabled in
                         if enabled {
@@ -356,6 +356,10 @@ struct SettingsView: View {
                            outcome != .completed && outcome != .disabled {
                             Text("常用指令：" + outcome.message).font(.caption).foregroundStyle(.secondary)
                         }
+                        if let outcome = automaticSyncCoordinator.bookmarksOutcome,
+                           outcome != .completed && outcome != .disabled {
+                            Text("遠端書籤：" + outcome.message).font(.caption).foregroundStyle(.secondary)
+                        }
                         Text(lastSyncDescription)
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -371,7 +375,7 @@ struct SettingsView: View {
                     automaticSyncCoordinator.request(.manual)
                 }
                 .disabled(!syncSettingsStore.metadataSyncEnabled)
-                Label("同步採端對端加密；雲端同步服務無法看到主機名稱、IP、帳號、裝置名稱、連線紀錄、常用指令、備註或密碼。私鑰檔案與 known_hosts 不會同步。", systemImage: "lock.shield")
+                Label("同步採端對端加密；雲端同步服務無法看到主機名稱、IP、帳號、裝置名稱、連線紀錄、常用指令、遠端目錄書籤、備註或密碼。本機目錄書籤、私鑰檔案與 known_hosts 不會同步。", systemImage: "lock.shield")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1009,7 +1013,7 @@ struct SettingsView: View {
                     .foregroundStyle(.green)
             }
             Text(syncSettingsStore.metadataSyncEnabled
-                ? "登入完成；主機、群組、密碼、已結束連線紀錄與常用指令同步已啟用。"
+                ? "登入完成；主機、群組、密碼、已結束連線紀錄、常用指令與遠端書籤同步已啟用。"
                 : "登入完成；尚未啟用跨裝置同步。")
                 .font(.caption)
                 .foregroundStyle(.secondary)

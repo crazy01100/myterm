@@ -96,3 +96,9 @@ Published upstream advisories and remediation tracking may be discussed in Issue
 ## Hosted sync availability
 
 The developer-hosted service uses a free plan with limited capacity and is closed to new users; existing accounts retain sign-in and sync. Firebase enforces access on the server, independently of visible app buttons, without changing existing end-to-end encryption or data formats. This does not eliminate abuse by existing accounts or all unauthenticated traffic. Self-hosted users follow their own backend policy; see [Firebase setup](FIREBASE_SETUP.en.md).
+
+## SFTP directory bookmarks
+
+Local bookmarks never enter cloud sync. Remote names, paths, host identity and SSH accounts are encrypted on the Mac with the existing Master Key before reaching an independent owner-only collection. Envelopes bind project/UID, record ID, type and version, without passwords, private keys or file contents. Necessary envelope, revision and deletion metadata remain visible; this does not hide traffic or record counts.
+
+Local `SFTP Bookmarks/bookmarks.json` contains plaintext metadata, including account partitions, baselines and pending intent, with 0700 directories and 0600 files. Explicit sign-out hides an account’s remote entries without erasing the local file; this is not secure deletion. Corruption and unknown schemas refuse overwrites. Retained tombstones prevent long-offline copies from reviving deleted records; capacity limits can still require manual attention. Sync does not elevate SFTP privileges, connect automatically or delete remote files.

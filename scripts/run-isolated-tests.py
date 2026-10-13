@@ -32,3 +32,5 @@ with tempfile.TemporaryDirectory(prefix='MyTerm-isolated-tests-',dir='/private/t
     subprocess.run(['zsh',str(root/'scripts/run-sftp-edit-tests.sh')],cwd=root,check=True,env=env)
     subprocess.run(['zsh',str(root/'scripts/run-command-snippet-tests.sh')],cwd=root,check=True,env=env)
     subprocess.run(['zsh',str(root/'scripts/run-snippet-sync-tests.sh')],cwd=root,check=True,env=env)
+
+    subprocess.run(['zsh',str(root/'scripts/run-sftp-bookmark-tests.sh')],cwd=root,check=True,env=env)
