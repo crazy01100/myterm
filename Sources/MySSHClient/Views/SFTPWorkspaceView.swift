@@ -179,7 +179,11 @@ private struct LocalSFTPFilePane: View {
                 store.navigate(to: URL(fileURLWithPath: path, isDirectory: true))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer(minLength: 0)
+            SFTPBookmarkMenu(isLocal: true, target: nil, path: store.currentURL.path,
+                             canNavigate: store.hasLoadedDirectory && !store.isLoading &&
+                             !remoteStore.hasActiveTransfers && !remoteStore.isFileOperationInProgress && remoteStore.overwriteRequest == nil) {
+                store.navigate(to: URL(fileURLWithPath: $0, isDirectory: true))
+            }
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
@@ -522,7 +526,12 @@ private struct RemoteSFTPFilePane: View {
                 store.goToPathComponent(path)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Spacer(minLength: 0)
+            if let host = store.connectedHost {
+                let target = SFTPBookmarkTarget(hostID: host.id, hostname: host.hostname, port: host.port, username: store.connectedUsername)
+                SFTPBookmarkMenu(isLocal: false, target: target, path: store.currentPath, canNavigate: store.canUseDirectoryBookmarks) { path in
+                    store.navigateToBookmark(path: path, hostID: target.hostID, hostname: target.hostname, port: target.port, username: target.username)
+                }
+            }
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)

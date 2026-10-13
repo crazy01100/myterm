@@ -228,3 +228,9 @@ Snippets use an independent `users/<UID>/commandSnippets/<UUID>` collection with
 On two updated Macs using the same test account and sync passphrase, enable the single cross-device sync switch in Settings; snippets are included automatically with no separate activation. Use non-sensitive fixtures to verify create, edit, delete and offline conflicts. Before new Rules are deployed, snippets remain local with an incomplete-sync message; existing sync collections remain usable. Older apps do not read or write the snippet collection.
 
 Rules reject cross-UID access, extra plaintext fields, ciphertext over 128 KiB, skipped revisions, physical deletion and resurrection. Additional client capacity checks are not Firebase-wide quota or billing limits. For rollback, preserve encrypted records and tombstones rather than clearing the collection.
+
+## Remote directory bookmark sync
+
+The independent `users/{uid}/sftpBookmarks/{UUID}` collection uses the existing account and end-to-end Master Key, without another sync switch or new indexes. Before using the newer app, self-hosted operators must update Firestore Rules through this guide’s existing deployment workflow; do not add broadly permissive rules. Host, password, Logs and command-snippet collections remain compatible.
+
+On two Macs using the same account, validate remote bookmark creation, renaming, deletion, offline restart and conflict review. Local directory bookmarks must remain device-local. Missing Rules leave bookmark sync incomplete while preserving local content; other data is not cleared. Successful sync has no popup, and the existing Sync Now action includes this worker.
