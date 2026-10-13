@@ -13,6 +13,7 @@ enum AppPaths {
         )
     }()
 
+    static var sftpBookmarksFile: URL { rootDirectory.appending(path: "SFTP Bookmarks", directoryHint: .isDirectory).appending(path: "bookmarks.json") }
     static var hostsFile: URL { rootDirectory.appending(path: "hosts.json") }
     static var sftpEditsDirectory: URL { rootDirectory.appending(path: "SFTP Edits", directoryHint: .isDirectory) }
     static var commandSnippetsFile: URL {

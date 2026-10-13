@@ -4,6 +4,7 @@ enum SyncRecordType: String, Codable, CaseIterable, Sendable {
     case group
     case host
     case password
+    case sftpBookmark
     case commandSnippet
     case connectionAudit
     case vaultKeyEnvelope

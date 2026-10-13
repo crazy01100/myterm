@@ -18,6 +18,7 @@ final class LocalFileBrowserStore: ObservableObject {
     @Published var selectedURLs: Set<URL> = []
     @Published var errorMessage: String?
 
+    @Published private(set) var hasLoadedDirectory = false
     private var backHistory: [URL] = []
     private var forwardHistory: [URL] = []
     private var loadGeneration = UUID()
@@ -53,33 +54,25 @@ final class LocalFileBrowserStore: ObservableObject {
     func navigate(to url: URL) {
         let target = url.standardizedFileURL
         guard target != currentURL else { return }
-        backHistory.append(currentURL)
-        forwardHistory.removeAll()
-        currentURL = target
-        selectedURLs.removeAll()
-        reload()
+        loadDirectory(target, navigation: .new)
     }
 
     func goBack() {
-        guard let target = backHistory.popLast() else { return }
-        forwardHistory.append(currentURL)
-        currentURL = target
-        selectedURLs.removeAll()
-        reload()
+        guard let target = backHistory.last else { return }
+        loadDirectory(target, navigation: .back)
     }
 
     func goForward() {
-        guard let target = forwardHistory.popLast() else { return }
-        backHistory.append(currentURL)
-        currentURL = target
-        selectedURLs.removeAll()
-        reload()
+        guard let target = forwardHistory.last else { return }
+        loadDirectory(target, navigation: .forward)
     }
 
-    func reload() {
+    func reload() { loadDirectory(currentURL, navigation: .refresh) }
+
+    private enum Navigation { case new, back, forward, refresh }
+    private func loadDirectory(_ url: URL, navigation: Navigation) {
         let generation = UUID()
         loadGeneration = generation
-        let url = currentURL
         isLoading = true
         Task {
             do {
@@ -87,13 +80,21 @@ final class LocalFileBrowserStore: ObservableObject {
                     try Self.loadEntries(at: url)
                 }.value
                 guard loadGeneration == generation else { return }
+                let oldURL = currentURL
+                switch navigation {
+                case .new: backHistory.append(oldURL); forwardHistory.removeAll()
+                case .back: _ = backHistory.popLast(); forwardHistory.append(oldURL)
+                case .forward: _ = forwardHistory.popLast(); backHistory.append(oldURL)
+                case .refresh: break
+                }
+                if oldURL != url { selectedURLs.removeAll() }
+                currentURL = url
                 entries = result
-                selectedURLs = selectedURLs.intersection(Set(result.map(\.url)))
+                selectedURLs = selectedURLs.intersection(Set(visibleEntries.map(\.url)))
+                hasLoadedDirectory = true
                 isLoading = false
             } catch {
                 guard loadGeneration == generation else { return }
-                entries = []
-                selectedURLs.removeAll()
                 isLoading = false
                 errorMessage = error.localizedDescription
             }
@@ -216,6 +217,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     @Published private(set) var overwriteRequest: SFTPOverwriteRequest?
 
     private var client: SFTPClient?
+    private var directoryRequest = UUID()
     private var connectionCancellation: SFTPCancellation?
     private var generation = UUID()
     private var pendingOverwriteOperation: PendingOverwriteOperation?
@@ -426,6 +428,23 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
         guard endingStatus == nil, state == .connected, currentPath != "/" else { return }
         let parent = (currentPath as NSString).deletingLastPathComponent
         load(path: parent.isEmpty ? "/" : parent)
+    }
+
+    var canUseDirectoryBookmarks: Bool {
+        state == .connected && editingInventoryValid && endingStatus == nil &&
+        !isFileOperationInProgress && !hasActiveTransfers && overwriteRequest == nil && pendingOverwriteOperation == nil
+    }
+
+    func navigateToBookmark(path: String, hostID: UUID, hostname: String, port: Int, username: String) {
+        guard canUseDirectoryBookmarks, let host = connectedHost,
+              host.id == hostID, host.hostname == hostname, host.port == port, connectedUsername == username,
+              path.hasPrefix("/"), path.utf8.count <= 16 * 1024,
+              !path.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+            errorMessage = "目前連線或工作狀態已變更，請稍後重新開啟書籤。"
+            return
+        }
+        guard path != currentPath else { return }
+        load(path: path)
     }
 
     func goToPathComponent(_ path: String) {
@@ -1061,6 +1080,8 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
 
     private func load(path: String) {
         guard endingStatus == nil, let client else { return }
+        let request = UUID()
+        directoryRequest = request
         let generation = self.generation
         state = .connecting
         Task {
@@ -1068,14 +1089,14 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
                 let result = try await Task.detached(priority: .userInitiated) {
                     try client.listDirectory(path)
                 }.value
-                guard self.generation == generation else { return }
+                guard self.generation == generation, directoryRequest == request else { return }
                 currentPath = path
                 entries = result
                 selectedNames.removeAll()
                 state = .connected
                 startNextTransfer()
             } catch {
-                guard self.generation == generation else { return }
+                guard self.generation == generation, directoryRequest == request else { return }
                 state = .connected
                 startNextTransfer()
                 errorMessage = Self.friendlyMessage(for: error)

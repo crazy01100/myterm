@@ -340,3 +340,9 @@ Sign-in response tests live in `SelfTests/GoogleFirebaseAuthResponseTests.swift`
 Thirty-minute retry deadline/clock cases live in `SelfTests/GoogleSignInRetryTests.swift`. `CloudAccountRecoveryTests.swift` exercises the real store for OAuth reuse, single-flight, cancellation, switching, expiry, and persistence boundaries. `GoogleFirebaseAuthResponseTests.swift` uses synthetic transport to retry Firebase with the same Google credential, without waiting half an hour or touching production accounts. The full entry point remains `scripts/run-isolated-tests.py`.
 
 Release helpers verify the Sparkle artifact version against Package.resolved, preferring .build-app and falling back to .build only when versions match. If no matching tools exist, rebuild the current version; do not change signing baselines or bypass verification.
+
+### SFTP bookmark validation
+
+`zsh scripts/run-sftp-bookmark-tests.sh` uses temporary stores, synthetic keys/accounts, a memory backend and URLProtocol to validate encryption and merging; the complete isolated runner includes it. `run-sftp-list-tests.sh` covers failed navigation and host identity checks, and `run-sync-reliability-tests.sh` verifies that a failing fourth worker cannot advance whole-round success. New Rules are tested with a local demo emulator, never production data for deletion/conflict fixtures.
+
+After local validation, compare, deploy and read back backward-compatible Rules, then test the same Dev version on two Macs. An external Mac may use a stable writable directory without a checkout; verify its development identity. App creation, management, navigation, busy-state handling, account switching, offline use and conflicts still require interactive acceptance.

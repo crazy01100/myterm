@@ -81,6 +81,24 @@ struct SyncReliabilityTests {
             three.request(.manual)
             try await waitUntil { !three.isRunning }
             check(three.snippetsOutcome == .completed && three.message == "同步完成", "three workers participate in whole-round success")
+            var bookmarkResult: SyncAttemptOutcome = .failed("synthetic bookmark failure")
+            var bookmarkCalls = 0
+            var bookmarkEnabled = true
+            let four = AutomaticSyncCoordinator(defaults: defaults, journal: journal)
+            four.configure(context: { .init(scope: "four", enabled: bookmarkEnabled) }, prepare: {},
+                metadata: { _ in .completed }, logs: { _ in .completed }, snippets: { _ in .completed },
+                bookmarks: { _ in bookmarkCalls += 1; return bookmarkResult })
+            four.request(.manual); try await waitUntil { !four.isRunning }
+            check(four.lastSuccessfulSyncAt == nil && four.message == "同步尚未全部完成", "bookmark failure prevents whole-round success")
+            bookmarkResult = .waiting("review required")
+            four.request(.manual); try await waitUntil { !four.isRunning }
+            check(four.lastSuccessfulSyncAt == nil, "bookmark conflict does not advance success timestamp")
+            bookmarkResult = .completed
+            four.request(.manual); try await waitUntil { !four.isRunning }
+            check(four.bookmarksOutcome == .completed && four.message == "同步完成", "four workers share one successful round")
+            let callsBeforeDisable = bookmarkCalls
+            bookmarkEnabled = false; four.request(.manual)
+            check(bookmarkCalls == callsBeforeDisable && !four.isRunning, "same global switch disables bookmark worker")
             let timing = AutomaticSyncCoordinator.Timing(periodic: 0.08, debounce: 0.01, stale: 60)
             let coordinator = AutomaticSyncCoordinator(defaults: defaults, timing: timing, journal: journal)
             coordinator.configure(context: { .init(scope: scope, enabled: enabled) }, prepare: { prepared = true }, metadata: { _ in
