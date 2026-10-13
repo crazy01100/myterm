@@ -238,3 +238,32 @@ test("常用指令隔離集合：owner、版本、刪除與密文界線", async 
   await assertFails(setDoc(doc(db, `users/snippet-alice/vault/${id}`), valid()));
   await assertSucceeds(setDoc(doc(db, `users/snippet-alice/vault/${id}`), validMetadataRecord("host")));
 });
+
+test("遠端書籤隔離集合：owner、版本、刪除與密文界線", async () => {
+  const db = testEnvironment.authenticatedContext("bookmark-alice").firestore();
+  const id = "71000000-2000-3000-4000-500000000001";
+  const ref = doc(db, `users/bookmark-alice/sftpBookmarks/${id}`);
+  const valid = (deleted = false, revision = 1) => validMetadataRecord("sftpBookmark", deleted, revision);
+  await assertFails(setDoc(ref, { ...valid(), path: "/private/local-only" }));
+  await assertFails(setDoc(ref, { ...valid(), ciphertext: Bytes.fromUint8Array(new Uint8Array(131073)) }));
+  await assertFails(setDoc(ref, { ...valid(), formatVersion: 2 }));
+  await assertFails(setDoc(ref, { ...valid(), nonce: Bytes.fromUint8Array(new Uint8Array(11)) }));
+  await assertFails(setDoc(ref, valid(false, 2)));
+  await assertSucceeds(setDoc(ref, valid()));
+  await assertSucceeds(getDocs(collection(db, "users/bookmark-alice/sftpBookmarks")));
+  await assertFails(setDoc(ref, valid(false, 1)));
+  await assertFails(setDoc(ref, valid(false, 3)));
+  await assertFails(setDoc(ref, { ...valid(false, 2), recordType: "host" }));
+  await assertSucceeds(setDoc(ref, valid(false, 2)));
+  await assertSucceeds(setDoc(ref, valid(true, 3)));
+  await assertFails(setDoc(ref, valid(false, 4)));
+  await assertFails(deleteDoc(ref));
+  const other = testEnvironment.authenticatedContext("bookmark-bob").firestore();
+  await assertFails(getDoc(doc(other, `users/bookmark-alice/sftpBookmarks/${id}`)));
+  await assertFails(setDoc(doc(other, `users/bookmark-alice/sftpBookmarks/${id}`), valid(true, 4)));
+  const anon = testEnvironment.unauthenticatedContext().firestore();
+  await assertFails(getDocs(collection(anon, "users/bookmark-alice/sftpBookmarks")));
+  await assertFails(setDoc(doc(anon, `users/bookmark-alice/sftpBookmarks/${id}`), valid()));
+  await assertFails(setDoc(doc(db, `users/bookmark-alice/vault/${id}`), valid()));
+  await assertSucceeds(setDoc(doc(db, `users/bookmark-alice/vault/${id}`), validMetadataRecord("host")));
+});

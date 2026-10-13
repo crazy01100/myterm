@@ -165,3 +165,11 @@ Third-party components and assets retain their own licenses and copyright notice
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
 Source tests and administration scripts require Python 3.12 or newer through the project launcher; see [Python tool environment](DEVELOPMENT.en.md#python-runtime). App users do not need Python.
+
+## SFTP directory bookmarks
+
+Use the bookmark icon at the right of either path bar to save the current directory and return to it from a name-only menu. Full paths remain visible in Manage Bookmarks and removal confirmations. Manage Bookmarks renames or removes shortcuts, never files. Removing a bookmark or discarding a candidate requires confirmation showing its name and path. Missing directories, unmounted disks and access failures preserve the previous view. Successful navigation clears that pane’s search while retaining its sort order. Bookmark navigation pauses during transfers or save-back.
+
+Local bookmarks stay on each Mac. Remote bookmarks are scoped to the saved host and effective SSH account, and participate in the existing Enable Sync switch and Sync Now action. Other Macs using the same Google account receive additions, renames and removals on the next sync round. Offline use remains available. A missing host is shown as unavailable until its metadata arrives; bookmarks never connect automatically or match hosts by IP alone.
+
+Successful sync has no popup; failures retain local content. Concurrent renames appear as reviewable candidates in Manage Bookmarks. Deleted bookmarks are not automatically resurrected by offline copies. Explicit sign-out hides that account’s remote bookmarks until signing back in; local bookmarks are unaffected. Self-hosted services must first deploy Firestore Rules supporting `sftpBookmarks`; older apps retain their existing sync functionality.

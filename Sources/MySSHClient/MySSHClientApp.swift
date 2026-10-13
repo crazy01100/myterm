@@ -10,6 +10,7 @@ struct MySSHClientApp: App {
     @StateObject private var automaticConnectionAuditSyncStore = AutomaticConnectionAuditSyncStore()
     @StateObject private var dataTransferCoordinator = DataTransferCoordinator()
     @StateObject private var shortcutStore = AppShortcutStore()
+    @StateObject private var bookmarkStore = SFTPBookmarkStore()
     @StateObject private var snippetStore = CommandSnippetStore()
     @StateObject private var syncSettingsStore = SyncSettingsStore()
     @StateObject private var cloudAccountStore = CloudAccountStore()
@@ -39,7 +40,7 @@ struct MySSHClientApp: App {
                 automaticMetadataSyncStore: automaticMetadataSyncStore,
                 automaticConnectionAuditSyncStore: automaticConnectionAuditSyncStore,
                 automaticSyncCoordinator: automaticSyncCoordinator,
-                snippetStore: snippetStore
+                snippetStore: snippetStore, bookmarkStore: bookmarkStore
             )
                 .environmentObject(hostStore)
                 .environmentObject(knownHostsStore)
@@ -49,6 +50,7 @@ struct MySSHClientApp: App {
                 .environmentObject(automaticSyncCoordinator)
                 .environmentObject(shortcutStore)
                 .environmentObject(snippetStore)
+                .environmentObject(bookmarkStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
                 .environmentObject(vaultSetupStore)
@@ -79,6 +81,7 @@ struct MySSHClientApp: App {
                 .environmentObject(hostStore)
                 .environmentObject(dataTransferCoordinator)
                 .environmentObject(snippetStore)
+                .environmentObject(bookmarkStore)
                 .environmentObject(shortcutStore)
                 .environmentObject(syncSettingsStore)
                 .environmentObject(cloudAccountStore)
@@ -152,6 +155,7 @@ private struct AppRootView: View {
     @ObservedObject var automaticConnectionAuditSyncStore: AutomaticConnectionAuditSyncStore
     @ObservedObject var automaticSyncCoordinator: AutomaticSyncCoordinator
     @ObservedObject var snippetStore: CommandSnippetStore
+    @ObservedObject var bookmarkStore: SFTPBookmarkStore
 
     var body: some View {
         ContentView()
@@ -201,6 +205,7 @@ private struct AppRootView: View {
             .onReceive(NotificationCenter.default.publisher(for: .myTermPasswordDidChange)) { _ in
                 requestSync(.localChange)
             }
+            .onChange(of: bookmarkStore.changeRevision) { _, _ in requestSync(.localChange) }
             .onChange(of: snippetStore.changeRevision) { _, _ in requestSync(.localChange) }
             .onChange(of: connectionAuditStore.synchronizationRevision) { _, _ in
                 requestSync(.localChange)
@@ -278,7 +283,11 @@ private struct AppRootView: View {
         }, prepare: {
             if let uid = cloudAccountStore.state.signedInAccount?.uid, let project = cloudAccountStore.firebaseProjectID {
                 snippetStore.bindScope(SnippetSyncPolicy.scope(project: project, uid: uid))
-            } else { snippetStore.bindScope(nil) }
+                bookmarkStore.bindScope(BookmarkSyncPolicy.scope(project: project, uid: uid))
+            } else {
+                snippetStore.bindScope(nil)
+                bookmarkStore.bindScope(nil, preserveOffline: cloudAccountStore.canRetrySessionRestore)
+            }
             vaultSetupStore.prepareForAutomaticSync(account: cloudAccountStore.state.signedInAccount)
             automaticMetadataSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
             automaticConnectionAuditSyncStore.updateAvailability(settings: syncSettingsStore, accountStore: cloudAccountStore)
@@ -295,6 +304,8 @@ private struct AppRootView: View {
                 settings: syncSettingsStore, accountStore: cloudAccountStore, vaultSetupStore: vaultSetupStore)
         }, snippets: { _ in
             await AutomaticSnippetSync.synchronize(store: snippetStore, settings: syncSettingsStore, accountStore: cloudAccountStore, vault: vaultSetupStore)
+        }, bookmarks: { _ in
+            await AutomaticBookmarkSync.synchronize(store: bookmarkStore, settings: syncSettingsStore, accountStore: cloudAccountStore, vault: vaultSetupStore)
         })
     }
 }
