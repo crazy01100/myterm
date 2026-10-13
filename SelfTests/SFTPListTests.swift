@@ -95,6 +95,15 @@ import Foundation
         check(local.searchQuery.isEmpty && local.sorting.column == .size, "navigation clears query preserves sort")
         local.goBack(); try await waitForLocal(local)
         check(local.visibleEntries.count == 5, "back navigation returns unfiltered list")
+        local.searchQuery = "file"; local.selectAllVisible()
+        let oldLocalURL = local.currentURL, oldLocalSelection = local.selectedURLs
+        local.navigate(to: root.appendingPathComponent("missing-directory")); try await waitForLocal(local)
+        check(local.errorMessage != nil && local.currentURL == oldLocalURL && local.searchQuery == "file" && local.selectedURLs == oldLocalSelection,
+              "failed local bookmark navigation preserves path filter and selection")
+        local.goForward(); try await waitForLocal(local)
+        check(local.currentURL.path == folder.path, "failed navigation preserves forward history")
+        local.goBack(); try await waitForLocal(local)
+        check(local.currentURL.path == root.path, "back history survives failed navigation")
         let restored = LocalFileBrowserStore(sortPreferences: defaults)
         check(restored.sorting == local.sorting && restored.searchQuery.isEmpty, "recreated local store restores only sort")
         try await waitForLocal(restored)
@@ -113,6 +122,14 @@ import Foundation
         check(remote.searchQuery == "FILE" && remote.visibleEntries.count == 2, "remote refresh retains filter")
         remote.searchQuery = ""; remote.showHiddenFiles = true; remote.selectAllVisible(); remote.showHiddenFiles = false
         check(!remote.selectedEntries.contains(where: \.isHidden), "remote hidden selection pruned")
+        remote.searchQuery = "file"; remote.selectAllVisible()
+        let oldRemotePath = remote.currentPath, oldRemoteSelection = remote.selectedNames
+        remote.navigateToBookmark(path: "/missing-directory", hostID: host.id, hostname: host.hostname, port: host.port, username: host.username)
+        try await waitForRemote(remote)
+        check(remote.errorMessage != nil && remote.currentPath == oldRemotePath && remote.searchQuery == "file" && remote.selectedNames == oldRemoteSelection,
+              "failed remote bookmark preserves old view")
+        remote.navigateToBookmark(path: "/folder", hostID: UUID(), hostname: host.hostname, port: host.port, username: host.username)
+        check(remote.currentPath == oldRemotePath, "wrong host bookmark cannot navigate")
         remote.searchQuery = "folder"
         remote.open(remote.visibleEntries.first { $0.isDirectory }!); try await waitForRemote(remote)
         check(remote.searchQuery.isEmpty && remote.sorting.column == .modified, "remote navigation clears query keeps sort")

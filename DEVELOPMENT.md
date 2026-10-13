@@ -340,3 +340,9 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 30 分鐘重試的期限／時鐘案例在 `SelfTests/GoogleSignInRetryTests.swift`；`CloudAccountRecoveryTests.swift` 使用真實 store 驗證免重新 OAuth、單一請求、取消、切換、過期與保存界線；`GoogleFirebaseAuthResponseTests.swift` 以合成傳輸驗證同一 Google 憑證重試 Firebase，不需等待真實半小時或操作正式帳號。完整入口仍為 `scripts/run-isolated-tests.py`。
 
 發布工具會依Package.resolved核對Sparkle artifact版本，優先使用.build-app，只有版本符合才退回.build。若找不到相符工具，重新執行目前版本建置，不刪改簽章基線或跳過驗證。
+
+### SFTP 書籤驗證
+
+`zsh scripts/run-sftp-bookmark-tests.sh`使用暫存Store、合成key／帳號、記憶體後端及URLProtocol驗證書籤加密與合併；已接入完整隔離入口。`run-sftp-list-tests.sh`包含失敗導覽原地保留／主機身分核對，`run-sync-reliability-tests.sh`檢查第四分項失敗時不更新整輪成功時間。Rules新增集合採本機demo Emulator測試，不以正式資料做刪除／衝突測試。
+
+完成本機驗證後先核對、部署並讀回向後相容的Rules，再交同一Dev版本給兩台Mac驗收同步。外部Mac可在穩定可寫位置執行，無須完整checkout；核對development身分。App內新增／管理／跳轉、工作中停用、帳號切換、離線及衝突仍需實際操作驗收。

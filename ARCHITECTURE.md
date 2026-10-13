@@ -238,3 +238,11 @@ Firebase 開發工具原生支援修補後的 `stream-json` 串流介面，安�
 帳號加入代管服務的限制由 Firebase 控制；成功登入後的 UID 所有權、同步排程、加密及資料格式保持不變。`GoogleFirebaseAuthClient` 在建立 session 前先辨識 HTTP 錯誤與 HTTP 成功內的登入錯誤、帳號確認及額外驗證；只有明確的 `ADMIN_ONLY_OPERATION` 才顯示未開放提示。UID、兩種 token 及有效期限完整有效時才傳回 session；未知或缺欄位回應顯示固定錯誤，不顯示原始回應或 Google 錯誤描述。Google 錯誤只保留白名單代碼。Loopback 頁面只確認收到 Google 回應，最終登入結果以 App 為準。`build-app.sh` 可從本機 `Config/Local/CloudSyncServiceNotice.txt` 將非機密說明加入 Bundle；`CloudAccountStore`／`SettingsView` 只負責呈現，不把文字當成權限判斷。無本機說明的自架建置不繼承開發者代管提示。
 
 `GoogleSignInRetryCredential` 保存 process-local 的已驗證 Google token、原始 callback URI、client／project 綁定及固定到期界線。`CloudAccountStore` 只在明確未開放時保留它，使用單一請求與帳號世代防止重複／過時登入；`GoogleFirebaseAuthClient.prepareSignIn` 完成 Google 驗證，`completeSignIn` 可重試 Firebase 交換。 Google 驗證成功但服務明確拒絕新帳號加入時，已驗證的 Google ID token 只在目前程序記憶體保留最多 30 分鐘，且受 Google 到期時間及 30 秒安全餘裕限制。單調時鐘避免系統時間回撥延長期限；重試不續期，不保存至磁碟／Keychain 或診斷紀錄。到期、登入成功、登出、取消、切換帳號及程序結束時釋放；原 Firebase 登入狀態的保存方式不變。
+
+### SFTP 書籤與同步
+
+SFTPDirectoryBookmark 定義不同的本機／遠端型別，遠端包含主機UUID、位址、port及有效SSH帳號，不複製憑證設定。App共用SFTPBookmarkStore以通道隔離的 `SFTP Bookmarks/bookmarks.json` 原子保存本機清單及分帳號遠端內容／基準／revision／tombstone。書籤選單位於路徑列；管理頁以原內容與帳號scope核對修改，防止過期表單覆寫。
+
+SFTPBookmarkSyncCodec只接受遠端型別，以既有Vault Master Key及專案／UID綁定的AEAD封套上傳到獨立 `users/{uid}/sftpBookmarks/{UUID}`；FirestoreBookmarkBackend使用精確updateTime CAS，SFTPBookmarkSyncEngine三方合併並持久保存刪除，語意重複依完整目標／路徑合併。衝突候選本機保留，確認後才送出；刪除對修改不復活原UUID。AutomaticBookmarkSync是AutomaticSyncCoordinator的第四個分項，沿既有開關、排程及整輪成功判斷，不另建計時器。
+
+本機目錄讀取成功後才提交路徑／歷史；遠端书籤跳轉核對當前主機與帳號、忙碌狀態，目錄要求另有識別，回覆須同時符合連線generation。跳轉讀取時傳輸佇列等待，編輯回存仍綁定原路徑。同步不觸發目錄存取、SFTP連線或變更畫面位置。

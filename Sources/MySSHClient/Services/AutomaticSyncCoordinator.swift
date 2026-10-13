@@ -57,6 +57,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     @Published private(set) var message = "尚未同步"
     @Published private(set) var lastSuccessfulSyncAt: Date?
     @Published private(set) var metadataOutcome: SyncAttemptOutcome?
+    @Published private(set) var bookmarksOutcome: SyncAttemptOutcome?
     @Published private(set) var snippetsOutcome: SyncAttemptOutcome?
     @Published private(set) var logsOutcome: SyncAttemptOutcome?
     @Published private(set) var isRunning = false
@@ -66,6 +67,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     private var prepare: (() -> Void)?
     private var metadata: Operation?
     private var logs: Operation?
+    private var bookmarks: Operation = { _ in .disabled }
     private var snippets: Operation = { _ in .disabled }
     private var task: Task<Void, Never>?
     private var periodicTask: Task<Void, Never>?
@@ -98,7 +100,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
     func configure(context: @escaping () -> Context, prepare: @escaping () -> Void,
                    canRecoverSession: @escaping () -> Bool = { false },
                    recoverSession: @escaping () async -> Void = {},
-                   metadata: @escaping Operation, logs: @escaping Operation, snippets: @escaping Operation = { _ in .disabled }) {
+                   metadata: @escaping Operation, logs: @escaping Operation, snippets: @escaping Operation = { _ in .disabled }, bookmarks: @escaping Operation = { _ in .disabled }) {
         guard self.context == nil else { return }
         self.context = context
         self.prepare = prepare
@@ -107,6 +109,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
         self.metadata = metadata
         self.logs = logs
         self.snippets = snippets
+        self.bookmarks = bookmarks
         journal.record(.lifecycle, .preparing)
     }
 
@@ -139,6 +142,7 @@ final class AutomaticSyncCoordinator: ObservableObject {
             metadataOutcome = nil
             logsOutcome = nil
             snippetsOutcome = nil
+            bookmarksOutcome = nil
             deferAutomaticChanges = false
         }
         isEnabled = snapshot.enabled
@@ -184,11 +188,12 @@ final class AutomaticSyncCoordinator: ObservableObject {
                 return
             }
             self.journal.record(.coordinator, .started, trigger: trigger, roundID: roundID)
-            let (metadataResult, logsResult, snippetsResult) = await SyncRoundContext.$id.withValue(roundID) {
+            let (metadataResult, logsResult, snippetsResult, bookmarksResult) = await SyncRoundContext.$id.withValue(roundID) {
                 async let first = metadata(trigger)
                 async let second = logs(trigger)
                 async let third = self.snippets(trigger)
-                return await (first, second, third)
+                async let fourth = self.bookmarks(trigger)
+                return await (first, second, third, fourth)
             }
             // Wait for all operations to release their resources even after cancellation.
             guard !Task.isCancelled, thisGeneration == self.generation, context() == snapshot else {
@@ -198,7 +203,8 @@ final class AutomaticSyncCoordinator: ObservableObject {
             self.metadataOutcome = metadataResult
             self.logsOutcome = logsResult
             self.snippetsOutcome = snippetsResult
-            let allCompleted = metadataResult == .completed && logsResult == .completed && (snippetsResult == .completed || snippetsResult == .disabled)
+            self.bookmarksOutcome = bookmarksResult
+            let allCompleted = metadataResult == .completed && logsResult == .completed && (snippetsResult == .completed || snippetsResult == .disabled) && (bookmarksResult == .completed || bookmarksResult == .disabled)
             self.deferAutomaticChanges = !allCompleted
             if allCompleted {
                 let date = self.now()
