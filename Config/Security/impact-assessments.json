@@ -128,10 +128,10 @@
       ],
       "status": "needs-review",
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
-      "reason": "Firebase CLI15.32.1的Firestore controller、Rules watcher及chokidar／braces展開程式與前次評估相同。Node24深層expand可發生堆疊錯誤；專案入口仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。",
+      "reason": "Firebase CLI15.33.0的Firestore controller、Rules watcher及chokidar／braces展開程式與前次評估相同。Node24深層expand可發生堆疊錯誤；專案入口仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。 本次升級僅核對來源與相依指紋相同，未重新執行實際可利用性測試，判定維持needs-review。",
       "inputs": {
-        "package-lock.json": "e1b9347409ec3696c95bd067dd54639ce078166f9a38e229f3896e44a38d232d",
-        "package.json": "c9d38ab5f7a2f83b645c57d3edc4e48843ee20161aa71fb3ba4f4caba04d3819",
+        "package-lock.json": "d0dfb2bfd5181bf02d2f5c6f9d61e80190db90e89039b7527a01484efbfaa82c",
+        "package.json": "d53625bb9dacf6f472f60e1bce9e91739917fac17e988c78cb336cb9a647b150",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
         "scripts/firebase-tools.sh": "ae9380bd7f5a7a3ba58fe4f5ae56a885d8d8d572bc459363f20886d099a0af61",
@@ -142,12 +142,12 @@
         "node_modules/firebase-tools/lib/config.js": "e0ffd09b3d65c180bd3e0a342801c8a014b211c47893566a6a64874b38480c04"
       },
       "evidence": [
-        "https://github.com/firebase/firebase-tools/blob/v15.32.1/src/emulator/firestoreEmulator.ts",
+        "https://github.com/firebase/firebase-tools/blob/v15.33.0/src/emulator/firestoreEmulator.ts",
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "1fa05f7927ad94fcd745a20bf9313a3a2802af17",
-      "reviewedAt": "2026-10-07T12:16:20.443161+00:00"
+      "reviewedCommit": "cf84d72012ea456ce5c6ba43515aaba1058b3529",
+      "reviewedAt": "2026-10-13T12:01:52.542197+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",

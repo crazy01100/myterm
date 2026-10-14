@@ -36,9 +36,9 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 ## Requirements
 
 - A Firebase/Google Cloud project you can administer.
-- Node.js 24 LTS; [package.json](package.json) defines the version requirement.
+- Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13); [package.json](package.json) defines the version requirement.
 - The repository's pinned Firebase CLI, used through `scripts/firebase-tools.sh` after running `./scripts/project-node.sh --npm install` at the repository root.
-- Development tools also require Node.js 24 LTS and Python 3.12 or later. Install pinned dependencies with `./scripts/project-node.sh --npm ci`, then verify with `./scripts/project-node.sh --npm run test:development-tools`. The CLI natively supports the patched stream packages, so no compatibility patch is required. A read-only check verifies installed versions against the lockfile before launch.
+- Development tools also require Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13) and Python 3.12 or later. Install pinned dependencies with `./scripts/project-node.sh --npm ci`, then verify with `./scripts/project-node.sh --npm run test:development-tools`. The CLI natively supports the patched stream packages, so no compatibility patch is required. A read-only check verifies installed versions against the lockfile before launch.
 - macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools to build MyTerm.
 
 The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.
