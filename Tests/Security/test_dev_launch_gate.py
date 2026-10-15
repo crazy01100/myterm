@@ -62,6 +62,7 @@ class DevLaunchGateTests(unittest.TestCase):
             # Only temporary test copies replace OS probes. Production has no bypass option.
             helper = (ROOT / 'scripts/check-dev-launch.py').read_text().replace("'/bin/ps'", repr(str(fake_ps)))
             (scripts / 'check-dev-launch.py').write_text(helper)
+            (scripts / 'security-conditional-risk.py').write_text('# Stub: this suite only exercises the production-process gate.\n')
             executable(scripts / 'project-python.sh', '#!/bin/sh\nexec "' + sys.executable + '" "$@"\n')
             executable(scripts / 'build-app.sh', '#!/bin/sh\ntouch "' + str(root / 'built') + '"\n')
             executable(scripts / 'verify-app.sh', '#!/bin/sh\nexit 0\n')

@@ -234,3 +234,7 @@ Rules reject cross-UID access, extra plaintext fields, ciphertext over 128 KiB, 
 The independent `users/{uid}/sftpBookmarks/{UUID}` collection uses the existing account and end-to-end Master Key, without another sync switch or new indexes. Before using the newer app, self-hosted operators must update Firestore Rules through this guide’s existing deployment workflow; do not add broadly permissive rules. Host, password, Logs and command-snippet collections remain compatible.
 
 On two Macs using the same account, validate remote bookmark creation, renaming, deletion, offline restart and conflict review. Local directory bookmarks must remain device-local. Missing Rules leave bookmark sync incomplete while preserving local content; other data is not cleared. Successful sync has no popup, and the existing Sync Now action includes this worker.
+
+## Case review before tool use
+
+Before loading the CLI, the Firebase wrapper checks the Issue #43 conditional decision (initially pending, not active). Once enabled, each invocation reads official metadata and reviewed tools/configuration again and stops on mismatch; follow [security maintenance](SECURITY_MAINTENANCE.en.md) for reassessment. New Rules contents or tool versions require baseline review. Cloud writes still require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.

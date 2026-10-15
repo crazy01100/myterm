@@ -246,3 +246,7 @@ SFTPDirectoryBookmark 定義不同的本機／遠端型別，遠端包含主機U
 SFTPBookmarkSyncCodec只接受遠端型別，以既有Vault Master Key及專案／UID綁定的AEAD封套上傳到獨立 `users/{uid}/sftpBookmarks/{UUID}`；FirestoreBookmarkBackend使用精確updateTime CAS，SFTPBookmarkSyncEngine三方合併並持久保存刪除，語意重複依完整目標／路徑合併。衝突候選本機保留，確認後才送出；刪除對修改不復活原UUID。AutomaticBookmarkSync是AutomaticSyncCoordinator的第四個分項，沿既有開關、排程及整輪成功判斷，不另建計時器。
 
 本機目錄讀取成功後才提交路徑／歷史；遠端书籤跳轉核對當前主機與帳號、忙碌狀態，目錄要求另有識別，回覆須同時符合連線generation。跳轉讀取時傳輸佇列等待，編輯回存仍綁定原路徑。同步不觸發目錄存取、SFTP連線或變更畫面位置。
+
+## 開發工具風險決策
+
+Issue #43具有獨立、初始pending的條件式接受紀錄。共用評估器在作業入口唯讀查詢官方資訊及受審來源指紋，不執行有漏洞套件；啟用後仍保留告警，每次條件符合才套用接受，不代表修補或沙箱。其他漏洞例外期限不變，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。既有App及資料不變；重部署workflow先以不執行生命週期腳本方式安裝固定工具並複核，再下載已簽署資產。

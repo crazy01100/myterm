@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "decision": {
+    "id": "GHSA-vfj7-8cjw-p6xm",
+    "component": "braces",
+    "version": "3.0.3",
+    "scope": "development",
+    "state": "pending",
+    "revision": 1,
+    "acceptedBy": "project maintainer",
+    "acceptedAt": "2026-10-15T14:14:51.018570+00:00",
+    "issue": "https://github.com/crazy01100/myterm/issues/43",
+    "allowedUses": [
+      "Reviewed local Firebase account/project queries through the project wrapper",
+      "Explicit-project Firestore Rules/indexes deployment through the project wrapper",
+      "Loopback demo-myterm Auth/Firestore emulators with reviewed repository inputs"
+    ],
+    "residualRisk": "Package remains unpatched and actual exploitability remains unverified. Local owners can bypass the wrapper; checks do not prevent all post-check changes. Not included in the MyTerm App.",
+    "baseline": {
+      "reviewedCommit": "0dac6d276a95dd4411270038dd8275a5b6c4b97a",
+      "files": {
+        "Package.resolved": "958e30dd064399b01b176a1bfca93b1306545cdab00e36c6bb6f2cf4d5393ffd",
+        "Package.swift": "0ff003bdceeff45fd52b3a603ddca9628418e67511e4a593bab2a9d1ef1dd09e",
+        "Tests/FirebaseRules/firestore.rules.test.mjs": "caf9ac83a057748ed8a40fb59684b41fb967809f73dd5242619023663db370e2",
+        "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
+        "firestore.indexes.json": "6742255415c36daf631b52f233039190af819205cc41fa58d07dd7d9e180c2b9",
+        "firestore.rules": "40d7138afb628d0c608e4ab8fb657730db8258476208a37f13b9ae54777ccdc7",
+        "node_modules/braces/lib/expand.js": "41ccc196ebfa7b7781a634e721eb744e4e7bcb54cba427a7e3d6806a1b9e58f7",
+        "node_modules/braces/package.json": "56f08b888a4f30dc7cf8a7dbb36ffe92b737912ba36abe9d069d32167c957ac7",
+        "node_modules/chokidar/index.js": "18ce2effe87d6379aa1d3756e5694c57c72cf97804056d688499a2bffcec66fd",
+        "node_modules/chokidar/package.json": "24c7edf8c0127eb1bd257da726983a9aed172a0a1cd5454607a040021675f50e",
+        "node_modules/firebase-tools/lib/config.js": "e0ffd09b3d65c180bd3e0a342801c8a014b211c47893566a6a64874b38480c04",
+        "node_modules/firebase-tools/lib/emulator/controller.js": "86a3411bbb68a6e6c031e79f921b545045618471fd373e16cf6621f67011a946",
+        "node_modules/firebase-tools/lib/emulator/firestoreEmulator.js": "242e2d443427838ea720e6b646c3f57e522b6789271837d79c05108a94cde00e",
+        "node_modules/firebase-tools/package.json": "bdc585a7498b51fe16e7af54882c3113208f23a775e9d1a37f9dc3b51539a8c8",
+        "package-lock.json": "d0dfb2bfd5181bf02d2f5c6f9d61e80190db90e89039b7527a01484efbfaa82c",
+        "package.json": "d53625bb9dacf6f472f60e1bce9e91739917fac17e988c78cb336cb9a647b150",
+        "scripts/build-app.sh": "b4aab91a60cd9fa034fa3a13bf7ec86b9c005b1f958a33282bcd8440335018d7",
+        "scripts/dependency-inventory.py": "e076a096d2bdad8cd817cfe301ee409fbdadec72c77960a0bd294cab1c65dfa1",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "scripts/package-app.sh": "a491fa6b583d320c2de32d995bf250be4c170f1ec2c6f7362fb5c927a64e5992",
+        "scripts/prepare-release-build.sh": "93cba6c102e105a053c1f0f3ca2ebf76bc0b702314ec5955c952667c772f9952",
+        "scripts/run-dev-app.sh": "7c7211f86b4417b95ebbfad70b4987aae65e215d09b628b401cd4be0fab534d8",
+        "scripts/security-audit.py": "4cb7eef57ab31374ccdf87c21d18c3760b0cb7a830400dbab9b7c2bf9a19be21",
+        "scripts/security-conditional-risk.py": "6258a643cdd23c1c457c4198a2e36faa7c6532c4c0d1314692c0d96065428613",
+        "scripts/verify-firebase-tools.cjs": "4290f65162825fa862e6062338213ffb94f0822408fc3a2b873944af5d0d690a",
+        "scripts/security-test-profile.py": "1bae1dac834dbbf0e656b30992984bedddb2f0c5a942275e8dd7dd79b6803d7a",
+        "scripts/run-policy-tests.py": "15c685f2d234d689fd6ce9f23325e353d9015b3c895c03d283592afabb96b019",
+        ".github/workflows/security-gate.yml": "ee5bbe9a1a9910186eefaf8496e9cf93f3fa8d7e89ada4386de1351c096fa81a",
+        ".github/workflows/security-checks.yml": "75901b602e92a43eed413b8673fcef9db94b2e7b635e848b92317bf0a0ae13b3",
+        ".github/workflows/deploy-update-site.yml": "5f489adc3d2cfd2083082429d4d7713f067e42a20ee5faeea3444de3131a8515"
+      },
+      "dependencyGraph": {
+        "nodes": {
+          "": "0.0.0",
+          "node_modules/braces": "3.0.3",
+          "node_modules/chokidar": "3.6.0",
+          "node_modules/firebase-tools": "15.33.0"
+        },
+        "edges": [
+          [
+            "",
+            "node_modules/firebase-tools"
+          ],
+          [
+            "node_modules/chokidar",
+            "node_modules/braces"
+          ],
+          [
+            "node_modules/firebase-tools",
+            "node_modules/chokidar"
+          ]
+        ]
+      },
+      "advisoryDigest": "fff4461c4c7fd6f8ef2af8ac3143b254d7cfded1ed9cb0c871bbd5b72f53c77d",
+      "registryDigest": "f51f86c4b2b46d7dcd5adbd6ab97140ee732d5e7ca18f1853657d9119f7cd6bd",
+      "upstreamChokidarRange": "^3.6.0"
+    },
+    "reassessmentTriggers": [
+      "Any identity, dependency graph, reviewed source or use change",
+      "New official braces version, patch, advisory change or Firebase watcher replacement",
+      "Untrusted input, public listener or App runtime inclusion",
+      "Missing official metadata, unexpected behavior or maintainer revocation"
+    ],
+    "previousTimeLimitedDecision": {
+      "acceptedAt": "2026-10-05T11:51:42+08:00",
+      "expiresAt": "2026-10-19T23:59:59+08:00",
+      "configuration": "Config/Security/exceptions.json"
+    },
+    "acceptanceRecord": "Maintainer explicitly accepted this baseline and policy-only CI routing on 2026-10-15; activate after reviewed baseline is merged."
+  }
+}

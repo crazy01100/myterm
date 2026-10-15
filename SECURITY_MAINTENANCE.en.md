@@ -25,7 +25,7 @@ npm dependencies are checked against both `npm audit` and the GitHub Advisory Da
 
 Requires an authenticated `gh` with appropriate read access, Python 3.12 or newer, Node.js 24 LTS, and npm. Checks query public advisories and necessary source/version metadata, without reading local cloud configuration or signing private keys. `Config/Security/native-components.json` binds the libsodium version to the swift-sodium revision; review the actual XCFramework header after changing the wrapper. Vendor fixes announced by commit are checked using commit ancestry rather than an invented version.
 
-New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
+New moderate/high risks, uncertain applicability and query failures block release preflight. Old vulnerabilities in the latest released app remain visible in monitoring but do not prevent building a follow-up from fixed sources. `Config/Security/exceptions.json` may contain explicit exceptions matching the advisory, component, version and development scope, with an accepting person, reason and expiry. Ordinary time-limited exceptions last at most 31 days and automatically stop suppressing the gate when expired. Development dependencies are not excluded as a category.
 
 
 `security-audit.py --monitor` fails only on scan operational errors and retains every finding in its report. Release preflight without `--monitor` continues to block unresolved risks. Independent distributors must configure their own tracking. Newly discovered unpublished vulnerabilities, private test evidence, and user data must not be automatically published; see [Security design](SECURITY.en.md) for reporting.
@@ -47,7 +47,7 @@ The governing principle is to **avoid all EoL/EoS dependencies**. During mainten
 
 Prefer supported versions or upstream fixes. Retention requires explicit maintainer confirmation and a record of the package/version/scope, date, rationale, decision, and reassessment triggers. One decision does not exempt all unmaintained components. Check those conditions whenever the component is encountered again; unchanged facts may refer to the existing decision without repeated deadline extensions or added replacement tests. Reassess when the version, use, exposure, vulnerabilities, or upstream options change.
 
-Support-status retention decisions are separate from vulnerability exceptions and may use reassessment triggers instead of recurring deadline extensions. They do not change scanning, Issue tracking, or release gates, and do not accept future vulnerabilities. Exceptions for matched vulnerabilities still follow the existing acceptance rules and maximum 31-day duration in `Config/Security/exceptions.json`.
+Support-status retention decisions are separate from vulnerability exceptions and may use reassessment triggers instead of recurring deadline extensions. They do not change scanning, Issue tracking, or release gates, and do not accept future vulnerabilities. Ordinary time-limited vulnerability exceptions retain the existing acceptance rules and 31-day maximum in `Config/Security/exceptions.json`. Only Issue #43 has the separate, initially pending conditional decision below; retaining json-ptr does not accept that vulnerability.
 
 Project Python tools require at least 3.12, CI uses 3.12, and administration scripts select their interpreter through `scripts/project-python.sh`. The minimum-version guard does not track future EoL dates; lifecycle review remains part of each maintenance pass. See the [tool environment](DEVELOPMENT.en.md#python-runtime).
 
@@ -93,6 +93,27 @@ Firebase CLI is pinned to `15.33.0`, which natively supports patched `stream-jso
 
 The `basic-ftp` fix overrides only get-uri's dependency and retains the 6.x default protection against separate transfer hosts. Regression tests cover real loopback FTP downloads, MDTM/directory fallbacks, missing files, cancellation, and bounded malformed listings. get-uri's existing rejection of Unix LIST entries without reliable timestamps remains unchanged. This dependency is separate from MyTerm SFTP.
 
+
+### Issue #43 conditional risk acceptance
+
+`Config/Security/conditional-acceptances.json` is a separate decision restricted to GHSA-vfj7-8cjw-p6xm, braces 3.0.3, and development scope. Other exceptions retain their 31-day maximum. The initial `pending` state does not accept risk or replace the existing expiry. Only explicit maintainer acceptance of the initial baseline and activation enable this decision. `revoked` withdraws it; `retired` is reserved for separately approved remediation closure, with normal scanning gates still enforced.
+
+Once active, recheck at the beginning of every development/maintenance task (including resumption on another day), before Firebase tool use, RC/release preparation, Draft publication, and existing-release redeployment. The shared `scripts/security-conditional-risk.py` reads official advisory/npm metadata, the complete incoming dependency graph, reviewed sources and configuration. It never consumes cached acceptance receipts or executes npm packages. Allowed uses remain the wrapper's account/project queries, explicit-project Firestore Rules/index deployment, and loopback demo emulators. Inputs must be reviewed by the maintainer; fingerprints do not establish trust or prove non-exploitability.
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --purpose development --task TASK_ID \
+  --output docs/TASK_ID-conditional-review.json
+```
+
+Purposes are development, firebase, ci, monitor, release, publish, and redeploy. Purpose/task identify the operation; they are not exemptions. Use `--inspect-pending` for read-only draft inspection: even a matching draft returns nonzero so it cannot be mistaken for authorization. Normal pending entry points retain existing behavior and report that activation is pending; they do not extend the old exception.
+
+Changes to reviewed dependencies, sources or Rules contents; an official fix or new braces version; changed advisory content; or a changed upstream Firebase watcher dependency require reassessment. Unrelated UI edits do not require renewed acceptance of the same risk, but each new task still checks. Query failures are not safety findings. A failed or revoked active decision never falls back to the old time-limited exception. Other advisories, versions and scopes remain outside this acceptance. Unchanged conditions do not require repeated maintainer approval.
+
+A PR's baseline and scope must match its reviewed base or have a current maintainer APPROVED GitHub review on that exact PR head. Stale, dismissed or changes-requested reviews do not qualify; forks cannot inherit this decision. Propose the initial baseline as pending before review; activation still requires maintainer approval and normal PR review. These are entry-point and governance controls, not a sandbox against a local owner editing code, bypassing the wrapper, or all post-check changes. The baseline binds relevant build/packaging configuration and sources, not merely the devDependency label.
+
+Keep the high-severity finding, version match and unverified actual impact visible, alongside acceptance type, scope, current condition status and latest review time. Acceptance never removes a finding or closes the Issue. Even disappearance from a data source requires manual confirmation of the official fix, installed upgrade and verification before closing #43. Preserve the previous expiry and risk-transition history; review-time-only updates add no comment. `test_conditional_risk.py` uses policy fixtures without npm execution or vulnerability inputs. The full development-tool suite contains separate vulnerability regression cases and must not be run, or triggered by pushing, in a task that prohibits such testing.
+
 ## Public-key release verification
 
 Initial setup:
@@ -136,3 +157,7 @@ Keep pre-release tests, signature checks and maintenance evidence in plans, CI a
 Before public visibility, verify main's required security check, force-push/deletion restrictions, and fork PR workflow approval policy. The update-site workflow's repository/main guard and production binding are source-level conditions; administrators must still configure environment reviewers, deployable refs, and environment Secrets, then validate an actual deployment approval. Do not treat the environment binding as credential isolation while repository-level Cloudflare Secrets remain. See [Development](DEVELOPMENT.en.md#production-deployment-protection) for setup and plan checks before returning to private.
 
 New release-note links carry equal `length` and `sparkle:length` attributes for older updaters and Sparkle 2.10. The verifier retains support for signed historical metadata, but rejects any incorrect or conflicting length. Signing tools must come from a SwiftPM artifact whose framework version matches `Package.resolved`; stale caches cannot select tools from another version.
+
+### CI verification profiles
+
+scripts/security-test-profile.py computes actual Git changes from PR base/head, push before/after, or the current monitoring commit and its first parent. Only additions/modifications to explicitly listed policy, formatting, entry, documentation and mock-test files use run-policy-tests.py. Lockfiles, Rules, App files, deletions, renames, unknown files and empty diffs retain full verification; failed comparisons stop execution. Environment overrides and PR labels cannot choose the profile. Existing vulnerability cases remain unchanged and the policy-only report explicitly says they were not executed. Advisory scanning and CodeQL remain required. Changes to the selector require maintainer review; this is not a boundary against writers modifying the code.
