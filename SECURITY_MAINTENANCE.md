@@ -47,7 +47,7 @@ Issue 內文只保留公告連結、元件、受影響範圍、目前版本、�
 
 優先採用受支援版本或上游修正。若評估後建議保留，須由維護者明確確認並記錄套件／版本／範圍、日期、理由、處理決策及重新評估條件，不把單一決策擴大為所有停止維護元件的豁免。每次再次發現時核對這些條件；事實未變可引用既有決策，不因同一警告反覆要求展延或追加替換測試。版本、用途、暴露範圍、漏洞或上游方案改變時，重新評估。
 
-支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；一般已命中漏洞的期限例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天規則；僅 Issue #43 另有下述待啟用的條件式個案，json-ptr 的保留決策不構成該漏洞接受。
+支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；一般已命中漏洞的期限例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天規則；僅 Issue #43 另有下述已啟用的條件式個案，json-ptr 的保留決策不構成該漏洞接受。
 
 Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/project-python.sh` 選擇執行環境。版本門檻本身不會追蹤未來EoL；每次相依維護仍須查核生命週期。詳見 [工具環境](DEVELOPMENT.md#python-runtime)。
 
@@ -89,14 +89,14 @@ Firebase CLI 固定為 `15.33.0`，上游已原生支援安全版本的 `stream-
 
 `braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
 
-[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在緩解後保持開啟。須等官方修補版發布、專案實際升級且相容性測試與完整掃描通過，才可標示修復並結案；屆時重評是否移除臨時限制。影響評估不豁免 gate，任何漏洞例外須另獲明確接受。 維護者已明確接受僅此 development 範圍的 `braces 3.0.3` 告警，期限至 2026-10-19 23:59:59（UTC+8），精確紀錄位於 `Config/Security/exceptions.json`。期滿不自動展延，期間持續顯示於監測且不關閉 Issue。
+[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在緩解後保持開啟。須等官方修補版發布、專案實際升級且相容性測試與完整掃描通過，才可標示修復並結案；屆時重評是否移除臨時限制。影響評估不豁免 gate，任何漏洞例外須另獲明確接受。 維護者已明確接受僅此 development 範圍的 `braces 3.0.3` 告警，期限至 2026-10-19 23:59:59（UTC+8），精確紀錄位於 `Config/Security/exceptions.json`。原期限未展延，紀錄保留供歷史追溯；目前由下述已批准的條件式個案接替本案資格判斷，持續顯示於監測且不關閉 Issue。
 
 `basic-ftp` 的修補版本只覆寫 get-uri 的消費端；保留 6.x 預設拒絕不同傳輸主機的保護。回歸涵蓋實際 loopback FTP 下載、MDTM／目錄後備查詢、缺檔、中止及有界惡意清單；get-uri 原有拒絕缺少可靠時間戳的 Unix LIST 行為維持。此相依不屬於 MyTerm SFTP。
 
 
 ### Issue #43 條件式風險接受
 
-`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。初始狀態為 `pending`，尚不接受風險或取代原期限；只有維護者明確接受初始基準、改為 `active` 後，才依每次複核結果套用。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
+`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。維護者已於2026-10-15明確接受本案精確基準，受審基準合併後狀態改為 `active`，依每次複核結果套用。未獲接受的新提案使用 `pending`，不視為接受或自動取代原期限。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
 
 啟用後，每項開發／維護任務開始（跨日恢復亦同）、Firebase工具使用、RC／正式版準備、Draft公開與既有版本重部署前，都要重新核對官方公告／npm版本、完整引入圖、受審來源與設定內容。本機與CI共用 `scripts/security-conditional-risk.py`；不讀取舊的通過紀錄，每次重新查詢，不執行npm套件。用途限既有wrapper允許的帳號／專案查詢、明確專案Rules／indexes部署及loopback demo Emulator。使用的輸入須經維護者審查；來源摘要不能證明輸入可信或不可利用。
 
