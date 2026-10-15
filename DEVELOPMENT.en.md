@@ -127,6 +127,10 @@ Development tools require Node.js 24 LTS (24.12.0 or later within 24.x for Fireb
 
 The upstream repository also provides `scripts/invite-sync-user.sh --help` for maintainer administration. It requires local Google Cloud CLI and administrator authorization; it is not an app build dependency or an expansion of the existing Firebase CLI wrapper. Run its isolated safety suite with `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`; normal Python test discovery under `Tests/Security` also runs it. Administrator settings, credentials, and private operating notes stay out of Git. This tool is not part of the independent source export.
 
+### Case review before development and publication
+
+At the start of each development/maintenance task, on resumption on another day, and before every release, perform the Issue #43 conditional review described in [security maintenance](SECURITY_MAINTENANCE.en.md), recording the current task and commit. Dev, Firebase, release preparation and redeployment entries also invoke the shared check. Before publishing a Draft, perform a fresh `--purpose publish` review against its candidate source; do not reuse development reports or treat pending as acceptance. Stop dependent operations on failure and report the change without extending or downgrading the decision. App behavior/versioning and production/Dev isolation remain unchanged.
+
 ### Document languages and synchronized maintenance
 
 GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.
@@ -346,3 +350,5 @@ Release helpers verify the Sparkle artifact version against Package.resolved, pr
 `zsh scripts/run-sftp-bookmark-tests.sh` uses temporary stores, synthetic keys/accounts, a memory backend and URLProtocol to validate encryption and merging; the complete isolated runner includes it. `run-sftp-list-tests.sh` covers failed navigation and host identity checks, and `run-sync-reliability-tests.sh` verifies that a failing fourth worker cannot advance whole-round success. New Rules are tested with a local demo emulator, never production data for deletion/conflict fixtures.
 
 After local validation, compare, deploy and read back backward-compatible Rules, then test the same Dev version on two Macs. An external Mac may use a stable writable directory without a checkout; verify its development identity. App creation, management, navigation, busy-state handling, account switching, offline use and conflicts still require interactive acceptance.
+
+For policy-only changes, CI selects `scripts/run-policy-tests.py` using the exact Git diff evaluated by `scripts/security-test-profile.py`. It does not execute npm vulnerability cases and reports that exclusion. Dependency, Rules and App changes retain full verification. See [security maintenance](SECURITY_MAINTENANCE.en.md).

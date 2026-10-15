@@ -127,6 +127,11 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             operations.append((issue,{'title':title,'body':body,'state':'open'},comment))
         else:
             f=old['finding']
+            if (f.get('id')=='GHSA-vfj7-8cjw-p6xm' and f.get('component')=='braces'
+                    and f.get('scope')=='development' and issue['state']=='open'):
+                actions.append({'action':'needs-review','number':issue['number'],
+                                'reason':'Issue 43 requires explicit verified remediation before closure'})
+                continue
             if enrich:f=enrich({**f,'observedAt':old['checkedAt']})
             historical={'schemaVersion':1,'scanStatus':'complete','errors':[],'releaseTag':report['releaseTag'],
                         'checkedAt':report['checkedAt'],'findings':[f]}

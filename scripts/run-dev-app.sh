@@ -107,6 +107,7 @@ check_production_stopped() {
 
 # Fail before stopping the old Dev or building. Never terminate production.
 check_production_stopped
+"$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-conditional-risk.py" --purpose development --task "dev-$version-$build_number"
 
 typeset -a running_pids
 foreign_processes="$(foreign_myterm_processes)"

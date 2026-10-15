@@ -238,6 +238,12 @@ def run(include_release=None):
     report['findings']=[unique[k] for k in sorted(unique)]
     try:apply_exceptions(report,json.loads((ROOT/'Config/Security/exceptions.json').read_text()))
     except (ValueError,KeyError,OSError) as error:report['errors'].append('Invalid exception configuration: '+str(error))
+    try:
+        spec=importlib.util.spec_from_file_location('conditional_risk',ROOT/'scripts/security-conditional-risk.py')
+        policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
+        policy.review_report(report, ROOT)
+    except (ValueError,KeyError,TypeError,OSError) as error:
+        report['errors'].append('Invalid conditional risk policy: '+str(error))
     report['scanStatus']='failed' if report['errors'] else 'complete'
     return report
 
@@ -263,7 +269,7 @@ def apply_exceptions(report, document, now=None):
 
 
 def blocking(report):
-    return bool(report['errors'] or any(f['scope']!='released-app' and not f.get('acceptedRisk',False) and (f['status']=='needs-review' or f['severity'] not in ['low','info']) for f in report['findings']))
+    return bool(report['errors'] or report.get('conditionalBlocks') or any(f['scope']!='released-app' and not f.get('acceptedRisk',False) and (f['status']=='needs-review' or f['severity'] not in ['low','info']) for f in report['findings']))
 
 
 def write_summary(report, monitor):

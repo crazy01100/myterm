@@ -127,6 +127,10 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 
 原庫另有維護者管理入口 `scripts/invite-sync-user.sh --help`，需本機 Google Cloud CLI 與管理員授權，不是 App 建置依賴或既有 Firebase CLI wrapper 的擴權。隔離安全測試為 `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`，也由既有 `Tests/Security` Python 測試探索納入。管理設定、憑證與私人操作紀錄不進 Git；此工具未納入獨立來源輸出。
 
+### 開發與發布前個案複核
+
+每項開發／維護開始、跨日恢復及每次發布前，依[安全維護指南](SECURITY_MAINTENANCE.md)執行Issue #43條件複核並記錄當次task／commit。Dev、Firebase、發布準備及重部署入口亦會呼叫共用檢查。Draft公開前另以 `--purpose publish` 對候選來源重新複核；不得沿用開發階段報告或把pending當成接受。失效時先停止相關操作並提出差異，不自動展延或降級判定。此流程不改App功能／版號或正式與Dev隔離。
+
 ### 文件語系與同步維護
 
 GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [README.en.md](README.en.md)。專案自有的文件配對如下；現行指南在頁首提供雙向語言切換，英文文件優先連到英文版，中文文件優先連到中文版。
@@ -346,3 +350,5 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 `zsh scripts/run-sftp-bookmark-tests.sh`使用暫存Store、合成key／帳號、記憶體後端及URLProtocol驗證書籤加密與合併；已接入完整隔離入口。`run-sftp-list-tests.sh`包含失敗導覽原地保留／主機身分核對，`run-sync-reliability-tests.sh`檢查第四分項失敗時不更新整輪成功時間。Rules新增集合採本機demo Emulator測試，不以正式資料做刪除／衝突測試。
 
 完成本機驗證後先核對、部署並讀回向後相容的Rules，再交同一Dev版本給兩台Mac驗收同步。外部Mac可在穩定可寫位置執行，無須完整checkout；核對development身分。App內新增／管理／跳轉、工作中停用、帳號切換、離線及衝突仍需實際操作驗收。
+
+純政策變更的CI使用 `scripts/security-test-profile.py` 依精確Git差異選擇 `scripts/run-policy-tests.py`，不執行npm漏洞案例，並明列未執行範圍；相依／Rules／App等變更仍走原完整驗證。詳見[安全維護指南](SECURITY_MAINTENANCE.md)。

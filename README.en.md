@@ -166,6 +166,8 @@ Dependency alerts, isolated tests and public-key deployment verification: [Secur
 
 Source tests and administration scripts require Python 3.12 or newer through the project launcher; see [Python tool environment](DEVELOPMENT.en.md#python-runtime). App users do not need Python.
 
+Development entry points also follow the narrowly scoped Issue #43 conditional review in [security maintenance](SECURITY_MAINTENANCE.en.md). Once activated, this requires installed pinned development tools and a fresh online metadata check before development/release operations; it does not affect users running the existing App. A pending decision is not an acceptance.
+
 ## SFTP directory bookmarks
 
 Use the bookmark icon at the right of either path bar to save the current directory and return to it from a name-only menu. Full paths remain visible in Manage Bookmarks and removal confirmations. Manage Bookmarks renames or removes shortcuts, never files. Removing a bookmark or discarding a candidate requires confirmation showing its name and path. Missing directories, unmounted disks and access failures preserve the previous view. Successful navigation clears that pane’s search while retaining its sort order. Bookmark navigation pauses during transfers or save-back.

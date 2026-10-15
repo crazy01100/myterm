@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 FORMAT = '<!-- myterm-security-format:2 -->\n'
 SNAPSHOT = re.compile(r'<!-- myterm-security-snapshot:([A-Za-z0-9_=+-]+) -->')
 FIELDS = ['id','component','scope','version','severity','status','url','fixedVersion','patches',
-          'releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired','dependencyPaths','impact']
+          'conditionalAcceptance','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired','dependencyPaths','impact']
 SCOPES = {'current-source':'目前來源','released-app':'已發布 App','development':'開發工具','verification-tool':'驗簽工具','github-actions':'GitHub Actions'}
 LEVELS = {'critical':'嚴重風險','high':'高風險','moderate':'中風險','medium':'中風險','low':'低風險','unknown':'待確認'}
 IMPACTS = {'affected':'已確認受影響','not-affected':'已確認不受影響','needs-review':'待確認'}
@@ -35,6 +35,8 @@ def display_time(value):
 
 def public_finding(f):
     result={k:f[k] for k in FIELDS if k in f}
+    if 'conditionalAcceptance' in result:
+        result['conditionalAcceptance']={k:v for k,v in result['conditionalAcceptance'].items() if k in ['decisionId','revision','state','status','checkedAt','scope','accepted','reason']}
     if 'impact' in result:
         result['impact']={k:v for k,v in result['impact'].items() if k in ['status','reason','usage','reviewedCommit','reviewedAt','evidence','historical']}
     return result
@@ -42,7 +44,10 @@ def public_finding(f):
 
 def semantic(f):
     # Enrichment/formatting changes do not manufacture a risk-state transition.
-    return {k:f[k] for k in ['id','component','scope','version','severity','status','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired'] if k in f}
+    result = {k:f[k] for k in ['id','component','scope','version','severity','status','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired'] if k in f}
+    if 'conditionalAcceptance' in f:
+        result['conditionalAcceptance']={k:v for k,v in f['conditionalAcceptance'].items() if k in ['decisionId','revision','state','status','accepted']}
+    return result
 
 
 def render(key,f,report,resolved=False,resolutions=None):
@@ -72,6 +77,13 @@ def render(key,f,report,resolved=False,resolutions=None):
         rows.append(('評估基準'+('（歷史）' if impact.get('historical') else ''),impact['reviewedCommit'][:12]))
         rows.append(('評估時間',display_time(impact['reviewedAt'])))
     if f.get('releaseTag'): rows.append(('正式版本',f['releaseTag']))
+    conditional=f.get('conditionalAcceptance')
+    if conditional:
+        rows.extend([('處理方式','限定用途、條件式風險接受' if conditional.get('state')=='active' else '條件式決策：'+str(conditional.get('state'))),
+                     ('適用範圍',conditional.get('scope','待確認')),
+                     ('條件檢查','符合' if conditional.get('accepted') else '待確認／不符合'),
+                     ('最近複核',display_time(conditional['checkedAt']))])
+        if not conditional.get('accepted'): rows.append(('複核結果',conditional.get('reason','待確認')))
     if f.get('exceptionExpiresAt'):
         rows.extend([('暫時例外','有效' if f.get('acceptedRisk') else '已到期或無效'),('例外期限',display_time(f['exceptionExpiresAt']))])
     rows.append(('掃描時間',display_time(report['checkedAt'])))

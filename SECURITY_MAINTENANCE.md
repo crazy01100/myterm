@@ -25,7 +25,7 @@ npm 相依同時比對 `npm audit` 與 GitHub Advisory Database：以鎖檔內�
 
 需要已登入且有適當讀取權限的 `gh`、Python 3.12 以上、Node.js 24 LTS及 npm。只查詢公開公告與必要來源／版本資訊，不讀取本機雲端設定或簽章私鑰。`Config/Security/native-components.json` 將 libsodium 版本綁定到 swift-sodium revision；更新 wrapper 後必須重新核對實際 XCFramework header。上游修復版以 commit 公告的 Vendor，使用 commit ancestry 判斷，不捏造版本號。
 
-新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
+新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。一般期限例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
 
 
 `security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。未加 `--monitor` 的發布前檢查維持未處理風險阻擋。自行發行者應建立自己的風險追蹤流程。未知新漏洞、私人測試證據與使用者資料不屬於自動公開範圍，通報方式見 [安全設計](SECURITY.md)。
@@ -47,7 +47,7 @@ Issue 內文只保留公告連結、元件、受影響範圍、目前版本、�
 
 優先採用受支援版本或上游修正。若評估後建議保留，須由維護者明確確認並記錄套件／版本／範圍、日期、理由、處理決策及重新評估條件，不把單一決策擴大為所有停止維護元件的豁免。每次再次發現時核對這些條件；事實未變可引用既有決策，不因同一警告反覆要求展延或追加替換測試。版本、用途、暴露範圍、漏洞或上游方案改變時，重新評估。
 
-支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；已命中漏洞的例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天期限規則。
+支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；一般已命中漏洞的期限例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天規則；僅 Issue #43 另有下述待啟用的條件式個案，json-ptr 的保留決策不構成該漏洞接受。
 
 Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/project-python.sh` 選擇執行環境。版本門檻本身不會追蹤未來EoL；每次相依維護仍須查核生命週期。詳見 [工具環境](DEVELOPMENT.md#python-runtime)。
 
@@ -93,6 +93,27 @@ Firebase CLI 固定為 `15.33.0`，上游已原生支援安全版本的 `stream-
 
 `basic-ftp` 的修補版本只覆寫 get-uri 的消費端；保留 6.x 預設拒絕不同傳輸主機的保護。回歸涵蓋實際 loopback FTP 下載、MDTM／目錄後備查詢、缺檔、中止及有界惡意清單；get-uri 原有拒絕缺少可靠時間戳的 Unix LIST 行為維持。此相依不屬於 MyTerm SFTP。
 
+
+### Issue #43 條件式風險接受
+
+`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。初始狀態為 `pending`，尚不接受風險或取代原期限；只有維護者明確接受初始基準、改為 `active` 後，才依每次複核結果套用。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
+
+啟用後，每項開發／維護任務開始（跨日恢復亦同）、Firebase工具使用、RC／正式版準備、Draft公開與既有版本重部署前，都要重新核對官方公告／npm版本、完整引入圖、受審來源與設定內容。本機與CI共用 `scripts/security-conditional-risk.py`；不讀取舊的通過紀錄，每次重新查詢，不執行npm套件。用途限既有wrapper允許的帳號／專案查詢、明確專案Rules／indexes部署及loopback demo Emulator。使用的輸入須經維護者審查；來源摘要不能證明輸入可信或不可利用。
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --purpose development --task TASK_ID \
+  --output docs/TASK_ID-conditional-review.json
+```
+
+`--purpose` 可為 development、firebase、ci、monitor、release、publish 或 redeploy；它與task僅記錄用途，不提供豁免。待核准基準的唯讀檢查加 `--inspect-pending`，即使條件符合仍回傳非零，避免誤認為已授權。一般pending入口保留原流程，並顯示尚未啟用；原期限例外不因此延長。
+
+任一受審相依／來源／Rules內容改變、官方修補版或新的braces版本出現、公告內容或Firebase上游watcher相依改變，均停止沿用並要求重評；一般UI修改仍須在新任務核對，但不改相同風險的批准基準。查詢失敗不能視為安全。已啟用決策失效或撤銷後不退回舊期限例外；其他公告、版本及scope不受本案接受保護。條件未變時不要求維護者重複批准。
+
+PR的基準及用途須與受審base相同，或GitHub上有維護者對當前精確PR head的有效APPROVED review；過期、撤銷或要求修改的review不接受。fork不得繼承此維護者決策。初始新基準先以pending提案審閱，啟用仍須維護者批准及正常PR流程。這些是入口及審閱規範，不是能防止本機擁有者改寫程式、繞過wrapper或所有檢查後變動的沙箱。基準綁定相關建置／封裝設定及來源，不只依賴devDependency標籤。
+
+告警持續保留高風險、版本命中與實際影響待確認，另顯示處理方式、範圍、當次條件結果及最近複核。接受不移除finding或自動關閉Issue；#43即使從資料源消失也須先人工確認官方修補、實際升級及驗證，不因遺漏就結案。原期限與風險轉移歷史保留，單純更新複核時間不新增留言。政策模擬測試為 `test_conditional_risk.py`，不執行npm套件或漏洞輸入；完整開發工具測試另有漏洞回歸案例，不可在禁止漏洞測試的任務中逕行執行或推送觸發。
+
 ## 公開金鑰發布驗證
 
 首次使用：
@@ -136,3 +157,7 @@ Firebase CLI 固定為 `15.33.0`，上游已原生支援安全版本的 `stream-
 公開前應核對 main 的必要安全檢查、禁止 force push／刪除與 fork PR 執行核准政策。更新站 workflow 的原庫／main 限制與 production 綁定只是來源層的條件；管理員仍須設定環境 reviewer、可部署 refs 及環境 Secrets，完成實際部署核准驗收。repository 層級的 Cloudflare Secrets 未移除前，不把 environment 綁定當成憑證隔離。詳細步驟與改回私人前的方案檢查見 [開發指南](DEVELOPMENT.md#正式部署保護)。
 
 新產生的更新說明連結同時包含相同的 `length` 與 `sparkle:length`，相容舊版及 Sparkle 2.10 的讀取方式。驗證器保留已簽署歷史格式的驗證，但任一長度不符或兩欄矛盾即拒絕。簽署工具只能取自 framework 版本符合 `Package.resolved` 的 SwiftPM artifact，不能因舊快取存在而混用工具。
+
+### CI 驗證分流
+
+scripts/security-test-profile.py依PR的base/head、push的before/after或監測目前commit的第一父提交計算實際Git差異。只有明列政策／格式／入口／文件／mock測試的新增或修改，才執行run-policy-tests.py的純政策套件；套件鎖檔、Rules、App、刪除、改名、未知檔案或空差異仍選原完整驗證，比較失敗直接停止。環境旗標／PR標籤不能指定分流。完整漏洞案例保留不變，純政策報告明列未執行；一般相依公告掃描及CodeQL不省略。變更分流本身亦須維護者審查，不能視作防止有寫入權限者改程式的邊界。

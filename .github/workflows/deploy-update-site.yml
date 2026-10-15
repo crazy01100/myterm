@@ -40,6 +40,11 @@ jobs:
         with:
           node-version: '24.21.0'
 
+      - name: Review development dependency acceptance before redeployment
+        run: |
+          ./scripts/project-node.sh --npm ci --ignore-scripts --no-fund
+          ./scripts/project-python.sh scripts/security-conditional-risk.py --purpose redeploy --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+
       - name: Download signed release assets
         shell: bash
         run: |

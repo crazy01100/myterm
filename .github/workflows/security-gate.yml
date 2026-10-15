@@ -20,21 +20,32 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24.21.0'
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
+      - name: Select verification profile from exact source changes
+        id: verification
+        run: ./scripts/project-python.sh scripts/security-test-profile.py
       - name: Install pinned verification tools
         run: ./scripts/setup-security-tools.sh
       - name: Verify pinned Firebase development tools
         run: |
           npm ci --ignore-scripts --no-fund
+          ./scripts/project-python.sh scripts/security-conditional-risk.py --purpose ci --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           ./scripts/project-node.sh scripts/verify-firebase-tools.cjs
-          npm run test:development-tools
-      - name: Verify release validation and audit policies
+      - name: Verify development tool consumers (full profile only)
+        if: steps.verification.outputs.profile == 'full'
+        run: ./scripts/project-node.sh --npm run test:development-tools
+      - name: Verify release validation and audit policies (full profile only)
+        if: steps.verification.outputs.profile == 'full'
         run: ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
+      - name: Verify policy and entry fixtures (no vulnerability tests)
+        if: steps.verification.outputs.profile == 'policy-only'
+        run: ./scripts/security-python.sh scripts/run-policy-tests.py
       - name: Enforce source security policy
         run: python3 scripts/security-audit.py --output build/security-report.json
       - name: Save policy evidence
