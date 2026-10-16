@@ -5,7 +5,7 @@
     "component": "braces",
     "version": "3.0.3",
     "scope": "development",
-    "state": "pending",
+    "state": "active",
     "revision": 1,
     "acceptedBy": "project maintainer",
     "acceptedAt": "2026-10-15T14:14:51.018570+00:00",
@@ -88,6 +88,6 @@
       "expiresAt": "2026-10-19T23:59:59+08:00",
       "configuration": "Config/Security/exceptions.json"
     },
-    "acceptanceRecord": "Maintainer explicitly accepted this baseline and policy-only CI routing on 2026-10-15; activate after reviewed baseline is merged."
+    "acceptanceRecord": "Maintainer explicitly accepted this baseline and policy-only CI routing on 2026-10-15. Activated after reviewed baseline merged in PR #56 (93bd6852eb4e9c96b001b04d7b01140c33f74cd3)."
   }
 }

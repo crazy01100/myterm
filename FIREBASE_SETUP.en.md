@@ -237,4 +237,4 @@ On two Macs using the same account, validate remote bookmark creation, renaming,
 
 ## Case review before tool use
 
-Before loading the CLI, the Firebase wrapper checks the Issue #43 conditional decision (initially pending, not active). Once enabled, each invocation reads official metadata and reviewed tools/configuration again and stops on mismatch; follow [security maintenance](SECURITY_MAINTENANCE.en.md) for reassessment. New Rules contents or tool versions require baseline review. Cloud writes still require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.
+Before loading the CLI, the Firebase wrapper checks the Issue #43 conditional decision (maintainer-approved and active). Once enabled, each invocation reads official metadata and reviewed tools/configuration again and stops on mismatch; follow [security maintenance](SECURITY_MAINTENANCE.en.md) for reassessment. New Rules contents or tool versions require baseline review. Cloud writes still require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.

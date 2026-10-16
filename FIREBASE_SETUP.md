@@ -237,4 +237,4 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 
 ## 工具使用前的個案複核
 
-Firebase wrapper 在載入CLI前檢查Issue #43的條件式決策（初始pending尚未啟用）。啟用後，每次重新讀取官方資訊、受審工具及設定；不符時停止，沿[安全維護指南](SECURITY_MAINTENANCE.md)重評。新Rules內容或工具版本須先審查基準；雲端寫入仍須另有明確授權。MyTerm既有Google登入及同步不依賴本機CLI。
+Firebase wrapper 在載入CLI前檢查Issue #43的條件式決策（已獲維護者接受並啟用）。啟用後，每次重新讀取官方資訊、受審工具及設定；不符時停止，沿[安全維護指南](SECURITY_MAINTENANCE.md)重評。新Rules內容或工具版本須先審查基準；雲端寫入仍須另有明確授權。MyTerm既有Google登入及同步不依賴本機CLI。
