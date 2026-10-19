@@ -466,6 +466,8 @@ private struct RemoteSFTPFilePane: View {
                 }
             }
             Spacer()
+            SSHProtectionBadge(value: store.negotiatedProtection,
+                               required: store.connectedHost.map { SSHPostQuantumPolicy.requiredAlgorithms(for: $0) != nil } ?? false)
             SFTPFileSearchField(query: $store.searchQuery)
             if store.isFileOperationInProgress { ProgressView().controlSize(.small) }
             Menu {

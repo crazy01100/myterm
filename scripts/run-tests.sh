@@ -29,6 +29,7 @@ test_dir="$(mktemp -d /private/tmp/MySSHClient-tests.XXXXXX)"
 trap 'rm -rf "$test_dir"' EXIT
 
 cd "$project_dir"
+zsh "$project_dir/scripts/run-ssh-pq-tests.sh"
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/HostProfile.swift \
     Sources/MySSHClient/Models/QuickSSHRequest.swift \
@@ -64,7 +65,7 @@ swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Services/HostPlatformProbe.swift \
     Sources/MySSHClient/Services/HostConnectionRecency.swift \
     Sources/MySSHClient/Services/SSHConnectionDiagnostics.swift \
-    Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
+    Sources/MySSHClient/Models/SSHPostQuantumPolicy.swift Sources/MySSHClient/Services/SSHCapabilityService.swift Sources/MySSHClient/Models/SSHNegotiatedProtection.swift Sources/MySSHClient/Services/SSHDiagnosticStream.swift Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
     Sources/MySSHClient/Services/SFTPProtocol.swift \
     Sources/MySSHClient/Services/SFTPClient.swift \
     Sources/MySSHClient/Views/TerminalWorkspaceSplitDelegate.swift \

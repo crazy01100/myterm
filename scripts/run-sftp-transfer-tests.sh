@@ -7,7 +7,7 @@ trap 'rm -rf "$test_dir"' EXIT
 cd "$project_dir"
 swiftc -swift-version 5 -parse-as-library -D MYTERM_SELF_TESTS \
  Sources/MySSHClient/Models/HostProfile.swift Sources/MySSHClient/Models/SFTPModels.swift \
- Sources/MySSHClient/Services/AppPaths.swift Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
+ Sources/MySSHClient/Services/AppPaths.swift Sources/MySSHClient/Models/SSHPostQuantumPolicy.swift Sources/MySSHClient/Services/SSHCapabilityService.swift Sources/MySSHClient/Models/SSHNegotiatedProtection.swift Sources/MySSHClient/Services/SSHDiagnosticStream.swift Sources/MySSHClient/Services/SSHConnectionDiagnostics.swift Sources/MySSHClient/Services/SSHArgumentBuilder.swift \
  Sources/MySSHClient/Services/KeychainStore.swift Sources/MySSHClient/Services/LocalSecretVaultStore.swift \
  Sources/MySSHClient/Services/SFTPProtocol.swift Sources/MySSHClient/Services/SFTPClient.swift \
  Sources/MySSHClient/Services/SFTPEditCacheCleanup.swift Sources/MySSHClient/Services/SFTPEditFileMonitor.swift Sources/MySSHClient/Services/SFTPExternalEditStore.swift \

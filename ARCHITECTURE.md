@@ -70,7 +70,11 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 ### 連線與終端機
 
 - SSH 使用 macOS 內建 `/usr/bin/ssh`，MyTerm 建立 pseudo-terminal 並顯示互動畫面。
-- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新已儲存主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、短期診斷檔、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。成功後會釋放連線診斷記憶體，異常退出遺留的短期記錄則於下次 App 啟動清理。
+- `SSHPostQuantumPolicy` 從既有自訂 KEX 精確清單推導要求，不新增主機或同步欄位。啟用時拒絕覆蓋衝突設定；停用只清空 PQ KEX，保留其他有效演算法。
+- `SSHCapabilityService` 在私有序列佇列執行固定本機 `ssh -V`／`-Q kex`，每個程序限 2 秒、合計輸出 32 KiB；快取依執行檔身分失效，亦可手動重新查詢。`SSHArgumentBuilder` 將能力交集寫入單一 KEX 參數並停用通道共用。SSH 建立／重連非同步等待；SFTP 與平台探測使用背景入口。一般模式不要求能力查詢。
+- `SSHProtectionParser` 從專用 OpenSSH 管道解析 KEX、雙向 NEWKEYS、登入成功及重新交換；`SSHNegotiatedProtection` 按連線保存狀態，`SSHProtectionBadge` 提供窗格與 SFTP 各自的資訊。來源失效、超量、共用通道或未知演算法不標示 PQ 成功。
+- 連線進度僅在雙向 NEWKEYS 完成後顯示安全通道已建立；提早出現的登入身分準備訊息仍屬協商階段。要求 PQ 的連線若無相容 KEX，SSH 與 SFTP 明確說明已依設定停止連線，保留既有錯誤分類。重連保留端點／帳號、採最新已儲存的演算法規則；驗證成功後清除重連進行提示，保留其他登入通知。
+- 互動式 SSH Session 以 OpenSSH 的私人 verbose log 建立結構化連線階段；`SSHConnectionLogParser` 支援 CR／LF／CRLF，verbose debug 只供內部分類，使用者可見與可複製內容僅保留 allow-list 的繁體中文摘要及非 debug OpenSSH 原始錯誤，並遮蔽本機路徑／代理程式資訊。只有 OpenSSH 回報實際驗證成功後，Session 才進入 connected，並更新已儲存主機在本機的最近成功連線時間；失敗、取消或只建立分頁不更新。已停止的 SSH 可由失敗畫面按鈕或作用中終端的 Enter 走同一個原位重試入口：保留 `TerminalSession`、SwiftTerm view、工作區與正常 scrollback，重建 PTY、OpenSSH 參數、診斷管道、parser 及密碼提示狀態；遠端 shell 狀態不在本機恢復範圍。SSHDiagnosticStream以0600 FIFO和有界記憶體取代原始日誌檔；成功後釋放驗證緩衝但持續觀測rekey，結束或失敗清理FIFO，異常退出殘留於下次App啟動清理。
 - `SessionManager` 保有 Terminal process 生命週期，並把 Session 組成可拖曳重排的工作區；它同時管理執行期同名編號及背景輸出未讀集合。`LoginAwareTerminalView` 只在真正送入 renderer 的程序輸出邊界回報活動；目前可見 Workspace 的輸出不建立提示，背景 Workspace 只在第一次由已讀轉為未讀時發布狀態，避免大量輸出反覆重繪 toolbar，切回後清除該 Workspace 的 child 狀態。它也把每次 process attempt 的開始、OpenSSH 真實驗證成功、失敗、取消與結束事件送入 `ConnectionAuditStore`。同一窗格原位重連會沿用 pane session ID，但 `ConnectionAuditIndex` 只把進行中的同 ID attempt 視為冪等；上一筆已最終化後的重連會建立新的 record UUID，因此 Logs 與加密同步仍是逐次連線紀錄。把分頁拖入內容區時，一般優先以前一個工作區為合併目標，第一個分頁則使用後一個工作區，可合併為左右或上下雙窗格。把窗格標題列拖回頂部分頁列則可拆開；合併、拆分、切換方向與調整比例都不重建底層 process，也不新增稽核紀錄。
 - `TerminalWorkspaceSplitContainer` 為每個執行中 Session 保留穩定的 pane host；原生 `NSSplitView` 在拖曳期間直接更新 child view frame，完成拖曳後才把最終比例同步回 `TerminalWorkspaceCollection`，避免每個滑鼠事件都發布整個 SwiftUI 工作區狀態。分隔線的 25%～75% 邊界由 split view 強持有的獨立 `NSSplitViewDelegate` proxy 提供；delegate 不指回 split view 自身，避免 AppKit 在驗證側邊欄選單 action 時形成 responder 查詢遞迴。
 - `TerminalContainerView`／`LoginAwareTerminalView` 保留 SwiftTerm 的原生 terminal buffer 與 TUI mouse reporting：遠端滑鼠模式關閉時，一般及持續輸出不會清除使用者已建立的本機 selection；Vim、tmux 等程式啟用 mouse reporting 後，普通點擊、拖曳與滾輪仍完整送往遠端，Shift＋拖曳沿用 SwiftTerm 的本機選取。終端內容區使用 I-beam，滾動期間暫時隱藏系統指標以避免箭頭／I-beam 交替；文字 caret 以 steady 形狀顯示，遠端同一批 hide/show 只套用最後可見狀態。預設 Vim 未啟用 mouse reporting 時的 alternate-buffer 滾輪 fallback 以 display link 逐幀傳送方向步驟並合併中間回應；實體鍵盤、一般 shell scrollback 與已啟用的遠端滑鼠回報不經此路徑。
@@ -127,7 +131,7 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 | Master Key、登入狀態 | 與主機密碼共用本機保管庫及單一 Keychain 根金鑰 | 不直接同步 |
 | 私鑰檔案與路徑 | 使用者指定的本機位置／本機設定 | 不同步 |
 | MyTerm `known_hosts` | 各台 Mac 的 Application Support | 不同步 |
-| SSH 連線暫存診斷 | Application Support 內權限 `0600` 的短期檔案；成功、失敗或關閉後刪除，異常退出殘留於下次啟動清理 | 不同步 |
+| SSH／SFTP 即時診斷 | Application Support 內權限 `0600` 的連線專用FIFO及有界記憶體；失敗或關閉後移除管道，異常退出殘留於下次啟動清理 | 不同步 |
 | 匯出檔 | 使用者選擇的位置 | 不由 MyTerm 自動同步 |
 
 正式 App 顯示名稱已改為 MyTerm，但正式 Bundle ID、Keychain service 與既有 Application Support 識別字保留舊名稱，以維持早期版本升級後的資料與密碼關聯。`MyTerm Dev.app` 則使用獨立 Bundle ID、Application Support 目錄與本機保管庫 Keychain service，開發驗收不得讀寫正式資料或繼承正式 Google session；若舊版 Dev 曾誤匯入正式 session，新版會在隔離通道內執行一次清理，之後 Dev 自行建立的登入可正常保留。

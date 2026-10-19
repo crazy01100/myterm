@@ -4,10 +4,12 @@ enum SSHArgumentBuilder {
     static func arguments(
         for host: HostProfile,
         usernameOverride: String? = nil,
-        connectionLogURL: URL? = nil
+        connectionLogURL: URL? = nil,
+        capabilities: SSHClientCapabilities? = nil
     ) throws -> [String] {
         let host = try host.validated()
         let username = try HostProfile.validatedUsername(usernameOverride ?? host.username)
+        let requiredKEX = try SSHPostQuantumPolicy.runtimeAlgorithms(for: host, capabilities: capabilities)
         try AppPaths.prepare()
 
         // UserKnownHostsFile is a whitespace-separated list parsed by OpenSSH,
@@ -56,8 +58,12 @@ enum SSHArgumentBuilder {
         case .custom:
             appendOption("HostKeyAlgorithms", value: host.customAlgorithms.hostKeyAlgorithms, to: &arguments)
             appendOption("PubkeyAcceptedAlgorithms", value: host.customAlgorithms.publicKeyAlgorithms, to: &arguments)
-            appendOption("KexAlgorithms", value: host.customAlgorithms.keyExchangeAlgorithms, to: &arguments)
+            appendOption("KexAlgorithms", value: requiredKEX?.joined(separator: ",") ?? host.customAlgorithms.keyExchangeAlgorithms, to: &arguments)
             appendOption("Ciphers", value: host.customAlgorithms.ciphers, to: &arguments)
+        }
+
+        if requiredKEX != nil {
+            arguments += ["-o", "ControlPath=none", "-o", "ControlMaster=no", "-o", "ControlPersist=no"]
         }
 
         if let connectionLogURL {
