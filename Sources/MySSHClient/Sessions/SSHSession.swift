@@ -22,6 +22,8 @@ final class TerminalSession: ObservableObject, Identifiable {
     let execName: String
     let currentDirectory: String?
     private(set) var connectionLogURL: URL?
+    private var diagnosticStream: SSHDiagnosticStream?
+    @Published private(set) var negotiatedProtection = SSHNegotiatedProtection()
     @Published var state: SessionState = .connecting
     @Published var terminalTitle: String
     @Published private(set) var terminalFontSize = TerminalFontSizePolicy.defaultSize
@@ -108,7 +110,11 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     var connectionFailureSuggestion: String? {
-        connectionFailure?.recoverySuggestion
+        connectionFailure?.recoverySuggestion(requiringPostQuantum: arguments.contains("ControlPath=none"))
+    }
+
+    var connectionFailureTitle: String? {
+        connectionFailure?.title(requiringPostQuantum: arguments.contains("ControlPath=none"))
     }
 
     var displayedConnectionTechnicalLines: [String] {
@@ -127,8 +133,8 @@ final class TerminalSession: ObservableObject, Identifiable {
             "端點：\(detailDescription)"
         ]
         lines.append(contentsOf: connectionEvents.map { "[\($0.phase.title)] \($0.message)" })
-        if let connectionFailure {
-            lines.append("建議：\(connectionFailure.recoverySuggestion)")
+        if let suggestion = connectionFailureSuggestion {
+            lines.append("建議：\(suggestion)")
         }
         lines.append("")
         lines.append("OpenSSH 原始記錄（已排除詳細除錯資訊，並遮蔽本機路徑與機密資訊）：")
@@ -152,6 +158,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         host: HostProfile,
         username: String,
         origin: SSHSessionOrigin = .savedHost,
+        capabilities: SSHClientCapabilities? = nil,
         onConnectionAttemptStarted: (() -> Void)? = nil,
         onConnectionSucceeded: (() -> Void)? = nil,
         onConnectionCompleted: ((Int32?) -> Void)? = nil,
@@ -159,18 +166,21 @@ final class TerminalSession: ObservableObject, Identifiable {
         onConnectionCancelled: (() -> Void)? = nil
     ) throws {
         let username = try HostProfile.validatedUsername(username)
+        _ = try SSHPostQuantumPolicy.runtimeAlgorithms(for: host, capabilities: capabilities)
         let canBindPassword = origin.permitsPasswordBinding(host: host, username: username)
         let hasSavedPassword = canBindPassword && KeychainStore.containsPassword(for: host.id)
-        let connectionLogURL = try AppPaths.createSSHConnectionLog()
+        let diagnosticStream = try SSHDiagnosticStream()
+        let connectionLogURL = diagnosticStream.url
         let arguments: [String]
         do {
             arguments = try SSHArgumentBuilder.arguments(
                 for: host,
                 usernameOverride: username,
-                connectionLogURL: connectionLogURL
+                connectionLogURL: connectionLogURL,
+                capabilities: capabilities
             )
         } catch {
-            AppPaths.removeSSHConnectionLog(connectionLogURL)
+            diagnosticStream.close()
             throw error
         }
         self.id = id
@@ -181,10 +191,12 @@ final class TerminalSession: ObservableObject, Identifiable {
         serialConfiguration = nil
         executable = "/usr/bin/ssh"
         self.arguments = arguments
+        connectionLogParser = SSHConnectionLogParser(requiresPostQuantum: arguments.contains("ControlPath=none"))
         environment = SSHEnvironmentBuilder.environment()
         execName = "ssh"
         currentDirectory = nil
         self.connectionLogURL = connectionLogURL
+        self.diagnosticStream = diagnosticStream
         self.hasSavedPassword = hasSavedPassword
         self.onConnectionAttemptStarted = onConnectionAttemptStarted
         self.onConnectionSucceeded = onConnectionSucceeded
@@ -253,7 +265,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
     }
 
-    func reconnectInPlace() throws {
+    func reconnectInPlace(capabilities: SSHClientCapabilities? = nil, policyHost: HostProfile? = nil) throws {
         guard kind == .ssh,
               let host,
               let username,
@@ -267,25 +279,36 @@ final class TerminalSession: ObservableObject, Identifiable {
         }
 
         authenticationDidEnd(preserveVerifiedPasswordOffer: false)
-        let nextLogURL = try AppPaths.createSSHConnectionLog()
+        let nextStream = try SSHDiagnosticStream()
+        let nextLogURL = nextStream.url
         let nextArguments: [String]
         do {
+            var connectionHost = host
+            if let policyHost, policyHost.id == host.id {
+                // Reconnect retains this session's endpoint/account, but adopts
+                // the current saved host's algorithm policy for the new attempt.
+                connectionHost.algorithmMode = policyHost.algorithmMode
+                connectionHost.customAlgorithms = policyHost.customAlgorithms
+            }
             nextArguments = try SSHArgumentBuilder.arguments(
-                for: host,
+                for: connectionHost,
                 usernameOverride: username,
-                connectionLogURL: nextLogURL
+                connectionLogURL: nextLogURL,
+                capabilities: capabilities
             )
         } catch {
-            AppPaths.removeSSHConnectionLog(nextLogURL)
+            nextStream.close()
             throw error
         }
 
         connectionLogURL = nextLogURL
+        diagnosticStream = nextStream
+        negotiatedProtection = SSHNegotiatedProtection()
         inputAttemptID = UUID()
         arguments = nextArguments
         connectionLogOffset = 0
         authenticationLogDetector = SSHAuthenticationLogDetector()
-        connectionLogParser = SSHConnectionLogParser()
+        connectionLogParser = SSHConnectionLogParser(requiresPostQuantum: arguments.contains("ControlPath=none"))
         loginPasswordPromptPolicy = LoginPasswordPromptPolicy()
         didStartConnectionAudit = false
         didAuthenticate = false
@@ -497,7 +520,9 @@ final class TerminalSession: ObservableObject, Identifiable {
             passwordSaveOfferKind = nil
         }
         isPasswordPromptActive = false
-        AppPaths.removeSSHConnectionLog(connectionLogURL)
+        diagnosticStream?.close()
+        diagnosticStream = nil
+        negotiatedProtection = SSHNegotiatedProtection(status: .closed)
     }
 
     private func startConnectionMonitor() {
@@ -515,27 +540,24 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     private func inspectConnectionLog() {
-        guard let connectionLogURL,
-              let data = try? Data(contentsOf: connectionLogURL) else { return }
-        if data.count < connectionLogOffset {
-            connectionLogOffset = 0
-            authenticationLogDetector = SSHAuthenticationLogDetector()
-            connectionLogParser = SSHConnectionLogParser()
-        }
-        guard data.count > connectionLogOffset else { return }
-        let newBytes = Array(data[connectionLogOffset...])
-        connectionLogOffset = data.count
+        guard let diagnosticStream else { return }
+        let snapshot = diagnosticStream.snapshot()
+        if negotiatedProtection != snapshot.protection { negotiatedProtection = snapshot.protection }
+        guard !didAuthenticate, !snapshot.bytes.isEmpty else { return }
+        let newBytes = Array(snapshot.bytes)
         applyConnectionUpdate(connectionLogParser.consume(newBytes[...]))
         guard let result = authenticationLogDetector.consume(newBytes[...]) else { return }
 
-        connectionMonitorTask?.cancel()
-        connectionMonitorTask = nil
         (terminalView as? LoginAwareTerminalView)?.stopLoginPasswordPromptMonitoring()
-        AppPaths.removeSSHConnectionLog(connectionLogURL)
+        diagnosticStream.discardAuthenticationBytes()
 
         state = .connected
         didAuthenticate = true
         connectionPhase = .connected
+
+        if notice == "正在重新連線…" {
+            notice = nil
+        }
 
         switch result {
         case .password:
@@ -563,7 +585,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         connectionFailure = nil
         connectionLogOffset = 0
         authenticationLogDetector = SSHAuthenticationLogDetector()
-        connectionLogParser = SSHConnectionLogParser()
+        connectionLogParser = SSHConnectionLogParser(requiresPostQuantum: arguments.contains("ControlPath=none"))
     }
 
     private func applyConnectionUpdate(_ update: SSHConnectionLogUpdate) {
@@ -590,7 +612,7 @@ final class TerminalSession: ObservableObject, Identifiable {
         if let failure = update.failure {
             connectionFailure = failure
             connectionPhase = .failed
-            state = .failed(failure.title)
+            state = .failed(failure.title(requiringPostQuantum: arguments.contains("ControlPath=none")))
         }
     }
 
@@ -607,11 +629,7 @@ final class TerminalSession: ObservableObject, Identifiable {
     }
 
     private func finalizeConnectionTechnicalTranscript() {
-        guard let connectionLogURL,
-              let data = try? Data(contentsOf: connectionLogURL) else { return }
-        let transcript = SSHConnectionLogParser.technicalTranscript(from: data)
-        guard !transcript.isEmpty else { return }
-        connectionTechnicalLines = transcript
+        // The stream is incrementally parsed; never read a FIFO as a regular file.
         trimConnectionTechnicalLines()
     }
 
@@ -635,8 +653,9 @@ final class TerminalSession: ObservableObject, Identifiable {
             let failure = connectionFailure ?? .unknown
             connectionFailure = failure
             connectionPhase = .failed
-            state = .failed(failure.title)
-            let event = SSHConnectionDiagnosticEvent(phase: .failed, message: failure.title)
+            let title = failure.title(requiringPostQuantum: arguments.contains("ControlPath=none"))
+            state = .failed(title)
+            let event = SSHConnectionDiagnosticEvent(phase: .failed, message: title)
             if !connectionEvents.contains(where: {
                 $0.phase == event.phase && $0.message == event.message
             }) {
@@ -675,7 +694,7 @@ final class TerminalSession: ObservableObject, Identifiable {
 
     deinit {
         connectionMonitorTask?.cancel()
-        AppPaths.removeSSHConnectionLog(connectionLogURL)
+        diagnosticStream?.close()
     }
 }
 
@@ -771,8 +790,14 @@ final class SessionManager: ObservableObject {
     }
 
     @discardableResult
-    func createSSHSession(to host: HostProfile, username: String, origin: SSHSessionOrigin = .savedHost) throws -> TerminalSession.ID {
-        let session = try makeSSHSession(host: host, username: username, origin: origin)
+    func createSSHSession(to host: HostProfile, username: String, origin: SSHSessionOrigin = .savedHost) async throws -> TerminalSession.ID {
+        try Task.checkCancellation()
+        let capabilities: SSHClientCapabilities?
+        if SSHPostQuantumPolicy.requiredAlgorithms(for: host) != nil {
+            capabilities = await SSHCapabilityService.shared.query().capabilities
+            try Task.checkCancellation()
+        } else { capabilities = nil }
+        let session = try makeSSHSession(host: host, username: username, origin: origin, capabilities: capabilities)
         presentationNameRegistry.register(sessionID: session.id, baseName: session.displayName)
         sessions.append(session)
         workspaceState.add(sessionID: session.id)
@@ -803,9 +828,36 @@ final class SessionManager: ObservableObject {
             lastError = "找不到可以重新連線的 SSH 工作階段。"
             return false
         }
+        let policyHost = session.sshOrigin == .savedHost
+            ? session.host.flatMap { currentHostProfile?($0.id) ?? $0 } : session.host
+        if let host = policyHost, SSHPostQuantumPolicy.requiredAlgorithms(for: host) != nil {
+            guard pendingPQRetries.insert(session.id).inserted else { return false }
+            let attempt = session.inputAttemptID
+            let sessionID = session.id
+            Task { [weak self, weak session] in
+                let capabilities = await SSHCapabilityService.shared.query(forceRefresh: true).capabilities
+                guard let self else { return }
+                defer { self.pendingPQRetries.remove(sessionID) }
+                guard let session else { return }
+                guard self.sessions.contains(where: { $0.id == session.id }), session.inputAttemptID == attempt else { return }
+                // Re-read after the asynchronous query: edits while waiting
+                // must not silently use the earlier, possibly weaker policy.
+                let latestPolicy = session.sshOrigin == .savedHost
+                    ? session.host.flatMap { self.currentHostProfile?($0.id) ?? $0 } : session.host
+                _ = self.completeRetry(session, capabilities: capabilities, policyHost: latestPolicy)
+            }
+            return true
+        }
+        return completeRetry(session, capabilities: nil, policyHost: policyHost)
+    }
+
+    private var pendingPQRetries = Set<TerminalSession.ID>()
+    var currentHostProfile: ((HostProfile.ID) -> HostProfile?)?
+
+    private func completeRetry(_ session: TerminalSession, capabilities: SSHClientCapabilities?, policyHost: HostProfile?) -> Bool {
         do {
             snippetTargetSelection.invalidate(sessionID: session.id)
-            try session.reconnectInPlace()
+            try session.reconnectInPlace(capabilities: capabilities, policyHost: policyHost)
             lastError = nil
             return true
         } catch {
@@ -827,7 +879,7 @@ final class SessionManager: ObservableObject {
         markSelectedWorkspaceViewed()
     }
 
-    private func makeSSHSession(host: HostProfile, username: String, origin: SSHSessionOrigin) throws -> TerminalSession {
+    private func makeSSHSession(host: HostProfile, username: String, origin: SSHSessionOrigin, capabilities: SSHClientCapabilities?) throws -> TerminalSession {
         let hostID = host.id
         let sessionID = UUID()
         return try TerminalSession(
@@ -835,6 +887,7 @@ final class SessionManager: ObservableObject {
             host: host,
             username: username,
             origin: origin,
+            capabilities: capabilities,
             onConnectionAttemptStarted: { [weak self] in
                 self?.connectionAuditStore?.begin(
                     sessionID: sessionID,

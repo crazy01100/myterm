@@ -49,6 +49,12 @@ The JSON `summary` reports counts for groups, hosts, missing usernames, private-
 
 Duplicates are identified by host address + port + username. They are skipped by default, with an option to keep both; MyTerm does not directly overwrite existing hosts.
 
+## Algorithm settings and PQ requirements
+
+Termius metadata imports do not carry algorithm settings or a PQ requirement; newly imported hosts use system defaults. Configure enforcement in MyTerm's host editor after import when needed. A connection status shown by the source app does not enable the requirement in MyTerm.
+
+MyTerm's own export/import format preserves existing algorithm fields, including explicit PQ KEX lists. Local private-key paths and live negotiation results are excluded. Each Mac must check its own capabilities, and every device using the requirement must upgrade to a supporting build. See [usage instructions](README.en.md#post-quantum-key-exchange).
+
 ## Clean up private output
 
 After migration and once you have confirmed your backup strategy, you can delete JSON/CSV files in `Exports/` that are no longer needed. First confirm they are not still required for import or recovery. Repository build and release workflows do not depend on these files.

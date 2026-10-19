@@ -1988,8 +1988,8 @@ check(connectionUpdate.technicalLines.isEmpty,
 connectionUpdate = connectionLogParser.consume(
     Array("lished.\ndebug1: Authenticating to example.invalid:22 as 'operator'\nAuthenticated to example.invalid ([192.0.2.10]:22) using \"publickey\".\n".utf8)[...]
 )
-check(connectionUpdate.events.map(\.phase) == [.securing, .authenticating, .connected],
-      "split SSH diagnostics advance through secure authentication stages")
+check(connectionUpdate.events.map(\.phase) == [.securing, .securing, .connected],
+      "early SSH identity preparation does not imply an established secure channel")
 check(connectionUpdate.authenticatedMethod == "publickey",
       "SSH diagnostics retain only the successful authentication method")
 check(connectionUpdate.technicalLines == [

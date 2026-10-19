@@ -131,6 +131,12 @@ The upstream repository also provides `scripts/invite-sync-user.sh --help` for m
 
 At the start of each development/maintenance task, on resumption on another day, and before every release, perform the Issue #43 conditional review described in [security maintenance](SECURITY_MAINTENANCE.en.md), recording the current task and commit. Dev, Firebase, release preparation and redeployment entries also invoke the shared check. Before publishing a Draft, perform a fresh `--purpose publish` review against its candidate source; do not reuse development reports or treat pending as acceptance. Stop dependent operations on failure and report the change without extending or downgrading the decision. App behavior/versioning and production/Dev isolation remain unchanged.
 
+### SSH post-quantum policy validation
+
+Run `zsh scripts/run-ssh-pq-tests.sh` for standalone post-quantum policy/local-capability checks; the core test entry point also includes it. It compiles the real policy, host codecs, arguments and capability runner with temporary AppPaths, using synthetic hosts and local query/timeout/output-limit fixtures. It performs no SSH login, Keychain, cloud, App or vulnerability tests. These checks do not replace real handshake, retry, SFTP or UI acceptance; complete suites/CI remain subject to the task's authorized test scope.
+
+`SelfTests/SSHPostQuantumLoopbackTests.swift` supports separately prepared ordinary localhost handshake, rekey and SFTP protocol validation. This is not App acceptance: use Dev to exercise successful/rejected connections, in-place retry, split panes and SFTP transfers, checking each badge's actual algorithm. Temporary services use independent keys, authorization files and synthetic data, bind only to loopback, and do not enable system Remote Login. Close test connections and services and remove keys afterward. If Dev sync is enabled, confirm the scope of test-host and Logs retention first instead of silently changing the sync switch. Record two-Mac policy sync and per-Mac capability differences separately; local protocol results do not replace them.
+
 ### Document languages and synchronized maintenance
 
 GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.

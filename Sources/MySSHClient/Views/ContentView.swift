@@ -79,7 +79,7 @@ struct ContentView: View {
         }
         .sheet(item: $connectionRequest) { request in
             ConnectionUsernameView(host: request.host, initialUsername: request.initialUsername) { username in
-                try openSession(for: request.host, username: username)
+                try await openSession(for: request.host, username: username)
             }
         }
         .sheet(isPresented: $showingSerialConnection) {
@@ -654,8 +654,10 @@ struct ContentView: View {
     private func beginConnection(to host: HostProfile) {
         if host.username.isEmpty { askForUsername(for: host) }
         else {
-            do { try openSession(for: host, username: host.username) }
-            catch { sessionManager.lastError = error.localizedDescription }
+            Task {
+                do { try await openSession(for: host, username: host.username) }
+                catch { sessionManager.lastError = error.localizedDescription }
+            }
         }
     }
 
@@ -663,12 +665,13 @@ struct ContentView: View {
         connectionRequest = ConnectionRequest(host: host, initialUsername: "")
     }
 
-    private func openSession(for host: HostProfile, username: String) throws {
-        try sessionManager.createSSHSession(to: host, username: username)
+    private func openSession(for host: HostProfile, username: String) async throws {
+        try await sessionManager.createSSHSession(to: host, username: username)
     }
 
     private func configureSessionObservers() {
         let hostStore = hostStore
+        sessionManager.currentHostProfile = { [weak hostStore] id in hostStore?.profile(id: id) }
         sessionManager.onHostConnectionSucceeded = { [weak hostStore] hostID, connectedAt in
             guard let hostStore else { return }
             do {
@@ -793,10 +796,12 @@ struct ContentView: View {
     private func performQuickAction(_ destination: QuickActionDestination) {
         switch destination {
         case .temporarySSH(let request):
-            do {
-                let host = try request.temporaryProfile()
-                try sessionManager.createSSHSession(to: host, username: request.username, origin: .temporary)
-            } catch { sessionManager.lastError = error.localizedDescription }
+            Task {
+                do {
+                    let host = try request.temporaryProfile()
+                    try await sessionManager.createSSHSession(to: host, username: request.username, origin: .temporary)
+                } catch { sessionManager.lastError = error.localizedDescription }
+            }
         case .session(let id):
             guard sessionManager.activate(sessionID: id) else { return }
             DispatchQueue.main.async {
@@ -1451,6 +1456,10 @@ struct TerminalWorkspaceView: View {
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
                     .background(AppVisualTheme.subtleSurface, in: .capsule)
+                    if session.kind == .ssh {
+                        SSHProtectionBadge(value: session.negotiatedProtection,
+                                           required: session.arguments.contains("ControlPath=none"))
+                    }
                     if workspaceIsSplit {
                         Button(action: onToggleSplit) {
                             Image(systemName: splitAxis == .horizontal
@@ -1713,8 +1722,8 @@ private struct SSHConnectionExperienceView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(session.connectionPhase.title)
                     .font(.headline)
-                if let failure = session.connectionFailure {
-                    Text(failure.title)
+                if let title = session.connectionFailureTitle {
+                    Text(title)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

@@ -79,6 +79,20 @@ enum SSHConnectionFailureKind: String, Equatable {
             "請檢查主機連線設定，或重試後查看完整的連線階段。"
         }
     }
+
+    func title(requiringPostQuantum: Bool) -> String {
+        if requiringPostQuantum && self == .keyExchangeAlgorithm {
+            return "遠端主機未提供相容的後量子金鑰交換"
+        }
+        return title
+    }
+
+    func recoverySuggestion(requiringPostQuantum: Bool) -> String {
+        if requiringPostQuantum && self == .keyExchangeAlgorithm {
+            return "已依這台主機的設定停止連線。請檢查遠端 SSH 版本與演算法設定；若要沿用原本的連線方式，可自行關閉「要求後量子金鑰交換」。"
+        }
+        return recoverySuggestion
+    }
 }
 
 struct SSHConnectionDiagnosticEvent: Equatable {
@@ -109,9 +123,16 @@ struct SSHConnectionLogUpdate: Equatable {
 /// remain an internal parsing source; the transcript only keeps OpenSSH's real
 /// non-debug errors after removing local paths and other sensitive details.
 struct SSHConnectionLogParser {
+    private let requiresPostQuantum: Bool
+    private var sentNewKeys = false
+    private var receivedNewKeys = false
     private var partialLine = ""
     private var emittedMessages = Set<String>()
     private(set) var latestFailure: SSHConnectionFailureKind?
+
+    init(requiresPostQuantum: Bool = false) {
+        self.requiresPostQuantum = requiresPostQuantum
+    }
 
     mutating func consume(_ bytes: ArraySlice<UInt8>) -> SSHConnectionLogUpdate {
         guard !bytes.isEmpty else { return SSHConnectionLogUpdate() }
@@ -177,7 +198,7 @@ struct SSHConnectionLogParser {
                 appendUnique(
                     SSHConnectionDiagnosticEvent(
                         phase: .failed,
-                        message: failure.title,
+                        message: failure.title(requiringPostQuantum: requiresPostQuantum),
                         technicalLine: technicalLine ?? redactedTechnicalLine(line)
                     ),
                     to: &update.events
@@ -185,7 +206,17 @@ struct SSHConnectionLogParser {
                 continue
             }
 
-            if lowercased.contains("authenticated to ") {
+            if lowercased == "debug1: ssh2_msg_kexinit sent" || lowercased == "debug1: ssh2_msg_kexinit received" {
+                sentNewKeys = false
+                receivedNewKeys = false
+            } else if lowercased == "debug1: ssh2_msg_newkeys sent" || lowercased == "debug1: ssh2_msg_newkeys received" {
+                if lowercased.hasSuffix(" sent") { sentNewKeys = true }
+                if lowercased.hasSuffix(" received") { receivedNewKeys = true }
+                if sentNewKeys && receivedNewKeys {
+                    appendUnique(SSHConnectionDiagnosticEvent(phase: .authenticating,
+                        message: "安全通道已建立，正在準備登入驗證。"), to: &update.events)
+                }
+            } else if lowercased.contains("authenticated to ") {
                 update.authenticatedMethod = authenticationMethod(in: line)
                 appendUnique(
                     SSHConnectionDiagnosticEvent(
@@ -198,8 +229,8 @@ struct SSHConnectionLogParser {
             } else if lowercased.contains("authenticating to ") {
                 appendUnique(
                     SSHConnectionDiagnosticEvent(
-                        phase: .authenticating,
-                        message: "安全通道已建立，正在驗證登入身分。",
+                        phase: .securing,
+                        message: "正在準備 SSH 登入身分，尚在協商安全通道。",
                         technicalLine: technicalLine
                     ),
                     to: &update.events

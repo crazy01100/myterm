@@ -199,6 +199,16 @@ final class SFTPCancellation: @unchecked Sendable {
 }
 
 private final class SFTPProcessSession {
+    private let diagnostics: SSHDiagnosticStream?
+    var negotiatedProtection: SSHNegotiatedProtection {
+        stateLock.lock(); let closed = isClosed; stateLock.unlock()
+        guard !closed, process.isRunning else { return SSHNegotiatedProtection(status: .closed) }
+        return diagnostics?.snapshot().protection ?? SSHNegotiatedProtection(status: .unknown)
+    }
+    private var diagnosticMessage: String {
+        let message = diagnostics?.snapshot().failureMessage ?? ""
+        return message.isEmpty ? stderr.message : message
+    }
     private let process = Process()
     private let inputPipe = Pipe()
     private let outputPipe = Pipe()
@@ -215,8 +225,10 @@ private final class SFTPProcessSession {
         executableURL: URL = URL(fileURLWithPath: "/usr/bin/ssh"),
         cancellation: SFTPCancellation? = nil,
         responseTimeout: TimeInterval = 30,
-        initializationTimeout: TimeInterval = 30
+        initializationTimeout: TimeInterval = 30,
+        diagnostics: SSHDiagnosticStream? = nil
     ) throws {
+        self.diagnostics = diagnostics
         self.responseTimeout = responseTimeout
         initializationDeadline = ProcessInfo.processInfo.systemUptime + initializationTimeout
         process.executableURL = executableURL
@@ -280,12 +292,12 @@ private final class SFTPProcessSession {
             let result = Darwin.poll(&descriptor, 1, Int32(min(100, max(1, remaining * 1000))))
             if result < 0 {
                 if errno == EINTR { continue }
-                throw SFTPConnectionError.connectionClosed(stderr.message)
+                throw SFTPConnectionError.connectionClosed(diagnosticMessage)
             }
             if result > 0 {
                 try checkOpen()
                 if descriptor.revents & Int16(POLLNVAL | POLLERR) != 0 {
-                    throw SFTPConnectionError.connectionClosed(stderr.message)
+                    throw SFTPConnectionError.connectionClosed(diagnosticMessage)
                 }
                 return // POLLHUP is consumed as EOF by read; never loop on it.
             }
@@ -301,7 +313,7 @@ private final class SFTPProcessSession {
                 try waitFor(fd, events: Int16(POLLOUT), until: end)
                 let count = Darwin.write(fd, buffer.baseAddress!.advanced(by: offset), buffer.count - offset)
                 if count < 0, errno == EINTR || errno == EAGAIN { continue }
-                guard count > 0 else { throw SFTPConnectionError.connectionClosed(stderr.message) }
+                guard count > 0 else { throw SFTPConnectionError.connectionClosed(diagnosticMessage) }
                 offset += count
             }
         }
@@ -323,6 +335,7 @@ private final class SFTPProcessSession {
         guard !isClosed else { stateLock.unlock(); return }
         isClosed = true
         stateLock.unlock()
+        diagnostics?.close()
         errorPipe.fileHandleForReading.readabilityHandler = nil
         if process.isRunning {
             process.terminate()
@@ -343,7 +356,7 @@ private final class SFTPProcessSession {
             try waitFor(fd, events: Int16(POLLIN), until: deadline)
             let size = Darwin.read(fd, &buffer, min(buffer.count, count - result.count))
             if size < 0, errno == EINTR || errno == EAGAIN { continue }
-            guard size > 0 else { throw SFTPConnectionError.connectionClosed(stderr.message) }
+            guard size > 0 else { throw SFTPConnectionError.connectionClosed(diagnosticMessage) }
             result.append(contentsOf: buffer.prefix(size))
         }
         return result
@@ -357,6 +370,7 @@ private final class SFTPProcessSession {
 }
 
 final class SFTPClient: @unchecked Sendable {
+    var negotiatedProtection: SSHNegotiatedProtection { session.negotiatedProtection }
     private let session: SFTPProcessSession
     private var nextRequestID: UInt32 = 1
     private let operationLock = NSLock()
@@ -368,7 +382,11 @@ final class SFTPClient: @unchecked Sendable {
     }
 
     static func connect(to host: HostProfile, username: String, cancellation: SFTPCancellation? = nil) throws -> SFTPClient {
-        var arguments = try SSHArgumentBuilder.arguments(for: host, usernameOverride: username)
+        let capabilities = SSHPostQuantumPolicy.requiredAlgorithms(for: host) == nil
+            ? nil : SSHCapabilityService.shared.queryFromWorker().capabilities
+        let diagnostics = try SSHDiagnosticStream(requiresPostQuantum: SSHPostQuantumPolicy.requiredAlgorithms(for: host) != nil)
+        diagnostics.discardAuthenticationBytes()
+        var arguments = try SSHArgumentBuilder.arguments(for: host, usernameOverride: username, connectionLogURL: diagnostics.url, capabilities: capabilities)
         guard let destination = arguments.popLast() else {
             throw SFTPConnectionError.failedToStart("缺少 SSH 目的地。")
         }
@@ -394,7 +412,7 @@ final class SFTPClient: @unchecked Sendable {
         let processSession: SFTPProcessSession
         let supportsAtomicOverwrite: Bool
         do {
-            processSession = try SFTPProcessSession(arguments: arguments, environment: environment, cancellation: cancellation)
+            processSession = try SFTPProcessSession(arguments: arguments, environment: environment, cancellation: cancellation, diagnostics: diagnostics)
             try processSession.write(SFTPProtocolCodec.initializationPacket())
             supportsAtomicOverwrite = try SFTPProtocolCodec.supportsPOSIXRename(processSession.readPacket())
             passwordPipe?.cleanup()

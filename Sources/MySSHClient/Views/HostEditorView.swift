@@ -8,6 +8,8 @@ struct HostEditorView: View {
     @State private var password = ""
     @State private var showingKeyPicker = false
     @State private var errorMessage: String?
+    @State private var capability: SSHCapabilityQueryResult?
+    @State private var checkingCapability = false
     private let isNew: Bool
 
     init(profile: HostProfile?, defaultGroupID: UUID? = nil) {
@@ -75,9 +77,32 @@ struct HostEditorView: View {
                 }
 
                 Section("連線演算法") {
+                    Toggle("要求後量子金鑰交換", isOn: Binding(
+                        get: { SSHPostQuantumPolicy.requiredAlgorithms(for: profile) != nil },
+                        set: { requested in
+                            do { profile = try SSHPostQuantumPolicy.settingRequired(requested, for: profile); errorMessage = nil }
+                            catch { errorMessage = error.localizedDescription }
+                        }
+                    ))
+                    Text("啟用後，請先將其他使用這台主機的 Mac 升級；不支援時會停止連線。變更於下次連線生效。")
+                        .font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Text(capabilityDescription).font(.caption)
+                        Spacer()
+                        Button("重新檢查") { Task { await refreshCapability() } }.disabled(checkingCapability)
+                    }
+                    if case .available(let capability) = capability {
+                        DisclosureGroup("支援資訊") {
+                            Text(capability.version).font(.caption).textSelection(.enabled)
+                            ForEach(capability.postQuantumAlgorithms, id: \.self) { name in
+                                Text(name).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            }
+                        }
+                    }
                     Picker("模式", selection: $profile.algorithmMode) {
                         ForEach(AlgorithmMode.allCases) { mode in Text(mode.title).tag(mode) }
                     }
+                    .disabled(SSHPostQuantumPolicy.requiredAlgorithms(for: profile) != nil)
                     if profile.algorithmMode == .rsaCompatibility {
                         Label("只對這台主機額外允許 ssh-rsa。", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
@@ -87,6 +112,7 @@ struct HostEditorView: View {
                         TextField("Host Key Algorithms", text: $profile.customAlgorithms.hostKeyAlgorithms)
                         TextField("Public Key Algorithms", text: $profile.customAlgorithms.publicKeyAlgorithms)
                         TextField("Key Exchange Algorithms", text: $profile.customAlgorithms.keyExchangeAlgorithms)
+                            .disabled(SSHPostQuantumPolicy.requiredAlgorithms(for: profile) != nil)
                         TextField("Ciphers", text: $profile.customAlgorithms.ciphers)
                         Text("可使用逗號分隔；前置 + 代表加入系統預設清單，例如 +ssh-rsa。")
                             .font(.caption)
@@ -109,6 +135,7 @@ struct HostEditorView: View {
             .padding()
         }
         .frame(width: 580, height: 700)
+        .task { await refreshCapability() }
         .onChange(of: profile.username) { _, value in
             if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { password = "" }
         }
@@ -121,6 +148,21 @@ struct HostEditorView: View {
                 profile.privateKeyPath = url.path
             }
         }
+    }
+
+    private var capabilityDescription: String {
+        if checkingCapability { return "正在檢查本機能力…" }
+        if case .available(let value) = capability {
+            return value.postQuantumAlgorithms.isEmpty ? "本機不支援後量子金鑰交換" : "本機支援後量子金鑰交換"
+        }
+        return "暫時無法檢查本機能力"
+    }
+
+    private func refreshCapability() async {
+        guard !checkingCapability else { return }
+        checkingCapability = true
+        capability = await SSHCapabilityService.shared.query(forceRefresh: true)
+        checkingCapability = false
     }
 
     private func save() {

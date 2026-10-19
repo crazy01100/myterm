@@ -13,9 +13,12 @@ enum HostPlatformProbe {
         guard host.detectedPlatform == nil else { return host.detectedPlatform }
 
         do {
+            let capabilities = SSHPostQuantumPolicy.requiredAlgorithms(for: host) == nil
+                ? nil : SSHCapabilityService.shared.queryFromWorker().capabilities
             var arguments = try SSHArgumentBuilder.arguments(
                 for: host,
-                usernameOverride: username
+                usernameOverride: username,
+                capabilities: capabilities
             )
             guard let destination = arguments.popLast() else { return nil }
             arguments += [

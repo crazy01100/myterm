@@ -131,6 +131,12 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 
 每項開發／維護開始、跨日恢復及每次發布前，依[安全維護指南](SECURITY_MAINTENANCE.md)執行Issue #43條件複核並記錄當次task／commit。Dev、Firebase、發布準備及重部署入口亦會呼叫共用檢查。Draft公開前另以 `--purpose publish` 對候選來源重新複核；不得沿用開發階段報告或把pending當成接受。失效時先停止相關操作並提出差異，不自動展延或降級判定。此流程不改App功能／版號或正式與Dev隔離。
 
+### SSH 後量子政策驗證
+
+後量子政策／本機能力的獨立驗證使用 `zsh scripts/run-ssh-pq-tests.sh`，亦納入核心測試入口。它以暫存AppPaths編譯真實政策、主機編解碼、參數及能力程序，使用合成主機與本機查詢／逾時／輸出上限案例，不執行SSH登入、Keychain、雲端、App或漏洞測試。此結果不代替真實握手、重連、SFTP與介面驗收；完整套件／CI仍須遵守當次允許的測試範圍。
+
+`SelfTests/SSHPostQuantumLoopbackTests.swift` 用於另行準備的普通 localhost 握手／rekey／SFTP 協定驗證。這不等同 App 驗收：仍需從 Dev 操作成功／拒絕連線、原位重連、雙窗格及 SFTP 傳輸，並核對徽章的實際演算法。臨時服務使用獨立金鑰、授權檔與合成檔案，只綁定 loopback，不開啟系統遠端登入；完成後關閉測試連線、服務與清除金鑰。若 Dev 已啟用同步，先確認測試主機與 Logs 的保存範圍，不默默改同步開關。雙 Mac 政策同步與每台 Mac 的能力差異需另行記錄；本機協定結果不能代替。
+
 ### 文件語系與同步維護
 
 GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [README.en.md](README.en.md)。專案自有的文件配對如下；現行指南在頁首提供雙向語言切換，英文文件優先連到英文版，中文文件優先連到中文版。

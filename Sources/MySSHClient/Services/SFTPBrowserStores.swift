@@ -197,6 +197,8 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     @Published private(set) var state: State = .disconnected
     @Published private(set) var connectedHost: HostProfile?
     @Published private(set) var connectedUsername = ""
+    @Published private(set) var negotiatedProtection = SSHNegotiatedProtection(status: .closed)
+    private var protectionTask: Task<Void, Never>?
     @Published private(set) var homePath = ""
     @Published private(set) var currentPath = "" {
         didSet { if currentPath != oldValue { searchQuery = "" } }
@@ -374,6 +376,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
         let cancellation = SFTPCancellation()
         connectionCancellation = cancellation
         state = .connecting
+        negotiatedProtection = SSHNegotiatedProtection()
         connectedHost = host
         connectedUsername = username
         errorMessage = nil
@@ -402,6 +405,17 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
                 entries = result.2
                 selectedNames.removeAll()
                 state = .connected
+                protectionTask?.cancel()
+                protectionTask = Task { [weak self, weak currentClient = result.0] in
+                    while !Task.isCancelled {
+                        if let self, let currentClient {
+                            guard self.generation == generation else { return }
+                            let protection = currentClient.negotiatedProtection
+                            if self.negotiatedProtection != protection { self.negotiatedProtection = protection }
+                        } else { return }
+                        do { try await Task.sleep(nanoseconds: 250_000_000) } catch { return }
+                    }
+                }
                 startNextTransfer()
             } catch {
                 guard self.generation == generation else { return }
@@ -409,6 +423,7 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
                 entries = []
                 selectedNames.removeAll()
                 state = .failed
+                negotiatedProtection = SSHNegotiatedProtection(status: .closed)
                 errorMessage = Self.friendlyMessage(for: error)
             }
         }
@@ -529,6 +544,9 @@ final class SFTPRemoteBrowserStore: ObservableObject, SFTPHostOpeningConnection,
     }
 
     func disconnect() {
+        protectionTask?.cancel()
+        protectionTask = nil
+        negotiatedProtection = SSHNegotiatedProtection(status: .closed)
         endingCancellation?.cancel()
         endingContext = nil; endingCancellation = nil; endingStatus = nil; afterEnding = nil
         editStore.pause(connection: self)

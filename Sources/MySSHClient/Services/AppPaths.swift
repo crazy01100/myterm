@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 enum AppPaths {
     static let rootDirectory: URL = {
@@ -103,7 +104,9 @@ enum AppPaths {
                 continue
             }
             let values = try candidate.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-            guard values.isRegularFile == true || values.isSymbolicLink == true else { continue }
+            var info = stat()
+            let isFIFO = lstat(candidate.path, &info) == 0 && (info.st_mode & S_IFMT) == S_IFIFO
+            guard values.isRegularFile == true || values.isSymbolicLink == true || isFIFO else { continue }
             try fileManager.removeItem(at: candidate)
             removedCount += 1
         }
