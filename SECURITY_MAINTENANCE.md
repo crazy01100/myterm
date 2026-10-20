@@ -54,11 +54,12 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 ### 已評估保留：json-ptr 3.1.1
 
 - **決策日期／確認者**：2026-10-01，由專案維護者明確確認。
-- **範圍與用途**：目前 `firebase-tools 15.33.0 → exegesis 4.3.0 → json-ptr 3.1.1`；主要供本機 Auth Emulator 解析 API 規格與 JSON 參照。Firebase 共用模組亦可能載入它；不封裝於 MyTerm App，不參與正式 App 的 Google 登入或同步。
+- **範圍與用途**：目前 `firebase-tools 15.34.0 → exegesis 4.3.0 → json-ptr 3.1.1`；主要供本機 Auth Emulator 解析 API 規格與 JSON 參照。Firebase 共用模組亦可能載入它；不封裝於 MyTerm App，不參與正式 App 的 Google 登入或同步。
 - **查核依據**：[npm 已標示停止維護](https://www.npmjs.com/package/json-ptr)。2026-10-01 的 GitHub Advisory 版本比對及 npm audit 未命中 3.1.1；歷史[高風險](https://github.com/advisories/GHSA-x5r6-x823-9848)／[另一筆高風險紀錄](https://github.com/advisories/GHSA-rrqv-vjrw-hrcr)與[中風險](https://github.com/advisories/GHSA-8gwj-8hxc-285w)公告分別在 2.1.0 與 3.0.0 修補。查核當時最新版 Firebase CLI 15.32.1 仍有這條相依，未找到官方針對停止維護狀態的明確安全背書。
 - **處理決策與理由**：保留官方相依組合；目前沒有確認到急迫漏洞，自行替換會增加相容性與後續維護負擔。不替換、不加入自訂相容層，也不進行替換原型或小範圍測試；不設定反覆展延期限。停止維護狀態仍保留，不標示為已修復或受支援。
 - **2026-10-05重新核對**：Firebase CLI15.32.1的Auth Emulator入口來源及exegesis／json-ptr版本未變，用途及暴露範圍相同，沿用既有保留決策，未進行替換測試。
 - **2026-10-13重新核對**：Firebase CLI15.33.0的Auth Emulator相關來源與15.32.1相同，仍依賴exegesis4.3.0／json-ptr3.1.1；用途及暴露範圍不變，沿用既有保留決策，未進行替換測試。
+- **2026-10-20重新核對**：Firebase CLI15.34.0仍使用exegesis4.3.0／json-ptr3.1.1；Auth解析入口相同，utils僅將電話號碼前綴判斷改為startsWith。用途及本機暴露範圍不變，沿用既有保留決策，不進行替換測試。
 - **持續追蹤**：沿用既有漏洞監測；發現影響目前版本的新公告、實際相容性問題、上游移除／替代方案，或套件版本、使用方式、暴露範圍改變時重新評估。本決策不豁免新告警或發布安全門檻。
 
 ## 安全 Issue 的修正摘要
@@ -75,11 +76,11 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 ## 開發工具的相容性覆寫
 
-目前 npm overrides 包含 PubSub trace-context propagator、Gaxios CommonJS UUID、qs、`@grpc/grpc-js 1.14.5`、`glob 13.0.6` 與 get-uri 專用的 `basic-ftp 6.2.2`。gRPC 統一修補 Firebase／Google gax 的受影響分支；glob 取代已停止免費維護的 10.x，適用於 Firebase 檔案搜尋及其壓縮、清理、controller 載入相依。版本精確固定，測試涵蓋實際消費端、loopback gRPC 與隔離 Firestore Emulator；`firebase-glob.test.cjs` 驗證隱藏檔、排除規則、符號連結、同步／非同步／串流及暫存檔案操作。上層相依允許受支援且安全的版本後應移除覆寫，至少每月重新審閱。
+目前 npm overrides 包含 PubSub trace-context propagator、Gaxios CommonJS UUID、qs、`@grpc/grpc-js 1.14.5`及 `glob 13.0.6`。gRPC 統一修補 Firebase／Google gax 的受影響分支；glob 取代已停止免費維護的 10.x，適用於 Firebase 檔案搜尋及其壓縮、清理、controller 載入相依。版本精確固定，測試涵蓋實際消費端、loopback gRPC 與隔離 Firestore Emulator；`firebase-glob.test.cjs` 驗證隱藏檔、排除規則、符號連結、同步／非同步／串流及暫存檔案操作。上層相依允許受支援且安全的版本後應移除覆寫，至少每月重新審閱。
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.33.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
+Firebase CLI 固定為 `15.34.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
@@ -91,12 +92,14 @@ Firebase CLI 固定為 `15.33.0`，上游已原生支援安全版本的 `stream-
 
 [Issue #43](https://github.com/crazy01100/myterm/issues/43) 在緩解後保持開啟。須等官方修補版發布、專案實際升級且相容性測試與完整掃描通過，才可標示修復並結案；屆時重評是否移除臨時限制。影響評估不豁免 gate，任何漏洞例外須另獲明確接受。 維護者已明確接受僅此 development 範圍的 `braces 3.0.3` 告警，期限至 2026-10-19 23:59:59（UTC+8），精確紀錄位於 `Config/Security/exceptions.json`。原期限未展延，紀錄保留供歷史追溯；目前由下述已批准的條件式個案接替本案資格判斷，持續顯示於監測且不關閉 Issue。
 
-`basic-ftp` 的修補版本只覆寫 get-uri 的消費端；保留 6.x 預設拒絕不同傳輸主機的保護。回歸涵蓋實際 loopback FTP 下載、MDTM／目錄後備查詢、缺檔、中止及有界惡意清單；get-uri 原有拒絕缺少可靠時間戳的 Unix LIST 行為維持。此相依不屬於 MyTerm SFTP。
+Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics` 與 `@apphosting/common`；鎖檔中原先經由 PAC 代理引入的 `get-uri`／`basic-ftp` 等相依也已移除。原 get-uri 專用覆寫及其 FTP 消費端測試因此退役，不重新加入套件來維持舊測試。`firebase-removed-dependencies.test.cjs` 驗證鎖檔各層、已安裝套件解析與上游宣告均未重新引入該鏈。其他仍適用的安全覆寫與測試保留；歷史 basic-ftp 影響評估不改寫成當時未受影響。這些開發工具不屬於 MyTerm SFTP。
 
 
 ### Issue #43 條件式風險接受
 
-`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。維護者已於2026-10-15明確接受本案精確基準，受審基準合併後狀態改為 `active`，依每次複核結果套用。未獲接受的新提案使用 `pending`，不視為接受或自動取代原期限。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
+維護者於2026-10-20接受revision 2，將受審Firebase CLI基準調整為15.34.0。Rules監看、chokidar及braces相關來源不變；限定用途、殘餘風險與重新評估條件沿用，Issue #43仍保持開啟。新基準須通過精確PR head審閱及CI，不以版本更新取代風險重核。
+
+`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。維護者已於2026-10-15明確接受原revision 1基準，受審基準合併後狀態改為 `active`，依每次複核結果套用。未獲接受的新提案使用 `pending`，不視為接受或自動取代原期限。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
 
 啟用後，每項開發／維護任務開始（跨日恢復亦同）、Firebase工具使用、RC／正式版準備、Draft公開與既有版本重部署前，都要重新核對官方公告／npm版本、完整引入圖、受審來源與設定內容。本機與CI共用 `scripts/security-conditional-risk.py`；不讀取舊的通過紀錄，每次重新查詢，不執行npm套件。用途限既有wrapper允許的帳號／專案查詢、明確專案Rules／indexes部署及loopback demo Emulator。使用的輸入須經維護者審查；來源摘要不能證明輸入可信或不可利用。
 
