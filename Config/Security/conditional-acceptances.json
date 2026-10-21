@@ -6,7 +6,7 @@
     "version": "3.0.3",
     "scope": "development",
     "state": "active",
-    "revision": 2,
+    "revision": 4,
     "issue": "https://github.com/crazy01100/myterm/issues/43",
     "allowedUses": [
       "Reviewed local Firebase account/project queries through the project wrapper",
@@ -15,7 +15,7 @@
     ],
     "residualRisk": "Package remains unpatched and actual exploitability remains unverified. Local owners can bypass the wrapper; checks do not prevent all post-check changes. Not included in the MyTerm App.",
     "baseline": {
-      "reviewedCommit": "54bc1d109806f598400569b324eaea62e4681ba4",
+      "reviewedCommit": "335e9f5ba7c0129872d7129e215b65d141928d99",
       "files": {
         "Package.resolved": "958e30dd064399b01b176a1bfca93b1306545cdab00e36c6bb6f2cf4d5393ffd",
         "Package.swift": "0ff003bdceeff45fd52b3a603ddca9628418e67511e4a593bab2a9d1ef1dd09e",
@@ -31,7 +31,7 @@
         "node_modules/firebase-tools/lib/emulator/controller.js": "86a3411bbb68a6e6c031e79f921b545045618471fd373e16cf6621f67011a946",
         "node_modules/firebase-tools/lib/emulator/firestoreEmulator.js": "242e2d443427838ea720e6b646c3f57e522b6789271837d79c05108a94cde00e",
         "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
-        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a",
+        "package-lock.json": "2a3e688e43ef721c8c95c8390eba322b777853b5dce50ea7cb607f8e868f782f",
         "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
         "scripts/build-app.sh": "b4aab91a60cd9fa034fa3a13bf7ec86b9c005b1f958a33282bcd8440335018d7",
         "scripts/dependency-inventory.py": "e076a096d2bdad8cd817cfe301ee409fbdadec72c77960a0bd294cab1c65dfa1",
@@ -41,7 +41,7 @@
         "scripts/prepare-release-build.sh": "93cba6c102e105a053c1f0f3ca2ebf76bc0b702314ec5955c952667c772f9952",
         "scripts/run-dev-app.sh": "7c7211f86b4417b95ebbfad70b4987aae65e215d09b628b401cd4be0fab534d8",
         "scripts/security-audit.py": "4cb7eef57ab31374ccdf87c21d18c3760b0cb7a830400dbab9b7c2bf9a19be21",
-        "scripts/security-conditional-risk.py": "6258a643cdd23c1c457c4198a2e36faa7c6532c4c0d1314692c0d96065428613",
+        "scripts/security-conditional-risk.py": "c9e0fb7b51d21b20305d8e19b269c152b2043229e9ebceac03f4131653bb603a",
         "scripts/verify-firebase-tools.cjs": "4290f65162825fa862e6062338213ffb94f0822408fc3a2b873944af5d0d690a",
         "scripts/security-test-profile.py": "1bae1dac834dbbf0e656b30992984bedddb2f0c5a942275e8dd7dd79b6803d7a",
         "scripts/run-policy-tests.py": "15c685f2d234d689fd6ce9f23325e353d9015b3c895c03d283592afabb96b019",
@@ -86,8 +86,8 @@
       "expiresAt": "2026-10-19T23:59:59+08:00",
       "configuration": "Config/Security/exceptions.json"
     },
-    "acceptanceRecord": "Maintainer explicitly accepted revision 2 for Firebase CLI 15.34.0 / PR #59 on 2026-10-20, including existing fixed regression tests and full CI. Allowed uses and residual risk remain unchanged; Issue #43 stays open. No Daybreak or actual-exploitability testing is authorized. Revision 1 acceptance and activation remain in Git history (PR #56 / #57).",
+    "acceptanceRecord": "Maintainer explicitly accepted the exact revision 4 proposal (SHA-256 366ae2d281f8e6fdd7959a166c5ab50057b1274e6efdd63906504bd2b2b85f51) on 2026-10-21 for the self-authored PR review verifier. Allowed uses, dependency graph, residual risk and reassessment triggers remain unchanged. Full fixed regressions and CI for PR #65 are authorized; the final head/base/policy digest must still receive explicit review approval before merge. Keep Issue #43 open. No Daybreak or actual-exploitability testing.",
     "acceptedBy": "project maintainer",
-    "acceptedAt": "2026-10-20T02:56:00.468119+00:00"
+    "acceptedAt": "2026-10-21T13:48:13.977945+00:00"
   }
 }

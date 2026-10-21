@@ -131,6 +131,28 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 
 每項開發／維護開始、跨日恢復及每次發布前，依[安全維護指南](SECURITY_MAINTENANCE.md)執行Issue #43條件複核並記錄當次task／commit。Dev、Firebase、發布準備及重部署入口亦會呼叫共用檢查。Draft公開前另以 `--purpose publish` 對候選來源重新複核；不得沿用開發階段報告或把pending當成接受。失效時先停止相關操作並提出差異，不自動展延或降級判定。此流程不改App功能／版號或正式與Dev隔離。
 
+### PR基準核准與合併前複核
+
+先確認待審差異與新的Issue #43基準，再針對最後提交核准。其他作者PR沿用維護者Approve；本人建立的PR使用正式Review Comment。以下入口只讀取資料／產生文字，不會提交review、重跑CI或合併：
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --pr-review template --pr <PR號碼> \
+  --expected-head <完整head SHA> --expected-base <完整base SHA>
+```
+
+本機政策檔須與已推送head完全相同。取得維護者對具體內容的明確同意後，才由本人或經明確委託的代理以GitHub review API提交 `event=COMMENT`、`commit_id=<完整head SHA>` 及原樣正文。普通聊天同意不會被CI讀取，一般實作授權不代表未來提交已獲核准。撤銷時用相同template入口加 `--review-action revoke` 產生新Review正文；不要刪改舊紀錄。本人之後提交其他Review也會使舊自核准不能沿用，普通PR討論留言不受此限。
+
+核准或撤銷後，明確重跑同一head的必要安全檢查；不改CI權限、測試分流或branch ruleset。合併前先檢查全部必要CI、CodeQL及未解決討論，再執行：
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --pr-review verify --pr <PR號碼> \
+  --expected-head <已驗證head SHA> --expected-base <已驗證base SHA>
+```
+
+此命令重新讀取review、來源及官方資訊，完成後再讀review；成功只代表核准與限定條件當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#issue-43-條件式風險接受)。
+
 ### SSH 後量子政策驗證
 
 後量子政策／本機能力的獨立驗證使用 `zsh scripts/run-ssh-pq-tests.sh`，亦納入核心測試入口。它以暫存AppPaths編譯真實政策、主機編解碼、參數及能力程序，使用合成主機與本機查詢／逾時／輸出上限案例，不執行SSH登入、Keychain、雲端、App或漏洞測試。此結果不代替真實握手、重連、SFTP與介面驗收；完整套件／CI仍須遵守當次允許的測試範圍。

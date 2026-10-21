@@ -131,6 +131,28 @@ The upstream repository also provides `scripts/invite-sync-user.sh --help` for m
 
 At the start of each development/maintenance task, on resumption on another day, and before every release, perform the Issue #43 conditional review described in [security maintenance](SECURITY_MAINTENANCE.en.md), recording the current task and commit. Dev, Firebase, release preparation and redeployment entries also invoke the shared check. Before publishing a Draft, perform a fresh `--purpose publish` review against its candidate source; do not reuse development reports or treat pending as acceptance. Stop dependent operations on failure and report the change without extending or downgrading the decision. App behavior/versioning and production/Dev isolation remain unchanged.
 
+### PR baseline approval and pre-merge review
+
+Review the changes and new Issue #43 baseline before approving the final commit. Other authors' PRs retain maintainer Approve reviews; self-authored PRs use a formal Review Comment. This helper only reads data and generates text; it cannot submit reviews, rerun CI or merge:
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --pr-review template --pr <PR-number> \
+  --expected-head <full-head-SHA> --expected-base <full-base-SHA>
+```
+
+Local policy bytes must match the pushed head. Only after explicit maintainer consent to that concrete content may the maintainer, or an explicitly delegated agent, submit the unchanged body with GitHub's review API, `event=COMMENT` and `commit_id=<full-head-SHA>`. CI does not read consent in a chat; general implementation authorization does not approve future commits. To revoke, add `--review-action revoke` to the same template command and submit a new Review; do not delete or edit old records. A later Review by the owner also prevents reuse of an earlier self-approval; ordinary PR discussion comments do not.
+
+After acceptance or revocation, explicitly rerun the required security check for the same head. Do not alter CI permissions, test profiles or branch rulesets. Before merging, check all required CI, CodeQL and unresolved discussions, then run:
+
+```sh
+./scripts/project-python.sh scripts/security-conditional-risk.py \
+  --pr-review verify --pr <PR-number> \
+  --expected-head <verified-head-SHA> --expected-base <verified-base-SHA>
+```
+
+This rereads reviews, sources and official metadata, then reviews again. Success means the approval and conditional acceptance currently match; `mergeAuthorized=false` explicitly does not attest that all CI passed. Recheck required remote checks/discussions and use normal `gh pr merge --match-head-commit <verified-head-SHA>`, never an admin bypass. Stop and reassess if head or base changes. Introducing the verifier itself requires separate review of the implementation and exact baseline; its own successful return cannot replace maintainer consent. Completed checks do not automatically turn red on revocation, so do not skip this standard pre-merge check. See [security maintenance](SECURITY_MAINTENANCE.en.md#issue-43-conditional-risk-acceptance) for rules and limitations.
+
 ### SSH post-quantum policy validation
 
 Run `zsh scripts/run-ssh-pq-tests.sh` for standalone post-quantum policy/local-capability checks; the core test entry point also includes it. It compiles the real policy, host codecs, arguments and capability runner with temporary AppPaths, using synthetic hosts and local query/timeout/output-limit fixtures. It performs no SSH login, Keychain, cloud, App or vulnerability tests. These checks do not replace real handshake, retry, SFTP or UI acceptance; complete suites/CI remain subject to the task's authorized test scope.
