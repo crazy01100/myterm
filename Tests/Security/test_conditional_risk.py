@@ -68,6 +68,21 @@ class ConditionalTests(unittest.TestCase):
         self.assertFalse(a.blocking(r));self.assertEqual(len(r['findings']),1)
         self.assertEqual(r['findings'][0]['severity'],'high');self.assertEqual(r['findings'][0]['status'],'affected')
 
+    def test_valid_pr_review_cannot_bypass_patch_or_source_checks(self):
+        with patch.object(p,'verify_ci_baseline',return_value={'reviewId':10}):
+            self.advisory['vulnerabilities'][0]['first_patched_version']='3.0.4'
+            self.assertFalse(self.review()['accepted'])
+            self.advisory['vulnerabilities'][0]['first_patched_version']=None
+            (self.root/'firestore.rules').write_text('changed')
+            self.assertFalse(self.review()['accepted'])
+
+    def test_pr_review_rechecked_after_metadata_reads(self):
+        with patch.object(p,'verify_ci_baseline',side_effect=[{'reviewId':10},{'reviewId':20}]):
+            self.assertFalse(self.review()['accepted'])
+        with patch.object(p,'verify_ci_baseline',return_value={'reviewId':10}) as check:
+            self.assertTrue(self.review()['accepted'])
+            self.assertEqual(check.call_count,2)
+
     def test_pending_never_authorizes(self):
         self.decision['state']='pending';r=self.review()
         self.assertEqual(r['status'],'matched');self.assertFalse(r['accepted'])
@@ -165,22 +180,6 @@ class ConditionalTests(unittest.TestCase):
         event=self.root/'event.json';event.write_text(json.dumps({'pull_request':{'base':{'repo':{'full_name':'crazy01100/myterm'},'sha':'a'*40},'head':{'repo':{'full_name':'other/fork'}}}}))
         with self.assertRaises(ValueError):p.verify_ci_baseline(self.root,self.decision,{'GITHUB_EVENT_NAME':'pull_request','GITHUB_EVENT_PATH':str(event)})
 
-    def test_exact_head_maintainer_review_allows_changed_baseline_only(self):
-        import subprocess
-        event=self.root/'event.json';repo={'full_name':'crazy01100/myterm'}
-        event.write_text(json.dumps({'pull_request':{'number':99,'base':{'repo':repo,'sha':'a'*40},'head':{'repo':repo,'sha':'c'*40}}}))
-        trusted=copy.deepcopy(self.decision);trusted['baseline']['advisoryDigest']='b'*64
-        base=subprocess.CompletedProcess([],0,json.dumps({'decision':trusted}))
-        for state,sha,author,valid in [('APPROVED','c'*40,'crazy01100',True),('DISMISSED','c'*40,'crazy01100',False),
-                                      ('APPROVED','d'*40,'crazy01100',False),('APPROVED','c'*40,'someone',False),
-                                      ('CHANGES_REQUESTED','c'*40,'crazy01100',False)]:
-            with self.subTest(state=state,sha=sha,author=author):
-                reviews=subprocess.CompletedProcess([],0,json.dumps([[{'id':1,'state':state,'commit_id':sha,'user':{'login':author}}]]))
-                with patch.object(p.subprocess,'run',side_effect=[base,reviews]):
-                    if valid:p.verify_ci_baseline(self.root,self.decision,{'GITHUB_EVENT_NAME':'pull_request','GITHUB_EVENT_PATH':str(event)})
-                    else:
-                        with self.assertRaises(ValueError):p.verify_ci_baseline(self.root,self.decision,{'GITHUB_EVENT_NAME':'pull_request','GITHUB_EVENT_PATH':str(event)})
-
     def test_missing_and_malformed_policy_rejected(self):
         target=self.root/p.POLICY;target.parent.mkdir(parents=True)
         for value in ([],{}, {'schemaVersion':2,'decision':self.decision}, {'schemaVersion':1,'decision':{**self.decision,'state':'unknown'}}):
@@ -194,14 +193,216 @@ class ConditionalTests(unittest.TestCase):
         (self.root/'node_modules/braces/package.json').write_text('{"version":"0.0.0"}')
         self.assertFalse(self.review()['accepted'])
 
-    def test_pr_cannot_change_reviewed_baseline(self):
+
+
+class PRReviewTests(unittest.TestCase):
+    """GitHub responses are synthetic. No real review submission or network."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='MyTerm-review-policy-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.head, self.base = 'c' * 40, 'a' * 40
+        self.decision = {**p.IDENTITY, 'revision': 4, 'state': 'active',
+                         'allowedUses': ['fixture'], 'residualRisk': 'unpatched',
+                         'baseline': {'files': {'fixture': 'f' * 64}}}
+        self.raw = json.dumps({'schemaVersion': 1, 'decision': self.decision}).encode()
+        self.pr = {'number': 65, 'state': 'open', 'draft': False, 'user': dict(p.MAINTAINER),
+                   'head': {'sha': self.head, 'repo': {'full_name': p.REPOSITORY}},
+                   'base': {'sha': self.base, 'ref': 'main', 'repo': {'full_name': p.REPOSITORY}}}
+        self.identity = p.pr_identity(self.pr, 65, self.head, self.base)
+        target = self.root / p.POLICY
+        target.parent.mkdir(parents=True)
+        target.write_bytes(self.raw)
+        trusted = copy.deepcopy(self.decision); trusted['revision'] = 3
+        self.trusted = json.dumps({'schemaVersion': 1, 'decision': trusted}).encode()
+
+    def review(self, **changes):
+        value = {'id': 10, 'user': dict(p.MAINTAINER), 'state': 'COMMENTED',
+                 'commit_id': self.head, 'submitted_at': '2026-10-15T00:00:00Z',
+                 'body': p.REVIEW_MARKER + '\n' + json.dumps(
+                     p.review_document(self.identity, self.decision, self.raw))}
+        value.update(changes)
+        return value
+
+    def select(self, pages, identity=None):
+        return p.select_review(pages, identity or self.identity, self.decision, self.raw)
+
+    def inspect(self, pages=None, **kwargs):
+        pages = pages if pages is not None else [[self.review()]]
+        sequence = [self.pr, self.raw, self.trusted]
+        if not kwargs.get('template'):
+            sequence += [pages, copy.deepcopy(pages)]
+        sequence += [self.pr]
+        with patch.object(p, 'gh_read', side_effect=sequence) as api:
+            result = p.inspect_pr_review(self.root, self.decision, 65, self.head, self.base, **kwargs)
+        return result, api
+
+    def test_self_comment_and_native_approval_are_distinct(self):
+        self.assertEqual(self.select([[self.review()]])['mode'], 'maintainer-self-review')
+        bot = {**self.identity, 'author': {'id': 42, 'login': 'dependabot[bot]', 'type': 'Bot'}}
+        self.assertEqual(self.select([[self.review(state='APPROVED', body='Reviewed')]], bot)['mode'], 'github-approved')
+        with self.assertRaises(ValueError):self.select([[self.review(state='APPROVED')]])
+        with self.assertRaises(ValueError):self.select([[self.review()]], bot)
+
+    def test_wrong_identity_never_qualifies(self):
+        for user in ({'id': 42, 'login': 'other', 'type': 'User'},
+                     {**p.MAINTAINER, 'id': 42}, {**p.MAINTAINER, 'type': 'Bot'},
+                     {**p.MAINTAINER, 'login': 'renamed'}, {**p.MAINTAINER, 'id': str(p.MAINTAINER['id'])}):
+            with self.subTest(user=user), self.assertRaises(ValueError):self.select([[self.review(user=user)]])
+
+    def test_unsubmitted_stale_and_withdrawn_rejected(self):
+        for changes in ({'state':'PENDING'}, {'state':'DISMISSED'}, {'state':'CHANGES_REQUESTED'},
+                        {'submitted_at':None}, {'submitted_at':'2026-10-15'},
+                        {'submitted_at':'2999-01-01T00:00:00Z'}, {'commit_id':'d'*40}):
+            with self.subTest(changes=changes),self.assertRaises(ValueError):self.select([[self.review(**changes)]])
+
+    def test_plain_comments_and_embedded_markers_do_not_approve(self):
+        for body in ('LGTM', '同意', '', ' '+self.review()['body'], '```\n'+self.review()['body']+'\n```'):
+            with self.subTest(body=body[:20]),self.assertRaises(ValueError):self.select([[self.review(body=body)]])
+
+    def test_exact_document_fields_and_types_required(self):
+        document = p.review_document(self.identity, self.decision, self.raw)
+        for key,value in [('head',self.head[:7]),('base','b'*40),('pr',66),('repository','other/repo'),
+                          ('revision',3),('policySHA256','0'*64),('action','revoke'),
+                          ('schemaVersion',True),('statement','approved'),('decisionId','another')]:
+            bad={**document,key:value}
+            with self.subTest(key=key),self.assertRaises(ValueError):
+                self.select([[self.review(body=p.REVIEW_MARKER+'\n'+json.dumps(bad))]])
+        for bad in ({**document,'extra':True}, {k:v for k,v in document.items() if k!='head'}):
+            with self.assertRaises(ValueError):self.select([[self.review(body=p.REVIEW_MARKER+'\n'+json.dumps(bad))]])
+
+    def test_duplicate_json_fields_rejected(self):
+        body=self.review()['body'].replace('"schemaVersion": 1','"schemaVersion": 1, "schemaVersion": 1')
+        with self.assertRaises(ValueError):self.select([[self.review(body=body)]])
+
+    def test_raw_policy_bytes_are_bound(self):
+        with self.assertRaises(ValueError):p.select_review([[self.review()]],self.identity,self.decision,self.raw+b'\n')
+
+    def test_latest_revocation_blocks_old_accept_across_pages(self):
+        revoke=p.REVIEW_MARKER+'\n'+json.dumps(p.review_document(self.identity,self.decision,self.raw,'revoke'))
+        for latest in (self.review(id=20,body=revoke), self.review(id=20,state='CHANGES_REQUESTED'),
+                       self.review(id=20,state='DISMISSED'), self.review(id=20,body=p.REVIEW_MARKER+'\n{}')):
+            with self.subTest(state=latest['state']),self.assertRaises(ValueError):
+                self.select([[latest],[self.review()]])
+        self.assertEqual(self.select([[self.review(id=20,body=revoke)],[self.review(id=30)]])['reviewId'],30)
+
+    def test_later_self_review_cannot_erase_revocation_and_revive_old_accept(self):
+        # Editing a later explicit revoke into ordinary text must not fall back
+        # to an earlier acceptance. New self-authored reviews require a fresh
+        # explicit decision; ordinary issue discussion comments are separate.
+        with self.assertRaises(ValueError):
+            self.select([[self.review(), self.review(id=20, body='A discussion')]])
+        bot = {**self.identity, 'author': {'id':42,'login':'dependabot[bot]','type':'Bot'}}
+        self.assertEqual(self.select([[self.review(state='APPROVED'),
+                                      self.review(id=20,body='A discussion')]],bot)['reviewId'],10)
+
+    def test_missing_malformed_or_duplicate_pages_fail(self):
+        for pages in ([],{},[{}],[[None]],[[{'id':True}]],[[self.review()],[self.review()]], [[]]):
+            with self.subTest(pages=pages),self.assertRaises((ValueError,TypeError)):self.select(pages)
+
+    def test_readonly_api_sequence_and_binding(self):
+        result,api=self.inspect()
+        self.assertEqual(result['reviewId'],10)
+        self.assertEqual(api.call_count,6)
+        self.assertEqual(api.call_args_list[3],api.call_args_list[4])
+        self.assertEqual(api.call_args_list[0],api.call_args_list[-1])
+
+    def test_template_is_text_only_and_binds_revoke(self):
+        result,api=self.inspect(template=True,action='revoke')
+        self.assertEqual(api.call_count,4)
+        self.assertEqual(p.strict_json(result.split('\n',1)[1])['action'],'revoke')
+        self.assertNotIn('/reviews', str(api.call_args_list))
+
+    def test_fork_draft_wrong_base_and_changed_refs_rejected(self):
+        for field,value in [('draft',True),('state','closed'),('number',66)]:
+            pr={**self.pr,field:value}
+            with self.subTest(field=field),self.assertRaises(ValueError):p.pr_identity(pr,65,self.head,self.base)
+        for part,field,value in [('head','repo',{'full_name':'other/fork'}),('base','ref','dev'),
+                                 ('head','sha','d'*40),('base','sha','b'*40)]:
+            pr=copy.deepcopy(self.pr);pr[part][field]=value
+            with self.subTest(part=part,field=field),self.assertRaises(ValueError):p.pr_identity(pr,65,self.head,self.base)
+
+    def test_invalid_arguments_never_reach_api(self):
+        for number,head,base in [(True,self.head,self.base),(0,self.head,self.base),(65,'bad',self.base),(65,self.head,None)]:
+            with patch.object(p,'gh_read') as api,self.assertRaises(ValueError):
+                p.inspect_pr_review(self.root,self.decision,number,head,base)
+            api.assert_not_called()
+
+    def test_local_policy_does_not_match_remote(self):
+        with patch.object(p,'gh_read',side_effect=[self.pr,self.raw+b'\n']),self.assertRaises(ValueError):
+            p.inspect_pr_review(self.root,self.decision,65,self.head,self.base)
+
+    def test_review_edit_or_deletion_during_query_fails(self):
+        for after in ([[]],[[self.review(body='removed')]],[[self.review(id=20,state='DISMISSED')]]):
+            seq=[self.pr,self.raw,self.trusted,[[self.review()]],after]
+            with self.subTest(after=after),patch.object(p,'gh_read',side_effect=seq),self.assertRaises(ValueError):
+                p.inspect_pr_review(self.root,self.decision,65,self.head,self.base)
+
+    def test_push_or_author_change_during_query_fails(self):
+        for after in ({**self.pr,'head':{**self.pr['head'],'sha':'d'*40}},
+                      {**self.pr,'user':{'id':42,'login':'other','type':'User'}}):
+            seq=[self.pr,self.raw,self.trusted,[[self.review()]],[[self.review()]],after]
+            with patch.object(p,'gh_read',side_effect=seq),self.assertRaises(ValueError):
+                p.inspect_pr_review(self.root,self.decision,65,self.head,self.base)
+
+    def test_local_change_during_query_fails(self):
+        seq=iter([self.pr,self.raw,self.trusted,[[self.review()]],[[self.review()]],self.pr])
+        def read(*args,**kwargs):
+            result=next(seq)
+            if result is self.pr and read.calls:
+                (self.root/p.POLICY).write_bytes(self.raw+b'\n')
+            read.calls+=1
+            return result
+        read.calls=0
+        with patch.object(p,'gh_read',side_effect=read),self.assertRaises(ValueError):
+            p.inspect_pr_review(self.root,self.decision,65,self.head,self.base)
+
+    def test_api_failure_is_not_acceptance(self):
         import subprocess
-        event=self.root/'event.json';repo={'full_name':'crazy01100/myterm'}
-        event.write_text(json.dumps({'pull_request':{'base':{'repo':repo,'sha':'a'*40},'head':{'repo':repo}}}))
-        trusted=copy.deepcopy(self.decision);trusted['baseline']['advisoryDigest']='b'*64
-        response=subprocess.CompletedProcess([],0,json.dumps({'decision':trusted}))
-        with patch.object(p.subprocess,'run',return_value=response),self.assertRaises(ValueError):
-            p.verify_ci_baseline(self.root,self.decision,{'GITHUB_EVENT_NAME':'pull_request','GITHUB_EVENT_PATH':str(event)})
+        with patch.object(p,'gh_read',side_effect=subprocess.TimeoutExpired('gh',25)),self.assertRaises(subprocess.SubprocessError):
+            p.inspect_pr_review(self.root,self.decision,65,self.head,self.base)
+
+    def test_unchanged_base_still_honours_revocation(self):
+        self.trusted=self.raw
+        result,_=self.inspect(pages=[[]])
+        self.assertEqual(result['mode'],'unchanged-reviewed-base')
+        with self.assertRaises(ValueError):self.inspect(pages=[[self.review(state='DISMISSED')]])
+
+    def test_all_decision_fields_require_review_when_changed(self):
+        for field in ('state','acceptedAt','reassessmentTriggers','allowedUses'):
+            trusted={**self.decision,field:'different'}
+            self.trusted=json.dumps({'decision':trusted}).encode()
+            with self.subTest(field=field),self.assertRaises(ValueError):self.inspect(pages=[[]])
+
+    def test_ci_uses_live_verifier_and_only_pr_event(self):
+        event=self.root/'event.json';event.write_text(json.dumps({'pull_request':self.pr}))
+        env={'GITHUB_EVENT_NAME':'pull_request','GITHUB_EVENT_PATH':str(event)}
+        with patch.object(p,'inspect_pr_review',return_value={'mode':'fixture'}) as verifier:
+            self.assertEqual(p.verify_ci_baseline(self.root,self.decision,env),{'mode':'fixture'})
+            verifier.assert_called_once_with(self.root,self.decision,65,self.head,self.base)
+        with patch.object(p,'inspect_pr_review') as verifier:
+            p.verify_ci_baseline(self.root,self.decision,{'GITHUB_EVENT_NAME':'push'})
+            verifier.assert_not_called()
+
+    def test_cli_template_cannot_enable_acceptance_or_write(self):
+        with patch.object(p,'ROOT',self.root),patch.object(p,'inspect_pr_review',return_value='template') as inspect,patch.object(p,'evaluate') as evaluate:
+            self.assertEqual(p.main(['--pr-review','template','--pr','65','--expected-head',self.head,'--expected-base',self.base]),0)
+            evaluate.assert_not_called()
+            self.assertTrue(inspect.call_args.kwargs['template'])
+
+    def test_premerge_rechecks_after_fresh_conditions(self):
+        evidence={'reviewId':10}
+        for accepted,after,expected in [(True,evidence,0),(False,evidence,1),(True,{'reviewId':20},1)]:
+            with patch.object(p,'ROOT',self.root),patch.object(p,'inspect_pr_review',side_effect=[evidence,after]),patch.object(p,'evaluate',return_value={'accepted':accepted}):
+                self.assertEqual(p.main(['--pr-review','verify','--pr','65','--expected-head',self.head,'--expected-base',self.base]),expected)
+
+    def test_gh_transport_is_get_only(self):
+        import subprocess
+        with patch.object(p.subprocess,'run',return_value=subprocess.CompletedProcess([],0,b'[]')) as run:
+            p.gh_read(self.root,'repos/example',pages=True)
+        args=run.call_args.args[0]
+        self.assertEqual(args[:4],['gh','api','--method','GET'])
+        self.assertIn('--paginate',args);self.assertIn('--slurp',args)
 
 
 class IssueLifecycleTests(unittest.TestCase):

@@ -23,6 +23,11 @@ PURPOSES = ('development', 'firebase', 'ci', 'monitor', 'release', 'publish', 'r
 ADVISORY_URL = 'https://api.github.com/advisories/' + IDENTITY['id']
 REGISTRY_URL = 'https://registry.npmjs.org/braces'
 CLI_URL = 'https://registry.npmjs.org/firebase-tools/latest'
+REPOSITORY = 'crazy01100/myterm'
+MAINTAINER = {'login': 'crazy01100', 'id': 43394184, 'type': 'User'}
+REVIEW_MARKER = 'MYTERM-CONDITIONAL-REVIEW-V1'
+REVIEW_STATEMENT = ('I accept the specified Issue #43 baseline, allowed uses and residual risk. '
+                    'Keep Issue #43 open. All security checks must still pass.')
 
 
 def digest(value):
@@ -177,44 +182,172 @@ def verify_local(root, decision):
     return digest({'files': hashes, 'dependencyGraph': graph})
 
 
-def verify_ci_baseline(root, decision, environ=None):
-    """Unreviewed PR content cannot invent its own baseline/allowed scope.
+def strict_json(raw):
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            if key in result:
+                raise ValueError('Duplicate review field')
+            result[key] = value
+        return result
+    return json.loads(raw, object_pairs_hook=pairs)
 
-    Activation of an already-reviewed pending baseline still requires the
-    maintainer's normal PR review; this check does not authenticate a human.
-    """
+
+def is_maintainer(user):
+    return (isinstance(user, dict) and type(user.get('id')) is int
+            and all(user.get(k) == v for k, v in MAINTAINER.items()))
+
+
+def gh_read(root, endpoint, *, raw=False, pages=False):
+    """GET only. No review creation, check writing, rerun or merge capability."""
+    args = ['gh', 'api', '--method', 'GET']
+    if pages:
+        args += ['--paginate', '--slurp']
+    if raw:
+        args += ['-H', 'Accept: application/vnd.github.raw+json']
+    result = subprocess.run(args + [endpoint], cwd=root, capture_output=True,
+                            timeout=25, check=True)
+    return result.stdout if raw else strict_json(result.stdout)
+
+
+def pr_identity(pr, number, head, base):
+    if (type(number) is not int or number < 1
+            or not isinstance(head, str) or not re.fullmatch('[a-f0-9]{40}', head)
+            or not isinstance(base, str) or not re.fullmatch('[a-f0-9]{40}', base)):
+        raise ValueError('Invalid exact PR reference')
+    if (pr['number'] != number or pr['state'] != 'open' or pr['draft'] is not False
+            or pr['base']['ref'] != 'main'
+            or pr['base']['repo']['full_name'] != REPOSITORY
+            or pr['head']['repo']['full_name'] != REPOSITORY
+            or pr['head']['sha'] != head or pr['base']['sha'] != base):
+        raise ValueError('PR must be open, ready, same-repository main and match exact head/base')
+    user = pr['user']
+    if not isinstance(user, dict) or type(user.get('id')) is not int or not user.get('login'):
+        raise ValueError('Missing PR author identity')
+    return {'number': number, 'head': head, 'base': base, 'author': user}
+
+
+def review_document(identity, decision, policy_bytes, action='accept'):
+    if action not in ('accept', 'revoke'):
+        raise ValueError('Unknown review action')
+    if (any(decision.get(k) != v for k, v in IDENTITY.items())
+            or type(decision.get('revision')) is not int or decision['revision'] < 1):
+        raise ValueError('Invalid review decision identity')
+    return {'schemaVersion': 1, 'action': action, 'repository': REPOSITORY,
+            'pr': identity['number'], 'head': identity['head'], 'base': identity['base'],
+            'decisionId': IDENTITY['id'], 'revision': decision['revision'],
+            'policySHA256': hashlib.sha256(policy_bytes).hexdigest(),
+            'statement': REVIEW_STATEMENT if action == 'accept' else 'I revoke this baseline acceptance.'}
+
+
+def review_candidates(pages, *, self_authored=False):
+    if not isinstance(pages, list) or not pages or any(not isinstance(page, list) for page in pages):
+        raise ValueError('Incomplete review pages')
+    candidates = []
+    seen = set()
+    for page in pages:
+        for review in page:
+            if not isinstance(review, dict) or type(review.get('id')) is not int or review['id'] <= 0:
+                raise ValueError('Invalid review response')
+            if review['id'] in seen:
+                raise ValueError('Duplicated review page; retry fresh query')
+            seen.add(review['id'])
+            user = review.get('user')
+            if (not isinstance(user, dict) or type(user.get('id')) is not int
+                    or not isinstance(user.get('login'), str) or not user['login']
+                    or user.get('type') not in ('User', 'Bot', 'Mannequin')):
+                raise ValueError('Missing review author')
+            if review.get('state') not in ('APPROVED', 'CHANGES_REQUESTED', 'DISMISSED', 'COMMENTED', 'PENDING'):
+                raise ValueError('Unknown review state')
+            # A renamed/deleted identity is not silently treated as someone else.
+            if user.get('id') == MAINTAINER['id'] or user.get('login') == MAINTAINER['login']:
+                if not is_maintainer(user):
+                    raise ValueError('Maintainer identity mismatch')
+                body = review.get('body') or ''
+                if not isinstance(body, str):
+                    raise ValueError('Invalid review body')
+                if (review.get('state') in ('APPROVED', 'CHANGES_REQUESTED', 'DISMISSED')
+                        or REVIEW_MARKER in body
+                        or (self_authored and review.get('state') == 'COMMENTED')):
+                    candidates.append(review)
+    return candidates
+
+
+def select_review(pages, identity, decision, policy_bytes):
+    self_authored = is_maintainer(identity['author'])
+    latest = max(review_candidates(pages, self_authored=self_authored),
+                 key=lambda item: item['id'], default=None)
+    if latest is None:
+        raise ValueError('Changed baseline needs maintainer review on this exact PR head')
+    submitted = dt.datetime.fromisoformat(latest.get('submitted_at') or '')
+    if submitted.tzinfo is None or submitted > dt.datetime.now(dt.timezone.utc):
+        raise ValueError('Review has not been validly submitted')
+    if latest.get('commit_id') != identity['head']:
+        raise ValueError('Maintainer review is stale')
+    state = latest.get('state')
+    if state == 'APPROVED' and not self_authored:
+        mode = 'github-approved'
+    elif state == 'COMMENTED' and self_authored:
+        body = latest['body']
+        if not body.startswith(REVIEW_MARKER + '\n') or len(body) > 8192:
+            raise ValueError('Invalid explicit review format')
+        actual = strict_json(body[len(REVIEW_MARKER) + 1:])
+        expected = review_document(identity, decision, policy_bytes)
+        # Canonical encoding distinguishes JSON booleans and integers, too.
+        if digest(actual) != digest(expected):
+            raise ValueError('Explicit review revoked, malformed or does not match current baseline')
+        mode = 'maintainer-self-review'
+    else:
+        raise ValueError('Review is not a valid approval or has been withdrawn')
+    return {'reviewId': latest['id'], 'mode': mode, 'submittedAt': latest['submitted_at'],
+            'reviewerId': MAINTAINER['id'], 'head': identity['head'], 'base': identity['base'],
+            'policySHA256': hashlib.sha256(policy_bytes).hexdigest()}
+
+
+def inspect_pr_review(root, decision, number, head, base, *, template=False, action='accept'):
+    # Validate untrusted CLI/event arguments before constructing API paths.
+    if (type(number) is not int or number < 1
+            or not isinstance(head, str) or not re.fullmatch('[a-f0-9]{40}', head)
+            or not isinstance(base, str) or not re.fullmatch('[a-f0-9]{40}', base)):
+        raise ValueError('Invalid exact PR reference')
+    endpoint = f'repos/{REPOSITORY}/pulls/{number}'
+    identity = pr_identity(gh_read(root, endpoint), number, head, base)
+    policy_bytes = (root / POLICY).read_bytes()
+    remote_bytes = gh_read(root, f'repos/{REPOSITORY}/contents/{POLICY}?ref={head}', raw=True)
+    if policy_bytes != remote_bytes or strict_json(policy_bytes)['decision'] != decision:
+        raise ValueError('Local policy is not the policy at the exact PR head')
+    trusted = gh_read(root, f'repos/{REPOSITORY}/contents/{POLICY}?ref={base}', raw=True)
+    baseline_changed = decision != strict_json(trusted)['decision']
+    if template:
+        if not is_maintainer(identity['author']):
+            raise ValueError('Use native APPROVED review for another author')
+        result = REVIEW_MARKER + '\n' + json.dumps(
+            review_document(identity, decision, policy_bytes, action), ensure_ascii=False, indent=2)
+    else:
+        reviews = gh_read(root, endpoint + '/reviews?per_page=100', pages=True)
+        # Even an unchanged baseline may have a new explicit revocation. When
+        # changed, a qualifying review is mandatory; otherwise honour blockers.
+        owner_decisions = review_candidates(reviews, self_authored=is_maintainer(identity['author']))
+        result = (select_review(reviews, identity, decision, policy_bytes)
+                  if baseline_changed or owner_decisions else {'mode': 'unchanged-reviewed-base'})
+        if gh_read(root, endpoint + '/reviews?per_page=100', pages=True) != reviews:
+            raise ValueError('Reviews changed during verification; retry fresh query')
+    if pr_identity(gh_read(root, endpoint), number, head, base) != identity:
+        raise ValueError('PR identity changed during verification')
+    if (root / POLICY).read_bytes() != policy_bytes:
+        raise ValueError('Local policy changed during verification')
+    return result
+
+
+def verify_ci_baseline(root, decision, environ=None):
+    """Review evidence only; never a substitute for source/advisory verification."""
     env = os.environ if environ is None else environ
     if env.get('GITHUB_EVENT_NAME') != 'pull_request':
         return
     event = read_json(Path(env['GITHUB_EVENT_PATH']))['pull_request']
-    base = event['base']; head = event['head']
-    if base['repo']['full_name'] != 'crazy01100/myterm' or head['repo']['full_name'] != base['repo']['full_name']:
-        raise ValueError('Unreviewed fork cannot use this maintainer decision')
-    sha = base['sha']
-    if not re.fullmatch('[a-f0-9]{40}', sha):
-        raise ValueError('Invalid PR base identity')
-    data = subprocess.run(['gh', 'api', 'repos/crazy01100/myterm/contents/' + POLICY + '?ref=' + sha,
-                           '-H', 'Accept: application/vnd.github.raw+json'],
-                          cwd=root, capture_output=True, text=True, timeout=25, check=True)
-    trusted = json.loads(data.stdout)['decision']
-    fields = tuple(IDENTITY) + ('revision', 'baseline', 'allowedUses', 'residualRisk')
-    if any(decision.get(k) != trusted.get(k) for k in fields):
-        number = event.get('number')
-        head_sha = head.get('sha', '')
-        if not isinstance(number, int) or not re.fullmatch('[a-f0-9]{40}', head_sha):
-            raise ValueError('PR conditional baseline differs from reviewed base; maintainer review required')
-        reviews = subprocess.run(['gh', 'api', '--paginate', '--slurp',
-                                  f'repos/crazy01100/myterm/pulls/{number}/reviews'],
-                                 cwd=root, capture_output=True, text=True, timeout=25, check=True)
-        pages = json.loads(reviews.stdout)
-        if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
-            raise ValueError('Invalid maintainer review response')
-        owner_reviews = [review for page in pages for review in page
-                         if review.get('user', {}).get('login') == 'crazy01100'
-                         and review.get('state') in ('APPROVED', 'CHANGES_REQUESTED', 'DISMISSED')]
-        latest = max(owner_reviews, key=lambda review: review.get('id', 0), default={})
-        if latest.get('state') != 'APPROVED' or latest.get('commit_id') != head_sha:
-            raise ValueError('Changed baseline needs maintainer approval on this exact PR head')
+    number = event.get('number')
+    identity = pr_identity(event, number, event['head'].get('sha'), event['base'].get('sha'))
+    return inspect_pr_review(root, decision, number, identity['head'], identity['base'])
 
 
 def evaluate(root, decision, fetch=fetch_json, now=None):
@@ -229,7 +362,7 @@ def evaluate(root, decision, fetch=fetch_json, now=None):
             raise ValueError('Decision identity mismatch')
         if decision.get('state') not in ('pending', 'active'):
             raise ValueError('Conditional decision is inactive')
-        if not isinstance(decision.get('revision'), int) or decision['revision'] < 1:
+        if type(decision.get('revision')) is not int or decision['revision'] < 1:
             raise ValueError('Invalid decision revision')
         if not decision.get('residualRisk') or not decision.get('allowedUses'):
             raise ValueError('Decision scope incomplete')
@@ -238,7 +371,9 @@ def evaluate(root, decision, fetch=fetch_json, now=None):
             if accepted.tzinfo is None or accepted > now or decision.get('acceptedBy') != 'project maintainer':
                 raise ValueError('Missing or invalid maintainer acceptance')
         if decision['state'] == 'active':
-            verify_ci_baseline(root, decision)
+            evidence = verify_ci_baseline(root, decision)
+            if evidence is not None:
+                result['prReview'] = evidence
         local = verify_local(root, decision)
         try:
             advisory_data, registry_data, cli = fetch(ADVISORY_URL), fetch(REGISTRY_URL), fetch(CLI_URL)
@@ -255,6 +390,8 @@ def evaluate(root, decision, fetch=fetch_json, now=None):
         # Close the ordinary read/query interval; this is not a sandbox/TOCTOU proof.
         if verify_local(root, decision) != local:
             raise ValueError('Local sources changed during review')
+        if result.get('prReview') is not None and verify_ci_baseline(root, decision) != result['prReview']:
+            raise ValueError('PR review changed during conditional verification')
         result.update(status='matched', sourceDigest=local, advisoryDigest=digest(advisory),
                       registryDigest=digest(registry), upstreamFirebaseVersion=cli['version'],
                       accepted=decision['state'] == 'active',
@@ -296,15 +433,43 @@ def review_report(report, root=ROOT, fetch=fetch_json):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--purpose', choices=PURPOSES, required=True)
-    parser.add_argument('--task', required=True, help='Current task/build/run identifier; not an authorization flag')
+    parser.add_argument('--purpose', choices=PURPOSES)
+    parser.add_argument('--task', help='Current task/build/run identifier; not an authorization flag')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--inspect-pending', action='store_true', help='Read-only draft inspection; never authorizes execution')
+    parser.add_argument('--pr-review', choices=('template', 'verify'),
+                        help='Read-only exact-commit review helper; never submits a review or merges')
+    parser.add_argument('--pr', type=int)
+    parser.add_argument('--expected-head')
+    parser.add_argument('--expected-base')
+    parser.add_argument('--review-action', choices=('accept', 'revoke'), default='accept')
     args = parser.parse_args(argv)
-    if not args.task.strip() or len(args.task) > 200:
-        parser.error('A concise current task identifier is required')
+    if args.pr_review:
+        if (args.purpose or args.task or args.output or args.inspect_pending
+                or args.pr is None or not args.expected_head or not args.expected_base
+                or (args.pr_review != 'template' and args.review_action != 'accept')):
+            parser.error('Review helper requires only PR, expected head/base and optional template action')
+    elif (not args.purpose or not args.task or not args.task.strip() or len(args.task) > 200
+          or args.pr is not None or args.expected_head or args.expected_base or args.review_action != 'accept'):
+        parser.error('A purpose and concise task identifier are required; review flags cannot authorize work')
     try:
         decision = load_policy()
+        if args.pr_review:
+            evidence = inspect_pr_review(ROOT, decision, args.pr, args.expected_head, args.expected_base,
+                                         template=args.pr_review == 'template', action=args.review_action)
+            if args.pr_review == 'template':
+                print(evidence)
+                return 0  # Text only; not a submitted or accepted decision.
+            result = evaluate(ROOT, decision)
+            # Check again after official metadata reads; do not return a stale
+            # approval if someone revoked it while those requests were running.
+            if inspect_pr_review(ROOT, decision, args.pr, args.expected_head, args.expected_base) != evidence:
+                raise ValueError('Review evidence changed during pre-merge check')
+            print(json.dumps({'prReview': evidence, 'conditionalReview': result,
+                              'mergeAuthorized': False,
+                              'remainingChecks': 'Required CI, CodeQL, threads and exact-head merge preconditions'},
+                             ensure_ascii=False, indent=2))
+            return 0 if result['accepted'] else 1
         if decision['state'] == 'pending' and not args.inspect_pending:
             print('Issue 43 conditional policy pending approval; existing time-limited rules remain in force.')
             return 0

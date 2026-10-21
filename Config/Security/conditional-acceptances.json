@@ -6,7 +6,7 @@
     "version": "3.0.3",
     "scope": "development",
     "state": "active",
-    "revision": 3,
+    "revision": 4,
     "issue": "https://github.com/crazy01100/myterm/issues/43",
     "allowedUses": [
       "Reviewed local Firebase account/project queries through the project wrapper",
@@ -15,7 +15,7 @@
     ],
     "residualRisk": "Package remains unpatched and actual exploitability remains unverified. Local owners can bypass the wrapper; checks do not prevent all post-check changes. Not included in the MyTerm App.",
     "baseline": {
-      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedCommit": "335e9f5ba7c0129872d7129e215b65d141928d99",
       "files": {
         "Package.resolved": "958e30dd064399b01b176a1bfca93b1306545cdab00e36c6bb6f2cf4d5393ffd",
         "Package.swift": "0ff003bdceeff45fd52b3a603ddca9628418e67511e4a593bab2a9d1ef1dd09e",
@@ -41,7 +41,7 @@
         "scripts/prepare-release-build.sh": "93cba6c102e105a053c1f0f3ca2ebf76bc0b702314ec5955c952667c772f9952",
         "scripts/run-dev-app.sh": "7c7211f86b4417b95ebbfad70b4987aae65e215d09b628b401cd4be0fab534d8",
         "scripts/security-audit.py": "4cb7eef57ab31374ccdf87c21d18c3760b0cb7a830400dbab9b7c2bf9a19be21",
-        "scripts/security-conditional-risk.py": "6258a643cdd23c1c457c4198a2e36faa7c6532c4c0d1314692c0d96065428613",
+        "scripts/security-conditional-risk.py": "c9e0fb7b51d21b20305d8e19b269c152b2043229e9ebceac03f4131653bb603a",
         "scripts/verify-firebase-tools.cjs": "4290f65162825fa862e6062338213ffb94f0822408fc3a2b873944af5d0d690a",
         "scripts/security-test-profile.py": "1bae1dac834dbbf0e656b30992984bedddb2f0c5a942275e8dd7dd79b6803d7a",
         "scripts/run-policy-tests.py": "15c685f2d234d689fd6ce9f23325e353d9015b3c895c03d283592afabb96b019",
@@ -86,8 +86,8 @@
       "expiresAt": "2026-10-19T23:59:59+08:00",
       "configuration": "Config/Security/exceptions.json"
     },
-    "acceptanceRecord": "Maintainer explicitly accepted revision 3 for Issues #60–#64 on 2026-10-21, including existing fixed regression tests and full CI. Only the package-lock fingerprint changes from revision 2; allowed uses, dependency graph and residual risk remain unchanged. Keep Issue #43 open. No Daybreak or actual-exploitability testing is authorized. Previous acceptances remain in Git history.",
+    "acceptanceRecord": "Maintainer explicitly accepted the exact revision 4 proposal (SHA-256 366ae2d281f8e6fdd7959a166c5ab50057b1274e6efdd63906504bd2b2b85f51) on 2026-10-21 for the self-authored PR review verifier. Allowed uses, dependency graph, residual risk and reassessment triggers remain unchanged. Full fixed regressions and CI for PR #65 are authorized; the final head/base/policy digest must still receive explicit review approval before merge. Keep Issue #43 open. No Daybreak or actual-exploitability testing.",
     "acceptedBy": "project maintainer",
-    "acceptedAt": "2026-10-21T13:03:11.931904+00:00"
+    "acceptedAt": "2026-10-21T13:48:13.977945+00:00"
   }
 }

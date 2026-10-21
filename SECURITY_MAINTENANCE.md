@@ -101,6 +101,8 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 ### Issue #43 條件式風險接受
 
+2026-10-21維護者接受revision 4，更新同庫自建PR明確Review核准驗證器的精確來源指紋。套件、完整引入圖、允許用途、殘餘風險與重評條件不變；核准器變更已另獲審閱，最終PR head/base與政策摘要仍須明確核准，CI及合併前重核不可省略。Issue #43保留告警。
+
 2026-10-21維護者接受revision 3，僅更新MCP SDK／Hono修補後的鎖檔指紋；Firebase15.34.0、chokidar／braces引入圖、其他受審來源與允許用途保持不變。告警仍開啟，原期限不展延。
 
 維護者於2026-10-20接受revision 2，將受審Firebase CLI基準調整為15.34.0。Rules監看、chokidar及braces相關來源不變；限定用途、殘餘風險與重新評估條件沿用，Issue #43仍保持開啟。新基準須通過精確PR head審閱及CI，不以版本更新取代風險重核。
@@ -119,7 +121,11 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 任一受審相依／來源／Rules內容改變、官方修補版或新的braces版本出現、公告內容或Firebase上游watcher相依改變，均停止沿用並要求重評；一般UI修改仍須在新任務核對，但不改相同風險的批准基準。查詢失敗不能視為安全。已啟用決策失效或撤銷後不退回舊期限例外；其他公告、版本及scope不受本案接受保護。條件未變時不要求維護者重複批准。
 
-PR的基準及用途須與受審base相同，或GitHub上有維護者對當前精確PR head的有效APPROVED review；過期、撤銷或要求修改的review不接受。fork不得繼承此維護者決策。初始新基準先以pending提案審閱，啟用仍須維護者批准及正常PR流程。這些是入口及審閱規範，不是能防止本機擁有者改寫程式、繞過wrapper或所有檢查後變動的沙箱。基準綁定相關建置／封裝設定及來源，不只依賴devDependency標籤。
+PR的完整決策須與受審base相同，否則須取得對當前精確head的有效維護者核准。其他作者建立的PR沿用GitHub APPROVED review；只有指定維護者本人建立、同庫且目標main的PR，可使用已提交的COMMENTED review及嚴格的 `MYTERM-CONDITIONAL-REVIEW-V1` 內容。驗證器固定核對GitHub帳號 `crazy01100`（數字ID `43394184`、User），不接受PR內容自訂的核准者。紀錄綁定repository、PR號碼、完整head/base、decision ID、revision及政策檔原始bytes SHA-256；重複／額外／缺少欄位、錯誤型別、PENDING、過期或撤銷均不接受。普通Issue留言、label及PR說明不是核准。自建PR取本人最新Review，後續新Review或將撤銷紀錄改成普通文字都不會重新啟用較舊核准；需要重新提交明確決策，日常討論可使用普通PR留言。
+
+CI唯讀查詢GitHub即時PR及全部review分頁，重新讀取以拒絕驗證期間的變動；本機政策內容亦須等於精確遠端head。核准／撤銷之後重跑當前PR安全檢查；合併前依[開發指南](DEVELOPMENT.md#pr基準核准與合併前複核)再次核對，並以精確head限制正常合併。fork不得繼承此決策，任何官方patch、來源／用途漂移、其他漏洞或掃描錯誤照常阻擋。核准文字不會寫出成功check、不會跳過測試，也不能滿足GitHub未來可能要求的另一人Approve。
+
+初始或更新基準先以pending提案，維護者明確接受後才啟用；驗證器本身變更亦須重新提出來源指紋及人工審閱，不能把新驗證器的通過當成它自己的核准。Review證明GitHub帳號提交，並非第二人審查或不可修改的簽章。GitHub已完成check不會隨留言變動即時失效，故標準合併前必須重新查詢；此流程不能防止帳號擁有者另行修改規則、直接合併、繞過wrapper或所有檢查後變動。基準綁定相關建置／封裝設定及來源，不只依賴devDependency標籤。
 
 告警持續保留高風險、版本命中與實際影響待確認，另顯示處理方式、範圍、當次條件結果及最近複核。接受不移除finding或自動關閉Issue；#43即使從資料源消失也須先人工確認官方修補、實際升級及驗證，不因遺漏就結案。原期限與風險轉移歷史保留，單純更新複核時間不新增留言。政策模擬測試為 `test_conditional_risk.py`，不執行npm套件或漏洞輸入；完整開發工具測試另有漏洞回歸案例，不可在禁止漏洞測試的任務中逕行執行或推送觸發。
 
