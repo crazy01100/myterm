@@ -128,9 +128,9 @@
       ],
       "status": "needs-review",
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
-      "reason": "Firebase CLI15.34.0的Firestore controller、Rules watcher、config及chokidar／braces展開來源與15.33.0逐檔SHA-256相同；引入路徑仍為Firebase CLI → chokidar3.6.0 → braces3.0.3。專案wrapper仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。本次僅重新審查來源與相依，未執行實際可利用性測試，判定維持needs-review；條件式接受另依已核准基準決定。",
+      "reason": "Firebase CLI15.34.0的Firestore controller、Rules watcher、config及chokidar／braces展開來源與15.33.0逐檔SHA-256相同；引入路徑仍為Firebase CLI → chokidar3.6.0 → braces3.0.3。專案wrapper仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。本次僅重新審查來源與相依，未執行實際可利用性測試，判定維持needs-review；條件式接受另依已核准基準決定。 本輪僅更新MCP SDK／Hono鎖檔，Firebase CLI／Rules監看／chokidar／braces來源與revision2相同；新條件基準的啟用另依維護者接受紀錄。",
       "inputs": {
-        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a",
+        "package-lock.json": "2a3e688e43ef721c8c95c8390eba322b777853b5dce50ea7cb607f8e868f782f",
         "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
@@ -146,8 +146,8 @@
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "54bc1d109806f598400569b324eaea62e4681ba4",
-      "reviewedAt": "2026-10-20T02:26:54.064223+00:00"
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",
@@ -266,6 +266,156 @@
       "evidence": [
         "https://github.com/advisories/GHSA-6qxp-vccf-f47h",
         "https://github.com/firebase/firebase-tools/blob/v15.32.1/src/mcp/index.ts"
+      ]
+    },
+    {
+      "id": "GHSA-22jm-h49p-29qw",
+      "component": "@modelcontextprotocol/sdk",
+      "scope": "development",
+      "versions": [
+        "1.31.0"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI15.34.0 → MCP SDK／Hono開發相依；專案wrapper禁止MCP入口",
+      "reason": "Firebase15.34.0的SDK Server建構未指定taskStore，未啟用公告要求的共享實驗tasks；Firebase另有可選SSE模式，不能把整個CLI寫成stdio-only。本次只進行來源與公告條件核對，未做實際可利用性測試；專案wrapper拒絕mcp／experimental:mcp，正常允許用途不啟動MCP服務。直接繞過wrapper或其他MCP應用不在此評估範圍；套件不封裝於MyTerm App。",
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00",
+      "historicalScanTimes": [
+        "2026-10-21T06:06:12.049239+00:00"
+      ],
+      "inputs": {
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/onemcp/onemcp_server.js": "781c1b24b2bae3ce1c67eeae903b2b9fa55a049bbeba893116aca91ad4e1362a",
+        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-22jm-h49p-29qw",
+        "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
+        "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
+      ]
+    },
+    {
+      "id": "GHSA-46jr-4wx8-v453",
+      "component": "@modelcontextprotocol/sdk",
+      "scope": "development",
+      "versions": [
+        "1.31.0"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI15.34.0 → MCP SDK／Hono開發相依；專案wrapper禁止MCP入口",
+      "reason": "Firebase保留可選HTTP/SSE入口；本專案禁止啟動它，未確認正常允許用途可到達公告的HTTP輸入驗證路徑。SDK升級新增maxToolInputElements預設關閉；若日後允許HTTP工具，須另設定工具輸入元素及request-body限制，不能只靠升級宣稱防護完成。本次只進行來源與公告條件核對，未做實際可利用性測試；專案wrapper拒絕mcp／experimental:mcp，正常允許用途不啟動MCP服務。直接繞過wrapper或其他MCP應用不在此評估範圍；套件不封裝於MyTerm App。",
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00",
+      "historicalScanTimes": [
+        "2026-10-21T06:06:12.049239+00:00"
+      ],
+      "inputs": {
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/onemcp/onemcp_server.js": "781c1b24b2bae3ce1c67eeae903b2b9fa55a049bbeba893116aca91ad4e1362a",
+        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-46jr-4wx8-v453",
+        "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
+        "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
+      ]
+    },
+    {
+      "id": "GHSA-6prh-2h8m-c8cw",
+      "component": "@modelcontextprotocol/sdk",
+      "scope": "development",
+      "versions": [
+        "1.31.0"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI15.34.0 → MCP SDK／Hono開發相依；專案wrapper禁止MCP入口",
+      "reason": "Firebase MCP來源未使用SDK的StreamableHTTPClientTransport／SSEClientTransport或OAuth客戶端；OneMcpServer使用Firebase自身apiv2.Client。升級保留新預設redirect政策，不啟用follow回退；本評估不涵蓋Firebase自身HTTP客戶端的其他議題。本次只進行來源與公告條件核對，未做實際可利用性測試；專案wrapper拒絕mcp／experimental:mcp，正常允許用途不啟動MCP服務。直接繞過wrapper或其他MCP應用不在此評估範圍；套件不封裝於MyTerm App。",
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00",
+      "historicalScanTimes": [
+        "2026-10-21T06:06:12.049239+00:00"
+      ],
+      "inputs": {
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/onemcp/onemcp_server.js": "781c1b24b2bae3ce1c67eeae903b2b9fa55a049bbeba893116aca91ad4e1362a",
+        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-6prh-2h8m-c8cw",
+        "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
+        "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
+      ]
+    },
+    {
+      "id": "GHSA-rvq5-wwqv-78pq",
+      "component": "@modelcontextprotocol/sdk",
+      "scope": "development",
+      "versions": [
+        "1.31.0"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI15.34.0 → MCP SDK／Hono開發相依；專案wrapper禁止MCP入口",
+      "reason": "Firebase MCP來源未呼叫SDK requireBearerAuth／verifyBearerToken。SDK升級的expectedResource預設關閉；日後使用此HTTP驗證路徑須同時設定expectedResource並由verifier回傳AuthInfo.resource，不可只升級或只設定其中一項。本次只進行來源與公告條件核對，未做實際可利用性測試；專案wrapper拒絕mcp／experimental:mcp，正常允許用途不啟動MCP服務。直接繞過wrapper或其他MCP應用不在此評估範圍；套件不封裝於MyTerm App。",
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00",
+      "historicalScanTimes": [
+        "2026-10-21T06:06:12.049239+00:00"
+      ],
+      "inputs": {
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/onemcp/onemcp_server.js": "781c1b24b2bae3ce1c67eeae903b2b9fa55a049bbeba893116aca91ad4e1362a",
+        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-rvq5-wwqv-78pq",
+        "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
+        "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
+      ]
+    },
+    {
+      "id": "GHSA-5r4p-p66f-jhc7",
+      "component": "hono",
+      "scope": "development",
+      "versions": [
+        "4.13.7"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI15.34.0 → MCP SDK／Hono開發相依；專案wrapper禁止MCP入口",
+      "reason": "Firebase MCP來源未載入Hono serveStatic；其可選HTTP路徑使用Express。Hono及Node adapter均升至官方修補版，未啟用allowPercentInPath回退。沒有驗證其他直接使用Hono靜態伺服器的應用。本次只進行來源與公告條件核對，未做實際可利用性測試；專案wrapper拒絕mcp／experimental:mcp，正常允許用途不啟動MCP服務。直接繞過wrapper或其他MCP應用不在此評估範圍；套件不封裝於MyTerm App。",
+      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
+      "reviewedAt": "2026-10-21T08:34:26.394859+00:00",
+      "historicalScanTimes": [
+        "2026-10-21T06:06:12.049239+00:00"
+      ],
+      "inputs": {
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/firebase-tools/lib/mcp/onemcp/onemcp_server.js": "781c1b24b2bae3ce1c67eeae903b2b9fa55a049bbeba893116aca91ad4e1362a",
+        "package-lock.json": "26134b89aacf68192e6efcb976981dd3d3c3e3ae0607eed07e872008dfccde7a"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-5r4p-p66f-jhc7",
+        "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
+        "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
       ]
     }
   ]

@@ -84,7 +84,11 @@ Firebase CLI 固定為 `15.34.0`，上游已原生支援安全版本的 `stream-
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
-`@modelcontextprotocol/sdk 1.31.0`沿Firebase CLI原相容範圍鎖定，不新增覆寫。Firebase只使用SDK伺服器端，專案入口亦禁止MCP指令，未使用GHSA-6qxp-vccf-f47h影響的HTTP OAuth客戶端；此判斷不涵蓋其他獨立MCP客戶端。`firebase-mcp-sdk.test.cjs`以合成資料驗證Server／stdio握手、工具列舉及OAuth issuer不符時拒絕送出憑證，沒有真實登入或服務連線。日後若引入HTTP OAuth客戶端，仍須依公告處理issuer／expectedIssuer及舊憑證，不能只依賴版本更新。
+`@modelcontextprotocol/sdk 1.32.1`、`hono 4.13.11`及`@hono/node-server 2.1.3`沿父套件相容範圍鎖定，不新增覆寫。SDK 1.x仍在官方bug／security維護期，本輪不遷移至2.x。Firebase MCP使用SDK Server，具備stdio及可選HTTP/SSE模式；專案wrapper拒絕mcp及experimental:mcp，正常允許用途不啟動這些入口。Firebase未設定實驗taskStore，未使用SDK HTTP/OAuth client、bearer middleware或Hono serveStatic；OneMcpServer使用Firebase自身apiv2.Client。這些來源判斷不涵蓋直接繞過wrapper或其他獨立MCP應用。
+
+SDK更新修正tasks的session綁定及HTTP/OAuth跨來源redirect政策；不設定`redirectPolicy: 'follow'`恢復舊行為。GHSA-46jr-4wx8-v453與GHSA-rvq5-wwqv-78pq的新保護選項預設關閉：未來若允許HTTP MCP，須另外限制工具輸入元素（`maxToolInputElements`）與request body；採用SDK bearer驗證時須同時設定`expectedResource`及由verifier回傳`AuthInfo.resource`。不得把單純升級宣稱為所有HTTP用法已受保護。先前OAuth issuer／expectedIssuer與舊憑證界線亦維持。
+
+Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
 
 ### braces 未修補漏洞的入口緩解
 
@@ -96,6 +100,8 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 
 ### Issue #43 條件式風險接受
+
+2026-10-21維護者接受revision 3，僅更新MCP SDK／Hono修補後的鎖檔指紋；Firebase15.34.0、chokidar／braces引入圖、其他受審來源與允許用途保持不變。告警仍開啟，原期限不展延。
 
 維護者於2026-10-20接受revision 2，將受審Firebase CLI基準調整為15.34.0。Rules監看、chokidar及braces相關來源不變；限定用途、殘餘風險與重新評估條件沿用，Issue #43仍保持開啟。新基準須通過精確PR head審閱及CI，不以版本更新取代風險重核。
 

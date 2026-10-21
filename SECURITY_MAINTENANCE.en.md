@@ -84,7 +84,11 @@ Firebase CLI is pinned to `15.34.0`, which natively supports patched `stream-jso
 
 `compression 1.8.2` and `proxy-addr 2.0.8` are locked within existing parent compatibility ranges without new overrides. `firebase-http-dependencies.test.cjs` covers compression resource cleanup after aborted gzip/deflate/Brotli responses, actual superstatic compressed and identity responses, and proxy-trust subnet and loopback HTTP cases through the Express 4/5 consumers used by Firebase and MCP. Both are development-only dependencies; the Hosting command restriction does not substitute for patching them.
 
-`@modelcontextprotocol/sdk 1.31.0` is locked within the Firebase CLI compatibility range without a new override. Firebase uses the SDK server APIs, and the project wrapper rejects MCP commands; the HTTP OAuth client affected by GHSA-6qxp-vccf-f47h is not used. This assessment does not cover other independent MCP clients. `firebase-mcp-sdk.test.cjs` uses synthetic data to verify Server/stdio handshakes, tool listing, and rejection of credentials bound to another OAuth issuer, without real sign-ins or service connections. Any future HTTP OAuth client integration must also address issuer/expectedIssuer and legacy credentials as specified in the advisory; a package update alone is not sufficient for every client configuration.
+`@modelcontextprotocol/sdk 1.32.1`, `hono 4.13.11`, and `@hono/node-server 2.1.3` are locked within their parent compatibility ranges without new overrides. SDK 1.x remains in its official bug/security maintenance period; this change does not migrate to 2.x. Firebase MCP uses SDK Server with stdio and optional HTTP/SSE modes. The project wrapper rejects mcp and experimental:mcp, so its allowed workflows do not start those entry points. Firebase does not configure experimental taskStore or use the SDK HTTP/OAuth clients, bearer middleware, or Hono serveStatic; OneMcpServer uses Firebase's own apiv2.Client. These source assessments do not cover direct wrapper bypasses or other MCP applications.
+
+The SDK update fixes task/session binding and HTTP/OAuth cross-origin redirect policy; do not restore the old behavior with `redirectPolicy: 'follow'`. The new protections for GHSA-46jr-4wx8-v453 and GHSA-rvq5-wwqv-78pq are off by default. Any future HTTP MCP integration must separately limit tool input elements (`maxToolInputElements`) and request bodies. SDK bearer authentication requires both `expectedResource` and a verifier returning `AuthInfo.resource`. A package update alone does not protect every HTTP configuration. Previous OAuth issuer/expectedIssuer and legacy credential requirements also remain.
+
+Both Hono and its Node adapter include the serveStatic duplicate path-decoding fix; do not enable the `allowPercentInPath` fallback. `firebase-mcp-sdk.test.cjs` retains synthetic Server/stdio handshakes, tool listing, and OAuth issuer checks. `test_firebase_policy.py` explicitly checks rejection of MCP commands and their alias. Source-bound advisory assessments are retained in `Config/Security/impact-assessments.json`; historical version matches are not proof of exploitability, and these descriptions do not lower the existing risk classifications.
 
 ### Entry-point mitigation for the unpatched braces advisory
 
@@ -96,6 +100,8 @@ Firebase CLI 15.34.0 removed the unused `proxy-agent`, `universal-analytics`, an
 
 
 ### Issue #43 conditional risk acceptance
+
+On 2026-10-21 the maintainer accepted revision 3, changing only the lockfile fingerprint for the MCP SDK/Hono fixes. Firebase 15.34.0, the chokidar/braces dependency graph, all other reviewed sources, and allowed uses remain unchanged. The finding stays open and the original expiry is not extended.
 
 On 2026-10-20 the maintainer accepted revision 2 for the reviewed Firebase CLI 15.34.0 baseline. The relevant Rules watcher, chokidar, and braces sources are unchanged. Allowed uses, residual risk, and reassessment triggers remain the same, and Issue #43 stays open. The new baseline still requires review of the exact PR head and passing CI; a version update does not replace risk reassessment.
 

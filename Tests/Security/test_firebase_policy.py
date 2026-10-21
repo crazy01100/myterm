@@ -13,6 +13,11 @@ class FirebasePolicyTests(unittest.TestCase):
     def test_forbidden_reachable_paths(self):
         for args in [['auth:import','untrusted.json'],['deploy','--project','example-project','--only','hosting'],['emulators:start','--project','demo-myterm','--only','hosting'],['deploy','--project','example-project','--only','firestore','--only','hosting']]:
             with self.subTest(args=args),self.assertRaises(ValueError):p.validate(args)
+    def test_mcp_and_alias_cannot_start_from_project_wrapper(self):
+        for args in [['mcp'], ['experimental:mcp'], ['mcp', '--sse'],
+                     ['mcp', '--project', 'demo-myterm']]:
+            with self.subTest(args=args), self.assertRaises(ValueError):
+                p.validate(args)
     def test_arbitrary_shell_and_production_emulator_rejected(self):
         for args in [['emulators:exec','--project','demo-myterm','--only','firestore','firebase auth:import input.json'],['emulators:start','--project','example-project','--only','firestore'],['deploy','--project','example-project','--only','firestore','--config','other.json']]:
             with self.subTest(args=args),self.assertRaises(ValueError):p.validate(args)
