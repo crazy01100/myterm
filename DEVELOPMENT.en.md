@@ -54,6 +54,8 @@ History cleanup changes commit/tag identifiers and can affect PR diffs and signe
 
 ## Daily development workflow
 
+Run `zsh scripts/run-local-terminal-file-drop-tests.sh` for focused Local Terminal path-drop regression; it is also included in `run-tests.sh`. Private pasteboards, offscreen AppKit/SwiftTerm views, and zsh/bash commands that only print arguments cover special filenames, whole-batch rejection, pane identity/lifetime, prompt and terminal modes, and bracketed paste. This focused entry does not read production data, launch MyTerm, or run vulnerability cases. Actual Finder drops and shared workspace/SFTP interactions still require Dev acceptance.
+
 Before launching MyTerm Dev, verify that the production app has exited. If `/Applications/MyTerm.app` is running, stop the Dev workflow and ask the user to “退出所有工作並關閉正式版本” (exit all work and quit the production app). Only the user closes production; tools must never terminate it. Recheck processes after the user's reply rather than treating a reply or elapsed time as proof.
 
 `run-dev-app.sh` calls the read-only `check-dev-launch.py` gate before stopping/rebuilding Dev and again immediately before launch. A process-query failure also stops the workflow. Do not bypass it through direct open, Finder or Computer Use that launches apps automatically. Users of external test Macs must also quit production first; this is launch ordering, not an app-location requirement. Isolated tests that do not launch an app can continue while waiting.

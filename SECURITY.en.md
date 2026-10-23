@@ -44,6 +44,10 @@ After Google verification succeeds and the service explicitly rejects new-accoun
 
 - Temporary SSH accepts structured accounts, hosts, and ports as process arguments, not shell commands or arbitrary options. It does not read/write MyTerm saved-host passwords or automatically save hosts; system SSH config/Agent authentication remains available. Host-key confirmation, Logs retention, and existing encrypted Logs sync still apply; this is not an incognito mode.
 
+## Local Terminal file drops
+
+Local terminals accept file URLs and send shell-quoted absolute paths to the actual destination local pane. They do not read or upload files, change the clipboard, or append Enter. Control characters/newlines, nonlocal URLs, mixed unsupported payloads, and oversized batches are rejected in full. Delivery rechecks the session, connection attempt, visibility, and existing password/terminal-mode guards; it never redirects to another pane or SSH session. These guards cannot identify every interactive program, so users must check the current program and cursor position. Running ssh or another program inside a local shell does not automatically change MyTerm’s session type.
+
 ## SSH trust
 
 Terminal send diagnostics record only event counters and byte counts, never raw password or other input bytes.
