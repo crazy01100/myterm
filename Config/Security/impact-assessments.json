@@ -128,9 +128,9 @@
       ],
       "status": "needs-review",
       "usage": "Firebase CLI → Firestore Emulator Rules檔案監看 → chokidar → braces.expand",
-      "reason": "Firebase CLI15.34.0的Firestore controller、Rules watcher、config及chokidar／braces展開來源與15.33.0逐檔SHA-256相同；引入路徑仍為Firebase CLI → chokidar3.6.0 → braces3.0.3。專案wrapper仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。本次僅重新審查來源與相依，未執行實際可利用性測試，判定維持needs-review；條件式接受另依已核准基準決定。 本輪僅更新MCP SDK／Hono鎖檔，Firebase CLI／Rules監看／chokidar／braces來源與revision2相同；新條件基準的啟用另依維護者接受紀錄。",
+      "reason": "Firebase CLI15.34.0的Firestore controller、Rules watcher、config及chokidar／braces展開來源與15.33.0逐檔SHA-256相同；引入路徑仍為Firebase CLI → chokidar3.6.0 → braces3.0.3。專案wrapper仍拒絕規則路徑／專案目錄／symlink大括號。直接執行CLI或檢查後修改不受此限制；套件尚未修補，實際外部輸入能否抵達仍未證明。正式App不包含此套件。本次僅重新審查來源與相依，未執行實際可利用性測試，判定維持needs-review；條件式接受另依已核准基準決定。 本輪僅更新MCP SDK／Hono鎖檔，Firebase CLI／Rules監看／chokidar／braces來源與revision2相同；新條件基準的啟用另依維護者接受紀錄。 2026-10-23僅更新ip-address與stream-json鎖檔，所有其他受審來源及braces引入圖不變；revision5精確基準已由維護者明確接受，Issue43保持告警。",
       "inputs": {
-        "package-lock.json": "2a3e688e43ef721c8c95c8390eba322b777853b5dce50ea7cb607f8e868f782f",
+        "package-lock.json": "bb7d12a3fd4167ceb50f563a5490b1a7c4c44d7f500364b7eaf1b1c7010b3c3d",
         "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
         "firebase.json": "6e2e569730026ce8808e936e404e9387b41c29abfb9ca44d8a138b9d11aa1990",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
@@ -146,8 +146,8 @@
         "https://github.com/paulmillr/chokidar/blob/3.6.0/index.js",
         "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
       ],
-      "reviewedCommit": "a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27",
-      "reviewedAt": "2026-10-21T08:34:26.394859+00:00"
+      "reviewedCommit": "c2d4bf4ef45710503da49d0910d8fbb6fed28004",
+      "reviewedAt": "2026-10-23T07:56:52.815525+00:00"
     },
     {
       "id": "GHSA-c475-qrg2-pj4r",
@@ -416,6 +416,66 @@
         "https://github.com/advisories/GHSA-5r4p-p66f-jhc7",
         "https://github.com/firebase/firebase-tools/blob/v15.34.0/src/mcp/index.ts",
         "https://github.com/crazy01100/myterm/blob/a1a1c7427ec90de4fe7ae50e623615bf3c1c5a27/scripts/firebase-command-policy.py"
+      ]
+    },
+    {
+      "id": "GHSA-rxp7-6hxx-x8q5",
+      "component": "ip-address",
+      "scope": "development",
+      "versions": [
+        "10.7.2"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → MCP SDK OAuth handlers → express-rate-limit → ip-address.Address6",
+      "reason": "先前10.7.2版本命中；本輪已沿父相依^10.2.0鎖定官方修補10.7.4，不新增override。express-rate-limit的ipKeyGenerator在node:net.isIPv6通過後使用Address6；MCP OAuth handlers可使用該限制器，但專案wrapper拒絕mcp／experimental:mcp。此為來源分析，未驗證所有入口或繞過wrapper情境；不以限定用途豁免告警，修正仍依官方版本與完整掃描確認。正式App不包含npm相依。",
+      "reviewedCommit": "c2d4bf4ef45710503da49d0910d8fbb6fed28004",
+      "reviewedAt": "2026-10-23T07:56:52.815525+00:00",
+      "inputs": {
+        "package-lock.json": "bb7d12a3fd4167ceb50f563a5490b1a7c4c44d7f500364b7eaf1b1c7010b3c3d",
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "node_modules/firebase-tools/lib/mcp/index.js": "9bc1d576b850c5c73f8fdfe21a9865e746e4f066ea439bbbad878a238fb72b1a",
+        "node_modules/@modelcontextprotocol/sdk/dist/cjs/server/auth/handlers/authorize.js": "96deb78e1f2f0be6efdd240843658cfdd40443c7bb9bcb5dfedc1b2d796d2c62",
+        "node_modules/@modelcontextprotocol/sdk/dist/cjs/server/auth/handlers/token.js": "91aecf87c02cabe4568e5677ee81a286fefb38e370aa376ce62843a68809ffda",
+        "node_modules/express-rate-limit/dist/index.cjs": "bde6cba05b52b82ced6b7cae7ec3d6d59ad4ddfbb3d79d0be71c7d8dd440bb86"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-rxp7-6hxx-x8q5",
+        "https://github.com/firebase/firebase-tools/tree/v15.34.0/src"
+      ],
+      "historicalScanTimes": [
+        "2026-10-23T07:05:23.415219+00:00"
+      ]
+    },
+    {
+      "id": "GHSA-jj87-hc4r-jwfw",
+      "component": "stream-json",
+      "scope": "development",
+      "versions": [
+        "3.6.0"
+      ],
+      "status": "needs-review",
+      "usage": "Firebase CLI → streamJson橋接 → Auth JSON／DatabaseImporter／Next.js parser與filters",
+      "reason": "先前3.6.0版本命中；本輪沿Firebase CLI的^3.6.0範圍鎖定官方修補3.7.0，不恢復來源相容層或override。CLI共用橋接只載入parser／pick／filter／stream-array／stream-object，審閱的消費端未使用公告所指FlexAssembler字串／RegExp規則；不代表其他直接呼叫或未來用途免受影響。使用官方修補並保留既有真實CLI消費端回歸；未新增漏洞載荷或實際可利用性實驗。正式App不包含npm相依。",
+      "reviewedCommit": "c2d4bf4ef45710503da49d0910d8fbb6fed28004",
+      "reviewedAt": "2026-10-23T07:56:52.815525+00:00",
+      "inputs": {
+        "package-lock.json": "bb7d12a3fd4167ceb50f563a5490b1a7c4c44d7f500364b7eaf1b1c7010b3c3d",
+        "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "node_modules/firebase-tools/lib/streamJson.js": "a9a43f1461f6bce5e4da6ae50601e32127aa01437d13b5d8d574b5a39f9be044",
+        "node_modules/firebase-tools/lib/commands/auth-import.js": "c6db98d6ef0cb2880eab3d2ba9325a7301a3b35a5054ef194af5f625d29db1ec",
+        "node_modules/firebase-tools/lib/database/import.js": "0545f06bc6e43e618d494a90fe38371c39d854924810884e8bc7070d71cd62b5",
+        "node_modules/firebase-tools/lib/frameworks/next/utils.js": "24e303fec6cf413c0e51252a1af280296184872517bb516369e723767934cd35"
+      },
+      "evidence": [
+        "https://github.com/advisories/GHSA-jj87-hc4r-jwfw",
+        "https://github.com/firebase/firebase-tools/tree/v15.34.0/src"
+      ],
+      "historicalScanTimes": [
+        "2026-10-23T07:05:23.415219+00:00"
       ]
     }
   ]

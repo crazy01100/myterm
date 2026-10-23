@@ -6,7 +6,7 @@
     "version": "3.0.3",
     "scope": "development",
     "state": "active",
-    "revision": 4,
+    "revision": 5,
     "issue": "https://github.com/crazy01100/myterm/issues/43",
     "allowedUses": [
       "Reviewed local Firebase account/project queries through the project wrapper",
@@ -15,7 +15,7 @@
     ],
     "residualRisk": "Package remains unpatched and actual exploitability remains unverified. Local owners can bypass the wrapper; checks do not prevent all post-check changes. Not included in the MyTerm App.",
     "baseline": {
-      "reviewedCommit": "335e9f5ba7c0129872d7129e215b65d141928d99",
+      "reviewedCommit": "c2d4bf4ef45710503da49d0910d8fbb6fed28004",
       "files": {
         "Package.resolved": "958e30dd064399b01b176a1bfca93b1306545cdab00e36c6bb6f2cf4d5393ffd",
         "Package.swift": "0ff003bdceeff45fd52b3a603ddca9628418e67511e4a593bab2a9d1ef1dd09e",
@@ -31,7 +31,7 @@
         "node_modules/firebase-tools/lib/emulator/controller.js": "86a3411bbb68a6e6c031e79f921b545045618471fd373e16cf6621f67011a946",
         "node_modules/firebase-tools/lib/emulator/firestoreEmulator.js": "242e2d443427838ea720e6b646c3f57e522b6789271837d79c05108a94cde00e",
         "node_modules/firebase-tools/package.json": "61190c04debee3506f7d4d8384204fde71c2e85176cb22de8aba9b88bfeacc8c",
-        "package-lock.json": "2a3e688e43ef721c8c95c8390eba322b777853b5dce50ea7cb607f8e868f782f",
+        "package-lock.json": "bb7d12a3fd4167ceb50f563a5490b1a7c4c44d7f500364b7eaf1b1c7010b3c3d",
         "package.json": "c0970a43d47b1c1dd87d67a3bda6130a34960874316e98976268ccc515458655",
         "scripts/build-app.sh": "b4aab91a60cd9fa034fa3a13bf7ec86b9c005b1f958a33282bcd8440335018d7",
         "scripts/dependency-inventory.py": "e076a096d2bdad8cd817cfe301ee409fbdadec72c77960a0bd294cab1c65dfa1",
@@ -86,8 +86,8 @@
       "expiresAt": "2026-10-19T23:59:59+08:00",
       "configuration": "Config/Security/exceptions.json"
     },
-    "acceptanceRecord": "Maintainer explicitly accepted the exact revision 4 proposal (SHA-256 366ae2d281f8e6fdd7959a166c5ab50057b1274e6efdd63906504bd2b2b85f51) on 2026-10-21 for the self-authored PR review verifier. Allowed uses, dependency graph, residual risk and reassessment triggers remain unchanged. Full fixed regressions and CI for PR #65 are authorized; the final head/base/policy digest must still receive explicit review approval before merge. Keep Issue #43 open. No Daybreak or actual-exploitability testing.",
+    "acceptanceRecord": "Maintainer explicitly accepted the exact revision 5 proposal (SHA-256 9e956480c5f3182f860f6d9a917692734efa9c23a13ac09f191c0202525f4b23) on 2026-10-23 for compatible ip-address 10.7.4 and stream-json 3.7.0 lockfile updates. All other reviewed source fingerprints, the complete braces dependency graph, allowed uses, residual risk and reassessment triggers are unchanged. Existing fixed regressions and complete CI for this maintenance and the 1.10.0 release are authorized; final PR head/base/policy still requires explicit review approval before merge. Keep Issue #43 open. No Daybreak or actual-exploitability testing.",
     "acceptedBy": "project maintainer",
-    "acceptedAt": "2026-10-21T13:48:13.977945+00:00"
+    "acceptedAt": "2026-10-23T07:54:57.800571+00:00"
   }
 }
