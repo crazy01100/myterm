@@ -54,6 +54,8 @@ Git 歷史清理會改變 commit／tag 的識別，並可能影響 PR 差異與�
 
 ## 日常開發流程
 
+本機 Terminal 路徑拖放的限定回歸入口為 `zsh scripts/run-local-terminal-file-drop-tests.sh`，亦接入 `run-tests.sh`。使用私有 pasteboard、離屏 AppKit／SwiftTerm 與僅輸出引數的 zsh／bash 測試，涵蓋特殊檔名、整批拒絕、窗格身分／生命週期、提示與終端模式、bracketed paste；不讀正式資料、不啟動 MyTerm 或執行漏洞案例。實際 Finder 拖放及共享窗格／SFTP 互動仍須 Dev 驗收。
+
 啟動MyTerm Dev前必須先確認正式版已退出。若`/Applications/MyTerm.app`仍在執行，立即停止Dev流程並提醒「退出所有工作並關閉正式版本」，由使用者自行關閉；工具不得代為終止正式版。使用者回覆後仍須重新查核程序，不靠等待或口頭確認推定已退出。
 
 `run-dev-app.sh`在任何Dev關閉／建置動作前及建置後即將啟動前，均透過`check-dev-launch.py`唯讀核對程序；查詢失敗亦停止。不得用直接open、Finder或會自動啟動App的Computer Use繞過。外部測試Mac也應先由使用者關閉正式版；這是開發啟動順序，不是App路徑限制。可在等待期間執行不啟動App的隔離測試。

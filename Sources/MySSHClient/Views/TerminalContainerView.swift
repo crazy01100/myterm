@@ -43,6 +43,21 @@ struct TerminalContainerView: NSViewRepresentable {
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         terminal.processDelegate = context.coordinator
+        terminal.fileDropVisible = isVisible
+        if session.kind == .local {
+            terminal.registerForDraggedTypes([.fileURL])
+            terminal.fileDropTarget = { [weak session] in
+                guard let session, session.kind == .local, session.canReceiveSnippet else { return nil }
+                return LocalTerminalFileDropTarget(sessionID: session.id, attemptID: session.inputAttemptID)
+            }
+            terminal.insertDroppedFiles = { [weak session, weak terminal, weak coordinator = context.coordinator] urls, target in
+                guard let session, let terminal,
+                      session.insertDroppedFiles(urls, target: target, into: terminal) else { return false }
+                coordinator?.onActivate()
+                terminal.window?.makeFirstResponder(terminal)
+                return true
+            }
+        }
         applyFont(to: terminal)
         terminal.fontSmoothing = true
         terminal.scrollerStyle = .overlay
@@ -134,6 +149,7 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {
+        (nsView as? FileDropTerminalView)?.fileDropVisible = isVisible
         context.coordinator.isVisible = isVisible
         context.coordinator.isActive = isActive
         context.coordinator.onActivate = onActivate
@@ -161,6 +177,7 @@ struct TerminalContainerView: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ nsView: LocalProcessTerminalView, coordinator: Coordinator) {
+        (nsView as? FileDropTerminalView)?.invalidateFileDrop()
         coordinator.removeControlDMonitor()
         coordinator.removeActivationMonitor()
         coordinator.removeTextCursorMonitor()
@@ -368,7 +385,7 @@ struct TerminalContainerView: NSViewRepresentable {
 /// Watches only the SSH authentication phase. Saved passwords remain one-shot.
 /// When no password exists, repeated login prompts replace the prior captured
 /// attempt until OpenSSH independently confirms successful authentication.
-final class LoginAwareTerminalView: SnippetGuardedTerminalView {
+final class LoginAwareTerminalView: FileDropTerminalView {
     var onLoginPasswordPrompt: (() -> Void)?
     var onLoginPasswordSubmitted: ((Data) -> Void)?
     var onLoginPasswordCaptureCancelled: (() -> Void)?

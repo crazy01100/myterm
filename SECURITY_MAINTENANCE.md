@@ -90,6 +90,8 @@ SDK更新修正tasks的session綁定及HTTP/OAuth跨來源redirect政策；不�
 
 Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
 
+`ip-address 10.7.4`與`stream-json 3.7.0`分別在父相依`^10.2.0`／`^3.6.0`範圍更新鎖檔，沒有新增override或來源相容層。前者由MCP的express-rate-limit引入；正常IPv4、IPv6子網及IPv4-mapped位址沿真實ipKeyGenerator驗證。後者沿用Firebase的Auth、DatabaseImporter及Next.js管線回歸；CLI橋接沒有使用公告所指FlexAssembler規則filter。這些來源範圍不是漏洞豁免，不涵蓋繞過wrapper的獨立用途；修復依官方版本、相容回歸及完整掃描確認。兩者只屬開發工具，不隨App封裝。
+
 ### braces 未修補漏洞的入口緩解
 
 `braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
@@ -100,6 +102,8 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 
 ### Issue #43 條件式風險接受
+
+2026-10-23維護者接受revision5精確基準，只更新ip-address10.7.4／stream-json3.7.0的鎖檔指紋；其餘30份受審來源、完整braces引入圖、限定用途及殘餘風險不變。Issue43仍保留告警，不展延原期限；最終PR head/base及政策摘要仍須明確審閱。
 
 2026-10-21維護者接受revision 4，更新同庫自建PR明確Review核准驗證器的精確來源指紋。套件、完整引入圖、允許用途、殘餘風險與重評條件不變；核准器變更已另獲審閱，最終PR head/base與政策摘要仍須明確核准，CI及合併前重核不可省略。Issue #43保留告警。
 

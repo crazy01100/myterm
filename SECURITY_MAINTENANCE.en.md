@@ -90,6 +90,8 @@ The SDK update fixes task/session binding and HTTP/OAuth cross-origin redirect p
 
 Both Hono and its Node adapter include the serveStatic duplicate path-decoding fix; do not enable the `allowPercentInPath` fallback. `firebase-mcp-sdk.test.cjs` retains synthetic Server/stdio handshakes, tool listing, and OAuth issuer checks. `test_firebase_policy.py` explicitly checks rejection of MCP commands and their alias. Source-bound advisory assessments are retained in `Config/Security/impact-assessments.json`; historical version matches are not proof of exploitability, and these descriptions do not lower the existing risk classifications.
 
+`ip-address 10.7.4` and `stream-json 3.7.0` are locked within their parent ranges, `^10.2.0` and `^3.6.0`, without new overrides or source adapters. The former is introduced by MCP’s express-rate-limit; ordinary IPv4, IPv6 subnet, and IPv4-mapped behavior is checked through its actual ipKeyGenerator. The latter retains Firebase Auth, DatabaseImporter, and Next.js pipeline regression coverage; the CLI bridge does not use the advisory’s FlexAssembler rule filters. These source scopes are not advisory exemptions and do not cover independent uses that bypass the wrapper. Closure depends on official fixed versions, compatibility regression, and complete scans. Both packages are development-only and are not bundled in the App.
+
 ### Entry-point mitigation for the unpatched braces advisory
 
 `braces 3.0.3` has no official fix for GHSA-vfj7-8cjw-p6xm. Firestore Emulator watches its Rules file through chokidar. Before startup, the project wrapper rejects `{`/`}` in the Rules path, project directory, or resolved symlink path, preventing those inputs from reaching brace expansion while preserving normal Rules reloads. This protects only the project entry point, does not patch the package, and cannot prevent a local owner from bypassing the wrapper or changing files/configuration after validation.
@@ -100,6 +102,8 @@ Firebase CLI 15.34.0 removed the unused `proxy-agent`, `universal-analytics`, an
 
 
 ### Issue #43 conditional risk acceptance
+
+On 2026-10-23, the maintainer accepted the exact revision 5 baseline, updating only the lockfile fingerprint for ip-address 10.7.4 and stream-json 3.7.0. The other 30 reviewed source fingerprints, complete braces dependency graph, allowed uses, and residual risk remain unchanged. Issue #43 stays open without extending the original deadline; the final PR head/base and policy summary still require explicit review.
 
 On 2026-10-21 the maintainer accepted revision 4, updating the exact source fingerprint of the explicit Review verifier for same-repository, self-authored PRs. Packages, the complete dependency graph, allowed uses, residual risk and reassessment triggers are unchanged. The verifier change received separate review; the final PR head/base and policy digest still require explicit approval, passing CI and a fresh pre-merge check. Issue #43 stays open.
 

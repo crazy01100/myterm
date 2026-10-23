@@ -29,6 +29,7 @@ test_dir="$(mktemp -d /private/tmp/MySSHClient-tests.XXXXXX)"
 trap 'rm -rf "$test_dir"' EXIT
 
 cd "$project_dir"
+zsh "$project_dir/scripts/run-local-terminal-file-drop-tests.sh"
 zsh "$project_dir/scripts/run-ssh-pq-tests.sh"
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/HostProfile.swift \

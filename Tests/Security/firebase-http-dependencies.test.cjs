@@ -11,6 +11,16 @@ const staticRequire=createRequire(cli.resolve('superstatic'));
 const compression=staticRequire('compression');
 const expressPaths=[cli.resolve('express'),createRequire(cli.resolve('@modelcontextprotocol/sdk/server/express.js')).resolve('express')];
 
+test('MCP rate-limit consumer preserves ordinary IPv4 and IPv6 keys',()=>{
+ const sdkRequire=createRequire(cli.resolve('@modelcontextprotocol/sdk/server/express.js'));
+ const {ipKeyGenerator}=sdkRequire('express-rate-limit');
+ assert.equal(ipKeyGenerator('192.0.2.1'),'192.0.2.1');
+ assert.equal(ipKeyGenerator('::ffff:192.0.2.1'),'192.0.2.1');
+ assert.equal(ipKeyGenerator('2001:db8:1234:5678::1'),'2001:db8:1234:5600::/56');
+ assert.equal(ipKeyGenerator('2001:db8:1234:5678::1',64),'2001:db8:1234:5678::/64');
+ assert.equal(ipKeyGenerator('2001:db8::1',false),'2001:db8::1');
+});
+
 async function listen(t,handler){
  const server=http.createServer(handler);
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',resolve);});

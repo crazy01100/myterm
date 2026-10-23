@@ -353,6 +353,15 @@ final class TerminalSession: ObservableObject, Identifiable {
         terminal.window?.makeFirstResponder(terminal)
     }
 
+    func insertDroppedFiles(_ urls: [URL], target: LocalTerminalFileDropTarget,
+                            into terminal: LoginAwareTerminalView) -> Bool {
+        guard kind == .local, target.sessionID == id, target.attemptID == inputAttemptID,
+              terminalView === terminal, canReceiveSnippet,
+              let text = LocalTerminalFileDrop.text(for: urls) else { return false }
+        terminal.sendDroppedPathText(text)
+        return true
+    }
+
     func sendSavedPassword(automatic: Bool = false) {
         guard canUseSavedPassword, let host else {
             notice = "本次帳號沒有綁定可自動使用的密碼。"
