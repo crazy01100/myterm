@@ -441,4 +441,93 @@ class EntryOrderTests(unittest.TestCase):
                 self.assertEqual(result.returncode,73,result.stderr)
                 self.assertFalse((root/'build').exists())
 
+
+class RetirementTests(unittest.TestCase):
+    def setUp(self):
+        ConditionalTests.setUp(self)
+        self.advisory.update(cve_id='CVE-2026-93687',
+                             html_url='https://github.com/advisories/'+p.IDENTITY['id'],
+                             withdrawn_at='2026-10-14T00:00:00Z', description='Official withdrawal fixture')
+        for name in p.RETIREMENT_FILES:
+            target=self.root/name; target.parent.mkdir(parents=True,exist_ok=True)
+            if not target.exists():target.write_text('fixture policy source\n')
+        self.decision.update(state='retired',revision=6,retirement={
+            'reason':'official-advisory-withdrawn','approvedBy':'project maintainer',
+            'approvedAt':'2026-10-15T00:00:00Z','proposalSHA256':'a'*64,
+            'withdrawnAt':self.advisory['withdrawn_at'],
+            'advisoryDigest':p.digest(p.withdrawal_snapshot(self.advisory)),
+            'sourceFiles':{name:p.file_hash(self.root,name) for name in p.RETIREMENT_FILES}})
+        self.save()
+
+    def save(self):
+        target=self.root/p.POLICY;target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_text(json.dumps({'schemaVersion':1,'decision':self.decision}))
+
+    def review(self):
+        with patch.dict('os.environ',{},clear=True):
+            return p.evaluate(self.root,self.decision,lambda url:self.responses[url],NOW)
+
+    def test_retirement_is_verified_but_not_risk_acceptance(self):
+        result=self.review()
+        self.assertTrue(p.verified(result),result)
+        self.assertFalse(result['accepted']);self.assertEqual(result['status'],'retired')
+        # A new dependency lock does not revive an obsolete risk baseline.
+        (self.root/'package-lock.json').write_text('{}')
+        self.assertTrue(p.verified(self.review()))
+
+    def test_fresh_metadata_required_and_reinstatement_blocks(self):
+        for update in ({'withdrawn_at':None},{'description':'changed'},{'ghsa_id':'GHSA-other'},
+                       {'withdrawn_at':'bad'}, {'vulnerabilities':[]}):
+            original=copy.deepcopy(self.advisory)
+            self.advisory.update(update)
+            self.assertFalse(p.verified(self.review()),update)
+            self.advisory.clear();self.advisory.update(original)
+        with patch.dict('os.environ',{},clear=True):
+            result=p.evaluate(self.root,self.decision,lambda _:(_ for _ in ()).throw(OSError('offline')),NOW)
+        self.assertFalse(p.verified(result));self.assertTrue(result['unavailable'])
+
+    def test_missing_approval_or_enforcement_source_blocks(self):
+        for key,value in [('approvedBy','bot'),('approvedAt','2027-01-01T00:00:00Z'),
+                          ('proposalSHA256',''),('reason','patched')]:
+            old=self.decision['retirement'][key];self.decision['retirement'][key]=value;self.save()
+            self.assertFalse(p.verified(self.review()))
+            self.decision['retirement'][key]=old
+        self.save()
+        (self.root/'scripts/security-conditional-risk.py').write_text('changed')
+        self.assertFalse(p.verified(self.review()))
+
+    def test_retirement_still_requires_pr_review_and_rechecks_it(self):
+        with patch.object(p,'verify_ci_baseline',side_effect=ValueError('missing review')):
+            self.assertFalse(p.verified(self.review()))
+        with patch.object(p,'verify_ci_baseline',side_effect=[{'reviewId':1},{'reviewId':2}]):
+            self.assertFalse(p.verified(self.review()))
+        with patch.object(p,'verify_ci_baseline',return_value={'reviewId':1}) as check:
+            self.assertTrue(p.verified(self.review()));self.assertEqual(check.call_count,2)
+
+    def test_retirement_report_no_exemption_for_active_findings_or_failures(self):
+        report={'errors':[],'findings':[]}
+        p.review_report(report,self.root,lambda url:self.responses[url])
+        self.assertFalse(a.blocking(report),report)
+        report={'errors':[],'findings':[{**p.IDENTITY,'severity':'high','status':'affected','acceptedRisk':True}]}
+        p.review_report(report,self.root,lambda url:self.responses[url])
+        self.assertTrue(a.blocking(report));self.assertFalse(report['findings'][0]['acceptedRisk'])
+        self.advisory['withdrawn_at']=None
+        report={'errors':[],'findings':[]}
+        p.review_report(report,self.root,lambda url:self.responses[url])
+        self.assertTrue(a.blocking(report))
+
+    def test_main_retired_must_not_return_early_or_skip_report(self):
+        output=self.root/'result.json'
+        with patch.object(p,'ROOT',self.root),patch.object(p,'load_policy',return_value=self.decision),patch.object(p,'evaluate',return_value={'accepted':False,'status':'needs-review'}),patch.object(p.subprocess,'run') as run:
+            run.return_value.stdout='a'*40
+            self.assertEqual(p.main(['--purpose','development','--task','fixture','--output',str(output)]),1)
+        self.assertTrue(output.exists())
+
+    def test_retired_review_statement_is_distinct_and_bound_to_policy(self):
+        identity={'number':1,'head':'a'*40,'base':'b'*40}
+        doc=p.review_document(identity,self.decision,b'policy')
+        self.assertEqual(doc['action'],'retire');self.assertEqual(doc['statement'],p.RETIREMENT_STATEMENT)
+        with self.assertRaises(ValueError):p.review_document(identity,self.decision,b'policy','accept')
+        self.assertEqual(p.review_document(identity,self.decision,b'policy','revoke')['action'],'revoke')
+
 if __name__=='__main__':unittest.main()

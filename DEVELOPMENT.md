@@ -155,6 +155,9 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 
 此命令重新讀取review、來源及官方資訊，完成後再讀review；成功只代表核准與限定條件當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#issue-43-條件式風險接受)。
 
+退役決策使用 `action=retire` 的專用 Review 聲明；`retirementVerified=true` 且 `accepted=false` 表示核對官方撤回，並未接受新風險。原複核命令與精確 PR 審閱仍適用，但 retired 不再比對歷史套件鎖檔，而比對撤回證據與政策執行來源；舊基準歷史保留，新的相依更新仍通過正常完整檢查。
+
+
 ### SSH 後量子政策驗證
 
 後量子政策／本機能力的獨立驗證使用 `zsh scripts/run-ssh-pq-tests.sh`，亦納入核心測試入口。它以暫存AppPaths編譯真實政策、主機編解碼、參數及能力程序，使用合成主機與本機查詢／逾時／輸出上限案例，不執行SSH登入、Keychain、雲端、App或漏洞測試。此結果不代替真實握手、重連、SFTP與介面驗收；完整套件／CI仍須遵守當次允許的測試範圍。

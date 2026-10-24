@@ -155,6 +155,9 @@ After acceptance or revocation, explicitly rerun the required security check for
 
 This rereads reviews, sources and official metadata, then reviews again. Success means the approval and conditional acceptance currently match; `mergeAuthorized=false` explicitly does not attest that all CI passed. Recheck required remote checks/discussions and use normal `gh pr merge --match-head-commit <verified-head-SHA>`, never an admin bypass. Stop and reassess if head or base changes. Introducing the verifier itself requires separate review of the implementation and exact baseline; its own successful return cannot replace maintainer consent. Completed checks do not automatically turn red on revocation, so do not skip this standard pre-merge check. See [security maintenance](SECURITY_MAINTENANCE.en.md#issue-43-conditional-risk-acceptance) for rules and limitations.
 
+A retirement decision uses the dedicated `action=retire` Review statement. `retirementVerified=true` with `accepted=false` verifies official withdrawal without accepting new risk. Existing entry commands and exact PR review still apply; retired decisions verify withdrawal evidence and enforcement sources instead of obsolete dependency fingerprints. Historical baselines remain available and dependency updates still require ordinary complete checks.
+
+
 ### SSH post-quantum policy validation
 
 Run `zsh scripts/run-ssh-pq-tests.sh` for standalone post-quantum policy/local-capability checks; the core test entry point also includes it. It compiles the real policy, host codecs, arguments and capability runner with temporary AppPaths, using synthetic hosts and local query/timeout/output-limit fixtures. It performs no SSH login, Keychain, cloud, App or vulnerability tests. These checks do not replace real handshake, retry, SFTP or UI acceptance; complete suites/CI remain subject to the task's authorized test scope.

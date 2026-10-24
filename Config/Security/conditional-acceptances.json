@@ -5,8 +5,8 @@
     "component": "braces",
     "version": "3.0.3",
     "scope": "development",
-    "state": "active",
-    "revision": 5,
+    "state": "retired",
+    "revision": 6,
     "issue": "https://github.com/crazy01100/myterm/issues/43",
     "allowedUses": [
       "Reviewed local Firebase account/project queries through the project wrapper",
@@ -88,6 +88,27 @@
     },
     "acceptanceRecord": "Maintainer explicitly accepted the exact revision 5 proposal (SHA-256 9e956480c5f3182f860f6d9a917692734efa9c23a13ac09f191c0202525f4b23) on 2026-10-23 for compatible ip-address 10.7.4 and stream-json 3.7.0 lockfile updates. All other reviewed source fingerprints, the complete braces dependency graph, allowed uses, residual risk and reassessment triggers are unchanged. Existing fixed regressions and complete CI for this maintenance and the 1.10.0 release are authorized; final PR head/base/policy still requires explicit review approval before merge. Keep Issue #43 open. No Daybreak or actual-exploitability testing.",
     "acceptedBy": "project maintainer",
-    "acceptedAt": "2026-10-23T07:54:57.800571+00:00"
+    "acceptedAt": "2026-10-23T07:54:57.800571+00:00",
+    "retirement": {
+      "reason": "official-advisory-withdrawn",
+      "approvedBy": "project maintainer",
+      "approvedAt": "2026-10-24T07:16:43.312128+00:00",
+      "proposalSHA256": "c979cbc420118841efdd8306681356da605bb038c71872425b752417a3cbc0f9",
+      "previousPolicySHA256": "cddaa7e80268e7b8034b69b2588367f419d5b38909491b332cf8bcd7a9486c38",
+      "withdrawnAt": "2026-10-23T12:53:02Z",
+      "advisoryURL": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+      "advisoryDigest": "a3f5e18362591aa5978400dd10d148608082a3c7a5080d078a98986e9283b88b",
+      "sourceFiles": {
+        ".github/workflows/security-checks.yml": "a8b9b6c80ee33702400ef1eb8d92aefa20767a45069dda1c260828a95f97e30e",
+        ".github/workflows/security-gate.yml": "f37d4b65d2d942e992d73d2fccab738a3fb0f7460a2c9a6e58a70ccfcc139a06",
+        "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+        "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
+        "scripts/security-audit.py": "698594fee4f1c133182894a956788a6d6770e714ea457bacbda2841106baa176",
+        "scripts/security-conditional-risk.py": "4fd43cf59887aa8ac9177ca9d1308f426d6d7c6b5b2f937c8514abd08eff098e",
+        "scripts/security-test-profile.py": "1bae1dac834dbbf0e656b30992984bedddb2f0c5a942275e8dd7dd79b6803d7a",
+        "scripts/sync-security-issues.py": "9f34b1e7bf6a4ab2c65b85d94bd8914debdb47f57e1bb4fc9c34f4f58df57ad0"
+      },
+      "record": "Maintainer approved issue43-withdrawal-retirement-1 on 2026-10-24. Official advisory withdrawal, not a package fix or renewed exception. Preserve revision 5 history and existing wrapper safeguards. Exact final PR head/base/policy review is still required; close Issue #43 only after main verification. No Daybreak or actual-exploitability testing."
+    }
   }
 }

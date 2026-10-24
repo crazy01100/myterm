@@ -150,6 +150,25 @@ def github_npm_advisories(packages):
     return list(found.values())
 
 
+def withdrawn_npm_advisory(finding, advisory):
+    """A stale npm entry is excluded only with positive official evidence."""
+    if advisory.get('ghsa_id') != finding['id']:
+        raise ValueError('Advisory identity mismatch')
+    if 'withdrawn_at' not in advisory:
+        raise ValueError('Missing official advisory withdrawal status')
+    if advisory['withdrawn_at'] is None:
+        return None
+    when = dt.datetime.fromisoformat(advisory['withdrawn_at'])
+    if when.tzinfo is None or when > dt.datetime.now(dt.timezone.utc):
+        raise ValueError('Invalid official withdrawal date')
+    if not any(row.get('package') == {'ecosystem':'npm','name':finding['component']}
+               for row in advisory.get('vulnerabilities', [])):
+        raise ValueError('Withdrawn advisory package mismatch')
+    return {'id':finding['id'], 'component':finding['component'],
+            'withdrawnAt':advisory['withdrawn_at'],
+            'url':'https://github.com/advisories/'+finding['id'], 'source':'GitHub Advisory Database'}
+
+
 def scan_npm(report):
     result=subprocess.run([str(ROOT/'scripts/project-node.sh'),'--npm','audit','--package-lock-only','--ignore-scripts','--json'],cwd=ROOT,capture_output=True,text=True,timeout=180,env={**os.environ,'npm_config_cache':str(ROOT/'.npm-cache')})
     data=json.loads(result.stdout)
@@ -193,6 +212,13 @@ def scan_npm(report):
             findings[key]=finding
     report['npmAdvisorySources']=['npm audit','GitHub Advisory Database (all locked package versions)']
     for finding in findings.values():
+        if re.fullmatch(r'GHSA-[a-z0-9-]+', finding['id']):
+            if finding['id'] not in cache:
+                cache[finding['id']] = gh('advisories/' + finding['id'])
+            withdrawn = withdrawn_npm_advisory(finding, cache[finding['id']])
+            if withdrawn:
+                report.setdefault('withdrawnAdvisories', []).append(withdrawn)
+                continue
         report['findings'].append(details.enrich(finding,gh,affected,cache=cache))
 
 

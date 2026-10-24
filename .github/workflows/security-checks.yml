@@ -45,8 +45,10 @@ jobs:
         run: ./scripts/setup-security-tools.sh
       - name: Verify pinned Firebase development tools
         run: |
+          mkdir -p build
+          ./scripts/project-python.sh -c 'import json; print(json.dumps({"stage": "development-tool-preflight", "status": "started"}))' > build/security-preflight.json
           npm ci --ignore-scripts --no-fund
-          ./scripts/project-python.sh scripts/security-conditional-risk.py --purpose monitor --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ./scripts/project-python.sh scripts/security-conditional-risk.py --purpose monitor --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --output build/security-conditional-review.json
           ./scripts/project-node.sh scripts/verify-firebase-tools.cjs
       - name: Verify development tool consumers (full profile only)
         if: steps.verification.outputs.profile == 'full'
@@ -80,5 +82,7 @@ jobs:
           path: |
             build/security-report.json
             build/security-issues-result.json
+            build/security-conditional-review.json
+            build/security-preflight.json
           retention-days: 30
           if-no-files-found: error

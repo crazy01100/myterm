@@ -43,7 +43,7 @@ MyTerm 的雲端流程分成兩層：
 
 Firebase 工具入口僅支援本指南的 Firestore 部署、基本帳號設定及 `demo-myterm` 本機 Emulator；Auth 匯入、Hosting、替代設定與任意測試子命令會被拒絕。相依例外、期限與限制詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
-Firestore Emulator 的規則檔路徑、專案目錄與符號連結指向不得包含 `{`／`}`；專案入口會在啟動前拒絕，以緩解尚未修補的 braces 漏洞。若遇到此訊息，請使用不含大括號的路徑；不要繞過 wrapper。正常規則檔修改後的自動重載仍可使用。詳見[安全維護](SECURITY_MAINTENANCE.md)。
+Firestore Emulator 的規則檔路徑、專案目錄與符號連結指向不得包含 `{`／`}`；專案入口會在啟動前拒絕，作為保留的輸入防護（原 braces 公告已撤回）。若遇到此訊息，請使用不含大括號的路徑；不要繞過 wrapper。正常規則檔修改後的自動重載仍可使用。詳見[安全維護](SECURITY_MAINTENANCE.md)。
 
 ## 1. 建立 Firebase 專案
 
@@ -237,4 +237,4 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 
 ## 工具使用前的個案複核
 
-Firebase wrapper 在載入CLI前檢查Issue #43的條件式決策（已獲維護者接受並啟用）。啟用後，每次重新讀取官方資訊、受審工具及設定；不符時停止，沿[安全維護指南](SECURITY_MAINTENANCE.md)重評。新Rules內容或工具版本須先審查基準；雲端寫入仍須另有明確授權。MyTerm既有Google登入及同步不依賴本機CLI。
+Firebase wrapper 在載入 CLI 前核對 Issue #43 的退役決策與官方撤回證據；來源或證據不符時停止並依[安全維護指南](SECURITY_MAINTENANCE.md)重評。歷史鎖檔基準已退役，一般相依、Rules 審閱及完整安全檢查仍適用；雲端寫入仍須明確授權。MyTerm 既有 Google 登入及同步不依賴本機 CLI。

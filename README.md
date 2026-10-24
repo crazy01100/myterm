@@ -175,7 +175,7 @@ MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 202
 
 原始碼測試與管理腳本需要 Python 3.12 以上；使用統一入口，設定方式見 [Python 工具環境](DEVELOPMENT.md#python-runtime)。一般 App 使用者不需安裝 Python。
 
-開發入口另依[安全維護指南](SECURITY_MAINTENANCE.md)辦理 Issue #43 的限定用途複核；決策啟用後，開發／發布前需已安裝固定開發工具並重新連線查核官方資訊，不影響使用既有 App 的使用者。pending 決策不代表已接受風險。
+開發入口另依[安全維護指南](SECURITY_MAINTENANCE.md)核對已退役的 Issue #43 接受決策及官方撤回證據；開發／發布前需重新連線查核，其他相依仍通過正常安全檢查，不影響使用既有 App 的使用者。
 
 ## SFTP 目錄書籤
 
