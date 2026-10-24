@@ -5,9 +5,9 @@ python_bin="$project_dir/scripts/project-python.sh"
 if [[ -n "${MYTERM_SECURITY_PYTHON_BOOTSTRAP:-}" ]]; then
   export MYTERM_PYTHON="$MYTERM_SECURITY_PYTHON_BOOTSTRAP"
 fi
-"$python_bin" -c 'import sys; assert sys.version_info >= (3, 12), "Python >=3.12 required"'
+# Prepare and verify pinned wheels before creating/updating project-owned venvs.
+"$python_bin" -B "$project_dir/scripts/python-toolchain.py" setup
 venv="$project_dir/.build/security-tools"
-"$python_bin" -m venv --clear "$venv"
-"$venv/bin/python3" -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r "$project_dir/Tests/Security/requirements.txt"
-"$venv/bin/python3" -c 'from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey'
+PIP_CONFIG_FILE=/dev/null "$project_dir/scripts/security-python.sh" -I -m pip --isolated install --index-url https://pypi.org/simple --no-cache-dir --disable-pip-version-check --require-hashes --only-binary=:all: -r "$project_dir/Tests/Security/requirements.txt"
+"$project_dir/scripts/security-python.sh" -I -c 'from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey'
 echo "Security tools ready. No signing key is needed."

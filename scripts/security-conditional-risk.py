@@ -7,6 +7,7 @@ metadata. Repository review is the authority for a decision, not this script.
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,10 @@ import sys
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+_tool_spec = importlib.util.spec_from_file_location('python_toolchain', ROOT / 'scripts/python-toolchain.py')
+python_tools = importlib.util.module_from_spec(_tool_spec)
+_tool_spec.loader.exec_module(python_tools)
+
 POLICY = 'Config/Security/conditional-acceptances.json'
 IDENTITY = {'id': 'GHSA-vfj7-8cjw-p6xm', 'component': 'braces',
             'version': '3.0.3', 'scope': 'development'}
@@ -29,7 +34,9 @@ REVIEW_MARKER = 'MYTERM-CONDITIONAL-REVIEW-V1'
 RETIREMENT_STATEMENT = ('I approve retirement of the specified Issue #43 conditional acceptance '
                         'because the official advisory was withdrawn. This is not a package fix. '
                         'Close Issue #43 only after main verification. All security checks must still pass.')
-RETIREMENT_FILES = {'scripts/security-conditional-risk.py', 'scripts/security-audit.py',
+RETIREMENT_FILES = {'Tests/Security/requirements.txt', 'Config/Security/python-tools.json', 'scripts/python-toolchain.py',
+                    'scripts/project-python.sh', 'scripts/setup-security-tools.sh', 'scripts/security-python.sh',
+                    '.github/workflows/deploy-update-site.yml', 'scripts/security-conditional-risk.py', 'scripts/security-audit.py',
                     'scripts/security-test-profile.py', 'scripts/sync-security-issues.py',
                     'scripts/firebase-command-policy.py', 'scripts/firebase-tools.sh',
                     '.github/workflows/security-gate.yml', '.github/workflows/security-checks.yml'}
@@ -61,7 +68,7 @@ def load_policy(root=ROOT):
 def fetch_json(url):
     request = urllib.request.Request(url, headers={'User-Agent': 'MyTerm-policy-review',
                                                   'Accept': 'application/json'})
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=20, context=python_tools.https_context(ROOT)) as response:
         raw = response.read(8 * 1024 * 1024 + 1)
     if len(raw) > 8 * 1024 * 1024:
         raise ValueError('Official metadata exceeds size limit')

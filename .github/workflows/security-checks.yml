@@ -42,7 +42,11 @@ jobs:
         id: verification
         run: ./scripts/project-python.sh scripts/security-test-profile.py
       - name: Install pinned verification tools
-        run: ./scripts/setup-security-tools.sh
+        run: |
+          mkdir -p build
+          printf '%s\n' '{"stage":"python-bootstrap","status":"started"}' > build/python-tooling-preflight.json
+          ./scripts/setup-security-tools.sh
+          ./scripts/project-python.sh -B scripts/python-toolchain.py inventory > build/python-tooling-inventory.json
       - name: Verify pinned Firebase development tools
         run: |
           mkdir -p build
@@ -60,10 +64,10 @@ jobs:
         if: steps.verification.outputs.profile == 'policy-only'
         run: ./scripts/security-python.sh scripts/run-policy-tests.py
       - name: Restore previous monitor state
-        run: python3 scripts/restore-security-monitor.py build/previous-security-report.json
+        run: ./scripts/project-python.sh scripts/restore-security-monitor.py build/previous-security-report.json
       - name: Scan source and released App
         run: |
-          python3 scripts/security-audit.py --monitor \
+          ./scripts/project-python.sh scripts/security-audit.py --monitor \
             --include-release "$GITHUB_REPOSITORY" \
             --previous build/previous-security-report.json \
             --output build/security-report.json
@@ -73,7 +77,7 @@ jobs:
         run: |
           args=()
           if [[ "$REFRESH_ISSUE_FORMAT" == "true" ]]; then args+=(--refresh-format); fi
-          python3 scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
+          ./scripts/project-python.sh scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
       - name: Save monitor evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -84,5 +88,7 @@ jobs:
             build/security-issues-result.json
             build/security-conditional-review.json
             build/security-preflight.json
+            build/python-tooling-preflight.json
+            build/python-tooling-inventory.json
           retention-days: 30
           if-no-files-found: error

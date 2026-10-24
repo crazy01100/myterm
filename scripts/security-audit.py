@@ -15,6 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
+_tool_spec = importlib.util.spec_from_file_location('python_toolchain', ROOT / 'scripts/python-toolchain.py')
+python_tools = importlib.util.module_from_spec(_tool_spec)
+_tool_spec.loader.exec_module(python_tools)
+
 spec=importlib.util.spec_from_file_location('inventory',ROOT/'scripts/dependency-inventory.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 
@@ -28,7 +32,7 @@ def gh(path):
 def get_json(url,payload=None):
     data=None if payload is None else json.dumps(payload).encode()
     req=urllib.request.Request(url,data=data,headers={'Content-Type':'application/json','User-Agent':'MyTerm-security-audit'})
-    with urllib.request.urlopen(req,timeout=45) as response:
+    with urllib.request.urlopen(req,timeout=45,context=python_tools.https_context(ROOT)) as response:
         raw=response.read(8*1024*1024+1)
     if len(raw)>8*1024*1024:raise ValueError('Advisory response too large')
     return json.loads(raw)
@@ -224,12 +228,57 @@ def scan_npm(report):
 
 def scan_verifier(report):
     requirements=(ROOT/'Tests/Security/requirements.txt').read_text()
-    packages=re.findall(r'^([\w-]+)==([\w.]+)',requirements,re.M)
-    for name,version in packages:
+    observations = {}
+    def observe(name, version, origin):
+        # Normalize date versions as PyPI does, without loading vendored code.
+        if re.fullmatch(r'[0-9]+(?:\.[0-9]+)+', version):
+            version='.'.join(str(int(part)) for part in version.split('.'))
+        observations.setdefault((name,version),set()).add(origin)
+    for name,version in re.findall(r'^([\w-]+)==([\w.]+)',requirements,re.M):
+        observe(name,version,'pinned verification requirements')
+    policy=python_tools.configuration(ROOT)
+    for name,row in policy['packages'].items():
+        observe(name,row['version'],'reviewed bootstrap source')
+    observe('certifi',policy['packages']['pip']['vendoredCertifi'],'reviewed pip → vendored certifi')
+    environments=python_tools.inventory(ROOT)
+    report['pythonTooling']={'environments':environments,'advisoryScope':'source pins and current runner environments; not other Macs',
+                            'networkCA':'reviewed standalone certifi for project Python HTTPS',
+                            'caSHA256':policy['caSHA256']}
+    for env in environments:
+        origins={row['origin'] for row in env['packages']}
+        if not {'pip','certifi','pip/_vendor/certifi'} <= origins:
+            raise ValueError('Incomplete managed Python environment: '+env['role'])
+        for row in env['packages']:
+            observe(row['name'],row['version'],('current CI runner / ' if os.environ.get('GITHUB_ACTIONS')=='true' else 'local checkout / ')+env['role']+' → '+row['origin'])
+            # A known old version is a finding, not missing evidence. A claimed
+            # current version with altered certificates is an operational error.
+            if row['name']=='certifi' and row['version']==policy['packages']['certifi']['version'] and row.get('caSHA256')!=policy['caSHA256']:
+                raise ValueError('CA content differs from reviewed version: '+env['role'])
+    grouped={}
+    for (name,version),origins in sorted(observations.items()):
         result=get_json('https://api.osv.dev/v1/query',{'package':{'ecosystem':'PyPI','name':name},'version':version})
         for advisory in result.get('vulns',[]):
             if advisory.get('withdrawn'):continue
-            report['findings'].append({'id':advisory['id'],'component':name,'version':version,'scope':'verification-tool','severity':advisory.get('database_specific',{}).get('severity','unknown').lower(),'status':'affected','url':'https://osv.dev/vulnerability/'+advisory['id']})
+            aliases=[advisory['id'],*advisory.get('aliases',[])]
+            identifier=next((x for x in sorted(aliases) if x.startswith('GHSA-')),advisory['id'])
+            key=(identifier,name)
+            severity=advisory.get('database_specific',{}).get('severity','unknown').lower()
+            if severity not in ('critical','high','moderate','medium','low','info'):severity='unknown'
+            entry=grouped.setdefault(key,{'versions':set(),'origins':set(),'fixed':set(),'severity':severity})
+            if entry['severity']!=severity:entry['severity']='unknown'  # Never downgrade conflicting sources.
+            entry['versions'].add(version);entry['origins'].update(origins)
+            for affected_row in advisory.get('affected',[]):
+                if affected_row.get('package',{}).get('name')!=name:continue
+                for ran in affected_row.get('ranges',[]):
+                    for event in ran.get('events',[]):
+                        if event.get('fixed'):entry['fixed'].add(event['fixed'])
+    for (identifier,name),entry in sorted(grouped.items()):
+        url=('https://github.com/advisories/'+identifier if identifier.startswith('GHSA-') else 'https://osv.dev/vulnerability/'+identifier)
+        finding={'id':identifier,'component':name,'version':','.join(sorted(entry['versions'])),
+                 'scope':'verification-tool','severity':entry['severity'],'status':'affected','url':url,
+                 'dependencyPaths':sorted(entry['origins'])}
+        if entry['fixed']:finding['fixedVersion']=', '.join(sorted(entry['fixed']))
+        report['findings'].append(finding)
 
 
 def scan_actions(report,cache):

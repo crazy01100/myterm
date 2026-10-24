@@ -179,6 +179,8 @@ Source tests and administration scripts require Python 3.12 or newer through the
 
 Development entries verify the retired Issue #43 acceptance decision and official withdrawal evidence under [security maintenance](SECURITY_MAINTENANCE.en.md). Development/release checks require a fresh online review; other dependencies remain subject to normal security checks. Existing App users are unaffected.
 
+Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+
 ## SFTP directory bookmarks
 
 Use the bookmark icon at the right of either path bar to save the current directory and return to it from a name-only menu. Full paths remain visible in Manage Bookmarks and removal confirmations. Manage Bookmarks renames or removes shortcuts, never files. Removing a bookmark or discarding a candidate requires confirmation showing its name and path. Missing directories, unmounted disks and access failures preserve the previous view. Successful navigation clears that pane’s search while retaining its sort order. Bookmark navigation pauses during transfers or save-back.

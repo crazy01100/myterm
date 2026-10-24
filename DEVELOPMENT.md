@@ -356,15 +356,16 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 
 專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
 
-若已安裝 Python 3.12，可在專案根目錄建立獨立環境：
+先準備受管工具，再執行需要網路的開發／安全作業：
 
 ```sh
-python3.12 -m venv .build/python-runtime
-./scripts/project-python.sh --version
 ./scripts/setup-security-tools.sh
+./scripts/project-python.sh scripts/python-toolchain.py inventory
 ```
 
-也可將 `MYTERM_PYTHON` 指向自己安裝的受支援 Python 執行檔。最低版本門檻不代替生命週期檢查；更新工具時仍需核對官方 EoL／EoS 狀態。驗簽套件另由 `.build/security-tools` 的隔離環境管理，重新執行 setup 會以選定的 Python 重建該可重建目錄，並以固定版本、wheel 及雜湊安裝。App 使用者不需要安装 Python。
+需要指定初始解譯器時，只在 setup 命令設定 `MYTERM_SECURITY_PYTHON_BOOTSTRAP=/path/to/python3.12`。setup 先驗證固定官方 wheels，再以離線安裝更新兩個專案 venv 的 pip／certifi，最後安裝固定驗簽相依；不更換全域／共用 Python。ensurepip 種子即使仍舊，每次新建後也須先完成可信 bootstrap。日常 setup 原地更新；明確清空重建可先執行 `./scripts/project-python.sh scripts/python-toolchain.py setup --rebuild`，再執行 setup-security-tools.sh 安裝驗簽需求，且應確保環境未被其他程序使用。
+
+離線管理命令仍可用一般 launcher。安全網路入口要求兩個受管工具環境，檢查實際 pip、內附／獨立 certifi 與 CA 摘要，失敗須修復而非跳過。SSL 信任只在專案安全入口使用已核對 CA，不修改系統信任；自訂企業 CA 需另評估。最低 Python 版本不代替官方支援期限查核。詳細範圍見[安全維護指南](SECURITY_MAINTENANCE.md#python-安裝工具與憑證信任)，App 使用者不需 Python。
 
 Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，依序接受 `MYTERM_NODE`、`.build/node-runtime/bin/node` 或已安裝的 Node 24，並讓子程序沿用相同 PATH。`./scripts/project-node.sh --npm ci` 可避免系統預設 Node 指到已EoL的奇數版本。可將官方 Node 24 發行包完整解壓至 `.build/node-runtime`，或指定已安裝的 Node 24 執行檔；不需覆蓋全域 Node。套件引擎範圍與 `.npmrc` 亦拒絕非24版本的安裝。
 
