@@ -238,3 +238,5 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 ## 工具使用前的個案複核
 
 Firebase wrapper 在載入 CLI 前核對 Issue #43 的退役決策與官方撤回證據；來源或證據不符時停止並依[安全維護指南](SECURITY_MAINTENANCE.md)重評。歷史鎖檔基準已退役，一般相依、Rules 審閱及完整安全檢查仍適用；雲端寫入仍須明確授權。MyTerm 既有 Google 登入及同步不依賴本機 CLI。
+
+Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。

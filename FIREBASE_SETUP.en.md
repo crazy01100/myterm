@@ -238,3 +238,5 @@ On two Macs using the same account, validate remote bookmark creation, renaming,
 ## Case review before tool use
 
 Before loading the CLI, the Firebase wrapper verifies the Issue #43 retirement decision and official withdrawal evidence; mismatches stop progress for reassessment under [security maintenance](SECURITY_MAINTENANCE.en.md). Historical dependency fingerprints are retired, while ordinary dependency/Rules review and full security checks still apply. Cloud writes require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.
+
+Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).

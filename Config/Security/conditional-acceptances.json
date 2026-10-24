@@ -6,7 +6,7 @@
     "version": "3.0.3",
     "scope": "development",
     "state": "retired",
-    "revision": 6,
+    "revision": 7,
     "issue": "https://github.com/crazy01100/myterm/issues/43",
     "allowedUses": [
       "Reviewed local Firebase account/project queries through the project wrapper",
@@ -99,16 +99,34 @@
       "advisoryURL": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
       "advisoryDigest": "a3f5e18362591aa5978400dd10d148608082a3c7a5080d078a98986e9283b88b",
       "sourceFiles": {
-        ".github/workflows/security-checks.yml": "a8b9b6c80ee33702400ef1eb8d92aefa20767a45069dda1c260828a95f97e30e",
-        ".github/workflows/security-gate.yml": "f37d4b65d2d942e992d73d2fccab738a3fb0f7460a2c9a6e58a70ccfcc139a06",
+        ".github/workflows/deploy-update-site.yml": "0006381dc677592a793e82fb82d6980842a992b7b5ac839110fbf271f295f963",
+        ".github/workflows/security-checks.yml": "8d585ac3ac9759a5a11d537b5a8be9ab6b01764cc58c68ba3d911918e8d320c9",
+        ".github/workflows/security-gate.yml": "a264dbe538cb73de9853a6f561b1488aee5614b257d31390db54c477474c7a30",
+        "Config/Security/python-tools.json": "b4a3d4f6fe3e13ba000167c4ca169f5c7a71a36db8c805270d2be1f36fd505a1",
+        "Tests/Security/requirements.txt": "7d8ed205fd0158707e943f51d9b1d90cdd6d7e66c42c00683f55e462a21b6723",
         "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
         "scripts/firebase-tools.sh": "4280cc1a24b72f07ed1b82a5317aabd2671e29cbbb00b8cbfdb459eeaf33dd33",
-        "scripts/security-audit.py": "698594fee4f1c133182894a956788a6d6770e714ea457bacbda2841106baa176",
-        "scripts/security-conditional-risk.py": "4fd43cf59887aa8ac9177ca9d1308f426d6d7c6b5b2f937c8514abd08eff098e",
+        "scripts/project-python.sh": "90cc0f87bd34f006def28340753e53cdcee258d73b4efbcc6ec99f511e1b1835",
+        "scripts/python-toolchain.py": "049d8d65a53ed8cca7d409c819fafa26471538fabd1f6b0fdc5d39c3e4d6dca3",
+        "scripts/security-audit.py": "b93681b8d1c510cc1c110a0cf5453f93358f7d2d2fd9b4933693c1ab79ff59c3",
+        "scripts/security-conditional-risk.py": "f8160323f9cce563ea83d3a8304486787422919f6562d154aef06776a05a2451",
+        "scripts/security-python.sh": "95b652246d73875732169f58bee0a656494c542dc4ab93a0f342a0c9662f47fd",
         "scripts/security-test-profile.py": "1bae1dac834dbbf0e656b30992984bedddb2f0c5a942275e8dd7dd79b6803d7a",
+        "scripts/setup-security-tools.sh": "7f89ccec2008119cd733357870c0047359fd2e11ac54a4927d916e55e97d004a",
         "scripts/sync-security-issues.py": "9f34b1e7bf6a4ab2c65b85d94bd8914debdb47f57e1bb4fc9c34f4f58df57ad0"
       },
-      "record": "Maintainer approved issue43-withdrawal-retirement-1 on 2026-10-24. Official advisory withdrawal, not a package fix or renewed exception. Preserve revision 5 history and existing wrapper safeguards. Exact final PR head/base/policy review is still required; close Issue #43 only after main verification. No Daybreak or actual-exploitability testing."
+      "record": "Maintainer approved issue43-withdrawal-retirement-1 on 2026-10-24. Official advisory withdrawal, not a package fix or renewed exception. Preserve revision 5 history and existing wrapper safeguards. Exact final PR head/base/policy review is still required; close Issue #43 only after main verification. No Daybreak or actual-exploitability testing.",
+      "sourceUpdateApprovals": [
+        {
+          "revision": 7,
+          "approvedBy": "project maintainer",
+          "approvedAt": "2026-10-24T08:51:38.993341+00:00",
+          "proposalSHA256": "5ae3029d23d8c098d303c832d1eb9d22f3be8cc27971e1970faabc72f8d391e9",
+          "previousPolicySHA256": "bcef9e6b1f7d0acad5b6fdd0a57d19b10b366481951c79104b03c2a4ede989e6",
+          "sourceDigest": "d064d2c57b0d68194a85cd058534200f2543fffd0471a0169b315c989c5cdbd3",
+          "record": "Maintainer explicitly approved revision 7 source fingerprints for trusted Python bootstrap, pip/certifi inventory, explicit CA verification and CI ordering. Original withdrawal evidence and retirement decision unchanged; Issue #43 remains closed/retired. Existing fixed regressions and full CI authorized; final PR head/base/policy still requires separate approval. No Daybreak or actual-exploitability testing."
+        }
+      ]
     }
   }
 }

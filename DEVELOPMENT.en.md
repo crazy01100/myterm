@@ -356,15 +356,16 @@ Manual security monitoring can enable `refresh_issue_format` to refresh existing
 
 Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
 
-With Python 3.12 installed, create an isolated environment at the repository root:
+Prepare managed tooling before networked development/security operations:
 
 ```sh
-python3.12 -m venv .build/python-runtime
-./scripts/project-python.sh --version
 ./scripts/setup-security-tools.sh
+./scripts/project-python.sh scripts/python-toolchain.py inventory
 ```
 
-Alternatively, point `MYTERM_PYTHON` to your installed supported interpreter. The minimum-version check does not replace lifecycle review: check official EoL/EoS status during tool updates. Verification packages use the separate `.build/security-tools` environment. Running setup recreates that reproducible directory with the selected Python, installing pinned wheels with verified hashes. App users do not need Python.
+To select the initial interpreter, set `MYTERM_SECURITY_PYTHON_BOOTSTRAP=/path/to/python3.12` only for setup. Setup verifies pinned official wheels, updates pip/certifi offline in both project venvs, then installs pinned verification requirements. It does not replace global/shared Python. Even an old ensurepip seed must complete trusted bootstrap after every fresh creation. Normal setup updates in place. Explicit clearing/rebuilding uses `./scripts/project-python.sh scripts/python-toolchain.py setup --rebuild`, followed by setup-security-tools.sh to restore verification requirements; ensure no other process uses the environments.
+
+The general launcher remains available for offline administration. Security network entries require managed tooling and check installed pip, vendored/standalone certifi and CA hashes; repair failures rather than bypass them. Reviewed CA trust is scoped to project security entries, not system trust. Enterprise CA needs require separate review. The minimum Python version is not an upstream support-lifecycle check. See [security maintenance](SECURITY_MAINTENANCE.en.md#python-installation-tools-and-certificate-trust); App users do not need Python.
 
 Use `./scripts/project-node.sh` for Node/npm. It selects Node 24 LTS from `MYTERM_NODE`, `.build/node-runtime/bin/node`, or an installed Node 24, and gives subprocesses the same PATH. `./scripts/project-node.sh --npm ci` avoids an EoL odd-numbered system default. Extract the complete official Node 24 distribution into `.build/node-runtime` or select an installed Node 24 executable without replacing global Node. Package engine constraints and `.npmrc` also reject installations on other major versions.
 

@@ -31,7 +31,11 @@ jobs:
         id: verification
         run: ./scripts/project-python.sh scripts/security-test-profile.py
       - name: Install pinned verification tools
-        run: ./scripts/setup-security-tools.sh
+        run: |
+          mkdir -p build
+          printf '%s\n' '{"stage":"python-bootstrap","status":"started"}' > build/python-tooling-preflight.json
+          ./scripts/setup-security-tools.sh
+          ./scripts/project-python.sh -B scripts/python-toolchain.py inventory > build/python-tooling-inventory.json
       - name: Verify pinned Firebase development tools
         run: |
           mkdir -p build
@@ -49,7 +53,7 @@ jobs:
         if: steps.verification.outputs.profile == 'policy-only'
         run: ./scripts/security-python.sh scripts/run-policy-tests.py
       - name: Enforce source security policy
-        run: python3 scripts/security-audit.py --output build/security-report.json
+        run: ./scripts/project-python.sh scripts/security-audit.py --output build/security-report.json
       - name: Save policy evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -59,5 +63,7 @@ jobs:
             build/security-report.json
             build/security-conditional-review.json
             build/security-preflight.json
+            build/python-tooling-preflight.json
+            build/python-tooling-inventory.json
           retention-days: 14
           if-no-files-found: error

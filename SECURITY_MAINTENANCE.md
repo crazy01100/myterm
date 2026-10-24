@@ -98,14 +98,14 @@ Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟�
 
 `braces 3.0.3` 仍由開發工具使用；GHSA-vfj7-8cjw-p6xm 已由官方撤回，並非發布修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
 
-[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在核准的撤回退役變更完成 main 驗證與結案摘要前保持開啟。原 2026-10-19 期限與歷次風險接受保留為歷史，不展延、不新增漏洞豁免。
+[Issue #43](https://github.com/crazy01100/myterm/issues/43) 已在核准的撤回退役變更完成 main 驗證與結案摘要後，以官方撤回理由關閉。原 2026-10-19 期限與歷次風險接受保留為歷史，不展延、不新增漏洞豁免。
 
 Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics` 與 `@apphosting/common`；鎖檔中原先經由 PAC 代理引入的 `get-uri`／`basic-ftp` 等相依也已移除。原 get-uri 專用覆寫及其 FTP 消費端測試因此退役，不重新加入套件來維持舊測試。`firebase-removed-dependencies.test.cjs` 驗證鎖檔各層、已安裝套件解析與上游宣告均未重新引入該鏈。其他仍適用的安全覆寫與測試保留；歷史 basic-ftp 影響評估不改寫成當時未受影響。這些開發工具不屬於 MyTerm SFTP。
 
 
 ### Issue #43 條件式風險接受
 
-目前決策為 **revision 6／retired（官方公告撤回）**。維護者於 2026-10-24 明確核准退役提案 `issue43-withdrawal-retirement-1`，提案 SHA-256 為 `c979cbc420118841efdd8306681356da605bb038c71872425b752417a3cbc0f9`。GitHub Advisory Database 於 2026-10-23 20:53:02（UTC+8）撤回 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，理由是不具實際可利用性。這是官方撤回，不是套件修補、風險展延或本專案的實際可利用性測試結論。
+目前決策為 **revision 7／retired（官方公告撤回）**；revision 7 僅經維護者核准擴充 Python 工具與 CI 的政策來源指紋，原退役決策與撤回證據不變。維護者於 2026-10-24 明確核准退役提案 `issue43-withdrawal-retirement-1`，提案 SHA-256 為 `c979cbc420118841efdd8306681356da605bb038c71872425b752417a3cbc0f9`。GitHub Advisory Database 於 2026-10-23 20:53:02（UTC+8）撤回 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，理由是不具實際可利用性。這是官方撤回，不是套件修補、風險展延或本專案的實際可利用性測試結論。
 
 `Config/Security/conditional-acceptances.json` 保留原 revision 5 的基準、接受紀錄與原期限歷史，另記錄退役核准、官方摘要及政策執行來源。歷次 revision 1–5 與 PR Review 可由 Git 歷史追溯；不改寫當時的風險判斷。`accepted=false` 與 `retirementVerified=true` 明確區分「沒有風險豁免」和「已核對撤回」。其他漏洞仍依普通安全門檻與最長 31 天例外規則。
 
@@ -126,6 +126,20 @@ CI 與合併前均唯讀重查完整 PR／Review，核對本機政策等於遠�
 監測對 npm 舊資料中的撤回公告，必須取得身分與元件相符、日期有效的官方撤回證據才排除目前 finding，並記錄 `withdrawnAdvisories`；npm 原始計數保留來源意義。缺漏或錯誤仍使掃描失敗。Issue #43 不因漏列或退役自動關閉：先完成核准、main 安全檢查／完整監測／CodeQL，重新核對官方撤回，再以「官方公告撤回／不再適用」人工結案並保留歷史。若公告再次有效，正常監測可重新開啟告警。
 
 前置檢查失敗時保存 preflight 與條件複核證據；有診斷檔不代表完整掃描成功。`test_conditional_risk.py` 等政策案例只用 mock／stub；完整開發工具回歸含既有漏洞案例，仍須該次任務明確授權。不得恢復 Daybreak 或已終止的實際可利用性計劃。
+
+## Python 安裝工具與憑證信任
+
+開發工具由 `Config/Security/python-tools.json` 固定 pip 26.2.2、certifi 2026.10.19、官方 wheel URL／SHA-256 及 CA 檔摘要。這處理 [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) 的憑證信任事件；沒有 CVE 不代表不需追蹤。pip 內附 certifi 與獨立 certifi 分開核對，單獨安裝 certifi 不能替換舊 pip 的內附副本。
+
+`python-toolchain.py setup` 先取得並核對所有精確 wheel，才建立／更新 `.build/python-runtime` 與 `.build/security-tools`；種子 pip 只用 no-index／no-deps 安裝已驗證的本機 wheel，不先做一般網路下載。兩個環境各自核對 pip、內附／獨立 certifi 與 CA 摘要。既有 venv 原地更新，只有明確 `setup --rebuild` 才清空重建；失敗即停止，不使用不完整環境。不要在其他程序仍使用該環境時重建，也不要搬動 venv 而忽略絕對 shebang。
+
+`setup-security-tools.sh` 共用上述流程，再從明確官方 index 以 require-hashes／wheel-only 安裝原有驗簽相依；不使用私人 pip 設定，不修改系統 Python 或共用解譯器。`security-python.sh` 每次驗證工具與 CA 並設定子程序的 SSL_CERT_FILE；一般 `project-python.sh` 仍只選解譯器，不承諾改變任意第三方程式的信任邏輯。安全掃描與退役公告查詢直接使用 helper 建立的明確 certifi SSLContext，不合併舊預設 OpenSSL CA 檔。自訂企業 CA 不會自動加入，需求須另行審查；不能停用驗證來修復連線。
+
+gate／monitor／deploy 在 Python 網路作業前先準備可信工具，並記錄 bootstrap 前置狀態與實際盤點；前置失敗不代表完成掃描。盤點包含來源固定版本、當次兩個受管環境的 pip／內附及獨立 certifi，以及實際存在的 uv 套件；ensurepip 種子另列為重建來源，不視為目前執行 pip。它不掃描整台 Mac、系統全部套件或其他工具的所有內附相依。
+
+監測把實際內附 certifi 對應到 PyPI 公告，按 GHSA／OSV 別名去重並合併仍受影響副本；來源 pins 及實際版本均查詢。缺少環境、必要元件、不可讀資料或宣稱修正版但 CA 內容不符時，不得回報完整成功。版本命中保留為版本命中，不宣稱利用已確認。公開報告只顯示 local checkout／current CI runner 與環境角色；CI 的成功不代表另一台 Mac 已更新。本機入口自行重核，未修正者不能繼續相關網路作業。
+
+pip（MIT）與 certifi／CA 資料（MPL-2.0）的原始授權隨套件保留；它們不隨 MyTerm App 封裝。本流程不變更 App、資料格式或已簽署資產，也不取消其他安全門檻。
 
 ## 公開金鑰發布驗證
 
