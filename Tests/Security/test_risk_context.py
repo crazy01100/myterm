@@ -70,14 +70,29 @@ class ContextTests(unittest.TestCase):
             data={'metadata':{'vulnerabilities':{}},'vulnerabilities':{}}
             for i,(node,ran) in enumerate([('node_modules/x','< 2.0.0'),('node_modules/y/node_modules/x','>= 2.0.0, < 3.0.0')]):
                 data['vulnerabilities'][str(i)]={'nodes':[node],'via':[{'url':'https://github.com/advisories/GHSA-test','name':'x','severity':'high','range':ran}]}
-            adv={'ghsa_id':'GHSA-test','vulnerabilities':[]}
+            adv={'withdrawn_at':None,'ghsa_id':'GHSA-test','vulnerabilities':[]}
             with patch.object(a,'ROOT',root),patch.object(a,'github_npm_advisories',return_value=[]),patch.object(a.subprocess,'run') as run,patch.object(a,'gh',return_value=adv):
                 run.return_value.stdout=json.dumps(data);report={'findings':[]};a.scan_npm(report)
             self.assertEqual(len(report['findings']),1);self.assertEqual(report['findings'][0]['version'],'1.0.0,2.0.0')
 
+class WithdrawalAuditTests(unittest.TestCase):
+    def test_positive_withdrawal_only_and_no_identity_or_date_fallback(self):
+        finding={'id':'GHSA-test','component':'example'}
+        advisory={'ghsa_id':'GHSA-test','withdrawn_at':'2026-01-01T00:00:00Z',
+                  'vulnerabilities':[{'package':{'ecosystem':'npm','name':'example'}}]}
+        result=a.withdrawn_npm_advisory(finding,advisory)
+        self.assertEqual(result['id'],'GHSA-test')
+        self.assertIsNone(a.withdrawn_npm_advisory(finding,{**advisory,'withdrawn_at':None}))
+        for change in ({'ghsa_id':'GHSA-other'},{'withdrawn_at':'bad'},
+                       {'withdrawn_at':'2999-01-01T00:00:00Z'},{'vulnerabilities':[]}):
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                a.withdrawn_npm_advisory(finding,{**advisory,**change})
+        del advisory['withdrawn_at']
+        with self.assertRaises(ValueError):a.withdrawn_npm_advisory(finding,advisory)
+
 class AdvisoryCrossCheckTests(unittest.TestCase):
     def advisory(self, name='@scope/x', ran='< 1.0.2'):
-        return {'ghsa_id':'GHSA-test','severity':'medium','html_url':'https://github.com/advisories/GHSA-test','vulnerabilities':[{'package':{'ecosystem':'npm','name':name},'vulnerable_version_range':ran,'first_patched_version':'1.0.2'}]}
+        return {'withdrawn_at':None,'ghsa_id':'GHSA-test','severity':'medium','html_url':'https://github.com/advisories/GHSA-test','vulnerabilities':[{'package':{'ecosystem':'npm','name':name},'vulnerable_version_range':ran,'first_patched_version':'1.0.2'}]}
     def test_scoped_nested_queries_paginate_deduplicate_and_skip_withdrawn(self):
         from urllib.parse import parse_qs, urlparse
         adv=self.advisory();withdrawn={**adv,'ghsa_id':'GHSA-old','withdrawn_at':'2026-01-01'}

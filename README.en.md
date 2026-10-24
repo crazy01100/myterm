@@ -177,7 +177,7 @@ Dependency alerts, isolated tests and public-key deployment verification: [Secur
 
 Source tests and administration scripts require Python 3.12 or newer through the project launcher; see [Python tool environment](DEVELOPMENT.en.md#python-runtime). App users do not need Python.
 
-Development entry points also follow the narrowly scoped Issue #43 conditional review in [security maintenance](SECURITY_MAINTENANCE.en.md). Once activated, this requires installed pinned development tools and a fresh online metadata check before development/release operations; it does not affect users running the existing App. A pending decision is not an acceptance.
+Development entries verify the retired Issue #43 acceptance decision and official withdrawal evidence under [security maintenance](SECURITY_MAINTENANCE.en.md). Development/release checks require a fresh online review; other dependencies remain subject to normal security checks. Existing App users are unaffected.
 
 ## SFTP directory bookmarks
 

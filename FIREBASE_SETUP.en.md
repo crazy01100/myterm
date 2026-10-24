@@ -43,7 +43,7 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 
 The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.
 
-Firestore Emulator Rules paths, project directories, and symlink targets must not contain `{`/`}`. The project wrapper rejects them before startup to mitigate the unpatched braces advisory. Use a path without braces if rejected; do not bypass the wrapper. Normal automatic Rules reloads remain available. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
+Firestore Emulator Rules paths, project directories, and symlink targets must not contain `{`/`}`. The project wrapper rejects them before startup as a retained input guard (the original braces advisory was withdrawn). Use a path without braces if rejected; do not bypass the wrapper. Normal automatic Rules reloads remain available. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
 ## 1. Create a Firebase project
 
@@ -237,4 +237,4 @@ On two Macs using the same account, validate remote bookmark creation, renaming,
 
 ## Case review before tool use
 
-Before loading the CLI, the Firebase wrapper checks the Issue #43 conditional decision (maintainer-approved and active). Once enabled, each invocation reads official metadata and reviewed tools/configuration again and stops on mismatch; follow [security maintenance](SECURITY_MAINTENANCE.en.md) for reassessment. New Rules contents or tool versions require baseline review. Cloud writes still require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.
+Before loading the CLI, the Firebase wrapper verifies the Issue #43 retirement decision and official withdrawal evidence; mismatches stop progress for reassessment under [security maintenance](SECURITY_MAINTENANCE.en.md). Historical dependency fingerprints are retired, while ordinary dependency/Rules review and full security checks still apply. Cloud writes require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.

@@ -47,7 +47,7 @@ Issue 內文只保留公告連結、元件、受影響範圍、目前版本、�
 
 優先採用受支援版本或上游修正。若評估後建議保留，須由維護者明確確認並記錄套件／版本／範圍、日期、理由、處理決策及重新評估條件，不把單一決策擴大為所有停止維護元件的豁免。每次再次發現時核對這些條件；事實未變可引用既有決策，不因同一警告反覆要求展延或追加替換測試。版本、用途、暴露範圍、漏洞或上游方案改變時，重新評估。
 
-支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；一般已命中漏洞的期限例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天規則；僅 Issue #43 另有下述已啟用的條件式個案，json-ptr 的保留決策不構成該漏洞接受。
+支援狀態的保留決策與漏洞例外分開處理，可依個案採用重新評估條件而非反覆期限展延。它不改變安全掃描、Issue 追蹤及發布 gate，也不自動接受未來漏洞；一般已命中漏洞的期限例外仍遵守 `Config/Security/exceptions.json` 的原有接受及最長 31 天規則；Issue #43 的條件式個案依下述官方撤回決策退役，json-ptr 的保留決策不構成該漏洞接受。
 
 Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/project-python.sh` 選擇執行環境。版本門檻本身不會追蹤未來EoL；每次相依維護仍須查核生命週期。詳見 [工具環境](DEVELOPMENT.md#python-runtime)。
 
@@ -92,28 +92,24 @@ Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟�
 
 `ip-address 10.7.4`與`stream-json 3.7.0`分別在父相依`^10.2.0`／`^3.6.0`範圍更新鎖檔，沒有新增override或來源相容層。前者由MCP的express-rate-limit引入；正常IPv4、IPv6子網及IPv4-mapped位址沿真實ipKeyGenerator驗證。後者沿用Firebase的Auth、DatabaseImporter及Next.js管線回歸；CLI橋接沒有使用公告所指FlexAssembler規則filter。這些來源範圍不是漏洞豁免，不涵蓋繞過wrapper的獨立用途；修復依官方版本、相容回歸及完整掃描確認。兩者只屬開發工具，不隨App封裝。
 
-### braces 未修補漏洞的入口緩解
+`body-parser` 的 1.x／2.x 分支分別鎖定 1.20.9／2.4.0，`fast-uri` 鎖定 3.1.9，`undici` 保留相容的 6.29.1／8.12.2，`zod` 鎖定 4.6.6；不跨主要版本替換。body-parser 2.4.0 要求的 `content-type 2.1.0` 與 `qs 6.16.1` 一併更新，其中 qs 沿用既有精確 override。兩條 Express 分支的壓縮 JSON／表單解析、Undici HTTP 解碼及 Zod 一般輸入驗證納入相容性回歸。以上只屬開發工具，不隨 App 封裝；一般使用流程的驗證不是實際可利用性判定。
 
-`braces 3.0.3` 的 GHSA-vfj7-8cjw-p6xm 尚無官方修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
+### 保留的 braces 入口防護
 
-[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在緩解後保持開啟。須等官方修補版發布、專案實際升級且相容性測試與完整掃描通過，才可標示修復並結案；屆時重評是否移除臨時限制。影響評估不豁免 gate，任何漏洞例外須另獲明確接受。 維護者已明確接受僅此 development 範圍的 `braces 3.0.3` 告警，期限至 2026-10-19 23:59:59（UTC+8），精確紀錄位於 `Config/Security/exceptions.json`。原期限未展延，紀錄保留供歷史追溯；目前由下述已批准的條件式個案接替本案資格判斷，持續顯示於監測且不關閉 Issue。
+`braces 3.0.3` 仍由開發工具使用；GHSA-vfj7-8cjw-p6xm 已由官方撤回，並非發布修補版。Firestore Emulator 經 chokidar 監看規則檔；專案 wrapper 在啟動前拒絕規則檔路徑、專案目錄或符號連結解析後路徑含 `{`／`}`，避免將這類輸入交給 brace 展開。一般規則檔熱重載保留。此限制只涵蓋專案入口，不修補套件，也不能阻止本機使用者繞過 wrapper 或在檢查後更改檔案／設定。
+
+[Issue #43](https://github.com/crazy01100/myterm/issues/43) 在核准的撤回退役變更完成 main 驗證與結案摘要前保持開啟。原 2026-10-19 期限與歷次風險接受保留為歷史，不展延、不新增漏洞豁免。
 
 Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics` 與 `@apphosting/common`；鎖檔中原先經由 PAC 代理引入的 `get-uri`／`basic-ftp` 等相依也已移除。原 get-uri 專用覆寫及其 FTP 消費端測試因此退役，不重新加入套件來維持舊測試。`firebase-removed-dependencies.test.cjs` 驗證鎖檔各層、已安裝套件解析與上游宣告均未重新引入該鏈。其他仍適用的安全覆寫與測試保留；歷史 basic-ftp 影響評估不改寫成當時未受影響。這些開發工具不屬於 MyTerm SFTP。
 
 
 ### Issue #43 條件式風險接受
 
-2026-10-23維護者接受revision5精確基準，只更新ip-address10.7.4／stream-json3.7.0的鎖檔指紋；其餘30份受審來源、完整braces引入圖、限定用途及殘餘風險不變。Issue43仍保留告警，不展延原期限；最終PR head/base及政策摘要仍須明確審閱。
+目前決策為 **revision 6／retired（官方公告撤回）**。維護者於 2026-10-24 明確核准退役提案 `issue43-withdrawal-retirement-1`，提案 SHA-256 為 `c979cbc420118841efdd8306681356da605bb038c71872425b752417a3cbc0f9`。GitHub Advisory Database 於 2026-10-23 20:53:02（UTC+8）撤回 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，理由是不具實際可利用性。這是官方撤回，不是套件修補、風險展延或本專案的實際可利用性測試結論。
 
-2026-10-21維護者接受revision 4，更新同庫自建PR明確Review核准驗證器的精確來源指紋。套件、完整引入圖、允許用途、殘餘風險與重評條件不變；核准器變更已另獲審閱，最終PR head/base與政策摘要仍須明確核准，CI及合併前重核不可省略。Issue #43保留告警。
+`Config/Security/conditional-acceptances.json` 保留原 revision 5 的基準、接受紀錄與原期限歷史，另記錄退役核准、官方摘要及政策執行來源。歷次 revision 1–5 與 PR Review 可由 Git 歷史追溯；不改寫當時的風險判斷。`accepted=false` 與 `retirementVerified=true` 明確區分「沒有風險豁免」和「已核對撤回」。其他漏洞仍依普通安全門檻與最長 31 天例外規則。
 
-2026-10-21維護者接受revision 3，僅更新MCP SDK／Hono修補後的鎖檔指紋；Firebase15.34.0、chokidar／braces引入圖、其他受審來源與允許用途保持不變。告警仍開啟，原期限不展延。
-
-維護者於2026-10-20接受revision 2，將受審Firebase CLI基準調整為15.34.0。Rules監看、chokidar及braces相關來源不變；限定用途、殘餘風險與重新評估條件沿用，Issue #43仍保持開啟。新基準須通過精確PR head審閱及CI，不以版本更新取代風險重核。
-
-`Config/Security/conditional-acceptances.json` 是僅供 GHSA-vfj7-8cjw-p6xm／braces 3.0.3／development 的獨立決策，與一般最長31天期限例外分開。維護者已於2026-10-15明確接受原revision 1基準，受審基準合併後狀態改為 `active`，依每次複核結果套用。未獲接受的新提案使用 `pending`，不視為接受或自動取代原期限。`revoked` 表示撤銷；`retired` 只供另經核准的修復結案，普通掃描門檻仍生效。
-
-啟用後，每項開發／維護任務開始（跨日恢復亦同）、Firebase工具使用、RC／正式版準備、Draft公開與既有版本重部署前，都要重新核對官方公告／npm版本、完整引入圖、受審來源與設定內容。本機與CI共用 `scripts/security-conditional-risk.py`；不讀取舊的通過紀錄，每次重新查詢，不執行npm套件。用途限既有wrapper允許的帳號／專案查詢、明確專案Rules／indexes部署及loopback demo Emulator。使用的輸入須經維護者審查；來源摘要不能證明輸入可信或不可利用。
+每項開發／維護開始、跨日恢復、Firebase 使用、發布準備、Draft 公開及重部署仍由共用入口重新查詢官方撤回證據，核對公告身分、內容摘要與政策執行來源；不執行 npm 套件、不沿用舊通過收據。已退役的歷史依賴鎖檔／Rules 指紋不再限制無關更新，但修改退役驗證器、相關安全入口或政策仍須重新審閱。公告恢復有效、撤回內容改變、證據缺少或來源失敗時停止並重評，不自動恢復接受或把查無資料當成安全。新公告包含 braces 的新風險照常阻擋。
 
 ```sh
 ./scripts/project-python.sh scripts/security-conditional-risk.py \
@@ -121,17 +117,15 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
   --output docs/TASK_ID-conditional-review.json
 ```
 
-`--purpose` 可為 development、firebase、ci、monitor、release、publish 或 redeploy；它與task僅記錄用途，不提供豁免。待核准基準的唯讀檢查加 `--inspect-pending`，即使條件符合仍回傳非零，避免誤認為已授權。一般pending入口保留原流程，並顯示尚未啟用；原期限例外不因此延長。
+purpose 包含 development、firebase、ci、monitor、release、publish、redeploy；用途欄位不是豁免。發布與重部署仍需獨立授權。既有 wrapper 命令限制、loopback 模擬器與大括號路徑防護保留；不因此開放未審查的輸入或直接 CLI 使用。json-ptr 與其他 EoL／EoS 個案決策不變。
 
-任一受審相依／來源／Rules內容改變、官方修補版或新的braces版本出現、公告內容或Firebase上游watcher相依改變，均停止沿用並要求重評；一般UI修改仍須在新任務核對，但不改相同風險的批准基準。查詢失敗不能視為安全。已啟用決策失效或撤銷後不退回舊期限例外；其他公告、版本及scope不受本案接受保護。條件未變時不要求維護者重複批准。
+PR 的決策須與受審 base 相同，否則須取得當前精確 head 的維護者 Review。其他作者 PR 使用原生 APPROVED；指定維護者本人建立、同庫且目標 main 的 PR 使用 `MYTERM-CONDITIONAL-REVIEW-V1` 正式 COMMENTED Review。核准身分固定為 crazy01100／43394184／User，紀錄綁定 PR、完整 head/base、revision 與政策原始 bytes SHA-256；退役使用 `action=retire` 及撤回專用聲明，不能用舊的接受風險聲明取代。撤銷、過期、PENDING、格式錯誤或普通留言均不接受，後續 Review 不會讓舊核准自動復活。
 
-PR的完整決策須與受審base相同，否則須取得對當前精確head的有效維護者核准。其他作者建立的PR沿用GitHub APPROVED review；只有指定維護者本人建立、同庫且目標main的PR，可使用已提交的COMMENTED review及嚴格的 `MYTERM-CONDITIONAL-REVIEW-V1` 內容。驗證器固定核對GitHub帳號 `crazy01100`（數字ID `43394184`、User），不接受PR內容自訂的核准者。紀錄綁定repository、PR號碼、完整head/base、decision ID、revision及政策檔原始bytes SHA-256；重複／額外／缺少欄位、錯誤型別、PENDING、過期或撤銷均不接受。普通Issue留言、label及PR說明不是核准。自建PR取本人最新Review，後續新Review或將撤銷紀錄改成普通文字都不會重新啟用較舊核准；需要重新提交明確決策，日常討論可使用普通PR留言。
+CI 與合併前均唯讀重查完整 PR／Review，核對本機政策等於遠端精確 head，並在官方查詢後再核對來源及 Review。退役不能提早成功而跳過審閱。精確 Review 不代表完整 CI 已通過，也不能代替第二人審查或阻止帳號擁有者另行繞過；`mergeAuthorized=false` 保留。必須使用正常、精確 head 的合併流程，不使用 admin 略過。
 
-CI唯讀查詢GitHub即時PR及全部review分頁，重新讀取以拒絕驗證期間的變動；本機政策內容亦須等於精確遠端head。核准／撤銷之後重跑當前PR安全檢查；合併前依[開發指南](DEVELOPMENT.md#pr基準核准與合併前複核)再次核對，並以精確head限制正常合併。fork不得繼承此決策，任何官方patch、來源／用途漂移、其他漏洞或掃描錯誤照常阻擋。核准文字不會寫出成功check、不會跳過測試，也不能滿足GitHub未來可能要求的另一人Approve。
+監測對 npm 舊資料中的撤回公告，必須取得身分與元件相符、日期有效的官方撤回證據才排除目前 finding，並記錄 `withdrawnAdvisories`；npm 原始計數保留來源意義。缺漏或錯誤仍使掃描失敗。Issue #43 不因漏列或退役自動關閉：先完成核准、main 安全檢查／完整監測／CodeQL，重新核對官方撤回，再以「官方公告撤回／不再適用」人工結案並保留歷史。若公告再次有效，正常監測可重新開啟告警。
 
-初始或更新基準先以pending提案，維護者明確接受後才啟用；驗證器本身變更亦須重新提出來源指紋及人工審閱，不能把新驗證器的通過當成它自己的核准。Review證明GitHub帳號提交，並非第二人審查或不可修改的簽章。GitHub已完成check不會隨留言變動即時失效，故標準合併前必須重新查詢；此流程不能防止帳號擁有者另行修改規則、直接合併、繞過wrapper或所有檢查後變動。基準綁定相關建置／封裝設定及來源，不只依賴devDependency標籤。
-
-告警持續保留高風險、版本命中與實際影響待確認，另顯示處理方式、範圍、當次條件結果及最近複核。接受不移除finding或自動關閉Issue；#43即使從資料源消失也須先人工確認官方修補、實際升級及驗證，不因遺漏就結案。原期限與風險轉移歷史保留，單純更新複核時間不新增留言。政策模擬測試為 `test_conditional_risk.py`，不執行npm套件或漏洞輸入；完整開發工具測試另有漏洞回歸案例，不可在禁止漏洞測試的任務中逕行執行或推送觸發。
+前置檢查失敗時保存 preflight 與條件複核證據；有診斷檔不代表完整掃描成功。`test_conditional_risk.py` 等政策案例只用 mock／stub；完整開發工具回歸含既有漏洞案例，仍須該次任務明確授權。不得恢復 Daybreak 或已終止的實際可利用性計劃。
 
 ## 公開金鑰發布驗證
 

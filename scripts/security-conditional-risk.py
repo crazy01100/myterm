@@ -26,6 +26,13 @@ CLI_URL = 'https://registry.npmjs.org/firebase-tools/latest'
 REPOSITORY = 'crazy01100/myterm'
 MAINTAINER = {'login': 'crazy01100', 'id': 43394184, 'type': 'User'}
 REVIEW_MARKER = 'MYTERM-CONDITIONAL-REVIEW-V1'
+RETIREMENT_STATEMENT = ('I approve retirement of the specified Issue #43 conditional acceptance '
+                        'because the official advisory was withdrawn. This is not a package fix. '
+                        'Close Issue #43 only after main verification. All security checks must still pass.')
+RETIREMENT_FILES = {'scripts/security-conditional-risk.py', 'scripts/security-audit.py',
+                    'scripts/security-test-profile.py', 'scripts/sync-security-issues.py',
+                    'scripts/firebase-command-policy.py', 'scripts/firebase-tools.sh',
+                    '.github/workflows/security-gate.yml', '.github/workflows/security-checks.yml'}
 REVIEW_STATEMENT = ('I accept the specified Issue #43 baseline, allowed uses and residual risk. '
                     'Keep Issue #43 open. All security checks must still pass.')
 
@@ -78,6 +85,73 @@ def advisory_snapshot(advisory):
         if row.get('vulnerable_version_range') != '<= 3.0.3':
             raise ValueError('Affected range changed')
     return {k: advisory[k] for k in fields}
+
+
+def withdrawal_snapshot(advisory):
+    """Reviewed official withdrawal, never absence from a feed or a patch claim."""
+    fields = ('ghsa_id', 'cve_id', 'html_url', 'summary', 'description', 'severity',
+              'withdrawn_at', 'vulnerabilities')
+    if not isinstance(advisory, dict) or any(k not in advisory for k in fields):
+        raise ValueError('Incomplete withdrawal metadata')
+    if (advisory['ghsa_id'] != IDENTITY['id'] or advisory['cve_id'] != 'CVE-2026-93687'
+            or advisory['html_url'] != 'https://github.com/advisories/' + IDENTITY['id']):
+        raise ValueError('Withdrawal identity mismatch')
+    withdrawn = dt.datetime.fromisoformat(advisory['withdrawn_at'] or '')
+    if withdrawn.tzinfo is None or withdrawn > dt.datetime.now(dt.timezone.utc):
+        raise ValueError('Invalid withdrawal date')
+    if not isinstance(advisory['description'], str) or not advisory['description'].strip():
+        raise ValueError('Missing withdrawal explanation')
+    rows = advisory['vulnerabilities']
+    if not isinstance(rows, list) or not rows or any(
+            row.get('package') != {'ecosystem': 'npm', 'name': 'braces'} for row in rows):
+        raise ValueError('Withdrawal package mismatch')
+    return {k: advisory[k] for k in fields}
+
+
+def retirement_sources(root, decision):
+    files = decision['retirement']['sourceFiles']
+    if not isinstance(files, dict) or set(files) != RETIREMENT_FILES:
+        raise ValueError('Incomplete retirement enforcement sources')
+    for name, expected in files.items():
+        if not isinstance(expected, str) or not re.fullmatch('[a-f0-9]{64}', expected):
+            raise ValueError('Invalid retirement source fingerprint')
+        if file_hash(root, name) != expected:
+            raise ValueError('Retirement enforcement source changed: ' + name)
+    return digest(files)
+
+
+def evaluate_retirement(root, decision, result, fetch, now):
+    retirement = decision['retirement']
+    approved = dt.datetime.fromisoformat(retirement['approvedAt'])
+    if (retirement.get('reason') != 'official-advisory-withdrawn'
+            or retirement.get('approvedBy') != 'project maintainer'
+            or approved.tzinfo is None or approved > now
+            or not re.fullmatch('[a-f0-9]{64}', retirement.get('proposalSHA256', ''))):
+        raise ValueError('Missing or invalid retirement approval')
+    source = retirement_sources(root, decision)
+    evidence = verify_ci_baseline(root, decision)
+    advisory = withdrawal_snapshot(fetch(ADVISORY_URL))
+    if (advisory['withdrawn_at'] != retirement['withdrawnAt']
+            or digest(advisory) != retirement['advisoryDigest']):
+        raise ValueError('Official withdrawal changed; review required')
+    if retirement_sources(root, decision) != source:
+        raise ValueError('Retirement sources changed during review')
+    if load_policy(root) != decision:
+        raise ValueError('Retirement policy changed during review')
+    if evidence is not None:
+        if verify_ci_baseline(root, decision) != evidence:
+            raise ValueError('PR review changed during retirement verification')
+        result['prReview'] = evidence
+    result.update(status='retired', accepted=False, retirementVerified=True,
+                  sourceDigest=source, advisoryDigest=digest(advisory),
+                  withdrawnAt=advisory['withdrawn_at'],
+                  reason='官方公告已撤回；條件式接受已退役，普通安全門檻仍生效。')
+    return result
+
+
+def verified(result):
+    return result.get('accepted') is True or (result.get('status') == 'retired'
+                                            and result.get('retirementVerified') is True)
 
 
 def registry_snapshot(registry):
@@ -227,8 +301,10 @@ def pr_identity(pr, number, head, base):
     return {'number': number, 'head': head, 'base': base, 'author': user}
 
 
-def review_document(identity, decision, policy_bytes, action='accept'):
-    if action not in ('accept', 'revoke'):
+def review_document(identity, decision, policy_bytes, action=None):
+    action = action or ('retire' if decision.get('state') == 'retired' else 'accept')
+    expected_action = 'retire' if decision.get('state') == 'retired' else 'accept'
+    if action not in (expected_action, 'revoke'):
         raise ValueError('Unknown review action')
     if (any(decision.get(k) != v for k, v in IDENTITY.items())
             or type(decision.get('revision')) is not int or decision['revision'] < 1):
@@ -237,7 +313,8 @@ def review_document(identity, decision, policy_bytes, action='accept'):
             'pr': identity['number'], 'head': identity['head'], 'base': identity['base'],
             'decisionId': IDENTITY['id'], 'revision': decision['revision'],
             'policySHA256': hashlib.sha256(policy_bytes).hexdigest(),
-            'statement': REVIEW_STATEMENT if action == 'accept' else 'I revoke this baseline acceptance.'}
+            'statement': (RETIREMENT_STATEMENT if action == 'retire' else REVIEW_STATEMENT
+                          if action == 'accept' else 'I revoke this baseline acceptance.')}
 
 
 def review_candidates(pages, *, self_authored=False):
@@ -304,7 +381,7 @@ def select_review(pages, identity, decision, policy_bytes):
             'policySHA256': hashlib.sha256(policy_bytes).hexdigest()}
 
 
-def inspect_pr_review(root, decision, number, head, base, *, template=False, action='accept'):
+def inspect_pr_review(root, decision, number, head, base, *, template=False, action=None):
     # Validate untrusted CLI/event arguments before constructing API paths.
     if (type(number) is not int or number < 1
             or not isinstance(head, str) or not re.fullmatch('[a-f0-9]{40}', head)
@@ -360,10 +437,12 @@ def evaluate(root, decision, fetch=fetch_json, now=None):
     try:
         if any(decision.get(k) != v for k, v in IDENTITY.items()):
             raise ValueError('Decision identity mismatch')
-        if decision.get('state') not in ('pending', 'active'):
-            raise ValueError('Conditional decision is inactive')
         if type(decision.get('revision')) is not int or decision['revision'] < 1:
             raise ValueError('Invalid decision revision')
+        if decision.get('state') == 'retired':
+            return evaluate_retirement(root, decision, result, fetch, now)
+        if decision.get('state') not in ('pending', 'active'):
+            raise ValueError('Conditional decision is inactive')
         if not decision.get('residualRisk') or not decision.get('allowedUses'):
             raise ValueError('Decision scope incomplete')
         if decision['state'] == 'active':
@@ -425,7 +504,7 @@ def review_report(report, root=ROOT, fetch=fetch_json):
     # Removal/fix/withdrawal needs a separately reviewed retirement decision.
     if decision['state'] != 'retired' and not any(all(f.get(k) == v for k, v in IDENTITY.items()) for f in report['findings']):
         report['errors'].append('Issue 43 finding changed or disappeared; review retirement before proceeding')
-    if decision['state'] != 'retired' and result['status'] != 'matched':
+    if not verified(result):
         report.setdefault('conditionalBlocks', []).append('Issue 43: ' + result['reason'])
         if result.get('unavailable'):
             report['errors'].append('Official conditional review unavailable')
@@ -442,15 +521,15 @@ def main(argv=None):
     parser.add_argument('--pr', type=int)
     parser.add_argument('--expected-head')
     parser.add_argument('--expected-base')
-    parser.add_argument('--review-action', choices=('accept', 'revoke'), default='accept')
+    parser.add_argument('--review-action', choices=('accept', 'retire', 'revoke'))
     args = parser.parse_args(argv)
     if args.pr_review:
         if (args.purpose or args.task or args.output or args.inspect_pending
                 or args.pr is None or not args.expected_head or not args.expected_base
-                or (args.pr_review != 'template' and args.review_action != 'accept')):
+                or (args.pr_review != 'template' and args.review_action is not None)):
             parser.error('Review helper requires only PR, expected head/base and optional template action')
     elif (not args.purpose or not args.task or not args.task.strip() or len(args.task) > 200
-          or args.pr is not None or args.expected_head or args.expected_base or args.review_action != 'accept'):
+          or args.pr is not None or args.expected_head or args.expected_base or args.review_action is not None):
         parser.error('A purpose and concise task identifier are required; review flags cannot authorize work')
     try:
         decision = load_policy()
@@ -469,12 +548,9 @@ def main(argv=None):
                               'mergeAuthorized': False,
                               'remainingChecks': 'Required CI, CodeQL, threads and exact-head merge preconditions'},
                              ensure_ascii=False, indent=2))
-            return 0 if result['accepted'] else 1
+            return 0 if verified(result) else 1
         if decision['state'] == 'pending' and not args.inspect_pending:
             print('Issue 43 conditional policy pending approval; existing time-limited rules remain in force.')
-            return 0
-        if decision['state'] == 'retired' and not args.inspect_pending:
-            print('Issue 43 conditional policy retired; normal security gates remain in force.')
             return 0
         result = evaluate(ROOT, decision)
         result.update(purpose=args.purpose, task=args.task)
@@ -485,7 +561,7 @@ def main(argv=None):
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
         print(json.dumps(result, ensure_ascii=False))
-        return 0 if result['accepted'] else 1
+        return 0 if verified(result) else 1
     except (ValueError, KeyError, TypeError, OSError, subprocess.SubprocessError) as error:
         print('Conditional review unavailable: ' + str(error), file=sys.stderr)
         return 1

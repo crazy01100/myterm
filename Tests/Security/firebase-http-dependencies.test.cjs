@@ -108,3 +108,50 @@ for(const entry of [...new Set(expressPaths)]){
   assert.equal(forwarded.ip,'198.51.100.7');assert.deepEqual(forwarded.ips,['198.51.100.7']);
  });
 }
+
+for(const entry of [...new Set(expressPaths)]){
+ const express=require(entry);
+ const parser=createRequire(entry)('body-parser');
+ const version=createRequire(entry)('./package.json').version;
+ test(`Express ${version} body-parser keeps compressed JSON and form parsing compatible`,{timeout:5000},async t=>{
+  const app=express();
+  app.post('/json',parser.json({limit:'16kb'}),(req,res)=>res.json(req.body));
+  app.post('/form',parser.urlencoded({extended:true,limit:'16kb'}),(req,res)=>res.json(req.body));
+  const port=await listen(t,app);
+  async function post(url,body,headers){
+   return new Promise((resolve,reject)=>{
+    const req=http.request({host:'127.0.0.1',port,path:url,method:'POST',headers:{...headers,'Content-Length':body.length}},res=>{
+     const chunks=[];res.on('data',c=>chunks.push(c));res.on('error',reject);
+     res.on('end',()=>resolve({status:res.statusCode,data:JSON.parse(Buffer.concat(chunks).toString())}));
+    });req.on('error',reject);req.end(body);
+   });
+  }
+  for(const [encoding,compress] of [['gzip',zlib.gzipSync],['deflate',zlib.deflateSync]]){
+   const data={name:'fixture',values:[1,2,3]};
+   const response=await post('/json',compress(Buffer.from(JSON.stringify(data))),{'Content-Type':'application/json','Content-Encoding':encoding});
+   assert.equal(response.status,200);assert.deepEqual(response.data,data);
+  }
+  const form=await post('/form',Buffer.from('name=fixture&roles%5B%5D=reader&roles%5B%5D=writer'),{'Content-Type':'application/x-www-form-urlencoded'});
+  assert.equal(form.status,200);assert.deepEqual(form.data,{name:'fixture',roles:['reader','writer']});
+ });
+}
+
+const gyp=createRequire(cli.resolve('node-gyp/package.json'));
+for(const entry of [...new Set([cli.resolve('undici'),gyp.resolve('undici')])]){
+ const undici=require(entry);
+ test(`Undici ${createRequire(entry)('./package.json').version} preserves ordinary HTTP response decoding`,{timeout:5000},async t=>{
+  const body=JSON.stringify({message:'fixture'});
+  const port=await listen(t,(_req,res)=>{res.writeHead(200,{'Content-Type':'application/json','Content-Encoding':'gzip'});res.end(zlib.gzipSync(body));});
+  const agent=new undici.Agent();t.after(()=>agent.close());
+  const response=await undici.fetch(`http://127.0.0.1:${port}/`,{dispatcher:agent});
+  assert.equal(response.status,200);assert.deepEqual(await response.json(),{message:'fixture'});
+ });
+}
+
+test('Firebase Zod validates ordinary constrained tool input',()=>{
+ const z=cli('zod');
+ const schema=z.object({project:z.string().min(1),files:z.array(z.string()).max(5)});
+ const input={project:'demo-myterm',files:['firestore.rules']};
+ assert.deepEqual(schema.parse(input),input);
+ assert.equal(schema.safeParse({project:'demo-myterm',files:[42]}).success,false);
+});
