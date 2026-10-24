@@ -444,6 +444,8 @@ class EntryOrderTests(unittest.TestCase):
 
 class RetirementTests(unittest.TestCase):
     def setUp(self):
+        # These fixtures must not inherit a live PR event from the CI runner.
+        self.enterContext(patch.dict('os.environ', {}, clear=True))
         ConditionalTests.setUp(self)
         self.advisory.update(cve_id='CVE-2026-93687',
                              html_url='https://github.com/advisories/'+p.IDENTITY['id'],
