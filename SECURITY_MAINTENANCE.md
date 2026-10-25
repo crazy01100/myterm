@@ -218,3 +218,5 @@ GitHub CLI與內附Go模組：監測／發布入口使用 `Config/Security/githu
 `security-pip-applicability.py`只判斷已審閱的三筆setuptools子集公告，以及一筆msgpack C解碼器公告。固定官方pip wheel未包含前者受影響的setuptools實作，也只包含msgpack純Python實作；每次比對公告條件、msgpack官方修補身分、兩個受管環境及完整vendor來源。新增原生模組、外部套件、路徑hook或來源漂移均保留待審。原始版本命中保存於`rawFindings`，具體證據另存`applicabilityReviews`，不修改官方嚴重度或授予例外。未驗證的環境不借用本機結果。通過gate前及Issue寫入前重新驗證，既有Issue不因這項分類自動以版本修復關閉；仍須同範圍與main驗證後維護。其他風險按上述合併／發布用途處理；必要覆蓋缺口仍阻擋。
 
 `security-supplier-notices.py` 查詢實際部署工具與 Rules JDK 的官方公告。JDK 身分來自所選工具的 release metadata；已知命中即使查詢失敗仍保留，但不宣稱查詢完整。公告內容變化進入正常待審紀錄，不要求新 revision。供應商證據有限與元件風險分開，不能因此自動解除告警；沒有 OS／runner 映像接受基準。
+
+Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主機、無關路徑、query 與 fragment 仍拒絕。相同環境／工具來源的版本先合併再比較，首次與後續寫入使用相同格式，避免重複通知或遺失版本觀測；這不改變漏洞判定或解除條件。
