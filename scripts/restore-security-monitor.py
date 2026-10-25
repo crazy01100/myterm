@@ -3,7 +3,7 @@
 import io,json,os,subprocess,sys,zipfile
 from pathlib import Path
 repo=os.environ['GITHUB_REPOSITORY'];output=Path(sys.argv[1])
-def api(path):return subprocess.check_output(['gh','api',path],timeout=60)
+def api(path):return subprocess.check_output([str(Path(__file__).resolve().parent/'project-gh.sh'),'api',path],timeout=60)
 artifacts=json.loads(api(f'repos/{repo}/actions/artifacts?name=security-monitor-state&per_page=10'))['artifacts']
 metadata=json.loads(api(f'repos/{repo}'))
 items=[]

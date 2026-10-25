@@ -13,7 +13,7 @@ class AuditPolicyTests(unittest.TestCase):
         self.assertTrue(a.affected('2.9.5','>= 2.2.0, <= 2.9.5'))
         self.assertFalse(a.affected('2.1.9','>= 2.2.0, <= 2.9.5'))
     def test_unknown_is_not_safe(self):
-        for value in ['before commit','^2.9.5','>= 2.9.5-beta',None]:self.assertIsNone(a.affected('2.9.6',value))
+        for value in ['before commit','^2.9.5','>= 2.9.5-',None]:self.assertIsNone(a.affected('2.9.6',value))
     def test_vendor_commit_ancestry(self):
         with patch.object(a,'gh',return_value={'status':'ahead'}) as call:
             self.assertTrue(a.vendor_is_patched('owner/repo','b'*40,'Anything after '+'a'*40))

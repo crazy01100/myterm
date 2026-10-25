@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "bundles": [
+    {
+      "repository": "actions/checkout",
+      "revision": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "url": "https://codeload.github.com/actions/checkout/tar.gz/3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "archiveSHA256": "b59292069298c7be5ffd9c636431a229faff70ece00e0c24fd31baeb7b309fa3",
+      "cacheFile": ".build/security-inventory-actions/actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1.tgz"
+    },
+    {
+      "repository": "actions/setup-node",
+      "revision": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "url": "https://codeload.github.com/actions/setup-node/tar.gz/949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "archiveSHA256": "738f1f022b9004d05770ca7d294748ef37f40f977472ce978c1f3f74aaa45e34",
+      "cacheFile": ".build/security-inventory-actions/actions-setup-node-949feb2413d6458794dcd2491c4babbbce0c15c1.tgz"
+    },
+    {
+      "repository": "actions/setup-python",
+      "revision": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "url": "https://codeload.github.com/actions/setup-python/tar.gz/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "archiveSHA256": "f8957c701bb6648d362eb6bbe03a2a35e6410093ea7098a7c2100cb3412965bd",
+      "cacheFile": ".build/security-inventory-actions/actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0.tgz"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "revision": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "url": "https://codeload.github.com/actions/upload-artifact/tar.gz/cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "archiveSHA256": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+      "cacheFile": ".build/security-inventory-actions/actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9.tgz"
+    }
+  ]
+}

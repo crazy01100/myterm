@@ -129,16 +129,16 @@ Development tools require Node.js 24 LTS (24.12.0 or later within 24.x for Fireb
 
 The upstream repository also provides `scripts/invite-sync-user.sh --help` for maintainer administration. It requires local Google Cloud CLI and administrator authorization; it is not an app build dependency or an expansion of the existing Firebase CLI wrapper. Run its isolated safety suite with `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`; normal Python test discovery under `Tests/Security` also runs it. Administrator settings, credentials, and private operating notes stay out of Git. This tool is not part of the independent source export.
 
-### Case review before development and publication
+### Source review before development and publication
 
-At the start of each development/maintenance task, on resumption on another day, and before every release, perform the Issue #43 conditional review described in [security maintenance](SECURITY_MAINTENANCE.en.md), recording the current task and commit. Dev, Firebase, release preparation and redeployment entries also invoke the shared check. Before publishing a Draft, perform a fresh `--purpose publish` review against its candidate source; do not reuse development reports or treat pending as acceptance. Stop dependent operations on failure and report the change without extending or downgrading the decision. App behavior/versioning and production/Dev isolation remain unchanged.
+Verify the policy contract, checkout identity and tools/monitoring results for the actual operation. Ordinary source changes no longer require revision fingerprint approval; required package integrity and risk gates remain. OS updates are outside project monitoring and are not development prerequisites.
 
 ### PR baseline approval and pre-merge review
 
-Review the changes and new Issue #43 baseline before approving the final commit. Other authors' PRs retain maintainer Approve reviews; self-authored PRs use a formal Review Comment. This helper only reads data and generates text; it cannot submit reviews, rerun CI or merge:
+For security policy, trust, permissions or gate changes, consolidate approval of the final PR after implementation and validation. Ordinary documentation, tests and notice cursors have no recurring revision approval. Other authors retain maintainer Approve; self-authored PRs use a formal Review Comment (`MYTERM-POLICY-REVIEW-V2`). This helper only reads/generates text; it does not submit reviews, rerun CI or merge:
 
 ```sh
-./scripts/project-python.sh scripts/security-conditional-risk.py \
+./scripts/project-python.sh scripts/security-source-review.py \
   --pr-review template --pr <PR-number> \
   --expected-head <full-head-SHA> --expected-base <full-base-SHA>
 ```
@@ -148,14 +148,13 @@ Local policy bytes must match the pushed head. Only after explicit maintainer co
 After acceptance or revocation, explicitly rerun the required security check for the same head. Do not alter CI permissions, test profiles or branch rulesets. Before merging, check all required CI, CodeQL and unresolved discussions, then run:
 
 ```sh
-./scripts/project-python.sh scripts/security-conditional-risk.py \
+./scripts/project-python.sh scripts/security-source-review.py \
   --pr-review verify --pr <PR-number> \
   --expected-head <verified-head-SHA> --expected-base <verified-base-SHA>
 ```
 
-This rereads reviews, sources and official metadata, then reviews again. Success means the approval and conditional acceptance currently match; `mergeAuthorized=false` explicitly does not attest that all CI passed. Recheck required remote checks/discussions and use normal `gh pr merge --match-head-commit <verified-head-SHA>`, never an admin bypass. Stop and reassess if head or base changes. Introducing the verifier itself requires separate review of the implementation and exact baseline; its own successful return cannot replace maintainer consent. Completed checks do not automatically turn red on revocation, so do not skip this standard pre-merge check. See [security maintenance](SECURITY_MAINTENANCE.en.md#issue-43-conditional-risk-acceptance) for rules and limitations.
+This rereads the PR, protected source trees and Reviews, then Reviews again. Success means the sources and exact approval currently match; `mergeAuthorized=false` explicitly does not attest that all CI passed. Recheck required remote checks/discussions and use normal `gh pr merge --match-head-commit <verified-head-SHA>`, never an admin bypass. Stop and reassess if head or base changes. Introducing the verifier itself requires separate review of the implementation and exact baseline; its own successful return cannot replace maintainer consent. Completed checks do not automatically turn red on revocation, so do not skip this standard pre-merge check. See [security maintenance](SECURITY_MAINTENANCE.en.md#generic-security-source-review) for rules and limitations.
 
-A retirement decision uses the dedicated `action=retire` Review statement. `retirementVerified=true` with `accepted=false` verifies official withdrawal without accepting new risk. Existing entry commands and exact PR review still apply; retired decisions verify withdrawal evidence and enforcement sources instead of obsolete dependency fingerprints. Historical baselines remain available and dependency updates still require ordinary complete checks.
 
 
 ### SSH post-quantum policy validation
@@ -349,12 +348,14 @@ No. `release.sh` creates at most a Draft. Public release, production update-site
 
 Dependency alerts, isolated tests and public-key deployment verification: [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
+Routine advisory monitoring runs every 12 hours without making full regressions a prerequisite for advisory queries. Full fixed regressions remain in PR/main CI and release validation. Temporary Go analysis tools are not prerequisites for development or monitoring; supplier evidence limitations remain distinct from unresolved risks.
+
 Manual security monitoring can enable `refresh_issue_format` to refresh existing bot Issues. See the security maintenance guide for dependency paths, case-specific impact reviews, and preservation of timestamps and comments. This option does not change risk resolution or release gates.
 
 <a id="python-runtime"></a>
 ## Python tool environment
 
-Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
+Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, the project base at `.build/python-base/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
 
 Prepare managed tooling before networked development/security operations:
 
@@ -386,3 +387,21 @@ Release helpers verify the Sparkle artifact version against Package.resolved, pr
 After local validation, compare, deploy and read back backward-compatible Rules, then test the same Dev version on two Macs. An external Mac may use a stable writable directory without a checkout; verify its development identity. App creation, management, navigation, busy-state handling, account switching, offline use and conflicts still require interactive acceptance.
 
 For policy-only changes, CI selects `scripts/run-policy-tests.py` using the exact Git diff evaluated by `scripts/security-test-profile.py`. It does not execute npm vulnerability cases and reports that exclusion. Dependency, Rules and App changes retain full verification. See [security maintenance](SECURITY_MAINTENANCE.en.md).
+
+### Isolated base and Java on Apple Silicon
+
+Managed Python environments use the Astral CPython base pinned in `Config/Security/python-runtime.json`. For initial setup, run `./scripts/project-python.sh scripts/setup-project-python.py`, then create the two venvs with `MYTERM_SECURITY_PYTHON_BOOTSTRAP="$PWD/.build/python-base/bin/python3.12" ./scripts/setup-security-tools.sh`. Before rebuilding existing environments, confirm that no process uses them and preserve recovery data. Never overwrite shared or system Python. Verification dependencies are downloaded as pinned official wheels, hash-verified, and installed offline; pip does not perform network package resolution.
+
+Java for Firestore Rules tests uses the official Temurin archive pinned in `Config/Security/java-runtime.json`. Run `./scripts/project-python.sh scripts/project-java-runtime.py setup` to prepare `.build/java-runtime`, without changing Homebrew or global Java. `scripts/project-java.sh` and the Firebase entry verify the complete file inventory, hashes, and trust data before use. Drift stops execution rather than silently repairing or upgrading it. Check the version with `./scripts/project-java.sh -version`. Setup does not overwrite an existing modified runtime; investigate differences before a separately reviewed replacement.
+
+App users do not need Java. This Apple Silicon archive is not used in Linux CI. CI separately inventories its actual JDK vendor, build, and trust data; a local pass does not validate CI. Vendor version schemes differ, so a patch number or the presence of a `blocked.certs` file alone is not proof of remediation.
+
+
+GitHub CLI uses a project-owned entry: first run `./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup`, then use `./scripts/project-gh.sh` instead of global `gh` for project operations. `Config/Security/github-cli.json` pins the official archives and complete installed file manifests. Each invocation checks content and permissions, with no PATH fallback on absence or drift. macOS arm64 and CI Linux archives are verified separately. Monitoring, source review, asset downloads, release and cleanup share this entry and existing authentication; Homebrew, the global CLI and login settings are unchanged. The independent health workflow prepares only this pinned tool without installing project pip/npm dependencies or running regressions.
+
+
+Security applicability regression includes synthetic archive/advisory cases in `Tests/Security/test_pip_applicability.py`, covering source drift, cross-environment misuse, forged decisions and Issue preservation. No new package installation or vulnerability payload is required. New applicability decisions are policy changes reviewed in the consolidated final PR, without a separate source-revision approval.
+
+`Tests/Security/test_runtime_advisories.py` uses synthetic advisory archives and commit responses to verify runtime core queries without installing runtimes or executing vulnerability inputs. A stale aggregate Node index, missing individual records, unknown ranges or incorrect CPython mappings must not produce successful evidence.
+
+Expanded monitoring remediation is tracked separately. The merge workflow explicitly uses `security-audit.py --merge-gate`, preserving original collector risk thresholds and all required query/coverage checks. Default audits, release and deployment retain all-risk gates; passing merge checks does not establish release readiness. See [security maintenance](SECURITY_MAINTENANCE.en.md) for purposes, evidence and limits.

@@ -7,7 +7,7 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '23 1 * * *'
+    - cron: '23 1,13 * * *'
 permissions:
   contents: read
   actions: read
@@ -27,6 +27,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       npm_config_cache: ${{ github.workspace }}/.npm-cache
+    # Advisory monitoring only. Full fixed regressions remain in PR/push CI.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,50 +35,60 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '24.21.0'
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+          node-version: '24.22.1'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
-      - name: Select verification profile from exact source changes
-        id: verification
-        run: ./scripts/project-python.sh scripts/security-test-profile.py
       - name: Install pinned verification tools
+        id: tools
         run: |
           mkdir -p build
           printf '%s\n' '{"stage":"python-bootstrap","status":"started"}' > build/python-tooling-preflight.json
           ./scripts/setup-security-tools.sh
+          ./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup
+          ./scripts/project-python.sh -B scripts/node-toolchain.py setup
+          ./scripts/project-python.sh -B scripts/security-prepare-inventory.py
           ./scripts/project-python.sh -B scripts/python-toolchain.py inventory > build/python-tooling-inventory.json
       - name: Verify pinned Firebase development tools
+        id: dependencies
         run: |
           mkdir -p build
           ./scripts/project-python.sh -c 'import json; print(json.dumps({"stage": "development-tool-preflight", "status": "started"}))' > build/security-preflight.json
-          npm ci --ignore-scripts --no-fund
-          ./scripts/project-python.sh scripts/security-conditional-risk.py --purpose monitor --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --output build/security-conditional-review.json
+          ./scripts/project-node.sh --npm ci --ignore-scripts --no-fund --no-audit
+          ./scripts/project-node.sh --npm ci --prefix Tools/Deployment --ignore-scripts --no-fund --no-audit --userconfig=/dev/null --registry=https://registry.npmjs.org
+          ./scripts/project-python.sh scripts/security-source-review.py --purpose monitor --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --output build/security-source-review.json
           ./scripts/project-node.sh scripts/verify-firebase-tools.cjs
-      - name: Verify development tool consumers (full profile only)
-        if: steps.verification.outputs.profile == 'full'
-        run: ./scripts/project-node.sh --npm run test:development-tools
-      - name: Verify release validation and audit policies (full profile only)
-        if: steps.verification.outputs.profile == 'full'
-        run: ./scripts/security-python.sh -m unittest discover -s Tests/Security -v
-      - name: Verify policy and entry fixtures (no vulnerability tests)
-        if: steps.verification.outputs.profile == 'policy-only'
-        run: ./scripts/security-python.sh scripts/run-policy-tests.py
       - name: Restore previous monitor state
+        if: always() && steps.dependencies.outcome == 'success'
         run: ./scripts/project-python.sh scripts/restore-security-monitor.py build/previous-security-report.json
       - name: Scan source and released App
+        id: scan
+        if: always() && steps.dependencies.outcome == 'success'
         run: |
           ./scripts/project-python.sh scripts/security-audit.py --monitor \
             --include-release "$GITHUB_REPOSITORY" \
             --previous build/previous-security-report.json \
             --output build/security-report.json
       - name: Record published advisory risks in Issues
+        id: risk_issues
+        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped'
         env:
           REFRESH_ISSUE_FORMAT: ${{ inputs.refresh_issue_format }}
         run: |
           args=()
           if [[ "$REFRESH_ISSUE_FORMAT" == "true" ]]; then args+=(--refresh-format); fi
           ./scripts/project-python.sh scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
+      - name: Record coverage and official notice review
+        id: notice_issues
+        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped'
+        run: ./scripts/project-python.sh scripts/sync-security-monitor-status.py --report build/security-report.json --apply
+      - name: Bind scan and notification receipt
+        if: always()
+        env:
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          RISK_ISSUES_OUTCOME: ${{ steps.risk_issues.outcome }}
+          NOTICE_ISSUES_OUTCOME: ${{ steps.notice_issues.outcome }}
+        run: ./scripts/project-python.sh scripts/security-monitor-receipt.py --report build/security-report.json
       - name: Save monitor evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -86,7 +97,9 @@ jobs:
           path: |
             build/security-report.json
             build/security-issues-result.json
-            build/security-conditional-review.json
+            build/security-monitor-status-result.json
+            build/security-monitor-receipt.json
+            build/security-source-review.json
             build/security-preflight.json
             build/python-tooling-preflight.json
             build/python-tooling-inventory.json

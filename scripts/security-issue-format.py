@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 FORMAT = '<!-- myterm-security-format:2 -->\n'
 SNAPSHOT = re.compile(r'<!-- myterm-security-snapshot:([A-Za-z0-9_=+-]+) -->')
 FIELDS = ['id','component','scope','version','severity','status','url','fixedVersion','patches',
-          'conditionalAcceptance','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired','dependencyPaths','impact']
+          'conditionalAcceptance','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired','dependencyPaths','impact','environmentObservations']
 SCOPES = {'current-source':'目前來源','released-app':'已發布 App','development':'開發工具','verification-tool':'驗簽工具','github-actions':'GitHub Actions'}
 LEVELS = {'critical':'嚴重風險','high':'高風險','moderate':'中風險','medium':'中風險','low':'低風險','unknown':'待確認'}
 IMPACTS = {'affected':'已確認受影響','not-affected':'已確認不受影響','needs-review':'待確認'}
@@ -44,7 +44,7 @@ def public_finding(f):
 
 def semantic(f):
     # Enrichment/formatting changes do not manufacture a risk-state transition.
-    result = {k:f[k] for k in ['id','component','scope','version','severity','status','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired'] if k in f}
+    result = {k:f[k] for k in ['id','component','scope','version','severity','status','releaseTag','acceptedRisk','exceptionExpiresAt','exceptionExpired','environmentObservations'] if k in f}
     if 'conditionalAcceptance' in f:
         result['conditionalAcceptance']={k:v for k,v in f['conditionalAcceptance'].items() if k in ['decisionId','revision','state','status','accepted']}
     return result
@@ -77,6 +77,9 @@ def render(key,f,report,resolved=False,resolutions=None):
         rows.append(('評估基準'+('（歷史）' if impact.get('historical') else ''),impact['reviewedCommit'][:12]))
         rows.append(('評估時間',display_time(impact['reviewedAt'])))
     if f.get('releaseTag'): rows.append(('正式版本',f['releaseTag']))
+    if f.get('environmentObservations'):
+        names={'ci':'CI','local':'本機','deployment':'部署'}
+        rows.append(('觀測環境','；'.join(names.get(o['environment'],o['environment'])+'／'+o['origin']+'／'+', '.join(o['versions']) for o in f['environmentObservations'])))
     conditional=f.get('conditionalAcceptance')
     if conditional:
         rows.extend([('處理方式','限定用途、條件式風險接受' if conditional.get('state')=='active' else '條件式決策：'+str(conditional.get('state'))),

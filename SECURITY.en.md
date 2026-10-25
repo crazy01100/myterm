@@ -111,6 +111,8 @@ Local `SFTP Bookmarks/bookmarks.json` contains plaintext metadata, including acc
 
 ## Development-tool risk decisions
 
-Issue #43 conditional acceptance is retired following official advisory withdrawal. Shared entries still verify withdrawal identity/content and enforcement sources and stop on mismatch. Retirement is neither a package fix nor a permanent exemption; other findings and gates remain in force. The Issue was closed as officially withdrawn after main verification. See [security maintenance](SECURITY_MAINTENANCE.en.md). Existing App/data are unchanged; redeployment still checks pinned tools and policy before downloading signed assets.
+Closed conditional-acceptance records remain historical and are no longer queried separately. Routine entries use generic source review, distinct from tool inventory, advisory lookup and risk gates. New advisories are separate cases, with no permanent waiver. Supplier evidence limits and unverified environments remain explicit; see [security maintenance](SECURITY_MAINTENANCE.en.md).
 
 Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+
+Project monitoring excludes OS/entire runner-image updates. It tracks actual project code, packages, tools and failures of this monitor; unknown applicability and unresolved risks remain tied to their actual uses.

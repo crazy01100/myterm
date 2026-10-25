@@ -5,7 +5,8 @@ import subprocess
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
-SUITES=('test_conditional_risk.py','test_audit_policy.py','test_security_issues.py',
+SUITES=('test_conditional_risk.py','test_audit_policy.py','test_monitor_merge_scope.py','test_security_issues.py',
+        'test_project_policy_review.py','test_supplier_notices.py',
         'test_risk_context.py','test_dev_launch_gate.py','test_security_test_profile.py')
 if __name__=='__main__':
     for suite in SUITES:

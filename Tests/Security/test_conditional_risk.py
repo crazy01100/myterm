@@ -406,14 +406,17 @@ class PRReviewTests(unittest.TestCase):
 
 
 class IssueLifecycleTests(unittest.TestCase):
-    def test_issue43_never_auto_closes_when_finding_disappears(self):
+    def test_cancelled_historical_issue_is_not_reopened_for_a_new_finding(self):
         spec=importlib.util.spec_from_file_location('issue_fixtures',ROOT/'Tests/Security/test_security_issues.py')
         fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixture)
         api=fixture.FakeGitHub();report=fixture.report()
-        report['findings']=[{**p.IDENTITY,'severity':'high','status':'affected','url':'https://github.com/advisories/'+p.IDENTITY['id']}]
         s.synchronize(report,api,True,fixture.ENV)
-        actions=s.synchronize(fixture.report(False),api,True,fixture.ENV)
-        self.assertEqual(api.issues[0]['state'],'open');self.assertEqual(actions[0]['action'],'needs-review')
+        api.issues[0].update(state='closed',state_reason='not_planned')
+        old=dict(api.issues[0])
+        actions=s.synchronize(report,api,True,fixture.ENV)
+        self.assertEqual(actions[0]['action'],'create');self.assertEqual(len(api.issues),2)
+        self.assertEqual(api.issues[0],old)
+        self.assertEqual(s.synchronize(report,api,True,fixture.ENV),[])
 
     def test_repeated_reviews_update_summary_without_comments(self):
         spec=importlib.util.spec_from_file_location('issue_fixtures',ROOT/'Tests/Security/test_security_issues.py')
@@ -433,7 +436,7 @@ class EntryOrderTests(unittest.TestCase):
             with self.subTest(entry=entry),tempfile.TemporaryDirectory(prefix='MyTerm-entry-policy-') as tmp:
                 root=Path(tmp);scripts=root/'scripts';scripts.mkdir()
                 for name in ['firebase-command-policy.py','check-dev-launch.py']:(scripts/name).write_text('')
-                (scripts/'security-conditional-risk.py').write_text('raise SystemExit(73)\n')
+                (scripts/'security-source-review.py').write_text('raise SystemExit(73)\n')
                 py=scripts/'project-python.sh';py.write_text('#!/bin/sh\nexec "'+sys.executable+'" "$@"\n');py.chmod(0o700)
                 (scripts/entry).write_text((ROOT/'scripts'/entry).read_text())
                 cli=root/'node_modules/.bin/firebase';cli.parent.mkdir(parents=True);cli.write_text('#!/bin/sh\nexit 99\n');cli.chmod(0o700)

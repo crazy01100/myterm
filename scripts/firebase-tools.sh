@@ -12,26 +12,17 @@ export XDG_CONFIG_HOME="$project_root/.firebase/config"
 export npm_config_cache="$project_root/.npm-cache"
 
 if [[ ! -x "$firebase_cli" ]]; then
-  print -u2 "尚未安裝 Firebase 開發工具。請先在專案根目錄執行：npm_config_cache=.npm-cache npm install"
+  print -u2 "尚未安裝 Firebase 開發工具。請先使用專案 Node 入口完成固定相依安裝，詳見 DEVELOPMENT.md。"
   exit 1
 fi
 
 # Refuse stale or incomplete installations before loading CLI commands.
-"$project_root/scripts/project-python.sh" "$project_root/scripts/security-conditional-risk.py" --purpose firebase --task "${MYTERM_RISK_TASK:-firebase-wrapper}"
+"$project_root/scripts/project-python.sh" "$project_root/scripts/security-source-review.py" --purpose firebase --task "${MYTERM_RISK_TASK:-firebase-wrapper}"
 
 "$project_root/scripts/project-node.sh" "$project_root/scripts/verify-firebase-tools.cjs" >/dev/null
 
-# Homebrew 在 Apple Silicon 的標準位置是 /opt/homebrew；這台 Mac 目前的
-# 既有 Homebrew 位於 /usr/local。兩者都檢查，避免要求使用者修改全域 PATH。
-for java_home_candidate in \
-  /opt/homebrew/opt/openjdk@21 \
-  /usr/local/opt/openjdk@21
-do
-  if [[ -x "$java_home_candidate/bin/java" ]]; then
-    export JAVA_HOME="$java_home_candidate"
-    export PATH="$JAVA_HOME/bin:$PATH"
-    break
-  fi
-done
+export JAVA_HOME="$("$project_root/scripts/project-java.sh" --print-home)"
+export PATH="$JAVA_HOME/bin:$PATH"
+unset JAVA_TOOL_OPTIONS JDK_JAVA_OPTIONS _JAVA_OPTIONS
 
 exec "$project_root/scripts/project-node.sh" "$firebase_cli" "$@"

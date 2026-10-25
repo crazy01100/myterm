@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 2,
+  "grantsRiskException": false,
+  "jdkFindings": [
+    {
+      "id": "CVE-2026-114820",
+      "component": "Temurin",
+      "version": "21.0.13+9",
+      "scope": "development",
+      "severity": "critical",
+      "status": "needs-review",
+      "url": "https://openjdk.org/groups/vulnerability/advisories/2026-10-24",
+      "fixedVersion": "",
+      "dependencyPaths": [
+        "platform/java"
+      ],
+      "environmentObservations": [
+        {
+          "environment": "local",
+          "origin": "platform/java",
+          "versions": [
+            "21.0.13+9"
+          ]
+        }
+      ]
+    }
+  ],
+  "candidateFindings": [
+    {
+      "id": "CVE-2026-11822",
+      "component": "SQLite",
+      "version": "3.53.1",
+      "scope": "development",
+      "severity": "unknown",
+      "status": "needs-review",
+      "url": "https://sqlite.org/cves.html",
+      "fixedVersion": "3.53.2",
+      "dependencyPaths": [
+        "python-runtime/sqlite",
+        "security-tools/sqlite"
+      ],
+      "environmentObservations": [
+        {
+          "environment": "local",
+          "origin": "python-runtime/sqlite",
+          "versions": [
+            "3.53.1"
+          ]
+        },
+        {
+          "environment": "local",
+          "origin": "security-tools/sqlite",
+          "versions": [
+            "3.53.1"
+          ]
+        }
+      ],
+      "classification": "bundled-only-use-unconfirmed",
+      "gateEffect": "none",
+      "reason": "Only monitoring imports SQLite; normal project use has not been established"
+    },
+    {
+      "id": "CVE-2026-11824",
+      "component": "SQLite",
+      "version": "3.53.1",
+      "scope": "development",
+      "severity": "unknown",
+      "status": "needs-review",
+      "url": "https://sqlite.org/cves.html",
+      "fixedVersion": "3.53.2",
+      "dependencyPaths": [
+        "python-runtime/sqlite",
+        "security-tools/sqlite"
+      ],
+      "environmentObservations": [
+        {
+          "environment": "local",
+          "origin": "python-runtime/sqlite",
+          "versions": [
+            "3.53.1"
+          ]
+        },
+        {
+          "environment": "local",
+          "origin": "security-tools/sqlite",
+          "versions": [
+            "3.53.1"
+          ]
+        }
+      ],
+      "classification": "bundled-only-use-unconfirmed",
+      "gateEffect": "none",
+      "reason": "Only monitoring imports SQLite; normal project use has not been established"
+    }
+  ],
+  "reviewedJDKs": [
+    {
+      "vendor": "Eclipse Adoptium",
+      "runtimeVersion": "21.0.13+9-LTS"
+    }
+  ]
+}

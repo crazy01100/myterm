@@ -32,6 +32,24 @@ class FakeGitHub:
         raise AssertionError(path)
 
 class IssueTests(unittest.TestCase):
+    def test_partial_verified_scan_adds_risk_but_never_resolves_or_lowers_old_risk(self):
+        api=FakeGitHub();original=report();s.synchronize(original,api,True,ENV)
+        partial=report(False);partial.update(scanStatus='failed',errors=['one provider unavailable'],publicationMode='additive',
+            sourceReview={'sourceVerified':True,'grantsRiskException':False,'policySHA256':'a'*64})
+        f=copy.deepcopy(original['findings'][0]);f.update(queryComplete=True,id='GHSA-other')
+        partial['findings']=[f];s.synchronize(partial,api,True,ENV)
+        self.assertEqual(len(api.issues),2);self.assertTrue(all(i['state']=='open' for i in api.issues))
+        f.update(id='GHSA-test',severity='low',version='2.0.0')
+        s.synchronize(partial,api,True,ENV)
+        old=s.fmt.parse_issue(api.issues[0])['finding']
+        self.assertEqual(old['severity'],'high');self.assertEqual(old['version'],'1.0.0, 2.0.0')
+
+    def test_partial_mode_without_source_approval_or_query_receipt_cannot_publish(self):
+        api=FakeGitHub();partial=report();partial.update(scanStatus='failed',errors=['incomplete'],publicationMode='additive')
+        with self.assertRaises(ValueError):s.synchronize(partial,api,True,ENV)
+        self.assertEqual(api.calls,[])
+        partial['sourceReview']={'sourceVerified':True,'grantsRiskException':False,'policySHA256':'a'*64}
+        self.assertEqual(s.synchronize(partial,api,True,ENV),[])
     def test_repository_metadata_endpoint(self):
         with patch.object(s.subprocess, 'run') as call:
             call.return_value.returncode=0;call.return_value.stdout='{"private":true}'
@@ -157,5 +175,36 @@ class FormatMigrationTests(unittest.TestCase):
         api=FakeGitHub();r=report();self.legacy(api,r)
         with self.assertRaises(ValueError):s.synchronize(report(False),api,True,ENV,enrich=lambda _:(_ for _ in ()).throw(ValueError('offline')))
         self.assertEqual(api.issues[0]['state'],'open')
+
+
+
+class EnvironmentCoverageTests(unittest.TestCase):
+    def test_ci_cannot_close_a_local_observation_or_disappeared_origin(self):
+        api=FakeGitHub();r=report()
+        r['findings'][0]['environmentObservations']=[{'environment':'local','origin':'project-npm-tool','versions':['1.0.0']}]
+        s.synchronize(r,api,True,ENV)
+        clear=report(False);clear.update(observedEnvironment='ci',observedOrigins=['project-npm-tool'],toolchainCoverage={'checksComplete':True})
+        self.assertEqual(s.synchronize(clear,api,True,ENV)[0]['action'],'needs-review')
+        self.assertEqual(api.issues[0]['state'],'open')
+        clear['observedEnvironment']='local';clear['observedOrigins']=[]
+        self.assertEqual(s.synchronize(clear,api,True,ENV)[0]['action'],'needs-review')
+        clear['observedOrigins']=['project-npm-tool']
+        self.assertEqual(s.synchronize(clear,api,True,ENV)[0]['action'],'preserve')
+        clear['originCoverage']={'project-npm-tool':{'closureEligible':True}}
+        self.assertEqual(s.synchronize(clear,api,True,ENV)[0]['action'],'resolve')
+    def test_new_ci_observation_preserves_unverified_local_risk(self):
+        api=FakeGitHub();r=report()
+        r['findings'][0]['environmentObservations']=[{'environment':'local','origin':'project-npm-tool','versions':['1.0.0']}]
+        s.synchronize(r,api,True,ENV)
+        r['findings'][0].update(version='2.0.0',environmentObservations=[{'environment':'ci','origin':'project-npm-tool','versions':['2.0.0']}])
+        s.synchronize(r,api,True,ENV)
+        snapshot=s.fmt.parse_issue(api.issues[0])['finding']
+        self.assertEqual({o['environment'] for o in snapshot['environmentObservations']},{'ci','local'})
+        self.assertEqual(snapshot['version'],'1.0.0, 2.0.0')
+    def test_legacy_and_new_collector_merge_without_dropping_origin(self):
+        old=report()['findings'][0];new={**old,'version':'2.0.0','dependencyPaths':['project-npm-tool'],
+             'environmentObservations':[{'environment':'ci','origin':'project-npm-tool','versions':['2.0.0']}]}
+        result=a.merge_findings([old,new]);self.assertEqual(len(result),1)
+        self.assertEqual(result[0]['version'],'1.0.0, 2.0.0');self.assertEqual(result[0]['dependencyPaths'],['project-npm-tool'])
 
 if __name__=='__main__':unittest.main()

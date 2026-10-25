@@ -26,12 +26,24 @@ def safe(value):
     return html.escape(str(value)).replace('@', '&#64;')
 
 
-def validate_report(report, now=None):
+def validate_report(report, now=None, additive=False):
+    load('security-pip-applicability').validate_envelope(report)
     now = now or dt.datetime.now(dt.timezone.utc)
-    if report.get('schemaVersion') != 1 or report.get('scanStatus') != 'complete' or report.get('errors') != []:
+    incomplete=report.get('scanStatus')!='complete' or report.get('errors')!=[] or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True
+    if additive:
+        review=report.get('sourceReview',{})
+        if (review.get('sourceVerified') is not True or review.get('grantsRiskException') is not False or
+                not re.fullmatch('[a-f0-9]{64}',review.get('policySHA256',''))):
+            raise ValueError('Additive reporting requires verified approved source policy')
+        if report.get('scanStatus') not in ('complete','failed') or not isinstance(report.get('errors'),list):
+            raise ValueError('Invalid partial scan envelope')
+    if report.get('schemaVersion') != 1 or incomplete and not additive:
         raise ValueError('Scan incomplete; existing risk Issues must remain unchanged')
-    if not report.get('releaseTag') or not isinstance(report.get('findings'), list):
+    if not isinstance(report.get('findings'), list) or (not report.get('releaseTag') and
+            (not additive or any(f.get('scope')=='released-app' for f in report['findings']))):
         raise ValueError('A complete source-and-release monitor report is required')
+    if not additive and 'toolchainCoverage' in report and report['toolchainCoverage'].get('checksComplete') is not True:
+        raise ValueError('Required toolchain checks are incomplete')
     checked = dt.datetime.fromisoformat(report['checkedAt'])
     if checked.tzinfo is None or not 0 <= (now-checked).total_seconds() <= 1800:
         raise ValueError('Report is stale or has an invalid timestamp')
@@ -40,8 +52,14 @@ def validate_report(report, now=None):
             raise ValueError('Invalid finding fields')
         if f['scope'] not in SCOPES or f['status'] not in ['affected', 'needs-review']:
             raise ValueError('Unknown finding scope/status')
-        if not re.fullmatch(r'https://(?:github\.com/[A-Za-z0-9_./-]+|osv\.dev/vulnerability/[A-Za-z0-9_-]+)', f['url']):
+        if not re.fullmatch(r'https://(?:github\.com/[A-Za-z0-9_./-]+|osv\.dev/vulnerability/[A-Za-z0-9_-]+|openssl-library\.org/news/secjson/cve-[0-9]{4}-[0-9]+\.json)', f['url']):
             raise ValueError('Unexpected advisory URL')
+        for observation in f.get('environmentObservations',[]):
+            if (observation.get('environment') not in ('local','ci','deployment') or
+                    not re.fullmatch(r'[A-Za-z0-9@._+-][A-Za-z0-9@._/+-]{0,199}',observation.get('origin','')) or
+                    not isinstance(observation.get('versions'),list) or not observation['versions'] or
+                    any(not isinstance(v,str) or not re.fullmatch(r'[A-Za-z0-9._+-]{1,128}',v) for v in observation['versions'])):
+                raise ValueError('Invalid environment observation')
 
 
 def risks(report):
@@ -69,7 +87,7 @@ class GitHub:
 
     def request(self, path, method='GET', payload=None):
         endpoint = 'repos/'+self.repo+('/'+path if path else '')
-        cmd = ['gh','api',endpoint,'--method',method]
+        cmd = [str(Path(__file__).resolve().parent/'project-gh.sh'),'api',endpoint,'--method',method]
         if payload is not None: cmd += ['--input','-']
         result = subprocess.run(cmd, input=None if payload is None else json.dumps(payload), capture_output=True, text=True, timeout=60)
         if result.returncode: raise RuntimeError(f'GitHub {method} {path.split("?")[0]} failed; risk tracking is incomplete')
@@ -86,8 +104,13 @@ class GitHub:
 
 
 def synchronize(report, api, apply=False, environ=None, allow_public=False, refresh_format=False, enrich=None):
-    validate_report(report)
-    desired = risks(report)
+    additive=report.get('publicationMode')=='additive'
+    validate_report(report,additive=additive)
+    if additive and refresh_format:raise ValueError('Partial scans cannot rewrite historical formatting')
+    selected={**report,'findings':[f for f in report['findings'] if not additive or f.get('queryComplete') is True]}
+    desired = risks(selected)
+    excluded_keys={digest([row['finding'][k] for k in ['id','component','scope']])
+                   for row in report.get('applicabilityReviews',[])}
     metadata = api.request('')
     if metadata.get('private') is not True:
         if metadata.get('private') is not False or not allow_public:
@@ -100,6 +123,9 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
     for issue in api.pages('issues?state=all&creator=github-actions%5Bbot%5D'):
         match = MARKER.match(issue.get('body') or '')
         if 'pull_request' in issue or issue.get('user',{}).get('login')!=BOT or not match: continue
+        # Withdrawn/cancelled decisions remain historical. A renewed advisory
+        # gets a new record; ordinary completed fixes retain reopen semantics.
+        if issue['state']=='closed' and issue.get('state_reason')=='not_planned':continue
         if match[1] in managed: raise ValueError('Duplicate managed Issues require review')
         managed[match[1]] = issue
     # Prepare every write first: a malformed record or enrichment failure must not
@@ -115,6 +141,21 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             raise ValueError('Issue snapshot identity differs from its marker')
         f=desired.pop(key,None)
         if f is not None:
+            if additive:
+                previous=old['finding']
+                f['version']=', '.join(sorted({v.strip() for row in (f,previous) for v in row['version'].split(',')}))
+                levels={'unknown':6,'critical':5,'high':4,'moderate':3,'medium':3,'low':2,'info':1}
+                f['severity']=max((f['severity'],previous['severity']),key=lambda x:levels.get(x,6))
+                if previous['status']=='needs-review':f['status']='needs-review'
+                f['acceptedRisk']=False
+            if old['finding'].get('environmentObservations'):
+                current={(o['environment'],o['origin']):o for o in f.get('environmentObservations',[])}
+                for observation in old['finding']['environmentObservations']:
+                    current.setdefault((observation['environment'],observation['origin']),observation)
+                f['environmentObservations']=[current[k] for k in sorted(current)]
+                versions={v.strip() for v in f['version'].split(',')}
+                versions.update(v for o in current.values() for v in o['versions'])
+                f['version']=', '.join(sorted(versions))
             changed=fmt.semantic(old['finding'])!=fmt.semantic(f) or issue['state']!='open'
             current_report=report if changed else {'checkedAt':old['checkedAt']}
             title,body=render(key,f,current_report)
@@ -127,11 +168,27 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             operations.append((issue,{'title':title,'body':body,'state':'open'},comment))
         else:
             f=old['finding']
-            if (f.get('id')=='GHSA-vfj7-8cjw-p6xm' and f.get('component')=='braces'
-                    and f.get('scope')=='development' and issue['state']=='open'):
-                actions.append({'action':'needs-review','number':issue['number'],
-                                'reason':'Issue 43 requires explicit verified remediation before closure'})
+            if key in excluded_keys:
+                # A precise subset decision is not a package upgrade. Preserve
+                # prior Issues for same-scope/main verification and maintenance.
+                actions.append({'action':'preserve','number':issue['number'],
+                                'reason':'Exact subset decision requires final main/scope review; not a version fix'})
                 continue
+            if additive:
+                if issue['state']=='open':actions.append({'action':'preserve','number':issue['number'],'reason':'Partial scan cannot resolve existing risk'})
+                continue
+            observations=f.get('environmentObservations',[])
+            if issue['state']=='open' and observations and (report.get('toolchainCoverage',{}).get('checksComplete') is not True or any(
+                    o['environment']!=report.get('observedEnvironment') or o['origin'] not in report.get('observedOrigins',[])
+                    for o in observations)):
+                actions.append({'action':'needs-review','number':issue['number'],
+                                'reason':'Previous environment or tool origin lacks matching current coverage'})
+                continue
+            if issue['state']=='open' and observations:
+                origins=report.get('originCoverage',{})
+                if any(origins.get(o['origin'],{}).get('closureEligible') is not True for o in observations):
+                    actions.append({'action':'preserve','number':issue['number'],'reason':'Origin lacks explicit closure eligibility'})
+                    continue
             if enrich:f=enrich({**f,'observedAt':old['checkedAt']})
             historical={'schemaVersion':1,'scanStatus':'complete','errors':[],'releaseTag':report['releaseTag'],
                         'checkedAt':report['checkedAt'],'findings':[f]}
@@ -172,10 +229,20 @@ def main():
     repo=os.environ.get('GITHUB_REPOSITORY','')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repo): raise ValueError('GITHUB_REPOSITORY is required')
     report=json.loads(args.report.read_text())
+    if 'toolchainCoverage' in report:
+        actual=load('security-source-review').source_check()
+        if args.apply and actual.get('publicationAuthorized') is not True:
+            raise ValueError('Only verified default-branch monitoring may publish')
+        if actual['policySHA256']!=report.get('sourceReview',{}).get('policySHA256'):
+            raise ValueError('Publication source policy differs from scan')
+    if report.get('errors') or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True:
+        report['publicationMode']='additive'
     audit=load('security-audit');context=load('security-risk-context');cache={}
+    load('security-pip-applicability').revalidate(report,Path(__file__).resolve().parents[1],audit.gh)
     enrich=lambda finding:context.enrich(finding,audit.gh,audit.affected,historical=True,cache=cache)
     actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
-    result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions}
+    result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions,
+            'reportSHA256':hashlib.sha256(args.report.read_bytes()).hexdigest()}
     args.report.with_name('security-issues-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     summary=os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:

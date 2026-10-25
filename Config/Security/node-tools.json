@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "nodeVersion": "24.22.1",
+  "npm": {
+    "version": "11.21.1",
+    "url": "https://registry.npmjs.org/npm/-/npm-11.21.1.tgz",
+    "integrity": "sha512-YTzL6QBEJXyHcTu0JiUc7RKMp+mzlJtl7rGLmERaXUQeFHIMc9atdr6G9M9C8vDWbv40epoTQAzNL2/PtZVDhQ=="
+  }
+}

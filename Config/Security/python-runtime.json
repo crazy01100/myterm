@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "vendor": "Astral python-build-standalone",
+  "pythonVersion": "3.12.15",
+  "release": "20261021",
+  "platform": "aarch64-apple-darwin",
+  "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261021/cpython-3.12.15%2B20261021-aarch64-apple-darwin-install_only_stripped.tar.gz",
+  "sha256": "7b8d00b751db21cea87dc551a8f8165147c5fbc5251d5537d7e5497dde00a219",
+  "size": 25017408,
+  "opensslMinimums": {
+    "3.5": 9,
+    "3.6": 5,
+    "4.0": 3
+  }
+}

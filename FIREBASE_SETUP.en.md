@@ -37,6 +37,8 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 
 - A Firebase/Google Cloud project you can administer.
 - Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13); [package.json](package.json) defines the version requirement.
+
+- On an Apple Silicon development Mac, Firestore Rules/emulator operations use the isolated project JDK. Prepare it using the [development guide](DEVELOPMENT.en.md#isolated-base-and-java-on-apple-silicon); the wrapper no longer automatically selects Homebrew Java. This does not change App users’ or hosted services’ Java environments.
 - The repository's pinned Firebase CLI, used through `scripts/firebase-tools.sh` after running `./scripts/project-node.sh --npm install` at the repository root.
 - Development tools also require Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13) and Python 3.12 or later. Install pinned dependencies with `./scripts/project-node.sh --npm ci`, then verify with `./scripts/project-node.sh --npm run test:development-tools`. The CLI natively supports the patched stream packages, so no compatibility patch is required. A read-only check verifies installed versions against the lockfile before launch.
 - macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools to build MyTerm.
@@ -237,6 +239,6 @@ On two Macs using the same account, validate remote bookmark creation, renaming,
 
 ## Case review before tool use
 
-Before loading the CLI, the Firebase wrapper verifies the Issue #43 retirement decision and official withdrawal evidence; mismatches stop progress for reassessment under [security maintenance](SECURITY_MAINTENANCE.en.md). Historical dependency fingerprints are retired, while ordinary dependency/Rules review and full security checks still apply. Cloud writes require explicit authorization. Existing MyTerm Google sign-in and sync do not depend on this local CLI.
+Before loading the CLI, the Firebase wrapper verifies the generic policy contract, project-tool integrity and risks for the actual use; closed cases are not queried. Rules Java retains its relevant security checks, while OS updates are not prerequisites. Ordinary source edits require no extra revision approval; policy changes receive consolidated final PR review. Cloud writes still require explicit authorization. App Google sign-in and sync do not depend on this local CLI.
 
 Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
