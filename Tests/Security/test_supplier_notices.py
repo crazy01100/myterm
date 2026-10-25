@@ -60,6 +60,9 @@ class SupplierTests(unittest.TestCase):
   self.java['runtimeVersion']='22.0.1';result=self.scan()
   self.assertEqual([r['collector'] for r in result['receipts'] if r['status']!='complete'],['emulator'])
   self.assertEqual(result['findings'],[])
+  receipt=next(r for r in result['receipts'] if r['collector']=='emulator')
+  self.assertEqual(receipt['observedTool']['runtimeVersion'],'22.0.1')
+  self.assertEqual(set(receipt['observedTool']),{'component','version','vendor','runtimeVersion','origin','use'})
  def test_os_metadata_has_no_query_or_gate_effect(self):
   before=self.scan()
   self.inventory['coverage'].append({'id':'platform','status':'inventoried','evidence':[{'osVersion':'changed'}]})

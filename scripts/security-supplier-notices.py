@@ -139,6 +139,9 @@ def scan(inventory,root=ROOT,fetcher=fetch,global_fetcher=None):
     tools=[t for t in domain.get('tools',[]) if t.get('component')=='java']
     if len(tools)!=1:raise ValueError('Rules Java identity missing')
     java=tools[0]
+    # Retain only public tool identity even when review fails, so a CI gap is
+    # actionable without probing credentials or reconstructing runner state.
+    row['observedTool']={key:java.get(key) for key in ('component','version','vendor','runtimeVersion','origin','use')}
     if not any(java.get('vendor')==r['vendor'] and java.get('runtimeVersion')==r['runtimeVersion'] for r in policy.get('reviewedJDKs',[])):
      raise ValueError('Selected Rules JDK requires tool-version review')
     for fact in policy['jdkFindings']:
