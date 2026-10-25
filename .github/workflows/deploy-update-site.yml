@@ -52,6 +52,7 @@ jobs:
           ./scripts/setup-security-tools.sh
           ./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup
           ./scripts/project-python.sh -B scripts/node-toolchain.py setup
+          ./scripts/project-python.sh -B scripts/project-java-runtime.py setup
           ./scripts/project-python.sh -B scripts/security-prepare-inventory.py
           ./scripts/project-python.sh -B scripts/python-toolchain.py inventory > build/python-tooling-inventory.json
 

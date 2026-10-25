@@ -242,3 +242,5 @@ On two Macs using the same account, validate remote bookmark creation, renaming,
 Before loading the CLI, the Firebase wrapper verifies the generic policy contract, project-tool integrity and risks for the actual use; closed cases are not queried. Rules Java retains its relevant security checks, while OS updates are not prerequisites. Ordinary source edits require no extra revision approval; policy changes receive consolidated final PR review. Cloud writes still require explicit authorization. App Google sign-in and sync do not depend on this local CLI.
 
 Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+
+Linux x86_64 CI also uses project-isolated Java: prepare the pinned official archive with `project-java-runtime.py setup` before using the wrapper, without inheriting the runner version.

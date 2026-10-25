@@ -242,3 +242,5 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 載入 CLI 前，Firebase wrapper 核對通用政策契約、專案工具完整性及實際用途風險；不查詢已結案個案。Rules 使用的 Java 保留相關安全檢查，OS 更新不列為前置。一般來源修改不需額外 revision 核准；安全政策修改併入最終 PR 審閱。雲端寫入仍需明確授權，App 的 Google 登入及同步不依賴本機 CLI。
 
 Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+Linux x86_64 CI 同樣使用專案隔離 Java；以 `project-java-runtime.py setup` 準備固定官方封裝後才使用 wrapper，不繼承 runner 預裝版本。

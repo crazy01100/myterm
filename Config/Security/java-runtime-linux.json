@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "vendor": "Eclipse Temurin",
+  "version": "21.0.13+9",
+  "platform": "x86_64-linux-gnu",
+  "archiveRoot": "jdk-21.0.13+9",
+  "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13_9.tar.gz",
+  "size": 207858352,
+  "sha256": "d7f5d5cf865a2902b70ff549b97586a7d3f234e016f041ab447ea740c7d66d1c",
+  "fileManifestSHA256": "33bee794bf06502e613ba36199a59a785eea259af066d87bb84809d2cef4a7b2",
+  "truststoreSHA256": "628b436e6698c364c5498a32c5bff91806bea7a9b501f75e2289ddc60b4ca7ef",
+  "blockedCertsSHA256": "96572f243f31c2ef81a6e627542e596f6a9295cff3c7ae095c1b595cb1457ded",
+  "removedTrustAnchorsSHA256": [
+    "86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b",
+    "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"
+  ],
+  "trustRemediation": "Official unmodified archive omits both roots named in Oracle 2026-10-23 remediation; no certificate-chain tests",
+  "notice": "https://ops.java/emudhra"
+}

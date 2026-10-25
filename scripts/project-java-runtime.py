@@ -13,22 +13,35 @@ import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 CONFIG='Config/Security/java-runtime.json'
-ARCHIVE='.build/java-base-download/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.13_9.tar.gz'
 TARGET='.build/java-runtime'
 MANIFEST='.build/java-runtime-files.json'
 
 
+def config_path():
+    identity=(platform.system(),platform.machine())
+    if identity==('Darwin','arm64'):return CONFIG
+    if identity==('Linux','x86_64'):return 'Config/Security/java-runtime-linux.json'
+    raise ValueError('No reviewed Java artifact for this platform')
+
+
+def java_home(target,row):
+    return target/'Contents/Home' if row['platform']=='aarch64-apple-darwin' else target
+
+
 def configuration(root):
-    row=json.loads((root/CONFIG).read_text())
+    config=config_path()
+    row=json.loads((root/config).read_text())
+    expected_platform='aarch64-apple-darwin' if config==CONFIG else 'x86_64-linux-gnu'
     version=row.get('version','')
     if (row.get('schemaVersion')!=1 or row.get('vendor')!='Eclipse Temurin' or
-            row.get('platform')!='aarch64-apple-darwin' or not re.fullmatch(r'21\.0\.[0-9]+\+[0-9]+',version) or
+            row.get('platform')!=expected_platform or not re.fullmatch(r'21\.0\.[0-9]+\+[0-9]+',version) or
             row.get('archiveRoot')!='jdk-'+version or type(row.get('size')) is not int or not 0<row['size']<256*1024*1024):
         raise ValueError('Unreviewed Java runtime policy')
     for key in ('sha256','fileManifestSHA256','truststoreSHA256','blockedCertsSHA256'):
         if not re.fullmatch('[a-f0-9]{64}',row.get(key,'')):raise ValueError('Invalid Java source fingerprint')
     release,build=version.split('+')
-    expected=f'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-{release}%2B{build}/OpenJDK21U-jdk_aarch64_mac_hotspot_{release}_{build}.tar.gz'
+    artifact='aarch64_mac' if expected_platform=='aarch64-apple-darwin' else 'x64_linux'
+    expected=f'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-{release}%2B{build}/OpenJDK21U-jdk_{artifact}_hotspot_{release}_{build}.tar.gz'
     if row.get('url')!=expected:raise ValueError('Java archive source changed')
     return row
 
@@ -56,13 +69,22 @@ def archive_manifest(archive,row):
                     not parts or parts[0]!=row['archiveRoot'] or item.name in seen):
                 raise ValueError('Java archive exceeds reviewed layout')
             seen.add(item.name)
-            # This exact distribution has only ordinary files/directories.
-            if not (item.isfile() or item.isdir()):raise ValueError('Unreviewed Java archive member')
+            if item.issym():
+                name='/'.join(parts[1:])
+                if (row.get('platform')!='x86_64-linux-gnu' or len(parts)!=4 or parts[1]!='legal'
+                        or parts[-1] not in ('LICENSE','ASSEMBLY_EXCEPTION','ADDITIONAL_LICENSE_INFO','cldr.md')
+                        or item.linkname!='../java.base/'+parts[-1]):
+                    raise ValueError('Unreviewed Java archive link')
+                files[name]={'symlink':item.linkname}
+            elif not (item.isfile() or item.isdir()):raise ValueError('Unreviewed Java archive member')
             if item.isfile():
                 name='/'.join(parts[1:])
                 if not name:raise ValueError('Invalid Java archive file')
                 with source.extractfile(item) as stream:
                     files[name]={'sha256':hashlib.file_digest(stream,'sha256').hexdigest(),'executable':bool(item.mode&0o111)}
+    for name,entry in files.items():
+        if 'symlink' in entry and 'sha256' not in files.get('legal/java.base/'+Path(name).name,{}):
+            raise ValueError('Java license link target missing or indirect')
     raw=json.dumps(files,sort_keys=True,separators=(',',':')).encode()
     if hashlib.sha256(raw).hexdigest()!=row['fileManifestSHA256']:
         raise ValueError('Java archive file manifest changed')
@@ -72,11 +94,16 @@ def archive_manifest(archive,row):
 def verify_tree(target,files):
     seen=set()
     for path in target.rglob('*'):
-        if path.is_symlink():raise ValueError('Java runtime contains an unexpected link')
+        if path.is_symlink():
+            name=str(path.relative_to(target));seen.add(name)
+            if (files.get(name)!={'symlink':os.readlink(path)} or
+                    not path.resolve().is_relative_to(target.resolve()) or not path.is_file()):
+                raise ValueError('Java runtime contains an unexpected link')
+            continue
         if path.is_dir():continue
         name=str(path.relative_to(target));seen.add(name)
         expected=files.get(name)
-        if (expected is None or not path.is_file() or digest_file(path)!=expected['sha256'] or
+        if (expected is None or 'sha256' not in expected or not path.is_file() or digest_file(path)!=expected['sha256'] or
                 bool(path.stat().st_mode&0o111)!=expected['executable']):
             raise ValueError('Java runtime file content or mode changed')
     if seen!=set(files):raise ValueError('Java runtime file inventory changed')
@@ -88,7 +115,7 @@ def verify(root=ROOT):
     if hashlib.sha256(raw).hexdigest()!=row['fileManifestSHA256']:
         raise ValueError('Java installed manifest differs from reviewed artifact')
     files=json.loads(raw);verify_tree(target,files)
-    home=target/'Contents/Home'
+    home=java_home(target,row)
     for name,key in (('cacerts','truststoreSHA256'),('blocked.certs','blockedCertsSHA256')):
         if digest_file(home/'lib/security'/name)!=row[key]:raise ValueError('Java trust data changed')
     return home
@@ -99,9 +126,7 @@ def clean_environment():
 
 
 def setup(root=ROOT):
-    if platform.system()!='Darwin' or platform.machine()!='arm64':
-        raise ValueError('Reviewed Java artifact requires Apple Silicon macOS')
-    row=configuration(root);archive=storage(root,ARCHIVE);target=storage(root,TARGET)
+    row=configuration(root);archive=storage(root,'.build/java-base-download/'+row['url'].rsplit('/',1)[-1]);target=storage(root,TARGET)
     if target.exists():
         return verify(root)  # Never overwrite an existing or modified runtime.
     archive.parent.mkdir(parents=True,exist_ok=True)
@@ -117,7 +142,7 @@ def setup(root=ROOT):
         stage=Path(directory)
         with tarfile.open(archive,'r:gz') as source:source.extractall(stage,filter='data')
         candidate=stage/row['archiveRoot'];verify_tree(candidate,files)
-        result=subprocess.run([str(candidate/'Contents/Home/bin/java'),'-version'],
+        result=subprocess.run([str(java_home(candidate,row)/'bin/java'),'-version'],
                               env=clean_environment(),capture_output=True,text=True,timeout=20,check=True)
         if 'Temurin-'+row['version'] not in result.stderr:
             raise ValueError('Java vendor/build differs from reviewed runtime')

@@ -7,6 +7,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('java_runtime',ROOT/'scripts/project-java-runtime.py')
@@ -14,10 +15,35 @@ j=importlib.util.module_from_spec(spec);spec.loader.exec_module(j)
 
 
 class JavaRuntimeTests(unittest.TestCase):
+    def test_platform_policy_and_home_are_separate(self):
+        for system,machine,expected,home in [('Darwin','arm64','aarch64-apple-darwin','Contents/Home'),
+                                            ('Linux','x86_64','x86_64-linux-gnu','.')]:
+            with patch.object(j.platform,'system',return_value=system),patch.object(j.platform,'machine',return_value=machine):
+                row=j.configuration(ROOT)
+                self.assertEqual(row['platform'],expected)
+                self.assertEqual(j.java_home(Path('/fixture'),row),Path('/fixture')/home)
+        with patch.object(j.platform,'system',return_value='Unknown'),self.assertRaises(ValueError):j.configuration(ROOT)
+
+    def test_linux_license_links_are_exact_and_cannot_redirect(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);target=root/'legal/java.base/LICENSE';target.parent.mkdir(parents=True);target.write_bytes(b'license')
+            link=root/'legal/java.sql/LICENSE';link.parent.mkdir();link.symlink_to('../java.base/LICENSE')
+            files={'legal/java.base/LICENSE':{'sha256':j.digest_file(target),'executable':False},
+                   'legal/java.sql/LICENSE':{'symlink':'../java.base/LICENSE'}}
+            j.verify_tree(root,files)
+            link.unlink();link.symlink_to('/etc/passwd')
+            with self.assertRaises(ValueError):j.verify_tree(root,files)
+
+    def test_ci_prepares_isolated_java_and_wrapper_never_uses_path_java(self):
+        wrapper=(ROOT/'scripts/project-java.sh').read_text()
+        self.assertNotIn('command -v java',wrapper)
+        for name in ('security-gate.yml','security-checks.yml','deploy-update-site.yml'):
+            self.assertIn('scripts/project-java-runtime.py setup',(ROOT/'.github/workflows'/name).read_text())
+
     def test_reviewed_source_identity_rejects_other_vendor_or_unpinned_source(self):
         approved=j.configuration(ROOT)
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);path=root/j.CONFIG;path.parent.mkdir(parents=True)
+            root=Path(directory);path=root/j.config_path();path.parent.mkdir(parents=True)
             for change in ({'url':'https://example.invalid/java.tar.gz'},{'vendor':'unreviewed'},
                            {'version':'25.0.1+1'},{'fileManifestSHA256':'missing'}):
                 path.write_text(json.dumps({**approved,**change}))

@@ -23,7 +23,7 @@ def digest(value):
 
 
 def get_bytes(url):
-    if not re.fullmatch(r'https://codeload.github.com/nodejs/security-wg/tar.gz/[a-f0-9]{40}', url):
+    if not re.fullmatch(r'https://codeload\.github\.com/nodejs/security-wg/tar\.gz/[a-f0-9]{40}', url):
         raise ValueError('Unreviewed database archive URL')
     spec = importlib.util.spec_from_file_location('trust', ROOT/'scripts/python-toolchain.py')
     trust = importlib.util.module_from_spec(spec); spec.loader.exec_module(trust)

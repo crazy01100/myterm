@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import tarfile
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('runtime',ROOT/'scripts/security-runtime-advisories.py')
@@ -15,6 +16,15 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 
 class RuntimeAdvisoryTests(unittest.TestCase):
+    def test_archive_url_rejects_lookalike_hosts_and_paths_before_network(self):
+        base='https://codeload.github.com/nodejs/security-wg/tar.gz/'+'a'*40
+        with patch.object(m.urllib.request,'urlopen',side_effect=AssertionError('Network forbidden')) as fetch:
+            for url in (base.replace('codeload.github','codeloadXgithub'),
+                        base.replace('github.com','githubXcom'),base.replace('tar.gz','tarXgz'),
+                        base+'?x=1',base.replace('https:','http:')):
+                with self.subTest(url=url),self.assertRaises(ValueError):m.get_bytes(url)
+            fetch.assert_not_called()
+
     def inventory(self):
         return {'environment':'fixture','coverage':[
             {'id':'node','status':'inventoried','evidence':[{'component':'node','vendorVersion':'24.22.1','role':'node-runtime'}]},

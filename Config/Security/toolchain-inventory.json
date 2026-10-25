@@ -303,7 +303,11 @@
       ],
       "owner": "project maintainer",
       "sources": [
-        "node_modules/firebase-tools/lib/emulator/downloadableEmulatorInfo.json"
+        "node_modules/firebase-tools/lib/emulator/downloadableEmulatorInfo.json",
+        "Config/Security/java-runtime.json",
+        "Config/Security/java-runtime-linux.json",
+        "scripts/project-java-runtime.py",
+        "scripts/project-java.sh"
       ],
       "advisorySources": [
         "Firestore vendor advisories",

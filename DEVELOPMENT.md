@@ -394,7 +394,7 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 
 Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官方Temurin封裝。執行`./scripts/project-python.sh scripts/project-java-runtime.py setup`準備`.build/java-runtime`；這不改Homebrew或全域Java。`scripts/project-java.sh`及Firebase入口核對完整檔案清單／hash與信任資料後才使用，內容漂移會停止，不自行修復或換版。直接版本檢查為`./scripts/project-java.sh -version`。已存在且內容不同的runtime不會被setup覆蓋，須先核對差異並另行處理。
 
-一般App使用者不需Java；這份Apple Silicon封裝不適用Linux CI。CI依其實際JDK發行商、build及信任清冊另外盤點，本機通過不代替CI證據。供應商版號不同，不能只比較patch數字或`blocked.certs`檔名就宣稱信任問題已修補。
+一般 App 使用者不需 Java。Linux x86_64 CI 以 `Config/Security/java-runtime-linux.json` 固定獨立的官方 Temurin 21.0.13+9 封裝，使用相同 setup／verify 入口，在工作目錄內準備後才掃描。Mac 與 Linux 的封裝、檔案 manifest 與 home 路徑各自驗證；Linux 僅允許固定 manifest 中的內部授權文件連結。CI 不繼承 runner 預裝 Java，也不修改全域 JAVA_HOME。本機通過不代替 CI 證據；此固定版本仍保留已知風險告警。供應商版號不同，不能只比較patch數字或`blocked.certs`檔名就宣稱信任問題已修補。
 
 
 GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup`，再以 `./scripts/project-gh.sh` 取代本專案操作中的全域 `gh`。官方封裝與全部安裝檔案由 `Config/Security/github-cli.json` 固定；入口每次檢查內容與權限，缺少或漂移不回退至 PATH。macOS arm64 與 CI Linux 的封裝各自驗證。監測、來源審閱、資產下載及發布／清理腳本共用此入口；沿用既有認證，不重寫 Homebrew、全域 CLI 或登入設定。獨立健康檢查只準備這個固定工具，不安裝專案 pip/npm 相依或執行回歸。
