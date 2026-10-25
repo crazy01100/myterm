@@ -13,7 +13,7 @@ if [[ -n "${MYTERM_PYTHON:-}" ]]; then
   fi
 else
   python_bin=""
-  candidates=("$project_dir/.build/python-runtime/bin/python3")
+  candidates=("$project_dir/.build/python-runtime/bin/python3" "$project_dir/.build/python-base/bin/python3")
   for name in python3 python3.14 python3.13 python3.12; do
     found="$(command -v "$name" || true)"
     [[ -z "$found" ]] || candidates+=("$found")

@@ -129,16 +129,16 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 
 原庫另有維護者管理入口 `scripts/invite-sync-user.sh --help`，需本機 Google Cloud CLI 與管理員授權，不是 App 建置依賴或既有 Firebase CLI wrapper 的擴權。隔離安全測試為 `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`，也由既有 `Tests/Security` Python 測試探索納入。管理設定、憑證與私人操作紀錄不進 Git；此工具未納入獨立來源輸出。
 
-### 開發與發布前個案複核
+### 開發與發布前來源複核
 
-每項開發／維護開始、跨日恢復及每次發布前，依[安全維護指南](SECURITY_MAINTENANCE.md)執行Issue #43條件複核並記錄當次task／commit。Dev、Firebase、發布準備及重部署入口亦會呼叫共用檢查。Draft公開前另以 `--purpose publish` 對候選來源重新複核；不得沿用開發階段報告或把pending當成接受。失效時先停止相關操作並提出差異，不自動展延或降級判定。此流程不改App功能／版號或正式與Dev隔離。
+依安全維護指南核對政策契約、checkout 身分與實際用途的工具／監測結果。一般來源修改不再要求 revision 指紋核准；必要套件完整性與風險門檻保留。OS 更新不屬專案監測或開發前置。
 
 ### PR基準核准與合併前複核
 
-先確認待審差異與新的Issue #43基準，再針對最後提交核准。其他作者PR沿用維護者Approve；本人建立的PR使用正式Review Comment。以下入口只讀取資料／產生文字，不會提交review、重跑CI或合併：
+涉及安全政策、信任、權限或 gate 的修改，完成實作與驗證後集中核准最終 PR；一般文件、測試及公告游標沒有逐次 revision 授權。其他作者沿用維護者 Approve，自建 PR 使用正式 Review Comment（`MYTERM-POLICY-REVIEW-V2`）。以下入口只讀取／產生文字，不提交 Review、重跑 CI 或合併：
 
 ```sh
-./scripts/project-python.sh scripts/security-conditional-risk.py \
+./scripts/project-python.sh scripts/security-source-review.py \
   --pr-review template --pr <PR號碼> \
   --expected-head <完整head SHA> --expected-base <完整base SHA>
 ```
@@ -148,14 +148,13 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 核准或撤銷後，明確重跑同一head的必要安全檢查；不改CI權限、測試分流或branch ruleset。合併前先檢查全部必要CI、CodeQL及未解決討論，再執行：
 
 ```sh
-./scripts/project-python.sh scripts/security-conditional-risk.py \
+./scripts/project-python.sh scripts/security-source-review.py \
   --pr-review verify --pr <PR號碼> \
   --expected-head <已驗證head SHA> --expected-base <已驗證base SHA>
 ```
 
-此命令重新讀取review、來源及官方資訊，完成後再讀review；成功只代表核准與限定條件當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#issue-43-條件式風險接受)。
+此命令重新讀取 PR、受保護來源樹及 Review，完成後再讀 Review；成功只代表來源與精確核准當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#通用政策來源審閱)。
 
-退役決策使用 `action=retire` 的專用 Review 聲明；`retirementVerified=true` 且 `accepted=false` 表示核對官方撤回，並未接受新風險。原複核命令與精確 PR 審閱仍適用，但 retired 不再比對歷史套件鎖檔，而比對撤回證據與政策執行來源；舊基準歷史保留，新的相依更新仍通過正常完整檢查。
 
 
 ### SSH 後量子政策驗證
@@ -349,12 +348,14 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 
 相依漏洞警示、隔離測試與公開金鑰部署驗證：[安全維護指南](SECURITY_MAINTENANCE.md)。
 
+日常公告監測每12小時執行，不以完整回歸作為公告查詢前置；完整固定回歸仍由PR／main CI及發布流程執行。無需安裝臨時Go分析工具才能開發或監測；供應商證據限制與未解除風險分開呈現。
+
 手動執行安全監測時，可啟用 `refresh_issue_format` 整理既有 Bot Issue。自動相依路徑與逐案影響評估、原始時間及留言保留方式見安全維護指南；此選項不變更漏洞解除或發布門檻。
 
 <a id="python-runtime"></a>
 ## Python 工具環境
 
-專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
+專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`、專案 `.build/python-base/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
 
 先準備受管工具，再執行需要網路的開發／安全作業：
 
@@ -386,3 +387,21 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 完成本機驗證後先核對、部署並讀回向後相容的Rules，再交同一Dev版本給兩台Mac驗收同步。外部Mac可在穩定可寫位置執行，無須完整checkout；核對development身分。App內新增／管理／跳轉、工作中停用、帳號切換、離線及衝突仍需實際操作驗收。
 
 純政策變更的CI使用 `scripts/security-test-profile.py` 依精確Git差異選擇 `scripts/run-policy-tests.py`，不執行npm漏洞案例，並明列未執行範圍；相依／Rules／App等變更仍走原完整驗證。詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+### Apple Silicon 的隔離基底與 Java
+
+受管Python環境使用`Config/Security/python-runtime.json`固定的Astral CPython基底；首次建立前執行`./scripts/project-python.sh scripts/setup-project-python.py`，再以`MYTERM_SECURITY_PYTHON_BOOTSTRAP="$PWD/.build/python-base/bin/python3.12" ./scripts/setup-security-tools.sh`建立兩個venv。既有環境重建前先確認沒有使用中程序並保存回復資料，不能原地覆蓋共用或系統Python。驗簽相依由固定官方wheel下載、核對hash後離線安裝，pip不自行連線解析套件。
+
+Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官方Temurin封裝。執行`./scripts/project-python.sh scripts/project-java-runtime.py setup`準備`.build/java-runtime`；這不改Homebrew或全域Java。`scripts/project-java.sh`及Firebase入口核對完整檔案清單／hash與信任資料後才使用，內容漂移會停止，不自行修復或換版。直接版本檢查為`./scripts/project-java.sh -version`。已存在且內容不同的runtime不會被setup覆蓋，須先核對差異並另行處理。
+
+一般 App 使用者不需 Java。Linux x86_64 CI 以 `Config/Security/java-runtime-linux.json` 固定獨立的官方 Temurin 21.0.13+9 封裝，使用相同 setup／verify 入口，在工作目錄內準備後才掃描。Mac 與 Linux 的封裝、檔案 manifest 與 home 路徑各自驗證；Linux 僅允許固定 manifest 中的內部授權文件連結。CI 不繼承 runner 預裝 Java，也不修改全域 JAVA_HOME。本機通過不代替 CI 證據；此固定版本仍保留已知風險告警。供應商版號不同，不能只比較patch數字或`blocked.certs`檔名就宣稱信任問題已修補。
+
+
+GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup`，再以 `./scripts/project-gh.sh` 取代本專案操作中的全域 `gh`。官方封裝與全部安裝檔案由 `Config/Security/github-cli.json` 固定；入口每次檢查內容與權限，缺少或漂移不回退至 PATH。macOS arm64 與 CI Linux 的封裝各自驗證。監測、來源審閱、資產下載及發布／清理腳本共用此入口；沿用既有認證，不重寫 Homebrew、全域 CLI 或登入設定。獨立健康檢查只準備這個固定工具，不安裝專案 pip/npm 相依或執行回歸。
+
+
+安全適用性回歸另含`Tests/Security/test_pip_applicability.py`的合成封裝／公告案例，驗證來源漂移、跨環境誤用、偽造判定與Issue保留；不需要安裝新套件或執行漏洞payload。新增適用性判定屬政策變更，納入最終 PR 集中審閱，不另設來源 revision 核准。
+
+`Tests/Security/test_runtime_advisories.py`以合成官方公告／封裝與commit回應驗證執行環境核心查詢，不安裝執行環境或執行漏洞輸入；Node資料庫index落後、逐檔缺失、未知範圍及CPython錯誤對應都不得產生成功證據。
+
+監測新增範圍的修補另列待辦，合併 workflow 明確使用 `security-audit.py --merge-gate`，保留既有 collector 的風險門檻與全部必要查詢／覆蓋檢查。預設安全掃描、發布與部署仍採全面風險門檻；不得以合併檢查成功代替發布就緒。用途、證據與限制見[安全維護指南](SECURITY_MAINTENANCE.md)。

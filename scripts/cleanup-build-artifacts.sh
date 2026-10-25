@@ -66,19 +66,19 @@ resolved_build_dir="${build_dir:A}"
 }
 [[ ! -L "$build_dir" ]] || fail "build/ 不得是符號連結，拒絕清理。"
 
-command -v gh >/dev/null 2>&1 || fail "找不到 GitHub CLI（gh）。" 69
+[[ -x "$project_dir/scripts/project-gh.sh" ]] || fail "找不到專案 GitHub CLI 入口。" 69
 cd "$project_dir"
 
 tag="v$version"
 print -- "[1/5] 確認 GitHub 正式版狀態：$tag"
-gh auth status >/dev/null
-release_state="$(gh release view "$tag" --json isDraft,isPrerelease --jq '[.isDraft, .isPrerelease] | @tsv')"
+"$project_dir/scripts/project-gh.sh" auth status >/dev/null
+release_state="$("$project_dir/scripts/project-gh.sh" release view "$tag" --json isDraft,isPrerelease --jq '[.isDraft, .isPrerelease] | @tsv')"
 IFS=$'\t' read -r is_draft is_prerelease <<< "$release_state"
 [[ "$is_draft" == "false" ]] || fail "$tag 仍是 Draft，拒絕清理。"
 [[ "$is_prerelease" == "false" ]] || fail "$tag 仍是 prerelease，拒絕清理。"
 
-repo_name="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-latest_tag="$(gh api "repos/$repo_name/releases/latest" --jq .tag_name)"
+repo_name="$("$project_dir/scripts/project-gh.sh" repo view --json nameWithOwner --jq .nameWithOwner)"
+latest_tag="$("$project_dir/scripts/project-gh.sh" api "repos/$repo_name/releases/latest" --jq .tag_name)"
 [[ "$latest_tag" == "$tag" ]] || {
     fail "GitHub 最新正式版是 $latest_tag，不是 $tag，拒絕清理。"
 }
@@ -89,7 +89,7 @@ cleanup_temp() {
     [[ -n "${download_dir:-}" && -d "$download_dir" ]] && /bin/rm -rf -- "$download_dir"
 }
 trap cleanup_temp EXIT INT TERM
-gh release download "$tag" --dir "$download_dir"
+"$project_dir/scripts/project-gh.sh" release download "$tag" --dir "$download_dir"
 "$project_dir/scripts/verify-release-assets.sh" \
     --assets "$download_dir" \
     --version "$version" \

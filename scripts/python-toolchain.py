@@ -10,6 +10,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import ssl
@@ -142,6 +143,12 @@ def validate_current(info, policy, root=ROOT, role=None):
         raise ValueError('Interpreter is not a managed project tool environment')
     if prefix == Path(info['basePrefix']).resolve() or not Path(info['purelib']).resolve().is_relative_to(prefix):
         raise ValueError('Refusing shared/base interpreter package writes or use')
+    runtime_policy=root/'Config/Security/python-runtime.json'
+    if platform.system()=='Darwin' and platform.machine()=='arm64' and runtime_policy.is_file():
+        runtime=json.loads(runtime_policy.read_text())
+        if (Path(info['basePrefix']).resolve()!=(root/'.build/python-base').resolve() or
+                info['python']!=runtime['pythonVersion']):
+            raise ValueError('Python tools must use the reviewed project-owned base runtime')
     rows = {p['origin']: p for p in info['packages']}
     expected = {'pip': policy['packages']['pip']['version'], 'certifi': policy['packages']['certifi']['version'],
                 'pip/_vendor/certifi': policy['packages']['pip']['vendoredCertifi']}

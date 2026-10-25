@@ -254,8 +254,30 @@ SFTPBookmarkSyncCodec只接受遠端型別，以既有Vault Master Key及專案�
 
 ## 開發工具風險決策
 
-Issue #43 的條件式接受已依官方公告撤回退役；共用入口仍核對撤回身分、內容及政策來源，失效時停止。退役不是套件修補或永久豁免，其他公告及安全門檻照常生效；Issue 已在 main 驗證完成後以官方撤回理由結案。詳見[安全維護指南](SECURITY_MAINTENANCE.md)。既有 App 與資料不變；重部署仍先驗證固定工具與政策，再下載已簽署資產。
+已結案的條件式接受保留為歷史，不再做個案專屬查詢。日常入口使用通用來源政策審閱，與工具清冊、公告查詢及風險gate分開；新公告另案處理，不授予永久豁免。供應商證據有限及未驗證環境明列限制，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 PR基準審閱由同一評估器讀取GitHub即時PR與review資料；其他作者使用原生APPROVED，本人建立PR可用綁定head/base及政策原始摘要的明確COMMENTED紀錄。API操作只讀，核准資格與安全掃描結果分開判斷；合併前需再次核對，無新增高權限事件或自動合併。此紀錄是維護者決策，非第二人審查或不可修改簽章。
+
+套件查詢按實際collector隔離失敗，OSV與GitHub補充查詢分別產生`packageMonitoring`收據；成功群組的風險保留，失敗群組不產生解除資格。套件查詢結果不代替原生／供應商覆蓋，亦不要求日常重做AST或Go原始碼引入圖。
+
+監測收據把報告hash、run／attempt／commit及兩種Issue寫入結果綁在一起；獨立健康查詢驗證保留artifact，健康發布器只維護自身Bot紀錄。故障與恢復的通知路徑不依賴完整套件回歸，不授予風險解除權限。
+
+工具監測分離清冊（`security-toolchain-inventory.py`）、套件／原生／官方公告查詢、來源收據（`security-toolchain-providers.py`）及覆蓋彙整（`security-toolchain-report.py`）。`security-toolchain-impact.py`只附加綁定精確清冊的本機評估，不改gate結果。部分掃描只能新增已查證風險，`sync-security-monitor-status.py`另保留覆蓋與公告待審狀態；來源政策核准不授予漏洞例外。
+
+Firestore 供應商查詢綁定精確 JAR 與已接受的有限證據界線；公告游標另綁定實際用途來源，未審公告保留追蹤，發布／部署仍阻擋。查詢完成不代表子相依完整掃描，亦不取得自動結案資格。
+
+
+GitHub自動化經 `project-gh.sh` 使用專案隔離的官方CLI，Python子程序亦明確指定此入口。`project-gh-runtime.py`驗證封裝與安裝檔案後才執行；`go-build-inventory.py`只讀已驗執行檔的Go建置資料，將模組與stdlib依各平台加入OSV查詢。模組存在不等於受影響函式可達，未知適用性保留告警並阻擋發布／部署，不把CLI父版本更新當作所有內附相依已修補。
+
+
+pip子集適用性在完整版本命中合併後進行，原始結果與精確不適用證據分開保存；只移出具有完整、同環境證據的三筆setuptools及一筆msgpack結果。此層不提供一般風險接受，也不補齊缺少的provider收據。
+
+執行環境核心另由`security-runtime-advisories.py`查核：Node.js按同一官方提交的逐檔公告清單及Git blob核對，不依賴可能落後的彙整index；CPython以當次解譯器身分與版本對應官方release commit，再查OSV的commit公告。原始查詢與環境origin獨立保存，未知版本／格式、缺檔或分頁不完整均阻擋。此對應不證明下游廠商補丁、原生庫或無CVE新聞已涵蓋，也不單獨授予自動結案資格。
+
+供應商公告適配器僅處理實際部署工具與 Rules Java，保留有限證據與元件風險的區分。OS／runner 映像更新不參與查詢、通知或 gate。Git checkout 契約取代日常來源指紋核准；一般 CI 可先驗證，真正政策修改在精確 head／base 的最終 PR 審閱後才可合併。套件鎖檔、資產 hash／簽章與必要 CI 保留。
+
+`security-audit.py` 在各 collector 完成後、合併與適用性註記之前保存 `collectionEvidence`。合併用途核對完整 collector 分區與原始風險投影，再獨立評估原有四組 collector；擴充結果的相同公告、版本或註記不會移除原有風險。所有結果持續寫入完整報告及通知。缺少分區、報告與證據不一致、查詢失敗或覆蓋不足均阻擋；預設發布用途仍評估完整風險。這份證據不是簽章，CLI 不接受外部報告作為通過依據，來源與精確 PR 審閱仍是修改政策的控制點。
+
+Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對完整檔案與信任清冊；CI 準備專案隔離 JDK，不再繼承 PATH 的 Java。Linux 封裝只接受 manifest 固定的內部授權文件連結；修改或缺漏仍拒絕。

@@ -1,0 +1,702 @@
+{
+  "schemaVersion": 1,
+  "environment": "local",
+  "grantsRiskException": false,
+  "reviewedAt": "2026-10-24T15:36:34.175118+00:00",
+  "inventoryDigest": "cf39c020a1753cb6ddc4bafa5c1280cf190c65890eea2834e423fd2b3f62cf1f",
+  "inputFiles": {
+    ".github/workflows/deploy-update-site.yml": "b80f27719f97cc4a770d2d5ebbac413b90dc68786bc3b6220f644cae31f2e97e",
+    ".github/workflows/security-checks.yml": "fedff26c848b8af7fa658f53343380440e4268f258b8b56291c2ece01091b475",
+    ".github/workflows/security-gate.yml": "47f4be9bd9cf7d06f557f12a2157dd18cf2d8981ccea886af01ae92b26d20179",
+    ".github/workflows/security-monitor-health.yml": "63f96d75a98d6eed24da689330322d62d857d5521e38634d511772681cc45d78",
+    "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
+    "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+    "Config/Security/python-runtime.json": "dfd25d1c319cebac34c38852d58613bbcbf280f0d336ec27f4c9979b981da81b",
+    "Config/Security/python-tools.json": "b4a3d4f6fe3e13ba000167c4ca169f5c7a71a36db8c805270d2be1f36fd505a1",
+    "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+    "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+    "scripts/python-verifier-wheels.py": "d3bee14506ce1d1daa234f12777bdf19855401b46c038fe1dbefafdde81e32df",
+    "scripts/setup-security-tools.sh": "224d79f9cbc599f9230fd39a711d1b8027b21ff292acc7926c43a21761e45959",
+    "Config/Security/github-cli.json": "9e76277c1682dd26414d7ff518a3fac9e97c21ccbea2bb04b5b30fccbc7f90ab",
+    "scripts/project-gh-runtime.py": "0f07cc1cabab3ca67f62b871354930efaf833503880c2492204b9eb4be88bfe5",
+    "scripts/project-gh.sh": "d269229ac0dc2db757938b5ed571a0eb4f8715551f6b6aceb0aecb2c43d7079d",
+    "scripts/go-build-inventory.py": "96ade3f9f00db778ed18dce4143edfb10eb2323fe1604f501707b033e1f82316",
+    ".build/security-inventory-actions/actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1.tgz": "b59292069298c7be5ffd9c636431a229faff70ece00e0c24fd31baeb7b309fa3",
+    ".build/security-inventory-actions/actions-setup-node-949feb2413d6458794dcd2491c4babbbce0c15c1.tgz": "738f1f022b9004d05770ca7d294748ef37f40f977472ce978c1f3f74aaa45e34",
+    ".build/security-inventory-actions/actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0.tgz": "f8957c701bb6648d362eb6bbe03a2a35e6410093ea7098a7c2100cb3412965bd",
+    ".build/security-inventory-actions/actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9.tgz": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+    ".build/npm-runtime/node_modules/socks/build/client/socksclient.js": "4b473feca4862b5c66ec0efa39ea2d40d07c845886b6081813b07d489fabd897",
+    ".build/npm-runtime/node_modules/socks/build/common/helpers.js": "dcbb2f1bcb2e7450ae05a2cc911c925151ee0a03baa501823b4e8e82ada48393",
+    ".build/npm-runtime/node_modules/node-gyp/lib/download.js": "e136afe6ae2828114abf0ddae296d1fdd0c8e418922f7f6f6363bc51761db5fe"
+  },
+  "assessments": [
+    {
+      "id": "GHSA-2mjp-6q6p-2qxm",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "低階 HTTP API 接受外部可控、大小寫重複的 Content-Length 陣列。 已確認 Action 對 Undici 的公開引入面為 fetch／ProxyAgent，未見直接呼叫本公告指定的 API；但 ProxyAgent／fetch 內部 dispatcher、標頭與重試選項尚不足以證明所有條件不存在。保留阻擋，不將外部 API 清單當完整呼叫圖。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-2mjp-6q6p-2qxm"
+      ]
+    },
+    {
+      "id": "GHSA-35p6-xmwp-9g52",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "HTTP/1.1 keep-alive 重用時，惡意上游回應污染後續回應佇列。 官方 bundle 確實呼叫 fetch，涉及的 HTTP／解壓實作仍存在；固定官方端點與 Promise catch 不足以排除公告條件。父 Action 最新正式版仍含舊相依，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-35p6-xmwp-9g52"
+      ]
+    },
+    {
+      "id": "GHSA-3jxr-9vmj-r5cp",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "連續不展開的大括號群組造成重複遞迴。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp"
+      ]
+    },
+    {
+      "id": "GHSA-3wwx-pv8p-q78v",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket permessage-deflate 解壓錯誤。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-3wwx-pv8p-q78v"
+      ]
+    },
+    {
+      "id": "GHSA-4992-7rv2-5pvq",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "低階 request/upgrade 的 upgrade 值包含換行。 已確認 Action 對 Undici 的公開引入面為 fetch／ProxyAgent，未見直接呼叫本公告指定的 API；但 ProxyAgent／fetch 內部 dispatcher、標頭與重試選項尚不足以證明所有條件不存在。保留阻擋，不將外部 API 清單當完整呼叫圖。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-4992-7rv2-5pvq"
+      ]
+    },
+    {
+      "id": "GHSA-4qv8-2p9j-2685",
+      "component": "undici",
+      "scope": "development",
+      "versions": [
+        "6.29.0"
+      ],
+      "status": "needs-review",
+      "usage": "獨立npm → node-gyp → undici.fetch",
+      "reason": "EventSource 處理持續串流的事件內容。 官方 npm 11.21.1 中可辨識的 Undici 消費者為 node-gyp/lib/download.js，使用 Agent／EnvHttpProxyAgent／RetryAgent／fetch，未使用 EventSource。保留精確用途候選，不把整份 npm 或其他 Undici 公告一併解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-4qv8-2p9j-2685"
+      ]
+    },
+    {
+      "id": "GHSA-4qv8-2p9j-2685",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0",
+        "6.29.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "EventSource 處理持續串流的事件內容。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-4qv8-2p9j-2685"
+      ]
+    },
+    {
+      "id": "GHSA-5rjg-fvgr-3xxf",
+      "component": "setuptools",
+      "scope": "verification-tool",
+      "versions": [
+        "70.3.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored pkg_resources",
+      "reason": "pip的官方vendoring說明與本機檔案顯示只保留pkg_resources，未包含公告所指的PackageIndex、sdist或legacy wheel安裝模組。這是本機靜態範圍證據；保留版本命中與待審狀態，不自動豁免。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-5rjg-fvgr-3xxf"
+      ]
+    },
+    {
+      "id": "GHSA-5wm8-gmm8-39j9",
+      "component": "fast-xml-builder",
+      "scope": "github-actions",
+      "versions": [
+        "1.0.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → XML相關相依",
+      "reason": "XMLBuilder 在 processEntities=false 時寫入含引號的屬性值。 upload-artifact 的 Azure serializer 使用 ignoreAttributes=false，且 builder 的 processEntities 保持 true；已讀取的 options 路徑未設定 false，與本公告前提不同。這是選項路徑證據，不宣稱其他 XML parser／CDATA 告警解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-5wm8-gmm8-39j9"
+      ]
+    },
+    {
+      "id": "GHSA-6j4f-fj2g-mc7p",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "parseCommaParts 遞迴或對大量元素使用 apply。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+      ]
+    },
+    {
+      "id": "GHSA-6v7p-g79w-8964",
+      "component": "msgpack",
+      "scope": "verification-tool",
+      "versions": [
+        "1.1.2"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip CacheControl → msgpack",
+      "reason": "本機pip內附pure-Python fallback；CacheControl使用一次性loads，未找到重複使用發生錯誤之C Unpacker的入口。仍保留版本命中；其他環境、模組或呼叫方式變更須重核。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-6v7p-g79w-8964"
+      ]
+    },
+    {
+      "id": "GHSA-8988-9cw3-xx77",
+      "component": "urllib3",
+      "scope": "verification-tool",
+      "versions": [
+        "2.7.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored urllib3",
+      "reason": "urllib3: HTTPS proxy TLS configuration may be ignored or overridden 兩個受管 pip 僅以 no-index／no-deps／no-cache-dir 及停用版本檢查方式安裝已核對 hash 的官方本機 wheel；urllib3 網路實作仍存在。離線流程屬用途限制，未替換或私改 pip 內附套件，保留版本告警與阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-8988-9cw3-xx77"
+      ]
+    },
+    {
+      "id": "GHSA-8gc5-j5rx-235r",
+      "component": "fast-xml-parser",
+      "scope": "github-actions",
+      "versions": [
+        "5.4.1"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → Azure/XML相關相依",
+      "reason": "XMLParser 數值實體展開繞過實體展開限制。 Azure parseXML 會對服務回應呼叫 XMLParser，且 processEntities=true；XMLValidator 與一般實體限制不足以排除本公告的數值實體繞過。保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-8gc5-j5rx-235r"
+      ]
+    },
+    {
+      "id": "GHSA-8xcm-r25x-g524",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "啟用 retry interceptor，重試時處理上游回應。 已確認 Action 對 Undici 的公開引入面為 fetch／ProxyAgent，未見直接呼叫本公告指定的 API；但 ProxyAgent／fetch 內部 dispatcher、標頭與重試選項尚不足以證明所有條件不存在。保留阻擋，不將外部 API 清單當完整呼叫圖。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-8xcm-r25x-g524"
+      ]
+    },
+    {
+      "id": "GHSA-f23m-r3pf-42rh",
+      "component": "lodash",
+      "scope": "github-actions",
+      "versions": [
+        "4.17.23"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → lodash",
+      "reason": "lodash unset/omit 接受陣列形式的特殊物件路徑。 固定 upload-artifact bundle 已對帳官方 lodash 4.17.23 的 95 個來源模組及 140 條相依；兩處 CommonJS 編譯轉換已逐字核對，三個通用 re-export 為 events／stream／tunnel 入口而非 lodash。此子集不含公告的 unset／omit／template 實作；精確封裝判定尚未納入通用 gate，原始命中與阻擋保留。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-f23m-r3pf-42rh"
+      ]
+    },
+    {
+      "id": "GHSA-f269-vfmq-vjvj",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket 收到特定 64-bit frame 長度。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-f269-vfmq-vjvj"
+      ]
+    },
+    {
+      "id": "GHSA-f886-m6hf-6m8v",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "範圍展開的 step 為零。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-f886-m6hf-6m8v"
+      ]
+    },
+    {
+      "id": "GHSA-g8m3-5g58-fq7m",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "呼叫 Cookie parser 並信任解析出的 SameSite 屬性。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-g8m3-5g58-fq7m"
+      ]
+    },
+    {
+      "id": "GHSA-gh4c-6fx4-qh6g",
+      "component": "urllib3",
+      "scope": "verification-tool",
+      "versions": [
+        "2.7.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored urllib3",
+      "reason": "urllib3: Chunked Deflate streaming can enter an infinite loop 兩個受管 pip 僅以 no-index／no-deps／no-cache-dir 及停用版本檢查方式安裝已核對 hash 的官方本機 wheel；urllib3 網路實作仍存在。離線流程屬用途限制，未替換或私改 pip 內附套件，保留版本告警與阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-gh4c-6fx4-qh6g"
+      ]
+    },
+    {
+      "id": "GHSA-gh4j-gqv2-49f6",
+      "component": "fast-xml-parser",
+      "scope": "github-actions",
+      "versions": [
+        "5.4.1"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → Azure/XML相關相依",
+      "reason": "XMLBuilder 將外部資料放入 comment 或 CDATA。 Azure serializer 明確設定 cdataPropName 為 __cdata，builder 程式仍存在。尚未證明所有儲存服務 mapper 的外部值均不能進入該欄位，不因主要用途是上傳就解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-gh4j-gqv2-49f6"
+      ]
+    },
+    {
+      "id": "GHSA-h35f-9h28-mq5c",
+      "component": "setuptools",
+      "scope": "verification-tool",
+      "versions": [
+        "70.3.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored pkg_resources",
+      "reason": "pip的官方vendoring說明與本機檔案顯示只保留pkg_resources，未包含公告所指的PackageIndex、sdist或legacy wheel安裝模組。這是本機靜態範圍證據；保留版本命中與待審狀態，不自動豁免。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-h35f-9h28-mq5c"
+      ]
+    },
+    {
+      "id": "GHSA-jp2q-39xq-3w4g",
+      "component": "fast-xml-parser",
+      "scope": "github-actions",
+      "versions": [
+        "5.4.1"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → Azure/XML相關相依",
+      "reason": "將 maxEntityCount 或 maxEntitySize 明確設為零。 Azure getParserOptions 固定 processEntities=true，沒有將 maxEntityCount／maxEntitySize 明確設為零；公告限定的零值設定前提未在此路徑出現。其他數值實體公告仍獨立阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-jp2q-39xq-3w4g"
+      ]
+    },
+    {
+      "id": "GHSA-jxxr-4gwj-5jf2",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "大範圍序列在 max 檢查前建立中間陣列。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-jxxr-4gwj-5jf2"
+      ]
+    },
+    {
+      "id": "GHSA-m8rv-5g2x-5cg5",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "低階 dispatcher 接受自訂 Blob-like 物件，其 type 可包含換行。 已確認 Action 對 Undici 的公開引入面為 fetch／ProxyAgent，未見直接呼叫本公告指定的 API；但 ProxyAgent／fetch 內部 dispatcher、標頭與重試選項尚不足以證明所有條件不存在。保留阻擋，不將外部 API 清單當完整呼叫圖。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-m8rv-5g2x-5cg5"
+      ]
+    },
+    {
+      "id": "GHSA-mh99-v99m-4gvg",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "展開結果長度未受結果數量限制控制。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-mh99-v99m-4gvg"
+      ]
+    },
+    {
+      "id": "GHSA-p88m-4jfj-68fv",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "將 Cookie parser 百分比解碼後的值再寫入 HTTP 回應標頭。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-p88m-4jfj-68fv"
+      ]
+    },
+    {
+      "id": "GHSA-q2hr-2g5m-vwhr",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "大括號 rewrite 反覆掃描造成平方級成本。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+      ]
+    },
+    {
+      "id": "GHSA-qhr7-859c-m2p7",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "巢狀大括號的遞迴深度失控。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+      ]
+    },
+    {
+      "id": "GHSA-r4xh-jqrq-34v2",
+      "component": "smol-toml",
+      "scope": "github-actions",
+      "versions": [
+        "1.7.1"
+      ],
+      "status": "needs-review",
+      "usage": "官方setup-node → node-version-file解析",
+      "reason": "smol-toml 解析外部 TOML 文件。 四份 workflow 中使用 setup-node 的三份均明確指定 node-version=24.22.1，resolveVersionInput 先回傳該值，未設定 node-version-file，不會進入 getNodeVersionFromFile 的 TOML 分支。只證明目前輸入分支；套件未修補、未擴大到其他 workflow，保留告警。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-r4xh-jqrq-34v2"
+      ]
+    },
+    {
+      "id": "GHSA-r53p-7pc4-xj5r",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "啟用 retry interceptor，重試回應的 framing 與標頭處理。 已確認 Action 對 Undici 的公開引入面為 fetch／ProxyAgent，未見直接呼叫本公告指定的 API；但 ProxyAgent／fetch 內部 dispatcher、標頭與重試選項尚不足以證明所有條件不存在。保留阻擋，不將外部 API 清單當完整呼叫圖。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-r53p-7pc4-xj5r"
+      ]
+    },
+    {
+      "id": "GHSA-r5fr-rjxr-66jc",
+      "component": "lodash",
+      "scope": "github-actions",
+      "versions": [
+        "4.17.23"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → lodash",
+      "reason": "lodash template 的 imports key 由外部控制或繼承污染屬性。 固定 upload-artifact bundle 已對帳官方 lodash 4.17.23 的 95 個來源模組及 140 條相依；兩處 CommonJS 編譯轉換已逐字核對，三個通用 re-export 為 events／stream／tunnel 入口而非 lodash。此子集不含公告的 unset／omit／template 實作；精確封裝判定尚未納入通用 gate，原始命中與阻擋保留。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-r5fr-rjxr-66jc"
+      ]
+    },
+    {
+      "id": "GHSA-rfgv-xxqx-mfg5",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket 接受未要求的 subprotocol。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-rfgv-xxqx-mfg5"
+      ]
+    },
+    {
+      "id": "GHSA-rgw5-rvv9-x895",
+      "component": "brace-expansion",
+      "scope": "github-actions",
+      "versions": [
+        "1.1.12",
+        "2.0.2",
+        "5.0.3"
+      ],
+      "status": "needs-review",
+      "usage": "官方upload-artifact production lock候選 → glob/minimatch",
+      "reason": "展開中間陣列及補零序列繞過 maxLength。 目前四份 workflow 的 artifact 路徑固定，Node 版本明確指定；沒有把外部 PR 文字直接作為這些模式。各公告所涉展開實作仍在官方 bundle，完整 glob/cache 內部來源未獲精確排除；固定輸入是限制而非修補，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-rgw5-rvv9-x895"
+      ]
+    },
+    {
+      "id": "GHSA-rxp7-6hxx-x8q5",
+      "component": "ip-address",
+      "scope": "development",
+      "versions": [
+        "10.7.2"
+      ],
+      "status": "needs-review",
+      "usage": "獨立npm → socks → ip-address",
+      "reason": "Address6 在長度檢查前處理多個百分號與換行構成的 zone 字串。 npm socks 收到的 IPv6 由固定 16 bytes 轉換；字串建構先經 Node net.isIPv6。實際 Node 24.22.1 內附 regex 的 zone 僅接受一次百分號及字母數字等白名單，不允許公告所需的重複百分號。此為該精確呼叫鏈的條件證據；原套件與其他使用方式仍未修補，尚不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-rxp7-6hxx-x8q5"
+      ]
+    },
+    {
+      "id": "GHSA-v3r7-h72x-cjcm",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "setCookie 的 domain 或 unparsed 屬性接受外部輸入。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-v3r7-h72x-cjcm"
+      ]
+    },
+    {
+      "id": "GHSA-v9p9-hfj2-hcw8",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket 協商不符合要求的 server_max_window_bits。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-v9p9-hfj2-hcw8"
+      ]
+    },
+    {
+      "id": "GHSA-vrm6-8vpv-qv8q",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket 解壓膨脹內容。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-vrm6-8vpv-qv8q"
+      ]
+    },
+    {
+      "id": "GHSA-vxpw-j846-p89q",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "WebSocket/WebSocketStream 處理大量分段。 六個固定 Action 入口的 AST 引入面僅見 fetch／ProxyAgent；未見 WebSocket、EventSource 或 Cookie helper 的外部消費者，亦未見其模組繞過主入口被引用。這是限定封裝的未使用 API 候選證據；尚未納入通用精確判定，不自動解除。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-vxpw-j846-p89q"
+      ]
+    },
+    {
+      "id": "GHSA-vxq7-64xx-v4gw",
+      "component": "urllib3",
+      "scope": "verification-tool",
+      "versions": [
+        "2.7.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored urllib3",
+      "reason": "urllib3: HTTPResponse.stream()/read_chunked() buffers an unbounded chunk-size line into memory 兩個受管 pip 僅以 no-index／no-deps／no-cache-dir 及停用版本檢查方式安裝已核對 hash 的官方本機 wheel；urllib3 網路實作仍存在。離線流程屬用途限制，未替換或私改 pip 內附套件，保留版本告警與阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-vxq7-64xx-v4gw"
+      ]
+    },
+    {
+      "id": "GHSA-xjj6-f33q-929c",
+      "component": "undici",
+      "scope": "development",
+      "versions": [
+        "6.29.0"
+      ],
+      "status": "needs-review",
+      "usage": "獨立npm → node-gyp → undici.fetch",
+      "reason": "fetch 處理過多 Content-Encoding 層，殘留串流的錯誤未被承接。 node-gyp 實際包含 fetch 下載與串流轉換；專案安裝停用 lifecycle scripts 降低此入口使用，但不代表 npm 內附 Undici 已修補。npm 12.2.1 唯讀比對亦仍內附相同版本，不藉跨主版升級宣稱修復。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-xjj6-f33q-929c"
+      ]
+    },
+    {
+      "id": "GHSA-xjj6-f33q-929c",
+      "component": "undici",
+      "scope": "github-actions",
+      "versions": [
+        "6.23.0",
+        "6.27.0",
+        "6.29.0"
+      ],
+      "status": "needs-review",
+      "usage": "官方Actions → HTTP/Octokit輔助函式 → 內附undici",
+      "reason": "fetch 處理過多 Content-Encoding 層，殘留串流的錯誤未被承接。 官方 bundle 確實呼叫 fetch，涉及的 HTTP／解壓實作仍存在；固定官方端點與 Promise catch 不足以排除公告條件。父 Action 最新正式版仍含舊相依，保留阻擋。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-xjj6-f33q-929c"
+      ]
+    },
+    {
+      "id": "GHSA-xmj3-9gf7-h52w",
+      "component": "setuptools",
+      "scope": "verification-tool",
+      "versions": [
+        "70.3.0"
+      ],
+      "status": "needs-review",
+      "usage": "兩個Python環境 → pip vendored pkg_resources",
+      "reason": "pip的官方vendoring說明與本機檔案顯示只保留pkg_resources，未包含公告所指的PackageIndex、sdist或legacy wheel安裝模組。這是本機靜態範圍證據；保留版本命中與待審狀態，不自動豁免。",
+      "gateEffect": "none",
+      "evidence": [
+        "https://github.com/advisories/GHSA-xmj3-9gf7-h52w"
+      ]
+    },
+    {
+      "id": "GO-2026-5932",
+      "component": "golang.org/x/crypto",
+      "scope": "development",
+      "versions": [
+        "v0.58.0"
+      ],
+      "status": "needs-review",
+      "gateEffect": "none",
+      "usage": "GitHub CLI 官方執行檔 → Go build metadata → golang.org/x/crypto",
+      "reason": "golang.org/x/crypto/openpgp 公告所列子套件。 三個官方 gh 2.103.2 資產的來源 commit／Go 1.27.3／GOOS／GOARCH／CGO／所有模組版本已對帳，同條件完整來源引入圖均沒有公告所列 OpenPGP 子套件。官方 binary 已移除符號，沒有用 govulncheck exit0 或字串缺席解除；精確來源／資產判定候選待整批整合。",
+      "evidence": [
+        "https://github.com/advisories/GO-2026-5932"
+      ]
+    }
+  ]
+}

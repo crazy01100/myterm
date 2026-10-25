@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "decision": {
+    "id": "security-monitoring",
+    "state": "version-controlled",
+    "mode": "project-policy-review",
+    "operatingSystemMonitoring": false,
+    "grantsRiskException": false,
+    "review": "exact-head-base",
+    "migration": {
+      "fromPolicy": "Config/Security/conditional-acceptances.json",
+      "previousPolicySHA256": "63be8b70e5c36b64c01145202cbd221cc8e3f5298b522d15137457058b91377b",
+      "reason": "Maintainer ended closed-issue-specific follow-up; retain generic source and exact PR review without vulnerability exceptions. Historical decision is preserved."
+    }
+  }
+}

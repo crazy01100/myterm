@@ -72,7 +72,7 @@ cd "$project_dir"
 candidate_dir="$project_dir/build/candidates/MyTerm-$version-build-$build_number"
 candidate_app="$candidate_dir/MyTerm.app"
 candidate_build_state="$project_dir/build/candidates/.last-build-number"
-"$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-conditional-risk.py" --purpose release --task "release-$version-$build_number"
+"$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-source-review.py" --purpose release --task "release-$version-$build_number"
 "$project_dir/scripts/check-release-safety.sh"
 "$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-audit.py" --output "$project_dir/build/security-preflight.json"
 sparkle_arguments=()

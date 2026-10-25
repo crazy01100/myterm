@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "decision": "pip-setuptools-subset",
+  "state": "approved",
+  "grantsRiskException": false,
+  "pipVersion": "26.2.2",
+  "componentVersion": "70.3.0",
+  "wheelSHA256": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+  "vendorManifestSHA256": "f802173d61f695117f4dfd05468bb8fb1b9567ea2341e416a5c3d6a4cfbe7496",
+  "advisories": {
+    "GHSA-5rjg-fvgr-3xxf": "22b22b5b9635fb1361ca2942fe54db67632bd440e026994f3d57986ef873f941",
+    "GHSA-h35f-9h28-mq5c": "2c47e3f97f0af2aa02486f90fcda46279a262984ba7a9bd02b8e29edd3d462f7",
+    "GHSA-xmj3-9gf7-h52w": "bc418f52ebf617d29205ede51393042e33a397f895ac8437135a0b08b0da0fab"
+  },
+  "msgpack": {
+    "decision": "pip-msgpack-pure-python",
+    "state": "approved",
+    "id": "GHSA-6v7p-g79w-8964",
+    "componentVersion": "1.1.2",
+    "patchCommit": "2c56ddb5d0025ed481d962c0f5d62d19dec7476d",
+    "advisorySHA256": "9955d98b5723ef6b93392933f28ec7dfd6397b682b7b50c410892bc56d8b903d",
+    "patchSHA256": "e169ea7fbcc3a42a3ce85f3a9519b230a1eef8c9c7ce0aeaa125a920e4a6b412"
+  }
+}

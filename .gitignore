@@ -33,6 +33,7 @@ DerivedData/
 /.firebase/
 /.npm-cache/
 /node_modules/
+/Tools/Deployment/node_modules/
 /firebase-emulator-data/
 firebase-debug.log*
 firestore-debug.log*

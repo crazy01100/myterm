@@ -24,3 +24,8 @@ The deployment workflow is limited to the original repository; select `main` for
 Issue #43 conditional acceptance is retired following official advisory withdrawal. Shared entries still verify withdrawal identity/content and enforcement sources and stop on mismatch. Retirement is neither a package fix nor a permanent exemption; other findings and gates remain in force. The Issue was closed as officially withdrawn after main verification. See [security maintenance](../SECURITY_MAINTENANCE.en.md). Existing App/data are unchanged; redeployment still checks pinned tools and policy before downloading signed assets.
 
 Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](../SECURITY_MAINTENANCE.en.md).
+
+Deployment uses the exact Wrangler package in `Tools/Deployment/package-lock.json` via the project Node/npm entries, with installation scripts disabled. The workflow verifies the isolated graph and runs the current security audit before the step receiving Cloudflare credentials. Missing coverage or unresolved risk stops deployment. It does not rebuild or replace existing signed App assets. See [security maintenance](../SECURITY_MAINTENANCE.en.md).
+
+
+Release assets are downloaded through `scripts/project-gh.sh` after preparation and verification of the official isolated CLI, without falling back to the runner-provided gh.

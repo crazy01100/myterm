@@ -85,7 +85,7 @@ branch="$(git branch --show-current)"
 [[ "$branch" == "main" ]] || { print -u2 -- "正式發布只能從 main 建立，目前為：$branch"; exit 65; }
 
 print -- "[1/6] 確認 GitHub 與遠端 main 狀態"
-gh auth status >/dev/null
+"$project_dir/scripts/project-gh.sh" auth status >/dev/null
 git fetch --quiet origin main --tags
 head_sha="$(git rev-parse HEAD)"
 origin_sha="$(git rev-parse origin/main)"
@@ -103,7 +103,7 @@ if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1; the
     print -u2 -- "GitHub 已存在 tag：$tag"
     exit 65
 fi
-if gh release view "$tag" >/dev/null 2>&1; then
+if "$project_dir/scripts/project-gh.sh" release view "$tag" >/dev/null 2>&1; then
     print -u2 -- "GitHub 已存在 Release：$tag"
     exit 65
 fi
@@ -147,7 +147,7 @@ release_flags=(
 if [[ ! "$version" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]]; then
     release_flags+=(--prerelease)
 fi
-gh release create "$tag" \
+"$project_dir/scripts/project-gh.sh" release create "$tag" \
     "$assets_dir/$archive_name" \
     "$assets_dir/appcast.xml" \
     "$assets_dir/release-notes.html" \
@@ -155,7 +155,7 @@ gh release create "$tag" \
     "$assets_dir/release-manifest.json" \
     "${release_flags[@]}"
 
-draft_url="$(gh release view "$tag" --json url --jq .url)"
+draft_url="$("$project_dir/scripts/project-gh.sh" release view "$tag" --json url --jq .url)"
 print -- "[6/6] GitHub Draft Release 已建立"
 print -- "草稿：$draft_url"
 print -- "狀態：尚未公開，Cloudflare Pages workflow 不會執行。"

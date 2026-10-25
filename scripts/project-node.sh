@@ -18,8 +18,9 @@ fi
 export PATH="$(dirname "$node_bin"):$PATH"
 if [[ "${1:-}" == "--npm" ]]; then
   shift
-  npm_cli="$(dirname "$node_bin")/npm"
-  [[ -f "$npm_cli" ]] || { echo "The selected Node distribution must include npm." >&2; exit 69; }
+  "$node_bin" -e 'const p=require(process.argv[1]); if(process.versions.node!==p.nodeVersion) { console.error("Selected Node differs from the reviewed npm toolchain."); process.exit(69); }' "$project_dir/Config/Security/node-tools.json"
+  npm_cli="$("$project_dir/scripts/project-python.sh" -B "$project_dir/scripts/node-toolchain.py" verify)"
+  export PATH="$(dirname "$npm_cli"):$PATH"
   exec "$node_bin" "$npm_cli" "$@"
 fi
 exec "$node_bin" "$@"

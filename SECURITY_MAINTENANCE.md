@@ -8,11 +8,11 @@
 
 啟用 GitHub 的 dependency graph、Dependabot alerts，並確認維護者已訂閱安全警示與 Actions 失敗通知。首次啟用時主動檢查既有警示；收到新版本不代表應自動合併或發布。
 
-`.github/dependabot.yml` 提供每週一的 Swift、npm、GitHub Actions 與驗簽 Python 套件更新提案。日常監測 `MyTerm security monitor`（security-checks.yml）每天台北時間 09:23 及手動執行，檢查來源與最新正式 Release；`MyTerm release security gate`（security-gate.yml）則在 PR／main 推送檢查來源，維持中高風險阻擋。排程可能延遲，不保證準時。
+`.github/dependabot.yml` 提供每週一的 Swift、npm、GitHub Actions 與驗簽 Python 套件更新提案。日常監測 `MyTerm security monitor`（security-checks.yml）每12小時（台北時間09:23、21:23）及手動執行，檢查來源與最新正式 Release；`MyTerm release security gate`（security-gate.yml）則在 PR／main 推送完整掃描，保留原有 App／Swift／Vendor、根 npm、Python 驗簽與 pip／certifi、Actions 本體公告的中高風險及未知適用性阻擋。排程可能延遲，不保證準時。
 
 日常監測的成功表示掃描與 Issue 處理完成，不代表沒有風險。有風險時以 Issue 記錄公告、元件、版本、影響範圍、上游修補資訊及例外期限；同一公告／元件／範圍沿用同一 Issue，沒有變化就不重複寫入。重要變更追加紀錄；只有完整成功掃描確認不再命中時才關閉，再次命中會重新開啟。人工作業的 Issue 不由工具管理，人工關閉仍命中的自動 Issue 不等於接受風險，下次會重新開啟。
 
-只有查詢、測試、報告或 Issue 寫入等運作異常才使日常監測 Fail；即使連續相同故障也不能顯示成功。來源安全門檻是另一個 workflow，發現未處理風險仍會阻擋，不能把它解讀成監測故障。未知適用範圍記為待確認風險，不宣稱安全。
+只有工具準備、查詢、報告或 Issue 寫入等運作異常才使日常監測 Fail；即使連續相同故障也不能顯示成功。來源安全門檻是另一個 workflow，在原有合併範圍發現未處理風險仍會阻擋，不能把它解讀成監測故障。未知適用範圍記為待確認風險，不宣稱安全。
 
 Issue 寫入權限只供 `crazy01100/myterm` 預設分支的排程／手動監測，PR 無此權限；fork 不會自動執行此監測 job。工具預設拒絕公開庫寫入，本庫 workflow 以 `--allow-public` 明確允許已審閱的公開公告資訊。紀錄只包含公開公告、相依版本與接受狀態，不包含主機、憑證或使用者資料。`scanStatus` 與 `lastSuccessfulScanAt` 記錄掃描健康；前次成功距今超過 48 小時會在下一次檢查提示。排程完全不執行時無法靠自己即時報警。上游版本資訊仍保存在掃描報告；沒有命中的一般新版由 Dependabot 提案追蹤，不為每個新版建立風險 Issue。
 
@@ -28,7 +28,7 @@ npm 相依同時比對 `npm audit` 與 GitHub Advisory Database：以鎖檔內�
 新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。一般期限例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
 
 
-`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。未加 `--monitor` 的發布前檢查維持未處理風險阻擋。自行發行者應建立自己的風險追蹤流程。未知新漏洞、私人測試證據與使用者資料不屬於自動公開範圍，通報方式見 [安全設計](SECURITY.md)。
+`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。預設發布前檢查（不加用途旗標）維持全部未處理風險阻擋。`--merge-gate` 只供 PR／main 合併檢查：擴充工具／內附相依的風險與待審官方公告持續告警並另列修補待辦，尚不增加自動合併阻擋。所有必要查詢失敗或覆蓋不足仍阻擋；同一公告若也命中原有 collector，原有結果照舊阻擋。此分工不表示風險已接受或修復，不改 Issue 結案條件，也不授權發布／部署。兩個用途旗標互斥，發布與部署入口不得使用 `--merge-gate`。自行發行者應建立自己的風險追蹤流程。未知新漏洞、私人測試證據與使用者資料不屬於自動公開範圍，通報方式見 [安全設計](SECURITY.md)。
 
 
 發布安全門檻以失敗的檢查結果表示來源不符合政策；它不等於 GitHub 已強制設定分支保護。分支保護須由維護者在 GitHub 另外設定並核對，不因 workflow 存在或儲存庫改為公開就視為已啟用；維護者不得合併未通過檢查的變更，本機發布入口亦會重新檢查。
@@ -103,29 +103,49 @@ Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟�
 Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics` 與 `@apphosting/common`；鎖檔中原先經由 PAC 代理引入的 `get-uri`／`basic-ftp` 等相依也已移除。原 get-uri 專用覆寫及其 FTP 消費端測試因此退役，不重新加入套件來維持舊測試。`firebase-removed-dependencies.test.cjs` 驗證鎖檔各層、已安裝套件解析與上游宣告均未重新引入該鏈。其他仍適用的安全覆寫與測試保留；歷史 basic-ftp 影響評估不改寫成當時未受影響。這些開發工具不屬於 MyTerm SFTP。
 
 
-### Issue #43 條件式風險接受
+### Issue #43 條件式風險接受（歷史，停止專屬追蹤）
 
 目前決策為 **revision 7／retired（官方公告撤回）**；revision 7 僅經維護者核准擴充 Python 工具與 CI 的政策來源指紋，原退役決策與撤回證據不變。維護者於 2026-10-24 明確核准退役提案 `issue43-withdrawal-retirement-1`，提案 SHA-256 為 `c979cbc420118841efdd8306681356da605bb038c71872425b752417a3cbc0f9`。GitHub Advisory Database 於 2026-10-23 20:53:02（UTC+8）撤回 [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)，理由是不具實際可利用性。這是官方撤回，不是套件修補、風險展延或本專案的實際可利用性測試結論。
 
 `Config/Security/conditional-acceptances.json` 保留原 revision 5 的基準、接受紀錄與原期限歷史，另記錄退役核准、官方摘要及政策執行來源。歷次 revision 1–5 與 PR Review 可由 Git 歷史追溯；不改寫當時的風險判斷。`accepted=false` 與 `retirementVerified=true` 明確區分「沒有風險豁免」和「已核對撤回」。其他漏洞仍依普通安全門檻與最長 31 天例外規則。
 
-每項開發／維護開始、跨日恢復、Firebase 使用、發布準備、Draft 公開及重部署仍由共用入口重新查詢官方撤回證據，核對公告身分、內容摘要與政策執行來源；不執行 npm 套件、不沿用舊通過收據。已退役的歷史依賴鎖檔／Rules 指紋不再限制無關更新，但修改退役驗證器、相關安全入口或政策仍須重新審閱。公告恢復有效、撤回內容改變、證據缺少或來源失敗時停止並重評，不自動恢復接受或把查無資料當成安全。新公告包含 braces 的新風險照常阻擋。
+### 通用政策來源審閱
+
+日常入口使用 `Config/Security/source-review.json` 與 `security-source-review.py` 核對政策契約及 Git checkout 身分，不再逐檔要求人工指紋核准。一般程式、測試、文件與公告游標修改沿 Git／CI 審查；已結案個案不再專屬查詢，歷史資料保留。新的安全公告另案處理，不恢復已終止測試。
+
+來源核對不等於漏洞掃描、環境完整性或風險接受。本機允許未提交修改以進行開發；CI 要求原儲存庫、受支援事件、乾淨 checkout 與事件 commit 一致。PR 可先執行唯讀驗證，但不得寫入監測 Issue。合併依原有 collector 風險門檻，擴充風險另行告警；發布／部署維持全面風險門檻。所有必要查詢失敗與覆蓋缺口仍阻擋，不以取消人工指紋迴圈放行。
 
 ```sh
-./scripts/project-python.sh scripts/security-conditional-risk.py \
+./scripts/project-python.sh scripts/security-source-review.py \
   --purpose development --task TASK_ID \
-  --output docs/TASK_ID-conditional-review.json
+  --output docs/TASK_ID-source-review.json
 ```
 
-purpose 包含 development、firebase、ci、monitor、release、publish、redeploy；用途欄位不是豁免。發布與重部署仍需獨立授權。既有 wrapper 命令限制、loopback 模擬器與大括號路徑防護保留；不因此開放未審查的輸入或直接 CLI 使用。json-ptr 與其他 EoL／EoS 個案決策不變。
+涉及安全設定、信任、權限、豁免、gate 或其執行入口的修改，在最終 PR 集中審閱一次；比較 head／base 的受保護檔案樹，包含刪除、改名與權限變更。一般文件、測試與公告游標不單獨要求政策核准。自建 PR 使用 `MYTERM-POLICY-REVIEW-V2`、`action=approve-policy`，綁定維護者身分、精確 head／base 與政策原始內容摘要；撤銷或 head／base 改變必須重核。唯讀 CI 可先完成測試，政策核准是獨立的合併前必要條件。成功仍回報 `mergeAuthorized=false`；必要 CI／CodeQL、討論與分支保護不得略過。
 
-PR 的決策須與受審 base 相同，否則須取得當前精確 head 的維護者 Review。其他作者 PR 使用原生 APPROVED；指定維護者本人建立、同庫且目標 main 的 PR 使用 `MYTERM-CONDITIONAL-REVIEW-V1` 正式 COMMENTED Review。核准身分固定為 crazy01100／43394184／User，紀錄綁定 PR、完整 head/base、revision 與政策原始 bytes SHA-256；退役使用 `action=retire` 及撤回專用聲明，不能用舊的接受風險聲明取代。撤銷、過期、PENDING、格式錯誤或普通留言均不接受，後續 Review 不會讓舊核准自動復活。
+### 工具清冊、覆蓋與公告追蹤
 
-CI 與合併前均唯讀重查完整 PR／Review，核對本機政策等於遠端精確 head，並在官方查詢後再核對來源及 Review。退役不能提早成功而跳過審閱。精確 Review 不代表完整 CI 已通過，也不能代替第二人審查或阻止帳號擁有者另行繞過；`mergeAuthorized=false` 保留。必須使用正常、精確 head 的合併流程，不使用 admin 略過。
+初始公告游標尚未審閱時，即使 feed 未變，也列出來源、當次觀測筆數與待審狀態；不把上千則歷史版本新聞全部灌入 Issue。來源查詢失敗不得移除先前待審項目，完整指紋留在受審設定與報告中。公告／覆蓋 Issue 寫入後讀回核對內容與狀態，讀回不符或失敗不能產生成功通知收據。
 
-監測對 npm 舊資料中的撤回公告，必須取得身分與元件相符、日期有效的官方撤回證據才排除目前 finding，並記錄 `withdrawnAdvisories`；npm 原始計數保留來源意義。缺漏或錯誤仍使掃描失敗。Issue #43 不因漏列或退役自動關閉：先完成核准、main 安全檢查／完整監測／CodeQL，重新核對官方撤回，再以「官方公告撤回／不再適用」人工結案並保留歷史。若公告再次有效，正常監測可重新開啟告警。
+日常排程只執行可信工具準備、公告查詢與通知，不執行完整固定回歸；PR／main CI與發布仍保留原測試門檻。套件查詢依實際collector分群，OSV及npm的GitHub補充來源各自保存結果；單群失敗不丟棄其他群的風險，整體仍標示不完整。`packageMonitoring`列每群身分摘要、origin、查詢狀態與數量，與原生／供應商覆蓋分開；套件查完不等於無漏洞或全部供應鏈已掃描。未啟用的gcloud、Pillow、Termius不執行查詢或安裝，沒有套件身分的App／JAR另沿既有供應商公告查核。
 
-前置檢查失敗時保存 preflight 與條件複核證據；有診斷檔不代表完整掃描成功。`test_conditional_risk.py` 等政策案例只用 mock／stub；完整開發工具回歸含既有漏洞案例，仍須該次任務明確授權。不得恢復 Daybreak 或已終止的實際可利用性計劃。
+本計劃不新增外部監測服務；深層AST分析、Go SDK／govulncheck與完整子庫反向還原不是日常監測前置條件。已有靜態證據保留，具體新告警需要時才另行評估。
+
+執行環境核心另由`security-runtime-advisories.py`查核：Node.js按同一官方提交的逐檔公告清單及Git blob核對，不依賴可能落後的彙整index；CPython以當次解譯器身分與版本對應官方release commit，再查OSV的commit公告。原始查詢與環境origin獨立保存，未知版本／格式、缺檔或分頁不完整均阻擋。此對應不證明下游廠商補丁、原生庫或無CVE新聞已涵蓋，也不單獨授予自動結案資格。
+
+`toolchain-inventory.json` 列出專案實際用途：App 相依、根 npm、獨立 npm、Node、專案 Python／pip／CA／驗簽套件、部署工具、Actions、Firestore 與 Rules 使用的 Java，以及專案 GitHub CLI。舊 platform collector 僅保留 gh。OS 更新與整個 runner 映像不查詢、不通知、不建立 Issue、不阻擋；系統名稱／架構只供選擇封裝與相容性診斷。未使用的 gcloud、Pillow、Termius 不為監測而安裝。僅可載入或由監測自己 import 的內附庫，先列用途未確認候選；SQLite 兩筆保留於 candidateFindings，不冒稱已修復，也不充當全專案阻擋。
+
+`inventoryComplete`只表示清冊成功；`checksComplete`要求對應資料源、相同身份／環境及有效時間。Firestore及四個精確Actions的有限供應商證據決策不接受已知漏洞，報告保留`allDependenciesScanned=false`；runner Node不等於setup-node安裝的Node。本機、CI及部署結果不能互相代證。
+
+套件與OpenSSL查詢分開執行；一個資料源失敗仍保留其他結果，但整體失敗不轉成通過。只有來源政策已驗證的預設分支監測，才可把已完成查詢的風險加入Issue；部分掃描不可解除舊告警、移除未驗證版本或降低嚴重度。解除需要同環境／origin與明確closure eligibility，供應商未覆蓋區域不得以空結果結案。
+
+`security-vendor-notices.py` 追蹤專案工具官方 feed 的 URL／內容摘要；無 CVE 或同 URL 修改仍可列待確認。Firestore 使用精確 JAR 與 Firebase 倉庫安全公告，不查雲端產品功能／IAM 公告，也不偽造 Maven 子相依查詢。公告游標是日常審閱紀錄，不是風險例外或人工 revision；feed 消失不代表解除。`sync-security-monitor-status.py` 分開呈現必要覆蓋缺口與相關公告，且寫入後讀回；一般新聞的相關性需審閱，不能僅憑沒有 CVE 宣告安全。
+
+`security-monitor-health.yml`每12小時（台灣10:17、22:17）及手動執行，不依賴npm／完整回歸。唯讀健康核對不以舊成功遮蔽最新失敗；超過24小時未完成有效掃描列延遲，48小時列過期。保留報告及`security-monitor-receipt.json`須綁定同一run／attempt／commit與報告hash，風險及公告兩種Issue寫入都成功才有完整收據；風險筆數本身不代表監測故障。
+
+`sync-security-health.py`在已核准來源、原庫預設分支排程／手動情境維護獨立健康Issue，使用固定狀態文字及公開run連結。相同故障24小時內不重複留言，持續故障每天至多提醒一次；恢復及復發沿同一紀錄，留言重試去重並讀回核對。不關閉或忽略漏洞Issue。公告／覆蓋Issue的重要變更也用去重留言通知。這只證明GitHub寫入完成，實際郵件接收仍須核對個人訂閱設定；不新增外部服務，整個GitHub或全部排程停擺時仍無跨平台通知保證。
+
+一般31天例外、EoL／EoS逐項評估及json-ptr既有決策不變。未解除告警不因來源指紋核准、工具升級或供應商界線被忽略。
 
 ## Python 安裝工具與憑證信任
 
@@ -188,3 +208,13 @@ pip（MIT）與 certifi／CA 資料（MPL-2.0）的原始授權隨套件保留�
 ### CI 驗證分流
 
 scripts/security-test-profile.py依PR的base/head、push的before/after或監測目前commit的第一父提交計算實際Git差異。只有明列政策／格式／入口／文件／mock測試的新增或修改，才執行run-policy-tests.py的純政策套件；套件鎖檔、Rules、App、刪除、改名、未知檔案或空差異仍選原完整驗證，比較失敗直接停止。環境旗標／PR標籤不能指定分流。完整漏洞案例保留不變，純政策報告明列未執行；一般相依公告掃描及CodeQL不省略。變更分流本身亦須維護者審查，不能視作防止有寫入權限者改程式的邊界。
+
+
+GitHub CLI與內附Go模組：監測／發布入口使用 `Config/Security/github-cli.json` 固定的專案CLI；不依賴PATH中的舊副本。官方封裝hash與安裝manifest逐次核對，Go建置資料列出的父模組、子模組與stdlib各自查OSV；無法解析或套件替換來源不明即保留覆蓋缺口。Go公告的package／symbol限制仍需適用性判讀，版本命中不宣稱可利用，也不因父工具已修補就關閉未知子相依告警。全域 CLI 與 OS 更新不納入此監測。
+
+
+### pip 精確封裝適用性
+
+`security-pip-applicability.py`只判斷已審閱的三筆setuptools子集公告，以及一筆msgpack C解碼器公告。固定官方pip wheel未包含前者受影響的setuptools實作，也只包含msgpack純Python實作；每次比對公告條件、msgpack官方修補身分、兩個受管環境及完整vendor來源。新增原生模組、外部套件、路徑hook或來源漂移均保留待審。原始版本命中保存於`rawFindings`，具體證據另存`applicabilityReviews`，不修改官方嚴重度或授予例外。未驗證的環境不借用本機結果。通過gate前及Issue寫入前重新驗證，既有Issue不因這項分類自動以版本修復關閉；仍須同範圍與main驗證後維護。其他風險按上述合併／發布用途處理；必要覆蓋缺口仍阻擋。
+
+`security-supplier-notices.py` 查詢實際部署工具與 Rules JDK 的官方公告。JDK 身分來自所選工具的 release metadata；已知命中即使查詢失敗仍保留，但不宣稱查詢完整。公告內容變化進入正常待審紀錄，不要求新 revision。供應商證據有限與元件風險分開，不能因此自動解除告警；沒有 OS／runner 映像接受基準。

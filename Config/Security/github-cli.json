@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "version": "2.103.2",
+  "platforms": {
+    "Darwin-arm64": {
+      "filename": "gh_2.103.2_macOS_arm64.zip",
+      "archiveRoot": "gh_2.103.2_macOS_arm64",
+      "url": "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_macOS_arm64.zip",
+      "size": 14105241,
+      "sha256": "5416000f5d17580a187339e0c4068a01ca5c87f7d4fe6ca64933696f967bc418",
+      "manifestSHA256": "d8d246962dad61aed040bcd8a6500bdc6f5e9fb13433aebd5e2198c45c1306e1"
+    },
+    "Linux-x86_64": {
+      "filename": "gh_2.103.2_linux_amd64.tar.gz",
+      "archiveRoot": "gh_2.103.2_linux_amd64",
+      "url": "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_linux_amd64.tar.gz",
+      "size": 15031001,
+      "sha256": "62ccf747115ddc61237efffdde66a3c8f70ba249433dc64f70801089b59c59c8",
+      "manifestSHA256": "0968ad2aea805f82f93f3ccf1e83c482db1e77d17bb38292d5eec8a71b949bbd"
+    },
+    "Linux-aarch64": {
+      "filename": "gh_2.103.2_linux_arm64.tar.gz",
+      "archiveRoot": "gh_2.103.2_linux_arm64",
+      "url": "https://github.com/cli/cli/releases/download/v2.103.2/gh_2.103.2_linux_arm64.tar.gz",
+      "size": 13660128,
+      "sha256": "4c3e99a50bd8b181a3fe9d69b25dd978bac768148d88f01507c6b4d1ef61a443",
+      "manifestSHA256": "3c5536cbac1ef7ca701ac0b06ad86786767d94b7d7d357038385424aa21b7864"
+    }
+  }
+}

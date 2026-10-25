@@ -1,0 +1,405 @@
+{
+  "schemaVersion": 1,
+  "revision": 1,
+  "status": "approved",
+  "owner": "project maintainer",
+  "maxEvidenceAgeHours": 48,
+  "environments": [
+    "source",
+    "local",
+    "ci",
+    "deployment",
+    "released-app"
+  ],
+  "supplierBoundaries": [
+    {
+      "id": "firestore-1.22.0-official-jar",
+      "state": "accepted",
+      "acceptedOn": "2026-10-24",
+      "acceptedBy": "project maintainer",
+      "kind": "supplier-managed-limited-subdependency-evidence",
+      "component": "firestore-emulator",
+      "firebaseToolsVersion": "15.34.0",
+      "version": "1.22.0",
+      "size": 136707194,
+      "sha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",
+      "url": "https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.22.0.jar",
+      "filename": "cloud-firestore-emulator-v1.22.0.jar",
+      "entryCount": 39381,
+      "knownVulnerabilityWaiver": false,
+      "subdependencyCoverage": "unavailable-from-supplier",
+      "use": "existing loopback demo-project Firestore Rules verification only",
+      "reassessmentTriggers": [
+        "version or hash change",
+        "use change",
+        "new supplier metadata or SBOM",
+        "new applicable advisory"
+      ],
+      "noticeSources": [
+        "https://cloud.google.com/firestore/docs/release-notes",
+        "https://github.com/firebase/firebase-tools/releases",
+        "https://github.com/firebase/firebase-tools/security/advisories"
+      ]
+    },
+    {
+      "id": "actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "state": "accepted",
+      "acceptedOn": "2026-10-24",
+      "acceptedBy": "project maintainer",
+      "kind": "action-bundle-limited-evidence",
+      "component": "actions/checkout",
+      "revision": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "archiveSHA256": "b59292069298c7be5ffd9c636431a229faff70ece00e0c24fd31baeb7b309fa3",
+      "url": "https://codeload.github.com/actions/checkout/tar.gz/3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "entrypoints": {
+        "main": {
+          "path": "dist/index.js",
+          "sha256": "b604bf1c08a471aedf51ddddbd3e8d03041683db270692d66cd1b4b097457818"
+        },
+        "post": {
+          "path": "dist/index.js",
+          "sha256": "b604bf1c08a471aedf51ddddbd3e8d03041683db270692d66cd1b4b097457818"
+        }
+      },
+      "knownVulnerabilityWaiver": false,
+      "runnerRuntimeCovered": false,
+      "subdependencyCoverage": "production-lock-and-license-candidates; full bundled reachability not provided",
+      "reassessmentTriggers": [
+        "revision or archive hash change",
+        "entrypoint or workflow change",
+        "new supplier metadata",
+        "new applicable advisory"
+      ]
+    },
+    {
+      "id": "actions-setup-node-949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "state": "accepted",
+      "acceptedOn": "2026-10-24",
+      "acceptedBy": "project maintainer",
+      "kind": "action-bundle-limited-evidence",
+      "component": "actions/setup-node",
+      "revision": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "archiveSHA256": "738f1f022b9004d05770ca7d294748ef37f40f977472ce978c1f3f74aaa45e34",
+      "url": "https://codeload.github.com/actions/setup-node/tar.gz/949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "entrypoints": {
+        "main": {
+          "path": "dist/setup/index.js",
+          "sha256": "61462d80fd9850ceb0fd072b80777ce297f537fb2ec2d7c8d87983e80ce7e4fa"
+        },
+        "post": {
+          "path": "dist/cache-save/index.js",
+          "sha256": "207a598f869d4f64eeb5a3d9e1e847472bba56120b7b12c40f35900d53fd58e4"
+        }
+      },
+      "knownVulnerabilityWaiver": false,
+      "runnerRuntimeCovered": false,
+      "subdependencyCoverage": "production-lock-and-license-candidates; full bundled reachability not provided",
+      "reassessmentTriggers": [
+        "revision or archive hash change",
+        "entrypoint or workflow change",
+        "new supplier metadata",
+        "new applicable advisory"
+      ]
+    },
+    {
+      "id": "actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "state": "accepted",
+      "acceptedOn": "2026-10-24",
+      "acceptedBy": "project maintainer",
+      "kind": "action-bundle-limited-evidence",
+      "component": "actions/setup-python",
+      "revision": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "archiveSHA256": "f8957c701bb6648d362eb6bbe03a2a35e6410093ea7098a7c2100cb3412965bd",
+      "url": "https://codeload.github.com/actions/setup-python/tar.gz/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "entrypoints": {
+        "main": {
+          "path": "dist/setup/index.js",
+          "sha256": "e6cb9c9f1b2f6c9c982c4939eb77dabefd5ef3730d79ff5cde6f63ae8b0184c8"
+        },
+        "post": {
+          "path": "dist/cache-save/index.js",
+          "sha256": "48e61419c67354e2a1d396bbfbd243e39199fc10e6a19db9e51801c5014df65e"
+        }
+      },
+      "knownVulnerabilityWaiver": false,
+      "runnerRuntimeCovered": false,
+      "subdependencyCoverage": "production-lock-and-license-candidates; full bundled reachability not provided",
+      "reassessmentTriggers": [
+        "revision or archive hash change",
+        "entrypoint or workflow change",
+        "new supplier metadata",
+        "new applicable advisory"
+      ]
+    },
+    {
+      "id": "actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "state": "accepted",
+      "acceptedOn": "2026-10-24",
+      "acceptedBy": "project maintainer",
+      "kind": "action-bundle-limited-evidence",
+      "component": "actions/upload-artifact",
+      "revision": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "archiveSHA256": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+      "url": "https://codeload.github.com/actions/upload-artifact/tar.gz/cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "entrypoints": {
+        "main": {
+          "path": "dist/upload/index.js",
+          "sha256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617"
+        }
+      },
+      "knownVulnerabilityWaiver": false,
+      "runnerRuntimeCovered": false,
+      "subdependencyCoverage": "production-lock-and-license-candidates; full bundled reachability not provided",
+      "reassessmentTriggers": [
+        "revision or archive hash change",
+        "entrypoint or workflow change",
+        "new supplier metadata",
+        "new applicable advisory"
+      ]
+    }
+  ],
+  "collectors": [
+    {
+      "id": "app",
+      "scopeIds": [
+        "C01",
+        "C17"
+      ],
+      "uses": [
+        "audit",
+        "release"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "Package.swift",
+        "Package.resolved",
+        "Vendor/SwiftTerm/UPSTREAM.md",
+        "Config/Security/native-components.json"
+      ],
+      "advisorySources": [
+        "GitHub repository advisories"
+      ]
+    },
+    {
+      "id": "npm-project",
+      "scopeIds": [
+        "C02",
+        "C13"
+      ],
+      "uses": [
+        "audit",
+        "development",
+        "firebase"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "advisorySources": [
+        "npm audit",
+        "GitHub global advisories"
+      ]
+    },
+    {
+      "id": "python",
+      "scopeIds": [
+        "C03",
+        "C04",
+        "C05",
+        "C08",
+        "C09"
+      ],
+      "uses": [
+        "audit",
+        "development",
+        "release",
+        "deployment"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "Config/Security/python-tools.json",
+        "Tests/Security/requirements.txt"
+      ],
+      "advisorySources": [
+        "OSV",
+        "Python security notices",
+        "OpenSSL security notices",
+        "CPython commit advisories"
+      ]
+    },
+    {
+      "id": "node",
+      "scopeIds": [
+        "C06",
+        "C07"
+      ],
+      "uses": [
+        "audit",
+        "development",
+        "firebase",
+        "deployment"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "scripts/project-node.sh"
+      ],
+      "advisorySources": [
+        "OSV",
+        "GitHub global advisories",
+        "Node security releases",
+        "Node core advisories"
+      ]
+    },
+    {
+      "id": "deployment",
+      "scopeIds": [
+        "C10"
+      ],
+      "uses": [
+        "audit",
+        "deployment"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "Tools/Deployment/package.json",
+        "Tools/Deployment/package-lock.json"
+      ],
+      "advisorySources": [
+        "OSV",
+        "GitHub global advisories",
+        "Cloudflare security notices"
+      ]
+    },
+    {
+      "id": "actions",
+      "scopeIds": [
+        "C11",
+        "C19"
+      ],
+      "uses": [
+        "audit",
+        "ci",
+        "deployment"
+      ],
+      "owner": "project maintainer / GitHub",
+      "sources": [
+        ".github/workflows",
+        "Config/Security/action-bundles.json"
+      ],
+      "advisorySources": [
+        "GitHub repository advisories",
+        "upstream bundle manifests"
+      ]
+    },
+    {
+      "id": "emulator",
+      "scopeIds": [
+        "C12"
+      ],
+      "uses": [
+        "audit",
+        "firebase"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "node_modules/firebase-tools/lib/emulator/downloadableEmulatorInfo.json",
+        "Config/Security/java-runtime.json",
+        "Config/Security/java-runtime-linux.json",
+        "scripts/project-java-runtime.py",
+        "scripts/project-java.sh"
+      ],
+      "advisorySources": [
+        "Firestore vendor advisories",
+        "Firebase release notes",
+        "JDK vendor security notices"
+      ]
+    },
+    {
+      "id": "gcloud",
+      "scopeIds": [
+        "C14"
+      ],
+      "uses": [
+        "sync-admin"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "scripts/invite-sync-user.mjs"
+      ],
+      "advisorySources": [
+        "Google Cloud CLI release notes",
+        "OSV"
+      ]
+    },
+    {
+      "id": "pillow",
+      "scopeIds": [
+        "C15"
+      ],
+      "uses": [
+        "icon-generation"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "scripts/make-app-icon.py"
+      ],
+      "advisorySources": [
+        "OSV",
+        "wheel native inventory"
+      ]
+    },
+    {
+      "id": "platform",
+      "scopeIds": [
+        "C16",
+        "C20"
+      ],
+      "uses": [
+        "audit",
+        "development",
+        "release",
+        "deployment",
+        "firebase"
+      ],
+      "owner": "project maintainer",
+      "sources": [
+        "Config/Security/github-cli.json",
+        "scripts/project-gh-runtime.py",
+        "scripts/project-gh.sh",
+        "scripts/go-build-inventory.py"
+      ],
+      "advisorySources": [
+        "OSV"
+      ]
+    },
+    {
+      "id": "termius",
+      "scopeIds": [
+        "C18"
+      ],
+      "uses": [
+        "termius-import"
+      ],
+      "owner": "operator / Termius",
+      "sources": [
+        "scripts/TermiusExport/export_decrypted_metadata.js"
+      ],
+      "advisorySources": [
+        "Termius release notes",
+        "Electron security releases"
+      ]
+    }
+  ],
+  "monitoringIntent": {
+    "scope": "Actual project packages, selected tools and code; no OS update responsibilities",
+    "scheduleHours": 12,
+    "externalMonitoring": false,
+    "deepSourceAnalysisRequired": false,
+    "unknownPackageImpactRemainsBlocking": true,
+    "supplierEvidenceIsNotVulnerabilityWaiver": true,
+    "optionalToolsRequireSelectedUse": true,
+    "operatingSystemMonitoring": false,
+    "runnerImageUpdateMonitoring": false
+  }
+}
