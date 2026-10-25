@@ -133,7 +133,7 @@ class HealthTests(unittest.TestCase):
         self.now=dt.datetime(2026,10,24,tzinfo=dt.timezone.utc)
         self.workflow={'path':'.github/workflows/security-checks.yml','state':'active'}
         self.run={'id':1,'path':self.workflow['path'],'event':'schedule','head_branch':'main','head_repository':{'full_name':h.REPOSITORY},'status':'completed','conclusion':'success','updated_at':self.now.isoformat(),'html_url':'https://github.com/fixture'}
-        self.artifact={'id':2,'name':'security-monitor-state','expired':False,'workflow_run':{'id':1}}
+        self.artifact={'id':2,'name':'security-monitor-state','expired':False,'workflow_run':{'id':1},'created_at':self.now.isoformat()}
     def check(self):return h.evaluate(self.workflow,[self.run],[self.artifact],now=self.now)
     def test_recent_success_with_matching_evidence(self):self.assertTrue(self.check()['healthy'])
     def test_disabled_stale_failed_foreign_or_missing_artifact(self):

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Retrieve only our prior JSON report; never extract artifact paths."""
-import io,json,os,subprocess,sys,zipfile
+import io,json,os,subprocess,sys,zipfile,importlib.util
 from pathlib import Path
 repo=os.environ['GITHUB_REPOSITORY'];output=Path(sys.argv[1])
 def api(path):return subprocess.check_output([str(Path(__file__).resolve().parent/'project-gh.sh'),'api',path],timeout=60)
 artifacts=json.loads(api(f'repos/{repo}/actions/artifacts?name=security-monitor-state&per_page=10'))['artifacts']
 metadata=json.loads(api(f'repos/{repo}'))
+spec=importlib.util.spec_from_file_location('monitor_health',Path(__file__).with_name('security-monitor-health.py'))
+health=importlib.util.module_from_spec(spec);spec.loader.exec_module(health)
 items=[]
-for artifact in artifacts:
+while artifacts:
+ artifact=health.latest_artifact(artifacts)
+ artifacts=[a for a in artifacts if a['id']!=artifact['id']]
  if artifact['expired']:continue
  run_id=artifact.get('workflow_run',{}).get('id')
  if not run_id or str(run_id)==os.environ.get('GITHUB_RUN_ID'):continue

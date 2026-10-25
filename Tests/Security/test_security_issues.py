@@ -32,6 +32,24 @@ class FakeGitHub:
         raise AssertionError(path)
 
 class IssueTests(unittest.TestCase):
+    def test_real_api_spaces_writes_without_delaying_reads(self):
+        import subprocess
+        clock=[10.0];pauses=[]
+        def sleep(seconds):pauses.append(seconds);clock[0]+=seconds
+        with patch.object(s.time,'monotonic',side_effect=lambda:clock[0]),patch.object(s.time,'sleep',side_effect=sleep), \
+             patch.object(s.subprocess,'run',return_value=subprocess.CompletedProcess([],0,'{}','')) as call:
+            api=s.GitHub('owner/repo')
+            api.request('issues','POST',{});api.request('issues/1','GET');api.request('issues/1','PATCH',{})
+            api.request('issues/1/comments','POST',{})
+        self.assertEqual(pauses,[1.0,1.0]);self.assertEqual(call.call_count,4)
+
+    def test_api_failure_reports_only_status_and_limit_classification(self):
+        import subprocess
+        with patch.object(s.subprocess,'run',return_value=subprocess.CompletedProcess([],1,'','private detail; secondary rate limit (HTTP 403)')):
+            with self.assertRaisesRegex(RuntimeError,r'HTTP 403 \(rate-limited\)') as caught:
+                s.GitHub('owner/repo').request('issues','POST',{})
+        self.assertNotIn('private detail',str(caught.exception))
+
     def test_repeated_origins_retain_every_version_and_publish_once(self):
         api=FakeGitHub();r=report();f=r['findings'][0];f['version']='1.0.0'
         f['environmentObservations']=[{'environment':'ci','origin':'action/fixture','versions':versions}

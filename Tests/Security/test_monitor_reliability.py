@@ -9,6 +9,9 @@ from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+import os
+import runpy
+from unittest.mock import patch
 from test_security_issues import FakeGitHub
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -28,7 +31,32 @@ class MonitorHealthTests(unittest.TestCase):
             'head_repository':{'full_name':h.REPOSITORY},'status':'completed','conclusion':'success',
             'updated_at':self.now.isoformat(),'html_url':'https://github.com/crazy01100/myterm/actions/runs/1',
             'run_attempt':2,'head_sha':'a'*40}
-        self.artifact={'id':2,'name':'security-monitor-state','expired':False,'workflow_run':{'id':1}}
+        self.artifact={'id':2,'name':'security-monitor-state','expired':False,'workflow_run':{'id':1},'created_at':self.now.isoformat()}
+    def test_latest_attempt_artifact_uses_creation_time_not_id_or_list_order(self):
+        old={**self.artifact,'id':99,'created_at':(self.now-dt.timedelta(minutes=5)).isoformat()}
+        for artifacts in ([old,self.artifact],[self.artifact,old]):
+            self.assertEqual(h.evaluate(self.workflow,[self.run],artifacts,now=self.now)['artifactId'],2)
+    def test_missing_future_or_ambiguous_artifact_time_fails_closed(self):
+        for rows in ([{**self.artifact,'created_at':None}],
+                     [{**self.artifact,'created_at':(self.now+dt.timedelta(minutes=1)).isoformat()}],
+                     [self.artifact,{**self.artifact,'id':3}]):
+            with self.subTest(rows=rows),self.assertRaises(ValueError):h.latest_artifact(rows,now=self.now)
+    def test_restore_selects_newest_created_report_even_with_lower_id(self):
+        old={**self.artifact,'id':99,'created_at':(self.now-dt.timedelta(minutes=5)).isoformat()}
+        blob=io.BytesIO()
+        with zipfile.ZipFile(blob,'w') as archive:archive.writestr('security-report.json',json.dumps({'source':'latest-attempt'}))
+        run={**self.run,'head_repository':{'id':11}}
+        responses={'repos/owner/repo/actions/artifacts?name=security-monitor-state&per_page=10':json.dumps({'artifacts':[old,self.artifact]}).encode(),
+                   'repos/owner/repo':json.dumps({'default_branch':'main','id':11}).encode(),
+                   'repos/owner/repo/actions/runs/1':json.dumps(run).encode(),
+                   'repos/owner/repo/actions/artifacts/2/zip':blob.getvalue()}
+        with tempfile.TemporaryDirectory() as directory:
+            target=Path(directory)/'previous.json'
+            with patch.dict(os.environ,{'GITHUB_REPOSITORY':'owner/repo','GITHUB_RUN_ID':'10'}), \
+                 patch('sys.argv',['restore',str(target)]), \
+                 patch('subprocess.check_output',side_effect=lambda args,**kw:responses[args[-1]]):
+                runpy.run_path(str(ROOT/'scripts/restore-security-monitor.py'),run_name='__main__')
+            self.assertEqual(json.loads(target.read_text()),{'source':'latest-attempt'})
     def test_new_failure_is_not_hidden_by_previous_success(self):
         failed={**self.run,'id':3,'conclusion':'failure'}
         self.run['updated_at']=(self.now-dt.timedelta(hours=12)).isoformat()

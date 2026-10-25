@@ -13,6 +13,26 @@ REPOSITORY = 'crazy01100/myterm'
 WORKFLOW = 'security-checks.yml'
 
 
+def latest_artifact(artifacts, *, now=None):
+    """Artifact IDs and API list order are not chronological evidence."""
+    now=now or dt.datetime.now(dt.timezone.utc)
+    candidates=[];seen=set()
+    for artifact in artifacts:
+        identifier=artifact.get('id')
+        if type(identifier) is not int or identifier<1 or identifier in seen:
+            raise ValueError('Invalid or duplicate artifact identity')
+        seen.add(identifier)
+        stamp=dt.datetime.fromisoformat(artifact.get('created_at') or '')
+        if stamp.tzinfo is None or stamp>now:
+            raise ValueError('Invalid artifact creation time')
+        candidates.append((stamp,artifact))
+    if not candidates:raise ValueError('Missing artifact candidates')
+    candidates.sort(key=lambda item:item[0],reverse=True)
+    if len(candidates)>1 and candidates[0][0]==candidates[1][0]:
+        raise ValueError('Ambiguous latest artifact; no ID fallback')
+    return candidates[0][1]
+
+
 def fetch(endpoint):
     r = subprocess.run([str(Path(__file__).resolve().parent/'project-gh.sh'), 'api', '--method', 'GET', endpoint], check=True,
                        capture_output=True, text=True, timeout=25)
@@ -67,8 +87,9 @@ def evaluate(workflow, runs, artifacts, *, now=None, max_hours=48):
     if not evidence:
         result.update(status='missing-evidence', reason='Successful monitor has no retained evidence artifact')
         return result
+    artifact=latest_artifact(evidence,now=now)
     result.update(status='healthy', healthy=True, reason='Recent successful monitor and retained evidence found',
-                  artifactId=max(evidence, key=lambda a: a['id'])['id'],
+                  artifactId=artifact['id'],artifactCreatedAt=artifact['created_at'],
                   runAttempt=run.get('run_attempt'), headSHA=run.get('head_sha'))
     return result
 
