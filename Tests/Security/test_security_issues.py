@@ -32,6 +32,39 @@ class FakeGitHub:
         raise AssertionError(path)
 
 class IssueTests(unittest.TestCase):
+    def test_repeated_origins_retain_every_version_and_publish_once(self):
+        api=FakeGitHub();r=report();f=r['findings'][0];f['version']='1.0.0'
+        f['environmentObservations']=[{'environment':'ci','origin':'action/fixture','versions':versions}
+                                      for versions in (['1.0.0','2.0.0'],['1.0.0'],['2.0.0'])]
+        s.synchronize(r,api,True,ENV)
+        self.assertEqual(s.synchronize(r,api,True,ENV),[])
+        stored=s.fmt.parse_issue(api.issues[0])['finding']
+        self.assertEqual(stored['version'],'1.0.0, 2.0.0')
+        self.assertEqual(stored['environmentObservations'],[{'environment':'ci','origin':'action/fixture','versions':['1.0.0','2.0.0']}])
+        f['environmentObservations']=[{'environment':'local','origin':'tool/fixture','versions':['3.0.0']}]
+        s.synchronize(r,api,True,ENV)
+        self.assertEqual(s.synchronize(r,api,True,ENV),[])
+        self.assertEqual(len(s.fmt.parse_issue(api.issues[0])['finding']['environmentObservations']),2)
+
+    def test_official_jdk_notice_publishes_once_without_accepting_risk(self):
+        api=FakeGitHub();r=report();f=r['findings'][0]
+        f.update(id='CVE-2099-1234',component='Temurin',scope='development',
+                 status='needs-review',url='https://openjdk.org/groups/vulnerability/advisories/2099-01-01')
+        actions=s.synchronize(r,api,True,ENV)
+        self.assertEqual(actions[0]['action'],'create')
+        self.assertIn(f['url'],api.issues[0]['body'])
+        self.assertEqual(s.synchronize(r,api,True,ENV),[])
+        self.assertEqual(s.fmt.parse_issue(api.issues[0])['finding']['status'],'needs-review')
+
+    def test_jdk_notice_does_not_allow_lookalike_hosts_or_unrelated_urls(self):
+        valid='https://openjdk.org/groups/vulnerability/advisories/2099-01-01'
+        for url in (valid.replace('openjdk.org','openjdkXorg'),valid.replace('openjdk.org','openjdk.org.example.com'),
+                    valid.replace('https:','http:'),valid+'?redirect=1',valid+'#fragment',
+                    valid.replace('/groups/vulnerability/advisories/','/unrelated/')):
+            api=FakeGitHub();r=report();r['findings'][0]['url']=url
+            with self.subTest(url=url),self.assertRaises(ValueError):s.synchronize(r,api,True,ENV)
+            self.assertEqual(api.calls,[])
+
     def test_partial_verified_scan_adds_risk_but_never_resolves_or_lowers_old_risk(self):
         api=FakeGitHub();original=report();s.synchronize(original,api,True,ENV)
         partial=report(False);partial.update(scanStatus='failed',errors=['one provider unavailable'],publicationMode='additive',

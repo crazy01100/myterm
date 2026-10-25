@@ -52,7 +52,7 @@ def validate_report(report, now=None, additive=False):
             raise ValueError('Invalid finding fields')
         if f['scope'] not in SCOPES or f['status'] not in ['affected', 'needs-review']:
             raise ValueError('Unknown finding scope/status')
-        if not re.fullmatch(r'https://(?:github\.com/[A-Za-z0-9_./-]+|osv\.dev/vulnerability/[A-Za-z0-9_-]+|openssl-library\.org/news/secjson/cve-[0-9]{4}-[0-9]+\.json)', f['url']):
+        if not re.fullmatch(r'https://(?:github\.com/[A-Za-z0-9_./-]+|osv\.dev/vulnerability/[A-Za-z0-9_-]+|openssl-library\.org/news/secjson/cve-[0-9]{4}-[0-9]+\.json|openjdk\.org/groups/vulnerability/advisories/[0-9]{4}-[0-9]{2}-[0-9]{2})', f['url']):
             raise ValueError('Unexpected advisory URL')
         for observation in f.get('environmentObservations',[]):
             if (observation.get('environment') not in ('local','ci','deployment') or
@@ -62,11 +62,30 @@ def validate_report(report, now=None, additive=False):
                 raise ValueError('Invalid environment observation')
 
 
+def merge_observations(*groups):
+    combined={}
+    for group in groups:
+        for observation in group:
+            key=(observation['environment'],observation['origin'])
+            combined.setdefault(key,set()).update(observation['versions'])
+    return [{'environment':env,'origin':origin,'versions':sorted(versions)}
+            for (env,origin),versions in sorted(combined.items())]
+
+
+def normalize_observations(finding):
+    if finding.get('environmentObservations'):
+        finding['environmentObservations']=merge_observations(finding['environmentObservations'])
+        versions={v.strip() for v in finding['version'].split(',')}
+        versions.update(v for o in finding['environmentObservations'] for v in o['versions'])
+        finding['version']=', '.join(sorted(versions))
+
+
 def risks(report):
     result = {}
     for f in report['findings']:
         key = digest([f[k] for k in ['id','component','scope']])
         snapshot = dict(f)
+        normalize_observations(snapshot)
         if f['scope'] == 'released-app': snapshot['releaseTag'] = report['releaseTag']
         if key in result: raise ValueError('Ambiguous duplicate risk identity')
         result[key] = snapshot
@@ -149,13 +168,9 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                 if previous['status']=='needs-review':f['status']='needs-review'
                 f['acceptedRisk']=False
             if old['finding'].get('environmentObservations'):
-                current={(o['environment'],o['origin']):o for o in f.get('environmentObservations',[])}
-                for observation in old['finding']['environmentObservations']:
-                    current.setdefault((observation['environment'],observation['origin']),observation)
-                f['environmentObservations']=[current[k] for k in sorted(current)]
-                versions={v.strip() for v in f['version'].split(',')}
-                versions.update(v for o in current.values() for v in o['versions'])
-                f['version']=', '.join(sorted(versions))
+                f['environmentObservations']=merge_observations(
+                    f.get('environmentObservations',[]),old['finding']['environmentObservations'])
+                normalize_observations(f)
             changed=fmt.semantic(old['finding'])!=fmt.semantic(f) or issue['state']!='open'
             current_report=report if changed else {'checkedAt':old['checkedAt']}
             title,body=render(key,f,current_report)
