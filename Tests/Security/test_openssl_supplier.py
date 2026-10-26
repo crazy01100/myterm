@@ -57,7 +57,7 @@ class SupplierTests(unittest.TestCase):
         pip.validate_envelope(r)
         with patch.object(s, 'verify_environments', return_value=self.proof):
             s.revalidate(r, self.root, lambda _: self.advisory)
-        with patch.object(s, 'verify_environments', side_effect=ValueError('drift')):
+        with patch.object(s, 'verify_environments', side_effect=ValueError('drift')), patch.object(s, 'verify_package', side_effect=ValueError('fixture')):
             with self.assertRaises(ValueError): s.revalidate(r, self.root, lambda _: self.advisory)
 
     def test_changed_cna_and_network_error_preserve_original_and_block(self):
@@ -78,9 +78,10 @@ class SupplierTests(unittest.TestCase):
 
     def test_missing_loaded_identity_is_not_a_waiver(self):
         r = self.report()
-        with patch.object(s, 'verify_environments', side_effect=ValueError('unmapped')):
+        with patch.object(s, 'verify_environments', side_effect=ValueError('unmapped')), patch.object(s, 'verify_package', return_value={'packageSHA256': 'a'*64}):
             s.classify(r, self.root, lambda _: self.advisory)
         self.assertEqual(r['findings'], [self.finding]); self.assertTrue(r['errors'])
+        self.assertEqual(r['opensslSupplierPackageCheck']['status'], 'verified')
 
     def test_partition_cannot_drop_raw_matches(self):
         r = self.report(); self.classify(r); r['supplierFixReviews'] = []

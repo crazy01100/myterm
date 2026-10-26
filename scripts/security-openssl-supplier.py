@@ -90,7 +90,17 @@ def probe():
         packages.append({'package': 'libssl3t64', 'sourcePackage': row[1], 'version': row[2], 'architecture': row[4]})
     if packages[0] != packages[1] or libraries != loaded_libraries(Path('/proc/self/maps').read_text()):
         raise ValueError('Mixed or changed OpenSSL package contents')
-    return {'status': 'observed', **packages[0], 'libraries': libraries, 'upstreamVersion': ssl.OPENSSL_VERSION.split()[1]}
+    # Diagnostic MD5 is the package database's format, never a trust decision.
+    manifest = Path('/var/lib/dpkg/info/libssl3t64:amd64.md5sums')
+    details = {}
+    if manifest.is_file() and manifest.stat().st_size < 1024*1024:
+        stored = dict((path, value) for value, path in re.findall(r'(?m)^([a-f0-9]{32})  (.+)$', manifest.read_text()))
+        for path in libraries:
+            data = Path(path).read_bytes()
+            details[path] = {'size': len(data), 'contentMD5': hashlib.md5(data, usedforsecurity=False).hexdigest(),
+                             'packageDatabaseMD5': stored.get(path.lstrip('/'))}
+    return {'status': 'observed', **packages[0], 'libraries': libraries,
+            'packageFileDiagnostics': details, 'upstreamVersion': ssl.OPENSSL_VERSION.split()[1]}
 
 
 def configuration(root):
@@ -222,6 +232,13 @@ def classify(report, root, fetch=None):
     try:
         evidence = verify_environments(root, p)
     except Exception as error:
+        # Independently verify the downloaded package even when process contents differ.
+        # This distinguishes a bad pin/extraction from a modified installed library.
+        try:
+            report['opensslSupplierPackageCheck'] = {'status': 'verified', **verify_package(root, p)}
+        except Exception as package_error:
+            report['opensslSupplierPackageCheck'] = {'status': 'failed', 'error': type(package_error).__name__,
+                'reason': str(package_error) if type(package_error) is ValueError else 'Official package verification failed'}
         report.setdefault('errors', []).append('OpenSSL supplier identity unavailable: '+type(error).__name__+
             (' ('+str(error)+')' if type(error) is ValueError else ''))
         return
