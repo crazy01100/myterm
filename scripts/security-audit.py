@@ -431,6 +431,9 @@ def scan_toolchain(report):
     advisory_module=load('security-toolchain-advisories')
     coverage_module=load('security-toolchain-report')
     observed=inventory_module.inventory(ROOT, purpose='audit')
+    report['opensslLoadedEvidence']=[{'role': e['role'], 'vendorVersion': e.get('vendorVersion'),
+        'loaded': e.get('loadedEvidence')} for c in observed.get('coverage', []) if c.get('id')=='python'
+        for e in c.get('evidence', []) if e.get('component')=='openssl']
     # A failed provider must not prevent collecting other providers' evidence.
     # Failure remains blocking; completed results are diagnostic, not a waiver.
     queried={'findings':[], 'advisoryQueryStatus':'failed'}

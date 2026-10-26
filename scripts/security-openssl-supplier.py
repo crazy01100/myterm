@@ -222,7 +222,8 @@ def classify(report, root, fetch=None):
     try:
         evidence = verify_environments(root, p)
     except Exception as error:
-        report.setdefault('errors', []).append('OpenSSL supplier identity unavailable: '+type(error).__name__)
+        report.setdefault('errors', []).append('OpenSSL supplier identity unavailable: '+type(error).__name__+
+            (' ('+str(error)+')' if type(error) is ValueError else ''))
         return
     def review(f):
         try:

@@ -166,7 +166,8 @@ def python_probe():
     try:
         loaded = supplier.probe()
     except Exception as error:
-        loaded = {'status': 'unavailable', 'error': type(error).__name__}
+        loaded = {'status': 'unavailable', 'error': type(error).__name__,
+                  'reason': str(error) if type(error) is ValueError else 'Process identity query failed'}
     return {'prefix': str(prefix), 'basePrefix': sys.base_prefix, 'components': rows, 'native': native,
             'nativeLinkage':linkage, 'opensslLoaded': loaded}
 
