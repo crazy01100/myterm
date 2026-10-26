@@ -32,22 +32,23 @@ def sha(path):
 
 def configuration(root=ROOT):
     data = json.loads((root / CONFIG).read_text())
-    if data.get('schemaVersion') != 1 or set(data.get('packages', {})) != {'pip', 'certifi'}:
+    if data.get('schemaVersion') != 2 or set(data.get('packages', {})) != {'pip', 'certifi'}:
         raise ValueError('Unknown Python bootstrap policy')
-    if not re.fullmatch('[a-f0-9]{64}', data.get('caSHA256', '')):
-        raise ValueError('Missing reviewed CA fingerprint')
     for name, row in data['packages'].items():
         url = urlparse(row['url'])
         if (url.scheme != 'https' or url.netloc != 'files.pythonhosted.org' or url.query or url.fragment
                 or not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+', row['version'])
                 or Path(url.path).name != f"{name}-{row['version']}-py3-none-any.whl"
-                or not re.fullmatch('[a-f0-9]{64}', row['sha256'])):
+                or not re.fullmatch('[a-f0-9]{64}', row['sha256'])
+                or not re.fullmatch('[a-f0-9]{64}', row.get('caSHA256', ''))):
             raise ValueError('Invalid pinned wheel identity')
     for name, floor in [('pip', (26, 2, 2)), ('certifi', (2026, 10, 19))]:
         if tuple(map(int, data['packages'][name]['version'].split('.'))) < floor:
             raise ValueError('Bootstrap pin is below the official security floor: ' + name)
-    if data['packages']['pip'].get('vendoredCertifi') != data['packages']['certifi']['version']:
-        raise ValueError('Bootstrap certificate versions must match the reviewed bundle')
+    vendor_version = data['packages']['pip'].get('vendoredCertifi', '')
+    if (not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+', vendor_version)
+            or tuple(map(int, vendor_version.split('.'))) < (2026, 10, 19)):
+        raise ValueError('Missing or outdated pinned pip certificate version')
     return data
 
 
@@ -75,8 +76,12 @@ def verify_wheel(path, name, row, policy):
         if f'\nName: {name}\n' not in '\n' + metadata or f"\nVersion: {row['version']}\n" not in '\n' + metadata:
             raise ValueError('Wheel metadata does not match pin')
         member = 'pip/_vendor/certifi/cacert.pem' if name == 'pip' else 'certifi/cacert.pem'
-        if hashlib.sha256(archive.read(member)).hexdigest() != policy['caSHA256']:
+        if hashlib.sha256(archive.read(member)).hexdigest() != row['caSHA256']:
             raise ValueError('Wheel CA bundle differs from reviewed source')
+        if name == 'pip':
+            vendor = literal_version_text(archive.read('pip/_vendor/certifi/__init__.py').decode())
+            if vendor != row['vendoredCertifi']:
+                raise ValueError('Wheel vendored certifi version differs from reviewed source')
 
 
 def prepare(root=ROOT):
@@ -101,7 +106,11 @@ def prepare(root=ROOT):
 
 
 def literal_version(path):
-    for node in ast.parse(path.read_text()).body:
+    return literal_version_text(path.read_text())
+
+
+def literal_version_text(text):
+    for node in ast.parse(text).body:
         if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '__version__' for t in node.targets):
             value = ast.literal_eval(node.value)
             if isinstance(value, str):
@@ -157,7 +166,8 @@ def validate_current(info, policy, root=ROOT, role=None):
             raise ValueError('Python tools need trusted setup: ' + origin)
         if 'certifi' in origin:
             row = rows[origin]
-            if row.get('caSHA256') != policy['caSHA256'] or not Path(row['caPath']).resolve().is_relative_to(prefix):
+            pin = policy['packages']['pip' if origin == 'pip/_vendor/certifi' else 'certifi']
+            if row.get('caSHA256') != pin['caSHA256'] or not Path(row['caPath']).resolve().is_relative_to(prefix):
                 raise ValueError('Unreviewed CA bundle: ' + origin)
     return rows['certifi']['caPath']
 

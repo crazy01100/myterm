@@ -149,11 +149,11 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 ## Python 安裝工具與憑證信任
 
-開發工具由 `Config/Security/python-tools.json` 固定 pip 26.2.2、certifi 2026.10.19、官方 wheel URL／SHA-256 及 CA 檔摘要。這處理 [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) 的憑證信任事件；沒有 CVE 不代表不需追蹤。pip 內附 certifi 與獨立 certifi 分開核對，單獨安裝 certifi 不能替換舊 pip 的內附副本。
+開發工具由 `Config/Security/python-tools.json` 固定 pip 26.2.2（內附 certifi 2026.10.19）、獨立 certifi 2026.10.23，以及各自官方 wheel URL／SHA-256 與 CA 檔摘要。這處理 [GHSA-6q48-6c7w-9gw2](https://github.com/advisories/GHSA-6q48-6c7w-9gw2) 的憑證信任事件；沒有 CVE 不代表不需追蹤。pip 內附 certifi 與獨立 certifi 分開核對，單獨安裝 certifi 不能替換舊 pip 的內附副本。兩份官方 CA 不要求版本或內容相同，但各來源必須符合自己的固定版本與摘要；互換、漂移或未知來源均拒絕。專案 HTTPS 明確使用獨立 certifi，pip 維持離線安裝，內附舊元件仍受監測。certifi 2026.10.23 並未移除所有後續公告涉及的信任根，不能代替 CPython 的中繼金鑰修補。
 
 `python-toolchain.py setup` 先取得並核對所有精確 wheel，才建立／更新 `.build/python-runtime` 與 `.build/security-tools`；種子 pip 只用 no-index／no-deps 安裝已驗證的本機 wheel，不先做一般網路下載。兩個環境各自核對 pip、內附／獨立 certifi 與 CA 摘要。既有 venv 原地更新，只有明確 `setup --rebuild` 才清空重建；失敗即停止，不使用不完整環境。不要在其他程序仍使用該環境時重建，也不要搬動 venv 而忽略絕對 shebang。
 
-`setup-security-tools.sh` 共用上述流程，再從明確官方 index 以 require-hashes／wheel-only 安裝原有驗簽相依；不使用私人 pip 設定，不修改系統 Python 或共用解譯器。`security-python.sh` 每次驗證工具與 CA 並設定子程序的 SSL_CERT_FILE；一般 `project-python.sh` 仍只選解譯器，不承諾改變任意第三方程式的信任邏輯。安全掃描與退役公告查詢直接使用 helper 建立的明確 certifi SSLContext，不合併舊預設 OpenSSL CA 檔。自訂企業 CA 不會自動加入，需求須另行審查；不能停用驗證來修復連線。
+`setup-security-tools.sh` 共用上述流程，再下載固定官方 wheel、核對 hash 後離線安裝原有驗簽相依；不使用私人 pip 設定，不修改系統 Python 或共用解譯器。`security-python.sh` 每次驗證工具與 CA 並設定子程序的 SSL_CERT_FILE；一般 `project-python.sh` 仍只選解譯器，不承諾改變任意第三方程式的信任邏輯。安全掃描與退役公告查詢直接使用 helper 建立的明確 certifi SSLContext，不合併舊預設 OpenSSL CA 檔。自訂企業 CA 不會自動加入，需求須另行審查；不能停用驗證來修復連線。
 
 gate／monitor／deploy 在 Python 網路作業前先準備可信工具，並記錄 bootstrap 前置狀態與實際盤點；前置失敗不代表完成掃描。盤點包含來源固定版本、當次兩個受管環境的 pip／內附及獨立 certifi，以及實際存在的 uv 套件；ensurepip 種子另列為重建來源，不視為目前執行 pip。它不掃描整台 Mac、系統全部套件或其他工具的所有內附相依。
 

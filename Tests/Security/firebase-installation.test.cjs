@@ -9,13 +9,14 @@ function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'myterm-firebase-install-'));
   t.after(() => fs.rmSync(root, {recursive:true, force:true}));
   const write = (file, value) => { const p=path.join(root,file);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,JSON.stringify(value)); };
-  const manifest = {devDependencies:{'firebase-tools':'15.31.0'}};
+  const manifest = {devDependencies:{'firebase-tools':'15.31.0','@firebase/rules-unit-testing':'6.0.0'}};
   const lock = {packages:{'':manifest}};
   write('package.json',manifest);
-  for(const [name,version] of Object.entries({'firebase-tools':'15.31.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2'})) {
-    write('node_modules/'+name+'/package.json',{name,version,main:'index.js'});
+  for(const [name,version] of Object.entries({'firebase-tools':'15.31.0','@firebase/rules-unit-testing':'6.0.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2'})) {
+    const peerDependencies = name === '@firebase/rules-unit-testing' ? {firebase:'^13.0.0'} : undefined;
+    write('node_modules/'+name+'/package.json',{name,version,main:'index.js',peerDependencies});
     fs.writeFileSync(path.join(root,'node_modules',name,'index.js'),'throw Error("must not execute package code");');
-    lock.packages['node_modules/'+name]={version};
+    lock.packages['node_modules/'+name]={version,peerDependencies};
   }
   write('package-lock.json',lock);
   return {root,write,manifest,lock};
@@ -37,4 +38,17 @@ test('unlocked nested dependency cannot shadow the reviewed dependency',t=>{
   const {root,write}=fixture(t);const p='node_modules/firebase-tools/node_modules/stream-json';
   write(p+'/package.json',{name:'stream-json',version:'1.9.1',main:'index.js'});fs.writeFileSync(path.join(root,p,'index.js'),'');
   assert.throws(()=>verify(root),/differs from lockfile/);
+});
+
+test('stale locked Rules peer metadata is rejected without loading package code',t=>{
+  const {root,write,lock}=fixture(t);
+  lock.packages['node_modules/@firebase/rules-unit-testing'].peerDependencies.firebase='13.0.0';
+  write('package-lock.json',lock);
+  assert.throws(()=>verify(root),/peer requirements differ/);
+});
+test('missing locked Rules peer metadata is rejected',t=>{
+  const {root,write,lock}=fixture(t);
+  delete lock.packages['node_modules/@firebase/rules-unit-testing'].peerDependencies;
+  write('package-lock.json',lock);
+  assert.throws(()=>verify(root),/peer requirements differ/);
 });
