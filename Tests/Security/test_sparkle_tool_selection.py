@@ -18,6 +18,7 @@ class SparkleToolSelectionTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         (self.root/'scripts').mkdir()
         shutil.copy2(ROOT/'scripts/project-python.sh',self.root/'scripts/project-python.sh')
+        shutil.copy2(ROOT/'scripts/python-openssl-env.sh',self.root/'scripts/python-openssl-env.sh')
         (self.root/'Package.resolved').write_text(json.dumps({'pins':[{'identity':'sparkle','state':{'version':'2.10.0'}}]}))
 
     def artifact(self, cache, version):
@@ -33,7 +34,7 @@ class SparkleToolSelectionTests(unittest.TestCase):
     def select(self):
         return subprocess.run(['zsh','-c','source "$1"; find_sparkle_tool "$2" sign_update','test',
             str(ROOT/'scripts/sparkle-key-common.sh'),str(self.root)],capture_output=True,text=True,
-            env={**os.environ,'MYTERM_PYTHON':sys.executable})
+            env={**os.environ,'MYTERM_PYTHON':sys.executable,'MYTERM_CI_OPENSSL':''})
 
     def test_release_cache_wins_over_stale_debug_cache(self):
         self.artifact('.build','2.9.6');expected=self.artifact('.build-app','2.10.0')

@@ -45,7 +45,7 @@ def command(args):
     return result.stdout
 
 
-def loaded_libraries(maps, stat=os.stat, read=lambda p: Path(p).read_bytes()):
+def loaded_libraries(maps, stat=os.stat, read=lambda p: Path(p).read_bytes(), *, isolated_paths=()):
     """Bind mapped inode/device to the file being hashed; reject replaced/deleted libs."""
     found = {}
     for line in maps.splitlines():
@@ -53,7 +53,7 @@ def loaded_libraries(maps, stat=os.stat, read=lambda p: Path(p).read_bytes()):
         if len(fields) != 6 or not re.search(r'/lib(?:ssl|crypto)\.so(?:\.|$)', fields[5]):
             continue
         _, _, _, device, inode, path = fields
-        if not re.fullmatch(r'/usr/lib/[A-Za-z0-9_-]+/lib(?:ssl|crypto)\.so\.3', path):
+        if path not in isolated_paths and not re.fullmatch(r'/usr/lib/[A-Za-z0-9_-]+/lib(?:ssl|crypto)\.so\.3', path):
             raise ValueError('Unknown or deleted mapped OpenSSL library')
         st = stat(path)
         major, minor = [int(x, 16) for x in device.split(':')]
@@ -76,7 +76,22 @@ def probe():
     # ssl is already imported in this same interpreter, not a shell openssl binary.
     if not sys.platform.startswith('linux'):
         return {'status': 'not-applicable', 'reason': 'Existing non-Linux vendor identity remains authoritative'}
-    libraries = loaded_libraries(Path('/proc/self/maps').read_text())
+    p = configuration(ROOT)['packages'][0]
+    runtime = load('project-openssl-runtime')
+    isolated = runtime.paths(ROOT, p)
+    paths = {str(x) for x in isolated.values()}
+    libraries = loaded_libraries(Path('/proc/self/maps').read_text(), isolated_paths=paths)
+    if set(libraries) & paths:
+        if set(libraries) != paths:
+            raise ValueError('Mixed isolated and system OpenSSL libraries')
+        runtime.verify(ROOT, p)
+        normalized = {name: libraries[str(path)] for name, path in isolated.items()}
+        if normalized != p['libraries'] or libraries != loaded_libraries(Path('/proc/self/maps').read_text(), isolated_paths=paths):
+            raise ValueError('Isolated OpenSSL mapping drifted')
+        return {'status': 'observed', 'installation': 'project-isolated-official-package',
+                **{key: p[key] for key in ('package', 'sourcePackage', 'version', 'architecture')},
+                'libraries': normalized, 'loadedPaths': {k: str(v) for k, v in isolated.items()},
+                'packageSHA256': p['sha256'], 'upstreamVersion': ssl.OPENSSL_VERSION.split()[1]}
     packages = []
     for path in sorted(libraries):
         owner = command(['/usr/bin/dpkg-query', '-S', path]).decode().strip()
@@ -99,7 +114,7 @@ def probe():
             data = Path(path).read_bytes()
             details[path] = {'size': len(data), 'contentMD5': hashlib.md5(data, usedforsecurity=False).hexdigest(),
                              'packageDatabaseMD5': stored.get(path.lstrip('/'))}
-    return {'status': 'observed', **packages[0], 'libraries': libraries,
+    return {'status': 'observed', 'installation': 'dpkg-managed', **packages[0], 'libraries': libraries,
             'packageFileDiagnostics': details, 'upstreamVersion': ssl.OPENSSL_VERSION.split()[1]}
 
 

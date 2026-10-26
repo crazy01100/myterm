@@ -8,6 +8,7 @@ import argparse
 import ast
 import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import platform
@@ -122,6 +123,13 @@ def inspect_current():
     result = {'python': '.'.join(map(str, sys.version_info[:3])), 'prefix': sys.prefix,
               'basePrefix': sys.base_prefix, 'purelib': sysconfig.get_path('purelib'),
               'ensurepip': None, 'packages': [], 'sslDefaultCA': ssl.get_default_verify_paths().cafile}
+    if os.environ.get('MYTERM_CI_OPENSSL') == 'required':
+        spec = importlib.util.spec_from_file_location('openssl_supplier', ROOT/'scripts/security-openssl-supplier.py')
+        helper = importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
+        loaded = helper.probe()
+        if loaded.get('installation') != 'project-isolated-official-package':
+            raise ValueError('CI Python did not load verified isolated OpenSSL')
+        result['opensslLoaded'] = loaded
     try:
         import ensurepip
         result['ensurepip'] = ensurepip.version()

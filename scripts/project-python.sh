@@ -2,6 +2,7 @@
 # Select a supported project interpreter without replacing the system Python.
 set -euo pipefail
 project_dir="$(cd "$(dirname "$0")/.." && pwd)"
+source "$project_dir/scripts/python-openssl-env.sh"
 usable() {
   [[ -x "$1" ]] && "$1" -I -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) and sys.version_info.releaselevel == "final" else 1)' >/dev/null 2>&1
 }

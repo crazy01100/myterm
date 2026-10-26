@@ -228,3 +228,5 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 `security-openssl-supplier.py` 只核對兩個受管 Python 環境實際載入的 OpenSSL。Linux 記錄程序映射、檔案內容與所屬套件完整版本；`Config/Security/openssl-supplier.json` 固定官方 HTTPS checksum 清單核對的封裝、函式庫及安全修補紀錄摘要。每次比對官方封裝內的逐 CVE 修補紀錄及目前 OpenSSL CNA，不能用上游版號、映像清單或僅有套件名稱推定已修補。此流程不安裝套件、不掃描 OS 或其他 runner 軟體。
 
 原命中保存在 `rawFindings`，精確供應商修補另存 `supplierFixReviews`；gate 與 Issue 寫入前重新核對。只有同一公告、所有相關環境／origin 與函式庫內容均驗證完整，才可依已修補解除對應 Issue，並保留維護摘要。公告變動、來源不符、缺證據或查詢失敗均保留風險與阻擋；非此精確封裝、未驗證環境與其他原生函式庫不借用此判定。這不是漏洞例外，發布／部署與其他風險門檻不變。
+
+已核准的完整Linux安全流程使用同版本官方OpenSSL的專案隔離副本，目的是消除runner同版號卻內容不同的來源不確定性；不把runner雜湊加進信任表。固定deb／兩份函式庫／修補紀錄雜湊不變。準備只寫入專案`.build`，不以dpkg安裝，不改系統CA／套件；原生系統來源仍須原本的精確核對。所有45筆公告仍逐筆比對目前CNA，任何變化都保留待審。來源選擇變數不是gate豁免，三個完整流程必須選用，獨立健康流程維持無套件準備。
