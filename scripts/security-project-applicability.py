@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Four reviewed platform/subset decisions; preserve raw matches and fail closed.
+"""Reviewed platform, subset and project-use decisions; retain raw matches.
 
 Reviewed source graphs are bound to exact official bytes, not inferred from a
 missing binary string or a package version. They are not recomputed by executing
@@ -40,6 +40,19 @@ def digest(value):
                                      separators=(',', ':')).encode()).hexdigest()
 
 
+def identity(row):
+    return row.get('id'), row.get('component'), row.get('scope')
+
+
+def target(row):
+    legacy = TARGETS.get(row.get('id'))
+    if legacy and (row.get('component'), row.get('scope')) == legacy[1:]:
+        return legacy[0]
+    if identity(row) in load('security-usage-applicability').targets():
+        return 'reviewed-project-usage'
+    return None
+
+
 def configuration(root):
     policy = json.loads((root/CONFIG).read_text())
     rules = policy.get('rules', [])
@@ -56,7 +69,7 @@ def configuration(root):
                     else {'platform/project-gh'} if rule['id'] == 'GO-2026-5932' else None)
         if expected is not None and set(rule['origins']) != expected:
             raise ValueError('Applicability origin scope changed')
-    return rules
+    return rules + load('security-usage-applicability').configuration(root)
 
 
 def advisory_digest(record, kind):
@@ -178,23 +191,39 @@ def verify(rule, root, fetch=None):
     if (record.get('ghsa_id', record.get('id')) != rule['id'] or record.get('withdrawn_at') or record.get('withdrawn')
             or advisory_digest(record, rule['advisoryKind']) != rule['advisorySHA256']):
         raise ValueError('Official applicability conditions changed')
-    proof = {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
-             'upload-lodash-subset': action_subset}[rule['decision']](root, rule)
+    proof = (load('security-usage-applicability').verify(root, rule)
+             if rule['decision'] == 'reviewed-project-usage' else
+             {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
+              'upload-lodash-subset': action_subset}[rule['decision']](root, rule))
+    config = load('security-usage-applicability').CONFIG if rule['decision'] == 'reviewed-project-usage' else CONFIG
     return {'id': rule['id'], 'decision': rule['decision'], 'component': rule['component'],
             'scope': rule['scope'], 'origins': rule['origins'], 'version': rule.get('version'),
+            **({'originVersions': rule['originVersions']} if 'originVersions' in rule else {}),
             'status': 'not-affected', 'reason': rule['reason'], 'evidence': proof,
             'advisorySHA256': rule['advisorySHA256'], 'grantsRiskException': False,
-            'ruleSHA256': hashlib.sha256((root/CONFIG).read_bytes()).hexdigest()}
+            'ruleSHA256': hashlib.sha256((root/config).read_bytes()).hexdigest()}
 
 
 def covers(proof, finding, environment):
     observations = finding.get('environmentObservations', [])
+    origin_versions = proof.get('originVersions')
+    if origin_versions is not None:
+        observed_versions = {}
+        for observation in observations:
+            observed_versions.setdefault(observation.get('origin'), set()).update(observation.get('versions', []))
+        version_ok = (set(origin_versions) == set(proof['origins'])
+                      and observed_versions == {origin: set(versions) for origin, versions in origin_versions.items()}
+                      and set(v.strip() for v in finding.get('version', '').split(',')) ==
+                          {v for values in origin_versions.values() for v in values})
+    else:
+        version_ok = (proof.get('version') is None or
+                      (finding.get('version') == proof['version'] and
+                       all(set(o.get('versions', [])) == {proof['version']} for o in observations)))
     return (all(finding.get(k) == proof.get(k) for k in ('id', 'component', 'scope'))
             and set(finding.get('dependencyPaths', [])) == set(proof['origins'])
             and bool(observations) and {o.get('origin') for o in observations} == set(proof['origins'])
-            and all(o.get('environment') == environment and o.get('versions')
-                    and (proof.get('version') is None or set(o['versions']) == {proof['version']}) for o in observations)
-            and (proof.get('version') is None or finding.get('version') == proof['version']))
+            and all(o.get('environment') == environment and o.get('versions') for o in observations)
+            and version_ok)
 
 
 def classify(report, root=ROOT, fetch=None, verifier=None):
@@ -226,7 +255,7 @@ def classify(report, root=ROOT, fetch=None, verifier=None):
         coverage['findings'] = [f for f in coverage.get('findings', []) if not any(
             f.get('id') == r['finding']['id'] and f.get('component') == r['finding']['component']
             and set(f.get('origins', [])) == set(r['proof']['origins'])
-            and f.get('versions') == [r['finding']['version']] for r in excluded)]
+            and set(f.get('versions', [])) == set(v.strip() for v in r['finding']['version'].split(',')) for r in excluded)]
         coverage['blocking'] = (coverage.get('checksComplete') is not True or any(
             f.get('status') == 'needs-review' or f.get('severity') not in ('low', 'info') for f in coverage['findings']))
 
@@ -234,17 +263,17 @@ def classify(report, root=ROOT, fetch=None, verifier=None):
 def validate_envelope(report):
     proofs = report.get('projectApplicabilityProofs', [])
     reviews = report.get('projectApplicabilityReviews', [])
-    if not isinstance(proofs, list) or not isinstance(reviews, list) or len(proofs) > 4 or len(reviews) > 4:
+    maximum = len(TARGETS) + len(load('security-usage-applicability').targets())
+    if not isinstance(proofs, list) or not isinstance(reviews, list) or len(proofs) > maximum or len(reviews) > maximum:
         raise ValueError('Invalid project applicability envelope')
     seen = set()
     for p in proofs:
-        if (p.get('id') not in TARGETS or p['id'] in seen
-                or tuple(p.get(k) for k in ('decision', 'component', 'scope')) != TARGETS[p['id']]
+        if (target(p) is None or identity(p) in seen or p.get('decision') != target(p)
                 or p.get('status') != 'not-affected' or p.get('grantsRiskException') is not False
                 or p.get('environment') != report.get('observedEnvironment') or not isinstance(p.get('evidence'), dict)
                 or any(not HEX.fullmatch(p.get(k, '')) for k in ('ruleSHA256', 'advisorySHA256'))):
             raise ValueError('Unrecognized project applicability proof')
-        seen.add(p['id'])
+        seen.add(identity(p))
     for r in reviews:
         if r.get('proof') not in proofs or not covers(r['proof'], r.get('finding', {}), report.get('observedEnvironment')):
             raise ValueError('Project applicability does not cover the finding')
@@ -272,5 +301,5 @@ def previous_decision(report, finding):
 def owned_resolution(snapshot):
     value = snapshot.get('applicabilityResolution', {})
     finding = snapshot.get('finding', {})
-    return (finding.get('id') in TARGETS and value.get('decision') == TARGETS[finding['id']][0]
+    return (target(finding) is not None and value.get('decision') == target(finding)
             and HEX.fullmatch(value.get('proofSHA256', '')) is not None)
