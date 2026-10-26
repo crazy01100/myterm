@@ -244,7 +244,8 @@ def validate_envelope(report):
         ids.add(finding['id'])
     original = [digest(f) for f in raw]
     partition = ([digest(f) for f in report['findings']] + [digest(r['finding']) for r in reviews]
-                 + [digest(r['finding']) for r in report.get('supplierFixReviews', [])])
+                 + [digest(r['finding']) for r in report.get('supplierFixReviews', [])]
+                 + [digest(r['finding']) for r in report.get('projectApplicabilityReviews', [])])
     if len(original) != len(set(original)) or sorted(original) != sorted(partition):
         raise ValueError('Raw version matches were removed or modified')
 
@@ -259,5 +260,6 @@ def revalidate(report, root, fetch):
     classify(fresh, root, fetch)
     if (digest(fresh['applicabilityReviews']) != digest(report['applicabilityReviews'])
             or sorted(map(digest, fresh['findings'])) != sorted(map(digest,
-                report['findings'] + [r['finding'] for r in report.get('supplierFixReviews', [])]))):
+                report['findings'] + [r['finding'] for r in report.get('supplierFixReviews', [])]
+                + [r['finding'] for r in report.get('projectApplicabilityReviews', [])]))):
         raise ValueError('Applicability evidence changed; preserve Issues and rescan')

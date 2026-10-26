@@ -1,0 +1,1463 @@
+{
+  "compilerNormalizations": [
+    "CommonJS exports/module typeof constant folding and nmd decorator for exact isBuffer.js and _nodeUtil.js only"
+  ],
+  "ambiguousReexports": [
+    {
+      "module": 9580,
+      "target": 4434,
+      "targetLodashSource": null
+    },
+    {
+      "module": 7137,
+      "target": 2203,
+      "targetLodashSource": null
+    },
+    {
+      "module": 770,
+      "target": 218,
+      "targetLodashSource": null
+    }
+  ],
+  "verifiedDependencyEdges": [
+    {
+      "from": "package/_Hash.js",
+      "to": "package/_hashClear.js",
+      "module": 8051
+    },
+    {
+      "from": "package/_Hash.js",
+      "to": "package/_hashDelete.js",
+      "module": 5431
+    },
+    {
+      "from": "package/_Hash.js",
+      "to": "package/_hashGet.js",
+      "module": 6934
+    },
+    {
+      "from": "package/_Hash.js",
+      "to": "package/_hashHas.js",
+      "module": 4306
+    },
+    {
+      "from": "package/_Hash.js",
+      "to": "package/_hashSet.js",
+      "module": 7226
+    },
+    {
+      "from": "package/_ListCache.js",
+      "to": "package/_listCacheClear.js",
+      "module": 9791
+    },
+    {
+      "from": "package/_ListCache.js",
+      "to": "package/_listCacheDelete.js",
+      "module": 4555
+    },
+    {
+      "from": "package/_ListCache.js",
+      "to": "package/_listCacheGet.js",
+      "module": 6634
+    },
+    {
+      "from": "package/_ListCache.js",
+      "to": "package/_listCacheHas.js",
+      "module": 8430
+    },
+    {
+      "from": "package/_ListCache.js",
+      "to": "package/_listCacheSet.js",
+      "module": 6918
+    },
+    {
+      "from": "package/_Map.js",
+      "to": "package/_getNative.js",
+      "module": 954
+    },
+    {
+      "from": "package/_Map.js",
+      "to": "package/_root.js",
+      "module": 6748
+    },
+    {
+      "from": "package/_MapCache.js",
+      "to": "package/_mapCacheClear.js",
+      "module": 8487
+    },
+    {
+      "from": "package/_MapCache.js",
+      "to": "package/_mapCacheDelete.js",
+      "module": 6275
+    },
+    {
+      "from": "package/_MapCache.js",
+      "to": "package/_mapCacheGet.js",
+      "module": 130
+    },
+    {
+      "from": "package/_MapCache.js",
+      "to": "package/_mapCacheHas.js",
+      "module": 9254
+    },
+    {
+      "from": "package/_MapCache.js",
+      "to": "package/_mapCacheSet.js",
+      "module": 9806
+    },
+    {
+      "from": "package/_Set.js",
+      "to": "package/_getNative.js",
+      "module": 954
+    },
+    {
+      "from": "package/_Set.js",
+      "to": "package/_root.js",
+      "module": 6748
+    },
+    {
+      "from": "package/_SetCache.js",
+      "to": "package/_MapCache.js",
+      "module": 9660
+    },
+    {
+      "from": "package/_SetCache.js",
+      "to": "package/_setCacheAdd.js",
+      "module": 4671
+    },
+    {
+      "from": "package/_SetCache.js",
+      "to": "package/_setCacheHas.js",
+      "module": 1884
+    },
+    {
+      "from": "package/_Symbol.js",
+      "to": "package/_root.js",
+      "module": 6748
+    },
+    {
+      "from": "package/_arrayIncludes.js",
+      "to": "package/_baseIndexOf.js",
+      "module": 4760
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/_baseTimes.js",
+      "module": 1299
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/isArguments.js",
+      "module": 541
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/isArray.js",
+      "module": 2430
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/isBuffer.js",
+      "module": 3739
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/_isIndex.js",
+      "module": 7446
+    },
+    {
+      "from": "package/_arrayLikeKeys.js",
+      "to": "package/isTypedArray.js",
+      "module": 5000
+    },
+    {
+      "from": "package/_assocIndexOf.js",
+      "to": "package/eq.js",
+      "module": 5199
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_SetCache.js",
+      "module": 3706
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_arrayIncludes.js",
+      "module": 534
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_arrayIncludesWith.js",
+      "module": 7314
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_arrayMap.js",
+      "module": 6649
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_baseUnary.js",
+      "module": 5506
+    },
+    {
+      "from": "package/_baseDifference.js",
+      "to": "package/_cacheHas.js",
+      "module": 4486
+    },
+    {
+      "from": "package/_baseFlatten.js",
+      "to": "package/_arrayPush.js",
+      "module": 827
+    },
+    {
+      "from": "package/_baseFlatten.js",
+      "to": "package/_isFlattenable.js",
+      "module": 5088
+    },
+    {
+      "from": "package/_baseGetTag.js",
+      "to": "package/_Symbol.js",
+      "module": 8584
+    },
+    {
+      "from": "package/_baseGetTag.js",
+      "to": "package/_getRawTag.js",
+      "module": 5292
+    },
+    {
+      "from": "package/_baseGetTag.js",
+      "to": "package/_objectToString.js",
+      "module": 1723
+    },
+    {
+      "from": "package/_baseIndexOf.js",
+      "to": "package/_baseFindIndex.js",
+      "module": 5588
+    },
+    {
+      "from": "package/_baseIndexOf.js",
+      "to": "package/_baseIsNaN.js",
+      "module": 4352
+    },
+    {
+      "from": "package/_baseIndexOf.js",
+      "to": "package/_strictIndexOf.js",
+      "module": 5232
+    },
+    {
+      "from": "package/_baseIsArguments.js",
+      "to": "package/_baseGetTag.js",
+      "module": 9117
+    },
+    {
+      "from": "package/_baseIsArguments.js",
+      "to": "package/isObjectLike.js",
+      "module": 1645
+    },
+    {
+      "from": "package/_baseIsNative.js",
+      "to": "package/isFunction.js",
+      "module": 4329
+    },
+    {
+      "from": "package/_baseIsNative.js",
+      "to": "package/_isMasked.js",
+      "module": 6613
+    },
+    {
+      "from": "package/_baseIsNative.js",
+      "to": "package/isObject.js",
+      "module": 6482
+    },
+    {
+      "from": "package/_baseIsNative.js",
+      "to": "package/_toSource.js",
+      "module": 7192
+    },
+    {
+      "from": "package/_baseIsTypedArray.js",
+      "to": "package/_baseGetTag.js",
+      "module": 9117
+    },
+    {
+      "from": "package/_baseIsTypedArray.js",
+      "to": "package/isLength.js",
+      "module": 6657
+    },
+    {
+      "from": "package/_baseIsTypedArray.js",
+      "to": "package/isObjectLike.js",
+      "module": 1645
+    },
+    {
+      "from": "package/_baseKeysIn.js",
+      "to": "package/isObject.js",
+      "module": 6482
+    },
+    {
+      "from": "package/_baseKeysIn.js",
+      "to": "package/_isPrototype.js",
+      "module": 5944
+    },
+    {
+      "from": "package/_baseKeysIn.js",
+      "to": "package/_nativeKeysIn.js",
+      "module": 4008
+    },
+    {
+      "from": "package/_baseRest.js",
+      "to": "package/identity.js",
+      "module": 6851
+    },
+    {
+      "from": "package/_baseRest.js",
+      "to": "package/_overRest.js",
+      "module": 168
+    },
+    {
+      "from": "package/_baseRest.js",
+      "to": "package/_setToString.js",
+      "module": 9402
+    },
+    {
+      "from": "package/_baseSetToString.js",
+      "to": "package/constant.js",
+      "module": 5089
+    },
+    {
+      "from": "package/_baseSetToString.js",
+      "to": "package/_defineProperty.js",
+      "module": 3106
+    },
+    {
+      "from": "package/_baseSetToString.js",
+      "to": "package/identity.js",
+      "module": 6851
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_SetCache.js",
+      "module": 3706
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_arrayIncludes.js",
+      "module": 534
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_arrayIncludesWith.js",
+      "module": 7314
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_cacheHas.js",
+      "module": 4486
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_createSet.js",
+      "module": 8242
+    },
+    {
+      "from": "package/_baseUniq.js",
+      "to": "package/_setToArray.js",
+      "module": 1894
+    },
+    {
+      "from": "package/_coreJsData.js",
+      "to": "package/_root.js",
+      "module": 6748
+    },
+    {
+      "from": "package/_createSet.js",
+      "to": "package/_Set.js",
+      "module": 4986
+    },
+    {
+      "from": "package/_createSet.js",
+      "to": "package/noop.js",
+      "module": 9029
+    },
+    {
+      "from": "package/_createSet.js",
+      "to": "package/_setToArray.js",
+      "module": 1894
+    },
+    {
+      "from": "package/_defineProperty.js",
+      "to": "package/_getNative.js",
+      "module": 954
+    },
+    {
+      "from": "package/_getMapData.js",
+      "to": "package/_isKeyable.js",
+      "module": 5626
+    },
+    {
+      "from": "package/_getNative.js",
+      "to": "package/_baseIsNative.js",
+      "module": 2334
+    },
+    {
+      "from": "package/_getNative.js",
+      "to": "package/_getValue.js",
+      "module": 8293
+    },
+    {
+      "from": "package/_getPrototype.js",
+      "to": "package/_overArg.js",
+      "module": 1128
+    },
+    {
+      "from": "package/_getRawTag.js",
+      "to": "package/_Symbol.js",
+      "module": 8584
+    },
+    {
+      "from": "package/_hashClear.js",
+      "to": "package/_nativeCreate.js",
+      "module": 1563
+    },
+    {
+      "from": "package/_hashGet.js",
+      "to": "package/_nativeCreate.js",
+      "module": 1563
+    },
+    {
+      "from": "package/_hashHas.js",
+      "to": "package/_nativeCreate.js",
+      "module": 1563
+    },
+    {
+      "from": "package/_hashSet.js",
+      "to": "package/_nativeCreate.js",
+      "module": 1563
+    },
+    {
+      "from": "package/_isFlattenable.js",
+      "to": "package/_Symbol.js",
+      "module": 8584
+    },
+    {
+      "from": "package/_isFlattenable.js",
+      "to": "package/isArguments.js",
+      "module": 541
+    },
+    {
+      "from": "package/_isFlattenable.js",
+      "to": "package/isArray.js",
+      "module": 2430
+    },
+    {
+      "from": "package/_isIterateeCall.js",
+      "to": "package/eq.js",
+      "module": 5199
+    },
+    {
+      "from": "package/_isIterateeCall.js",
+      "to": "package/isArrayLike.js",
+      "module": 5119
+    },
+    {
+      "from": "package/_isIterateeCall.js",
+      "to": "package/_isIndex.js",
+      "module": 7446
+    },
+    {
+      "from": "package/_isIterateeCall.js",
+      "to": "package/isObject.js",
+      "module": 6482
+    },
+    {
+      "from": "package/_isMasked.js",
+      "to": "package/_coreJsData.js",
+      "module": 252
+    },
+    {
+      "from": "package/_listCacheDelete.js",
+      "to": "package/_assocIndexOf.js",
+      "module": 4024
+    },
+    {
+      "from": "package/_listCacheGet.js",
+      "to": "package/_assocIndexOf.js",
+      "module": 4024
+    },
+    {
+      "from": "package/_listCacheHas.js",
+      "to": "package/_assocIndexOf.js",
+      "module": 4024
+    },
+    {
+      "from": "package/_listCacheSet.js",
+      "to": "package/_assocIndexOf.js",
+      "module": 4024
+    },
+    {
+      "from": "package/_mapCacheClear.js",
+      "to": "package/_Hash.js",
+      "module": 6320
+    },
+    {
+      "from": "package/_mapCacheClear.js",
+      "to": "package/_ListCache.js",
+      "module": 8884
+    },
+    {
+      "from": "package/_mapCacheClear.js",
+      "to": "package/_Map.js",
+      "module": 8272
+    },
+    {
+      "from": "package/_mapCacheDelete.js",
+      "to": "package/_getMapData.js",
+      "module": 1194
+    },
+    {
+      "from": "package/_mapCacheGet.js",
+      "to": "package/_getMapData.js",
+      "module": 1194
+    },
+    {
+      "from": "package/_mapCacheHas.js",
+      "to": "package/_getMapData.js",
+      "module": 1194
+    },
+    {
+      "from": "package/_mapCacheSet.js",
+      "to": "package/_getMapData.js",
+      "module": 1194
+    },
+    {
+      "from": "package/_nativeCreate.js",
+      "to": "package/_getNative.js",
+      "module": 954
+    },
+    {
+      "from": "package/_nodeUtil.js",
+      "to": "package/_freeGlobal.js",
+      "module": 8997
+    },
+    {
+      "from": "package/_overRest.js",
+      "to": "package/_apply.js",
+      "module": 9678
+    },
+    {
+      "from": "package/_root.js",
+      "to": "package/_freeGlobal.js",
+      "module": 8997
+    },
+    {
+      "from": "package/_setToString.js",
+      "to": "package/_baseSetToString.js",
+      "module": 4953
+    },
+    {
+      "from": "package/_setToString.js",
+      "to": "package/_shortOut.js",
+      "module": 3286
+    },
+    {
+      "from": "package/defaults.js",
+      "to": "package/_baseRest.js",
+      "module": 2035
+    },
+    {
+      "from": "package/defaults.js",
+      "to": "package/eq.js",
+      "module": 5199
+    },
+    {
+      "from": "package/defaults.js",
+      "to": "package/_isIterateeCall.js",
+      "module": 3349
+    },
+    {
+      "from": "package/defaults.js",
+      "to": "package/keysIn.js",
+      "module": 9430
+    },
+    {
+      "from": "package/difference.js",
+      "to": "package/_baseDifference.js",
+      "module": 3126
+    },
+    {
+      "from": "package/difference.js",
+      "to": "package/_baseFlatten.js",
+      "module": 3183
+    },
+    {
+      "from": "package/difference.js",
+      "to": "package/_baseRest.js",
+      "module": 2035
+    },
+    {
+      "from": "package/difference.js",
+      "to": "package/isArrayLikeObject.js",
+      "module": 7100
+    },
+    {
+      "from": "package/flatten.js",
+      "to": "package/_baseFlatten.js",
+      "module": 3183
+    },
+    {
+      "from": "package/isArguments.js",
+      "to": "package/_baseIsArguments.js",
+      "module": 3605
+    },
+    {
+      "from": "package/isArguments.js",
+      "to": "package/isObjectLike.js",
+      "module": 1645
+    },
+    {
+      "from": "package/isArrayLike.js",
+      "to": "package/isFunction.js",
+      "module": 4329
+    },
+    {
+      "from": "package/isArrayLike.js",
+      "to": "package/isLength.js",
+      "module": 6657
+    },
+    {
+      "from": "package/isArrayLikeObject.js",
+      "to": "package/isArrayLike.js",
+      "module": 5119
+    },
+    {
+      "from": "package/isArrayLikeObject.js",
+      "to": "package/isObjectLike.js",
+      "module": 1645
+    },
+    {
+      "from": "package/isBuffer.js",
+      "to": "package/_root.js",
+      "module": 6748
+    },
+    {
+      "from": "package/isBuffer.js",
+      "to": "package/stubFalse.js",
+      "module": 2074
+    },
+    {
+      "from": "package/isFunction.js",
+      "to": "package/_baseGetTag.js",
+      "module": 9117
+    },
+    {
+      "from": "package/isFunction.js",
+      "to": "package/isObject.js",
+      "module": 6482
+    },
+    {
+      "from": "package/isPlainObject.js",
+      "to": "package/_baseGetTag.js",
+      "module": 9117
+    },
+    {
+      "from": "package/isPlainObject.js",
+      "to": "package/_getPrototype.js",
+      "module": 6194
+    },
+    {
+      "from": "package/isPlainObject.js",
+      "to": "package/isObjectLike.js",
+      "module": 1645
+    },
+    {
+      "from": "package/isTypedArray.js",
+      "to": "package/_baseIsTypedArray.js",
+      "module": 6880
+    },
+    {
+      "from": "package/isTypedArray.js",
+      "to": "package/_baseUnary.js",
+      "module": 5506
+    },
+    {
+      "from": "package/isTypedArray.js",
+      "to": "package/_nodeUtil.js",
+      "module": 8724
+    },
+    {
+      "from": "package/keysIn.js",
+      "to": "package/_arrayLikeKeys.js",
+      "module": 2000
+    },
+    {
+      "from": "package/keysIn.js",
+      "to": "package/_baseKeysIn.js",
+      "module": 2094
+    },
+    {
+      "from": "package/keysIn.js",
+      "to": "package/isArrayLike.js",
+      "module": 5119
+    },
+    {
+      "from": "package/union.js",
+      "to": "package/_baseFlatten.js",
+      "module": 3183
+    },
+    {
+      "from": "package/union.js",
+      "to": "package/_baseRest.js",
+      "module": 2035
+    },
+    {
+      "from": "package/union.js",
+      "to": "package/_baseUniq.js",
+      "module": 2772
+    },
+    {
+      "from": "package/union.js",
+      "to": "package/isArrayLikeObject.js",
+      "module": 7100
+    }
+  ],
+  "unresolvedDependencies": [],
+  "ambiguousIdentityCandidates": [
+    9580,
+    7137,
+    770
+  ],
+  "bundleSHA256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+  "normalization": "AST locations/raw spelling/empty statements removed; literal require expressions normalized to dependency marker. No code execution.",
+  "matches": [
+    {
+      "module": 9580,
+      "source": [
+        "package/each.js",
+        "package/eachRight.js",
+        "package/entries.js",
+        "package/entriesIn.js",
+        "package/extend.js",
+        "package/extendWith.js",
+        "package/first.js",
+        "package/index.js",
+        "package/toJSON.js",
+        "package/value.js",
+        "package/valueOf.js"
+      ],
+      "normalizedSHA256": "08ae38d21d7ea9f5b14e5d84a8cd28c209fc6e0737145fe73e5642fcee45f648"
+    },
+    {
+      "module": 7137,
+      "source": [
+        "package/each.js",
+        "package/eachRight.js",
+        "package/entries.js",
+        "package/entriesIn.js",
+        "package/extend.js",
+        "package/extendWith.js",
+        "package/first.js",
+        "package/index.js",
+        "package/toJSON.js",
+        "package/value.js",
+        "package/valueOf.js"
+      ],
+      "normalizedSHA256": "08ae38d21d7ea9f5b14e5d84a8cd28c209fc6e0737145fe73e5642fcee45f648"
+    },
+    {
+      "module": 6320,
+      "source": [
+        "package/_Hash.js"
+      ],
+      "normalizedSHA256": "5eb041a6f1a9df623968d55de1d713d0cd23f8228ab222f8031ac7d53c688c36"
+    },
+    {
+      "module": 8884,
+      "source": [
+        "package/_ListCache.js"
+      ],
+      "normalizedSHA256": "6528b9507cb813546dd3946857507135750ee023609c032365633e0469e37b0b"
+    },
+    {
+      "module": 8272,
+      "source": [
+        "package/_Map.js"
+      ],
+      "normalizedSHA256": "6c17e38fc4d4d5678137d0698c73b3213c548024ab1a34c9e8f21aa6fdc9b56c"
+    },
+    {
+      "module": 9660,
+      "source": [
+        "package/_MapCache.js"
+      ],
+      "normalizedSHA256": "269922b5ef6bc80249149f8162be3490a6b7ae7a55633c075c8dd3ddc2228f1c"
+    },
+    {
+      "module": 4986,
+      "source": [
+        "package/_Set.js"
+      ],
+      "normalizedSHA256": "065ee72f65c564a3b8120b922ff61bcedb18fd0101f90befec233784d537f5de"
+    },
+    {
+      "module": 3706,
+      "source": [
+        "package/_SetCache.js"
+      ],
+      "normalizedSHA256": "e9f4e9cd92b4a41c9bf7c5914cab28833cd2b88d60bc1451fbb6f01d10bdf5f2"
+    },
+    {
+      "module": 8584,
+      "source": [
+        "package/_Symbol.js"
+      ],
+      "normalizedSHA256": "bd97bf57eab581de3870cac3b3afa9bf9f4a229f1129278e98f0199bb2f4a7ab"
+    },
+    {
+      "module": 9678,
+      "source": [
+        "package/_apply.js"
+      ],
+      "normalizedSHA256": "53fbf2583b2f2e3579ad6cd167260114b4a3d72c599babbe77fff9af2750707c"
+    },
+    {
+      "module": 534,
+      "source": [
+        "package/_arrayIncludes.js"
+      ],
+      "normalizedSHA256": "f2b81946c5dffce9e85ca84295cf78984d2b9ebdf4f36353070d13e69af22262"
+    },
+    {
+      "module": 7314,
+      "source": [
+        "package/_arrayIncludesWith.js"
+      ],
+      "normalizedSHA256": "54a2be5b9ec6abc8a8ebc48a3d4b3f36d44046ad2763c81e8c5c72dbf919ccf8"
+    },
+    {
+      "module": 2000,
+      "source": [
+        "package/_arrayLikeKeys.js"
+      ],
+      "normalizedSHA256": "3a212dfc6e8a24a05d73fb093468f37d90ae49f869795099bc8570ec4a32cd64"
+    },
+    {
+      "module": 6649,
+      "source": [
+        "package/_arrayMap.js"
+      ],
+      "normalizedSHA256": "c1a0c39043f52269d6a2fa558f7f32d3112e9bd8c6a50c09df74f106f3c47f81"
+    },
+    {
+      "module": 827,
+      "source": [
+        "package/_arrayPush.js"
+      ],
+      "normalizedSHA256": "006909928ce88059ffc23916e7e426e7990181aab6ce7de8651d337e9814a941"
+    },
+    {
+      "module": 4024,
+      "source": [
+        "package/_assocIndexOf.js"
+      ],
+      "normalizedSHA256": "03c582fc992b785661da282d3c595d51b5c0c35d27e4a6d3741bf643210606ed"
+    },
+    {
+      "module": 3126,
+      "source": [
+        "package/_baseDifference.js"
+      ],
+      "normalizedSHA256": "e78f039ffb394e07245263a07c8a3dcd66b94825e974299102d208c84adacee0"
+    },
+    {
+      "module": 5588,
+      "source": [
+        "package/_baseFindIndex.js"
+      ],
+      "normalizedSHA256": "be11835a6fdd509784a9c5fe49e40a42c5235ad3396dd37ee8e621ea9a5aabd0"
+    },
+    {
+      "module": 3183,
+      "source": [
+        "package/_baseFlatten.js"
+      ],
+      "normalizedSHA256": "c897afd40e970304fe1a2945fcb8b6057d37a1d1da563b3b413a5327057e219b"
+    },
+    {
+      "module": 9117,
+      "source": [
+        "package/_baseGetTag.js"
+      ],
+      "normalizedSHA256": "b44840c21a2daee3380bcfd6f1f80889754efd4984657587a508c61c96981712"
+    },
+    {
+      "module": 4760,
+      "source": [
+        "package/_baseIndexOf.js"
+      ],
+      "normalizedSHA256": "7cd3b2695caa1f31dc5bb22a298bfba59c99231ef31a8167e79b6448beb6e146"
+    },
+    {
+      "module": 3605,
+      "source": [
+        "package/_baseIsArguments.js"
+      ],
+      "normalizedSHA256": "ada06e6b93806b840cfe266a477ae7f5ae0c501884ff0693a377a992a2de5a00"
+    },
+    {
+      "module": 4352,
+      "source": [
+        "package/_baseIsNaN.js"
+      ],
+      "normalizedSHA256": "19715e7c0bb8f0a36b5416d2054cbe00fce717d2aecfdfcff6c416a183fcc252"
+    },
+    {
+      "module": 2334,
+      "source": [
+        "package/_baseIsNative.js"
+      ],
+      "normalizedSHA256": "5addc446be2e0705df6326acd8e33347bfa4bb0e620c77e20070d56faa493c00"
+    },
+    {
+      "module": 6880,
+      "source": [
+        "package/_baseIsTypedArray.js"
+      ],
+      "normalizedSHA256": "8b47bc4d9a661bbd9b53d4b5f1bce57b60f2d4f04b7495dd653ff44d2d80f58d"
+    },
+    {
+      "module": 2094,
+      "source": [
+        "package/_baseKeysIn.js"
+      ],
+      "normalizedSHA256": "38c0310aac77383d26ac897ec6f1bdc7bfa071d21f186b6403d81323d02a5070"
+    },
+    {
+      "module": 2035,
+      "source": [
+        "package/_baseRest.js"
+      ],
+      "normalizedSHA256": "046d9d12e9d9e22e4f17b744416c22d5d1079be3bbc98347c5283af079d14e14"
+    },
+    {
+      "module": 4953,
+      "source": [
+        "package/_baseSetToString.js"
+      ],
+      "normalizedSHA256": "014d4bef5fd6ef322c45f7c492b8335ad111aeae353a7694cc6345f9b2c54b04"
+    },
+    {
+      "module": 1299,
+      "source": [
+        "package/_baseTimes.js"
+      ],
+      "normalizedSHA256": "db469bc08db6a86fb27e15fad66de043c9de58f48a1dd645a408bcb017f8c98d"
+    },
+    {
+      "module": 5506,
+      "source": [
+        "package/_baseUnary.js"
+      ],
+      "normalizedSHA256": "dc352422699bb38ed33a58e9c9ac34451fc36907e1cf95e8bdf9483811349d60"
+    },
+    {
+      "module": 2772,
+      "source": [
+        "package/_baseUniq.js"
+      ],
+      "normalizedSHA256": "00f4cc67b7a62ddfaa82b9d2c514103316f33bf9c8665445335b12ef8fadfe26"
+    },
+    {
+      "module": 4486,
+      "source": [
+        "package/_cacheHas.js"
+      ],
+      "normalizedSHA256": "8c737d3c9ea3487d7c44c73bf2c570f45348cca8798e782a3bdbf1ee24c5b30d"
+    },
+    {
+      "module": 252,
+      "source": [
+        "package/_coreJsData.js"
+      ],
+      "normalizedSHA256": "2afdd8c7eab2ba84b4ae0ade4fc7f45e1498c0fd8821dfb8c78734fb3ad3ba70"
+    },
+    {
+      "module": 8242,
+      "source": [
+        "package/_createSet.js"
+      ],
+      "normalizedSHA256": "c673bf3b20e23dfbf668e34d86b855c2026d3d13316c4448f3d2321a57030576"
+    },
+    {
+      "module": 3106,
+      "source": [
+        "package/_defineProperty.js"
+      ],
+      "normalizedSHA256": "a4bb0c84ba826cf046fd359f766457d3b06770e14c34fc20d81e93d482aab2d8"
+    },
+    {
+      "module": 8997,
+      "source": [
+        "package/_freeGlobal.js"
+      ],
+      "normalizedSHA256": "3b1798245a253023ba3b97ce406f9bdd8ded5ae766e5f6ab7a4a0b5f796eae7b"
+    },
+    {
+      "module": 1194,
+      "source": [
+        "package/_getMapData.js"
+      ],
+      "normalizedSHA256": "362852e8a6478f6546fca5a4aa10336f587413816ca3d908702f8b45ef729d5b"
+    },
+    {
+      "module": 954,
+      "source": [
+        "package/_getNative.js"
+      ],
+      "normalizedSHA256": "4046a204dc508d9d72383edc737999bcc067f3b028e734d3718ad59480bb070f"
+    },
+    {
+      "module": 6194,
+      "source": [
+        "package/_getPrototype.js"
+      ],
+      "normalizedSHA256": "ce6026af64e755385f9b896df07c792035861341ee06b06348c09a06ab0817c3"
+    },
+    {
+      "module": 5292,
+      "source": [
+        "package/_getRawTag.js"
+      ],
+      "normalizedSHA256": "f14959a3d1bc7fb8f86fcd7dd9084fd9def77fe8dfcdaf19fe23a9c3582221ba"
+    },
+    {
+      "module": 8293,
+      "source": [
+        "package/_getValue.js"
+      ],
+      "normalizedSHA256": "4b8324d60648d0b928f1bf9416d7fb4d9d1d9e45893070adeaf801bcd49ea5b4"
+    },
+    {
+      "module": 8051,
+      "source": [
+        "package/_hashClear.js"
+      ],
+      "normalizedSHA256": "ef93ea3e311c41b91e07ab66f4bde6626fdb6870b63565dbee64860e6cd445f4"
+    },
+    {
+      "module": 5431,
+      "source": [
+        "package/_hashDelete.js"
+      ],
+      "normalizedSHA256": "76d6db40016a7055a69bf88061dc52268c7e622599e560abf0e9655528aa88cd"
+    },
+    {
+      "module": 6934,
+      "source": [
+        "package/_hashGet.js"
+      ],
+      "normalizedSHA256": "959c169e26107ebb5e3da31f82f5740381d8a567b20aa0f30a0c6b978df5acfd"
+    },
+    {
+      "module": 4306,
+      "source": [
+        "package/_hashHas.js"
+      ],
+      "normalizedSHA256": "2af7ee1035eb2fa956dde299f17a604f0665335e3c61a8d50741af68d609d36e"
+    },
+    {
+      "module": 7226,
+      "source": [
+        "package/_hashSet.js"
+      ],
+      "normalizedSHA256": "e59ed32e719896684684ab4e7c92860936ca34f85c834a84b9b57032fa5535b8"
+    },
+    {
+      "module": 5088,
+      "source": [
+        "package/_isFlattenable.js"
+      ],
+      "normalizedSHA256": "b6854976915f99075456f7415d53dc60ac513b356118ddae2fc1b6c767316ad9"
+    },
+    {
+      "module": 7446,
+      "source": [
+        "package/_isIndex.js"
+      ],
+      "normalizedSHA256": "f7abdec742e044c07ac9e08b2d25c87d9ca7c1e30315fc1b1b189912bc16e0fc"
+    },
+    {
+      "module": 3349,
+      "source": [
+        "package/_isIterateeCall.js"
+      ],
+      "normalizedSHA256": "daa6246027200a710b73841501e56881897d7c74326a100d3993617c8ae14ffc"
+    },
+    {
+      "module": 5626,
+      "source": [
+        "package/_isKeyable.js"
+      ],
+      "normalizedSHA256": "4f7a8d7ac99347d7b49b19d7958d8a22a5cb80c7f07dbfc51e012377e44b5616"
+    },
+    {
+      "module": 6613,
+      "source": [
+        "package/_isMasked.js"
+      ],
+      "normalizedSHA256": "2ec2683061b5e3a316efdab039ce280282d579f152e8a4898707d1eccdab8555"
+    },
+    {
+      "module": 5944,
+      "source": [
+        "package/_isPrototype.js"
+      ],
+      "normalizedSHA256": "160d37a4c9598e508c3953ea73150af8e38529f3cec1047eb561f18fc9690586"
+    },
+    {
+      "module": 9791,
+      "source": [
+        "package/_listCacheClear.js"
+      ],
+      "normalizedSHA256": "b9c3834dc46a59c48c4060cade1841677afe6a5094db801591ef80f390654a65"
+    },
+    {
+      "module": 4555,
+      "source": [
+        "package/_listCacheDelete.js"
+      ],
+      "normalizedSHA256": "980f1e58468cfc8abb58d5e146602148ad3809e2555f870e1acfd9700a62c162"
+    },
+    {
+      "module": 6634,
+      "source": [
+        "package/_listCacheGet.js"
+      ],
+      "normalizedSHA256": "26ded3ff40bd7a205899e1f8737f1ec5b89f7f0eedd0845741e0bef71c1a239b"
+    },
+    {
+      "module": 8430,
+      "source": [
+        "package/_listCacheHas.js"
+      ],
+      "normalizedSHA256": "f58575e385204b8def54ed8b93369179ff7bf021d0945e86f405a08f901690af"
+    },
+    {
+      "module": 6918,
+      "source": [
+        "package/_listCacheSet.js"
+      ],
+      "normalizedSHA256": "4db982df710be8a454f96a7d134d8d25c2ab2aea5eb02bc5641d6e2874ea3fa3"
+    },
+    {
+      "module": 8487,
+      "source": [
+        "package/_mapCacheClear.js"
+      ],
+      "normalizedSHA256": "3ab3cefcb04215d685626de3c68d890f53c4d4edc53245c1c00f9f000d1effc8"
+    },
+    {
+      "module": 6275,
+      "source": [
+        "package/_mapCacheDelete.js"
+      ],
+      "normalizedSHA256": "04a24aa883b9fcce44259a45ff6579b1fd1f49c47e77f26cc6a18935883154b8"
+    },
+    {
+      "module": 130,
+      "source": [
+        "package/_mapCacheGet.js"
+      ],
+      "normalizedSHA256": "33b9fd12628556bcf7dd1c4c8800df8538e8602f6111d759504da7556b012eee"
+    },
+    {
+      "module": 9254,
+      "source": [
+        "package/_mapCacheHas.js"
+      ],
+      "normalizedSHA256": "b0141ae30482168a24da8037a840eaba338372cd90744a7b3abab263aae8860e"
+    },
+    {
+      "module": 9806,
+      "source": [
+        "package/_mapCacheSet.js"
+      ],
+      "normalizedSHA256": "9dcfac22ea0654a0cf026b812c59530cf66c22e5472ee48ae3f4c72047f56a39"
+    },
+    {
+      "module": 1563,
+      "source": [
+        "package/_nativeCreate.js"
+      ],
+      "normalizedSHA256": "8b01fba637fae888e4c195454c1c2e85bd2845a6f6ecef2d8da94dfe89266eaa"
+    },
+    {
+      "module": 4008,
+      "source": [
+        "package/_nativeKeysIn.js"
+      ],
+      "normalizedSHA256": "2e591f31e712f65c8f73de2a74191255a60cba9902cacf5d2e6b19fb0c1c602f"
+    },
+    {
+      "module": 8724,
+      "source": [
+        "package/_nodeUtil.js"
+      ],
+      "normalizedSHA256": "770dbe3331bf17619f24a8338450578f8ea90ed2ec7877a0ff1c8420df6e2cd9"
+    },
+    {
+      "module": 1723,
+      "source": [
+        "package/_objectToString.js"
+      ],
+      "normalizedSHA256": "b96a84fe86be40f92b4fe062f7a3aeaa6973057df2c8fedbf9f203bb9754cddc"
+    },
+    {
+      "module": 1128,
+      "source": [
+        "package/_overArg.js"
+      ],
+      "normalizedSHA256": "3f41bf4fa707f370050e43e1f156f686b880c47f4c5ff58e024214cb1d8a4b88"
+    },
+    {
+      "module": 168,
+      "source": [
+        "package/_overRest.js"
+      ],
+      "normalizedSHA256": "4e5a36698fcffd63fd57986365105f2606113672fe717ca95a477fa8060b21b1"
+    },
+    {
+      "module": 6748,
+      "source": [
+        "package/_root.js"
+      ],
+      "normalizedSHA256": "9445d3ba44ec567cbe38f794a4a0bda78651ff759ef7a6e0b8e572e53660dd07"
+    },
+    {
+      "module": 4671,
+      "source": [
+        "package/_setCacheAdd.js"
+      ],
+      "normalizedSHA256": "bde35c34546ff0f18c79ec773f686c544488ab75cd7660db7e1609253f620f4c"
+    },
+    {
+      "module": 1884,
+      "source": [
+        "package/_setCacheHas.js"
+      ],
+      "normalizedSHA256": "b0bf7e14e50b1888a1eda0c3d48664dde199a3cfb47da6b529538e52d294dc50"
+    },
+    {
+      "module": 1894,
+      "source": [
+        "package/_setToArray.js"
+      ],
+      "normalizedSHA256": "78594adaa5500bdbee9230afd105dccd26a0442bb1b2d31665399fe81fe07080"
+    },
+    {
+      "module": 9402,
+      "source": [
+        "package/_setToString.js"
+      ],
+      "normalizedSHA256": "9699f36d93decc1b6b6e85dd6ccbc0d60a64743a7811301433a9c74d4aaa12f9"
+    },
+    {
+      "module": 3286,
+      "source": [
+        "package/_shortOut.js"
+      ],
+      "normalizedSHA256": "80482a63563e16e7a03116f88582820138f808ae023b0506cf445d90e210bf9f"
+    },
+    {
+      "module": 5232,
+      "source": [
+        "package/_strictIndexOf.js"
+      ],
+      "normalizedSHA256": "e10df2b70ad9e3fdee9173ed617bc15a8d974a7c2b45f09b780bb70a64782bfd"
+    },
+    {
+      "module": 7192,
+      "source": [
+        "package/_toSource.js"
+      ],
+      "normalizedSHA256": "b5fc611e9eb9154386bd6bdc38dc4e4254ef102e077da69f8fe64086d3ffd9ae"
+    },
+    {
+      "module": 5089,
+      "source": [
+        "package/constant.js"
+      ],
+      "normalizedSHA256": "d00ca89b203330660d7f6b1d05a5c46c23fd969f44aa90d27420f301e643c584"
+    },
+    {
+      "module": 7511,
+      "source": [
+        "package/defaults.js"
+      ],
+      "normalizedSHA256": "28896a1539f1b11916090ad37e0914af1703cc1be990d4bdf4e923f1d3205b84"
+    },
+    {
+      "module": 7294,
+      "source": [
+        "package/difference.js"
+      ],
+      "normalizedSHA256": "5ca402e73589bec700d7cbc689856c58957af026ddfca717637f3d5692482822"
+    },
+    {
+      "module": 5199,
+      "source": [
+        "package/eq.js"
+      ],
+      "normalizedSHA256": "8e76930aae6c32bcef20548e119890b0ec176363af88c27aa560bc96af4ee80c"
+    },
+    {
+      "module": 7047,
+      "source": [
+        "package/flatten.js"
+      ],
+      "normalizedSHA256": "81d2371b41b52d0f425207f500701e97b49491d69732a018ecc986116d210b1c"
+    },
+    {
+      "module": 6851,
+      "source": [
+        "package/identity.js"
+      ],
+      "normalizedSHA256": "b5be9a58a07865ff892ba928e2488e2ec561434921f896e579463cf3725318bb"
+    },
+    {
+      "module": 541,
+      "source": [
+        "package/isArguments.js"
+      ],
+      "normalizedSHA256": "088362938d5a5850ad22b3626caf326a2b2d3db2e5b46e0a1f91ebe54df79a9f"
+    },
+    {
+      "module": 2430,
+      "source": [
+        "package/isArray.js"
+      ],
+      "normalizedSHA256": "1454ac8e085dbf7a400ce7b1cb88b4c75816bd7203558733a0541da8feea5a88"
+    },
+    {
+      "module": 5119,
+      "source": [
+        "package/isArrayLike.js"
+      ],
+      "normalizedSHA256": "660d37f1bf37d1592768530573bf814bb55ae54bfc096dc4e0af830a06b02cd1"
+    },
+    {
+      "module": 7100,
+      "source": [
+        "package/isArrayLikeObject.js"
+      ],
+      "normalizedSHA256": "36b39f11d6f11711f78dde01b41d7544071405cdabe093764cec1f3a29fe4e38"
+    },
+    {
+      "module": 3739,
+      "source": [
+        "package/isBuffer.js"
+      ],
+      "normalizedSHA256": "1b6256a61f0449805b0a4231c4ecc88e70e1aa705355a04ba1838c74835e35ee"
+    },
+    {
+      "module": 4329,
+      "source": [
+        "package/isFunction.js"
+      ],
+      "normalizedSHA256": "2396b7c2d500f48a40010f73265b7b60fd7b618091b1b14012f5d456d987211b"
+    },
+    {
+      "module": 6657,
+      "source": [
+        "package/isLength.js"
+      ],
+      "normalizedSHA256": "32fc62f5223918215ed68f7bca1a81897b1996c45b7d7e3dae958d09364cea54"
+    },
+    {
+      "module": 6482,
+      "source": [
+        "package/isObject.js"
+      ],
+      "normalizedSHA256": "021eb76c16d96030b4271572bd9ad655da8d0c0c1040a788971987b8bbad34fe"
+    },
+    {
+      "module": 1645,
+      "source": [
+        "package/isObjectLike.js"
+      ],
+      "normalizedSHA256": "39baa059e801f37b4a58abc7337992d599bcdc43cbe59c360e89297240970930"
+    },
+    {
+      "module": 6542,
+      "source": [
+        "package/isPlainObject.js"
+      ],
+      "normalizedSHA256": "aa6b4ee005c520c78d6ec016f86d35aad58a69deefab385a7fcc9685b933b51f"
+    },
+    {
+      "module": 5000,
+      "source": [
+        "package/isTypedArray.js"
+      ],
+      "normalizedSHA256": "cdfc1ecef22a4ee27f2f31f386b763b07c929839c512cb19862a300e7d2d409a"
+    },
+    {
+      "module": 9430,
+      "source": [
+        "package/keysIn.js"
+      ],
+      "normalizedSHA256": "bb073d97e04c9171d41c45dcbdd2f3b24eb85c38a59607d11bb484fa770f9611"
+    },
+    {
+      "module": 9029,
+      "source": [
+        "package/noop.js"
+      ],
+      "normalizedSHA256": "c676785940e8db1e5d0a0e853ed61c3cb187a2172dd746c82b6e410bcb82a673"
+    },
+    {
+      "module": 2074,
+      "source": [
+        "package/stubFalse.js"
+      ],
+      "normalizedSHA256": "8aa228292cf82db4e59441174b1525ec4ffd7d6c924e0e18b95421f54080f613"
+    },
+    {
+      "module": 3270,
+      "source": [
+        "package/union.js"
+      ],
+      "normalizedSHA256": "6c0e5cb94e973e5f2cd3b57a3fdec9a3329e62c5ff9ad5007a43771f84a9510f"
+    },
+    {
+      "module": 770,
+      "source": [
+        "package/each.js",
+        "package/eachRight.js",
+        "package/entries.js",
+        "package/entriesIn.js",
+        "package/extend.js",
+        "package/extendWith.js",
+        "package/first.js",
+        "package/index.js",
+        "package/toJSON.js",
+        "package/value.js",
+        "package/valueOf.js"
+      ],
+      "normalizedSHA256": "08ae38d21d7ea9f5b14e5d84a8cd28c209fc6e0737145fe73e5642fcee45f648"
+    }
+  ],
+  "unmappedLodashCandidates": [],
+  "automaticApplicabilityGranted": false,
+  "schemaVersion": 1,
+  "kind": "reviewed-official-action-subset",
+  "source": {
+    "version": "4.17.23",
+    "url": "https://registry.npmjs.org/lodash/-/lodash-4.17.23.tgz",
+    "integrity": "sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==",
+    "sha256": "9aba685f4b44d7a8e778cdf7085e9512143dabd78812df40e258375e1e8dceb4",
+    "sourceFiles": 1048,
+    "installed": false,
+    "executed": false
+  }
+}

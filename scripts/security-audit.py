@@ -391,6 +391,10 @@ def run(include_release=None):
     except Exception as error:
         report['errors'].append('OpenSSL supplier review unavailable: '+type(error).__name__)
     try:
+        project_applicability().classify(report, ROOT)
+    except Exception as error:
+        report['errors'].append('Project applicability unavailable: '+type(error).__name__)
+    try:
         spec=importlib.util.spec_from_file_location('source_review',ROOT/'scripts/security-source-review.py')
         policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
         report['sourceReview']=policy.source_check(ROOT)
@@ -603,6 +607,11 @@ def apply_exceptions(report, document, now=None):
                 finding['exceptionExpiresAt'] = exception['expiresAt']
 
 
+def project_applicability():
+    spec=importlib.util.spec_from_file_location('project_applicability',Path(__file__).with_name('security-project-applicability.py'))
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+
+
 def openssl_supplier():
     spec=importlib.util.spec_from_file_location('openssl_supplier',Path(__file__).resolve().parent/'security-openssl-supplier.py')
     helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
@@ -677,6 +686,7 @@ def blocking(report, *, merge_gate=False):
     try:
         pip_applicability().revalidate(report,ROOT,gh)
         openssl_supplier().revalidate(report,ROOT)
+        project_applicability().revalidate(report,ROOT)
     except Exception:return True
     return False
 
@@ -717,6 +727,8 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- 精確封裝不適用（原版本命中保留）：'+html.escape(review['finding']['id']))
     for review in report.get('supplierFixReviews', []):
         lines.append('- 供應商已修補（原版本命中保留）：'+html.escape(review['finding']['id']))
+    for proof in report.get('projectApplicabilityProofs', []):
+        lines.append('- 精確平台／封裝不適用（非套件修補）：'+html.escape(proof['id'])+' — '+html.escape(proof['reason']))
     for error in report['errors']:
         lines.append('- 運作異常：'+html.escape(str(error)))
     for notice in report.get('vendorNotices',{}).get('changes',[]):
@@ -740,7 +752,7 @@ def main():
     previous=json.loads(args.previous.read_text()) if args.previous and args.previous.exists() else None
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
     report['stalePreviousScan']=bool(previous and previous.get('lastSuccessfulScanAt') and (dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(previous['lastSuccessfulScanAt'])).total_seconds()>48*3600)
-    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','supplierFixReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
+    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','supplierFixReviews','projectApplicabilityProofs','projectApplicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
         'noticeChanges':r.get('vendorNotices',{}).get('changes',[])},sort_keys=True)
     changed=previous is None or fingerprint(previous)!=fingerprint(report)
     report['changed']=changed

@@ -285,3 +285,5 @@ Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對�
 專案 Python 的 OpenSSL 供應商修補由 `security-openssl-supplier.py` 負責：collector 記錄程序實際載入的函式庫身分，獨立驗證器核對精確官方套件內容、逐 CVE 修補紀錄及 live CNA。報告保留原始版本命中與獨立修補證據；gate／Issue 寫入前重驗，解除僅限同公告的全部相關環境／origin，不授予整個 Python collector 一般結案資格。其他內附元件、未知封裝與 OS 排除界線不變。
 
 完整Linux安全流程的Python啟動邊界由 `project-openssl-runtime.py` 與 `python-openssl-env.sh` 共用：只讀取已驗證官方deb中的兩份函式庫，啟動前核對檔案，啟動後由Python自身映射再次確認。`python-toolchain.py` 在當次工具／CA檢查中拒絕回落到系統來源。報告將此副本標示為project-isolated-official-package，保存實際loadedPaths，不虛報為dpkg安裝；獨立健康流程不依賴此準備，所有未知來源仍保留風險。
+
+精確平台／封裝適用性由 `security-project-applicability.py` 產生獨立證據：受管 Python 真實平台、已審官方 gh 建置來源圖及 upload-artifact 子集，分別綁定當次官方公告與實際資產。報告保留 rawFindings 的完整分割與可重驗 proofs；不讓一個來源的判定覆蓋其他環境。Issue writer 在完整來源／正式資產監測後，以 snapshot 中的 applicabilityResolution 辨識本機制的「不適用」結案；後續證據失效且仍命中時重新開啟同一筆，其他 not_planned 歷史不沿用。未來未知來源或不完整查詢維持待審／阻擋。

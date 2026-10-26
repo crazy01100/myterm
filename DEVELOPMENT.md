@@ -411,3 +411,5 @@ GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I 
 OpenSSL 供應商修補證據保存在 `.build/openssl-supplier/`，僅供唯讀封裝核對；不從此目錄安裝或載入函式庫。Linux 驗證使用 runner 既有 `dpkg-query`／`dpkg-deb`／`dpkg`；若缺少工具或精確來源不符，保持待審，不能臨時安裝或以版本字串放行。更新官方封裝指紋時須先核對官方 checksum、內含兩份函式庫與逐 CVE 修補紀錄；資料更新走一般 PR，真正判定／信任變更仍在最終精確 PR 審閱。macOS 沿既有隔離封裝核對，CI 結果不代證本機。
 
 完整安全CI／監測／部署準備以 `MYTERM_CI_OPENSSL=required` 選用專案隔離的官方 OpenSSL。`project-openssl-runtime.py setup` 在兩個venv準備前驗證固定deb並只將兩份受審函式庫寫入 `.build/openssl-runtime/lib`；不執行deb維護腳本。`project-python.sh`／`security-python.sh` 共用 `python-openssl-env.sh`，先核對固定checksum、拒絕符號連結／額外檔案／自訂loader或provider，再設定此Python子程序樹的載入路徑。bootstrap的初次封裝下載使用既有curl；啟動後的CA／工具核對會再次確認實際映射。隔離來源不符時停止，不回退系統函式庫。獨立健康檢查維持原stdlib流程，沒有隔離工具準備前置；不修改runner全域環境、Mac或正式App。
+
+平台／子集不適用驗證只讀取現有受管工具及受審來源證據，不安裝 Go 或執行被分析 bundle。維護 `project-applicability.json`／`Config/Security/applicability/` 時，先核對實際官方資產與公告，不能以套件名稱、版本或缺少字串代證受影響程式不存在。`Tests/Security/test_project_applicability.py` 使用合成 metadata、inert archive 及記憶體 Issue API，驗證平台／來源漂移拒絕、歷史 origin、部分失敗、結案去重與同筆重新開啟。真正適用性／結案政策修改依最終精確 PR 審閱；普通公告游標仍不另設 revision。
