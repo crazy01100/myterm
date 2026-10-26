@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "state": "approved",
+  "grantsRiskException": false,
+  "rules": [
+    {
+      "id": "PSF-2025-2",
+      "decision": "cpython-windows-only",
+      "component": "CPython",
+      "scope": "development",
+      "origins": [
+        "python-runtime/cpython",
+        "security-tools/cpython"
+      ],
+      "advisoryKind": "psf",
+      "advisorySHA256": "133d80ffc33f131502955017a2092ab633ee2b4c1670fc8e999271712e41298e",
+      "reason": "官方公告只影響Windows的mimetypes預設路徑；本次受管解譯器實際平台為Mac／Linux，不符合該漏洞前提。"
+    },
+    {
+      "id": "GO-2026-5932",
+      "decision": "gh-openpgp-absent",
+      "component": "golang.org/x/crypto",
+      "scope": "development",
+      "origins": [
+        "platform/project-gh"
+      ],
+      "version": "v0.58.0",
+      "advisoryKind": "go",
+      "advisorySHA256": "6fdf2875141e3cceb034c2d2b5fda7849cc68904bb72bb74b46797ecb2d5d97b",
+      "evidenceFile": "Config/Security/applicability/gh-openpgp.json",
+      "evidenceSHA256": "6b636badd6446779755260c69d752fbcedb98ef6d5423fc9cb114ba34e65f422",
+      "reason": "此精確官方GitHub CLI資產對應的已審來源／建置引入圖未編入公告所影響的OpenPGP套件。"
+    },
+    {
+      "id": "GHSA-f23m-r3pf-42rh",
+      "decision": "upload-lodash-subset",
+      "component": "lodash",
+      "scope": "github-actions",
+      "origins": [
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+      ],
+      "version": "4.17.23",
+      "advisoryKind": "ghsa",
+      "advisorySHA256": "62771ee0abd76d2627ce931919190bb06499f12d0b052dc76aa3ba7fb1972521",
+      "evidenceFile": "Config/Security/applicability/upload-lodash.json",
+      "evidenceSHA256": "d50393c1397b49cf9bef69026f8962dcb49f97f3fd901a0cad796e74fe760781",
+      "action": {
+        "repository": "actions/upload-artifact",
+        "revision": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+        "url": "https://codeload.github.com/actions/upload-artifact/tar.gz/cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+        "archiveSHA256": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+        "cacheFile": ".build/security-inventory-actions/actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9.tgz"
+      },
+      "entrypoint": "dist/upload/index.js",
+      "bundleSHA256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+      "reason": "此精確官方upload-artifact只內附經完整比對的lodash子集，未包含本公告所影響的程式實作。"
+    },
+    {
+      "id": "GHSA-r5fr-rjxr-66jc",
+      "decision": "upload-lodash-subset",
+      "component": "lodash",
+      "scope": "github-actions",
+      "origins": [
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+      ],
+      "version": "4.17.23",
+      "advisoryKind": "ghsa",
+      "advisorySHA256": "8fc1f59a0beca73d294165bdd7867e3f9d1c55e4427632dbe2bbcd2096695f04",
+      "evidenceFile": "Config/Security/applicability/upload-lodash.json",
+      "evidenceSHA256": "d50393c1397b49cf9bef69026f8962dcb49f97f3fd901a0cad796e74fe760781",
+      "action": {
+        "repository": "actions/upload-artifact",
+        "revision": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+        "url": "https://codeload.github.com/actions/upload-artifact/tar.gz/cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+        "archiveSHA256": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+        "cacheFile": ".build/security-inventory-actions/actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9.tgz"
+      },
+      "entrypoint": "dist/upload/index.js",
+      "bundleSHA256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+      "reason": "此精確官方upload-artifact只內附經完整比對的lodash子集，未包含本公告所影響的程式實作。"
+    }
+  ]
+}

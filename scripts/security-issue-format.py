@@ -50,17 +50,25 @@ def semantic(f):
     return result
 
 
-def render(key,f,report,resolved=False,resolutions=None):
+def render(key,f,report,resolved=False,resolutions=None,applicability=None):
     f=public_finding(f);resolutions=list(resolutions or [])
     if resolved and not resolutions: resolutions=[report['checkedAt']]
     snapshot={'finding':f,'checkedAt':report['checkedAt'],'resolutions':resolutions}
+    if applicability is not None:
+        if (not isinstance(applicability,dict) or not re.fullmatch('[a-f0-9]{64}',applicability.get('proofSHA256',''))
+                or not isinstance(applicability.get('reason'),str)):
+            raise ValueError('Invalid applicability resolution')
+        display_time(applicability['checkedAt'])
+        snapshot['applicabilityResolution']=applicability
     encoded=base64.urlsafe_b64encode(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).decode()
     marker=f'<!-- myterm-security-risk:v1 key={key} digest={digest({"risk":f,"resolved":bool(resolutions)})} -->\n'
     title=f"[{LEVELS.get(f['severity'],'待確認')}] {f['component']}：{SCOPES[f['scope']]}安全風險（{f['id']}）"
+    if applicability is not None:
+        title=f"[不適用] {f['component']}：{SCOPES[f['scope']]}公告（{f['id']}）"
     if len(title)>240: raise ValueError('Issue title too long')
     body=marker+FORMAT+'<!-- myterm-security-snapshot:'+encoded+' -->\n'
     body+='- **公告**：['+safe(f['id'])+']('+f['url']+')\n'
-    rows=[('元件',f['component']),('受影響範圍',SCOPES[f['scope']]),('目前版本',f['version']),('判斷','版本命中' if f['status']=='affected' else '待確認')]
+    rows=[('元件',f['component']),('受影響範圍',SCOPES[f['scope']]),('目前版本',f['version']),('判斷','不適用' if applicability is not None else '版本命中' if f['status']=='affected' else '待確認')]
     if f.get('patches'):
         values=[]
         for patch in f['patches']:
@@ -69,7 +77,7 @@ def render(key,f,report,resolved=False,resolutions=None):
         rows.append(('修補版本','；'.join(values)))
     else: rows.append(('修補版本',f.get('fixedVersion') or '待確認'))
     impact=f.get('impact',{})
-    rows.append(('實際影響',IMPACTS.get(impact.get('status'),'待確認')))
+    rows.append(('實際影響','已確認不受影響' if applicability is not None else IMPACTS.get(impact.get('status'),'待確認')))
     if impact.get('usage'): rows.append(('使用路徑',impact['usage']))
     elif f.get('dependencyPaths'): rows.append(('相依路徑','；'.join(f['dependencyPaths'])))
     if impact.get('reason'): rows.append(('評估依據',impact['reason']))
@@ -99,6 +107,9 @@ def render(key,f,report,resolved=False,resolutions=None):
     if resolutions:
         body+='\n## 解除紀錄\n'
         for stamp in resolutions: body+='- '+display_time(stamp)+'：本次掃描已不再命中此風險。\n'
+    if applicability is not None:
+        body+='\n## 不適用結案\n- '+display_time(applicability['checkedAt'])+'：'+safe(applicability['reason'])+'\n'
+        body+='- 原始版本命中及嚴重度保留；此判定不是套件已修補或風險例外。證據失效且仍命中時重新評估並開啟原紀錄。\n'
     return title,body
 
 

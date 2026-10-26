@@ -230,3 +230,11 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 原命中保存在 `rawFindings`，精確供應商修補另存 `supplierFixReviews`；gate 與 Issue 寫入前重新核對。只有同一公告、所有相關環境／origin 與函式庫內容均驗證完整，才可依已修補解除對應 Issue，並保留維護摘要。公告變動、來源不符、缺證據或查詢失敗均保留風險與阻擋；非此精確封裝、未驗證環境與其他原生函式庫不借用此判定。這不是漏洞例外，發布／部署與其他風險門檻不變。
 
 已核准的完整Linux安全流程使用同版本官方OpenSSL的專案隔離副本，目的是消除runner同版號卻內容不同的來源不確定性；不把runner雜湊加進信任表。固定deb／兩份函式庫／修補紀錄雜湊不變。準備只寫入專案`.build`，不以dpkg安裝，不改系統CA／套件；原生系統來源仍須原本的精確核對。所有45筆公告仍逐筆比對目前CNA，任何變化都保留待審。來源選擇變數不是gate豁免，三個完整流程必須選用，獨立健康流程維持無套件準備。
+
+### 精確平台／封裝不適用的結案
+
+`security-project-applicability.py` 僅處理四筆已審範圍：CPython 的 Windows 限定 mimetypes 公告、固定官方 GitHub CLI 未編入的 OpenPGP 公告，以及 upload-artifact 精確 lodash 子集不含受影響實作的兩則公告。`Config/Security/project-applicability.json` 綁定官方公告內容、資產與受審來源圖；`Config/Security/applicability/` 保存必要的公開來源證據。這不涵蓋只有輸入受限、未找到呼叫或背景行為未明的其他版本命中。
+
+每次核對兩個受管解譯器的實際平台、官方 CLI／Action 內容及公告，並在 gate／Issue 寫入前重驗。原始版本命中保留在 `rawFindings`；`projectApplicabilityReviews` 記錄被排除的命中，`projectApplicabilityProofs` 另保留當次來源證據，供核對仍開啟的歷史 Issue。所有舊環境／origin 必須被明確覆蓋；版本已更新而不再命中，也不能單靠空清單結案。
+
+正式 main 監測驗證後，符合者以「不適用」及 `not_planned` 結案，保留原始嚴重度、理由與歷史，不寫成套件已修補或風險例外。相同條件不重開、不另建同筆；證據失效且仍有查證命中時，只重新開啟由這套機制結案的原 Issue。其他人工結案／撤回紀錄不改行為，部分掃描不得結案。新平台、資產、受影響程式或公告條件須重新評估；一般套件更新、其他風險與發布門檻仍獨立處理。

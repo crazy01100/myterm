@@ -27,9 +27,20 @@ def safe(value):
     return html.escape(str(value)).replace('@', '&#64;')
 
 
+def verification_links(report, environ):
+    commit=report.get('sourceReview',{}).get('checkoutCommit','')
+    run=environ.get('GITHUB_RUN_ID','')
+    if (environ.get('GITHUB_REPOSITORY')=='crazy01100/myterm'
+            and re.fullmatch('[a-f0-9]{40}',commit) and re.fullmatch('[1-9][0-9]*',run)):
+        base='https://github.com/crazy01100/myterm/'
+        return '\n\n[驗證來源]('+base+'commit/'+commit+')／[正式監測]('+base+'actions/runs/'+run+')。'
+    return ''
+
+
 def validate_report(report, now=None, additive=False):
     load('security-pip-applicability').validate_envelope(report)
     load('security-openssl-supplier').validate_envelope(report)
+    load('security-project-applicability').validate_envelope(report)
     now = now or dt.datetime.now(dt.timezone.utc)
     incomplete=report.get('scanStatus')!='complete' or report.get('errors')!=[] or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True
     if additive:
@@ -159,7 +170,10 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
         if 'pull_request' in issue or issue.get('user',{}).get('login')!=BOT or not match: continue
         # Withdrawn/cancelled decisions remain historical. A renewed advisory
         # gets a new record; ordinary completed fixes retain reopen semantics.
-        if issue['state']=='closed' and issue.get('state_reason')=='not_planned':continue
+        if issue['state']=='closed' and issue.get('state_reason')=='not_planned':
+            try: project_closed=load('security-project-applicability').owned_resolution(fmt.parse_issue(issue))
+            except (ValueError,KeyError,TypeError): project_closed=False
+            if not project_closed:continue
         if match[1] in managed: raise ValueError('Duplicate managed Issues require review')
         managed[match[1]] = issue
     # Prepare every write first: a malformed record or enrichment failure must not
@@ -198,6 +212,20 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             operations.append((issue,{'title':title,'body':body,'state':'open'},comment))
         else:
             f=old['finding']
+            proof=load('security-project-applicability').previous_decision(report,f)
+            if proof is not None and not additive:
+                if issue['state']=='closed' and load('security-project-applicability').owned_resolution(old):
+                    continue  # Identical applicable evidence never creates repeat notifications.
+                resolution={'decision':proof['decision'],'proofSHA256':load('security-project-applicability').digest(proof),
+                            'reason':proof['reason'],'checkedAt':report['checkedAt']}
+                title,body=render(key,f,{'checkedAt':old['checkedAt']},resolutions=old['resolutions'],applicability=resolution)
+                comment=('<!-- myterm-project-inapplicable:'+digest([f['id'],resolution['proofSHA256']])+' -->\n'
+                         '已核對本次環境／工具與官方公告：'+proof['reason']+'\n\n'
+                         '以不適用結案，保留原始命中及歷史；未將套件標示為已修補。來源、平台或公告變動後會重新核對。')
+                comment+=verification_links(report,os.environ if environ is None else environ)
+                operations.append((issue,{'title':title,'body':body,'state':'closed','state_reason':'not_planned'},comment))
+                actions.append({'action':'close-not-applicable','number':issue['number'],'key':key})
+                continue
             if key in excluded_keys:
                 # A precise subset decision is not a package upgrade. Preserve
                 # prior Issues for same-scope/main verification and maintenance.
@@ -280,6 +308,7 @@ def main():
     audit=load('security-audit');context=load('security-risk-context');cache={}
     load('security-pip-applicability').revalidate(report,Path(__file__).resolve().parents[1],audit.gh)
     load('security-openssl-supplier').revalidate(report,Path(__file__).resolve().parents[1])
+    load('security-project-applicability').revalidate(report,Path(__file__).resolve().parents[1])
     enrich=lambda finding:context.enrich(finding,audit.gh,audit.affected,historical=True,cache=cache)
     actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions,
