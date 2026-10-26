@@ -33,6 +33,9 @@ class ApplicabilityTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.policy = json.loads((ROOT/s.CONFIG).read_text())
+        usage = self.root/'Config/Security/usage-applicability.json'
+        usage.parent.mkdir(parents=True, exist_ok=True)
+        usage.write_bytes((ROOT/'Config/Security/usage-applicability.json').read_bytes())
         self.rule = self.policy['rules'][0]
         self.advisory = {'id': 'PSF-2025-2', 'details': 'Windows-only fixture', 'aliases': ['CVE-2024-3220'], 'affected': []}
         self.rule['advisorySHA256'] = s.advisory_digest(self.advisory, 'psf')

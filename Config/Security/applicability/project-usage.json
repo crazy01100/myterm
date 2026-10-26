@@ -1,0 +1,623 @@
+{
+  "schemaVersion": 1,
+  "kind": "reviewed-project-entry-paths",
+  "reviewedCommit": "148dc15158496a3450ca7ee5c46b8ea6c3b0d7b4",
+  "workflows": {
+    ".github/workflows/deploy-update-site.yml": "3748813969a1b7bcd9d3a11db669509d47547cdea346bc3e5d4ffd3beba1fbe9",
+    ".github/workflows/security-checks.yml": "192df2ea00ef055c3a6df0a69fcef3d3bb045aa1bf971ffe36e3546ff265654f",
+    ".github/workflows/security-gate.yml": "87c9ca7f73b0ef110c0882668bbd5087f06a8fac48b484fbac6ef4534da0c213",
+    ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"
+  },
+  "actions": [
+    {
+      "repository": "actions/checkout",
+      "revision": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "url": "https://codeload.github.com/actions/checkout/tar.gz/3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "archiveSHA256": "b59292069298c7be5ffd9c636431a229faff70ece00e0c24fd31baeb7b309fa3",
+      "cacheFile": ".build/security-inventory-actions/actions-checkout-3d3c42e5aac5ba805825da76410c181273ba90b1.tgz"
+    },
+    {
+      "repository": "actions/setup-node",
+      "revision": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "url": "https://codeload.github.com/actions/setup-node/tar.gz/949feb2413d6458794dcd2491c4babbbce0c15c1",
+      "archiveSHA256": "738f1f022b9004d05770ca7d294748ef37f40f977472ce978c1f3f74aaa45e34",
+      "cacheFile": ".build/security-inventory-actions/actions-setup-node-949feb2413d6458794dcd2491c4babbbce0c15c1.tgz"
+    },
+    {
+      "repository": "actions/setup-python",
+      "revision": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "url": "https://codeload.github.com/actions/setup-python/tar.gz/6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "archiveSHA256": "f8957c701bb6648d362eb6bbe03a2a35e6410093ea7098a7c2100cb3412965bd",
+      "cacheFile": ".build/security-inventory-actions/actions-setup-python-6d4fd22b20465ccc0f7354476588e8df7c9ca0e0.tgz"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "revision": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "url": "https://codeload.github.com/actions/upload-artifact/tar.gz/cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "archiveSHA256": "082ff3f390265f902386d7fc59c52d91fdd8e9d36d4bb5fdc94f44a70ec04b75",
+      "cacheFile": ".build/security-inventory-actions/actions-upload-artifact-cf430e030ddbb5b0abf93d22962f4752f3646cd9.tgz"
+    }
+  ],
+  "actionEntryPaths": [
+    {
+      "action": "actions/checkout",
+      "entrypoint": "dist/index.js",
+      "sha256": "b604bf1c08a471aedf51ddddbd3e8d03041683db270692d66cd1b4b097457818",
+      "undiciSurface": {
+        "action": "actions/checkout",
+        "entrypoint": "dist/index.js",
+        "sha256": "b604bf1c08a471aedf51ddddbd3e8d03041683db270692d66cd1b4b097457818",
+        "parserVersion": "8.18.0",
+        "moduleCount": 175,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "9659",
+            "properties": [
+              "ProxyAgent"
+            ],
+            "escapes": [],
+            "alias": "undici_1"
+          },
+          {
+            "module": "@entry",
+            "properties": [
+              "fetch"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    },
+    {
+      "action": "actions/setup-node",
+      "entrypoint": "dist/cache-save/index.js",
+      "sha256": "207a598f869d4f64eeb5a3d9e1e847472bba56120b7b12c40f35900d53fd58e4",
+      "undiciSurface": {
+        "action": "actions/setup-node",
+        "entrypoint": "dist/cache-save/index.js",
+        "sha256": "207a598f869d4f64eeb5a3d9e1e847472bba56120b7b12c40f35900d53fd58e4",
+        "parserVersion": "8.18.0",
+        "moduleCount": 233,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "@entry",
+            "properties": [
+              "kT"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    },
+    {
+      "action": "actions/setup-node",
+      "entrypoint": "dist/setup/index.js",
+      "sha256": "61462d80fd9850ceb0fd072b80777ce297f537fb2ec2d7c8d87983e80ce7e4fa",
+      "undiciSurface": {
+        "action": "actions/setup-node",
+        "entrypoint": "dist/setup/index.js",
+        "sha256": "61462d80fd9850ceb0fd072b80777ce297f537fb2ec2d7c8d87983e80ce7e4fa",
+        "parserVersion": "8.18.0",
+        "moduleCount": 236,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "9659",
+            "properties": [
+              "ProxyAgent"
+            ],
+            "escapes": [],
+            "alias": "undici_1"
+          },
+          {
+            "module": "@entry",
+            "properties": [
+              "ProxyAgent",
+              "fetch"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    },
+    {
+      "action": "actions/setup-python",
+      "entrypoint": "dist/cache-save/index.js",
+      "sha256": "48e61419c67354e2a1d396bbfbd243e39199fc10e6a19db9e51801c5014df65e",
+      "undiciSurface": {
+        "action": "actions/setup-python",
+        "entrypoint": "dist/cache-save/index.js",
+        "sha256": "48e61419c67354e2a1d396bbfbd243e39199fc10e6a19db9e51801c5014df65e",
+        "parserVersion": "8.18.0",
+        "moduleCount": 248,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "@entry",
+            "properties": [
+              "kT"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    },
+    {
+      "action": "actions/setup-python",
+      "entrypoint": "dist/setup/index.js",
+      "sha256": "e6cb9c9f1b2f6c9c982c4939eb77dabefd5ef3730d79ff5cde6f63ae8b0184c8",
+      "undiciSurface": {
+        "action": "actions/setup-python",
+        "entrypoint": "dist/setup/index.js",
+        "sha256": "e6cb9c9f1b2f6c9c982c4939eb77dabefd5ef3730d79ff5cde6f63ae8b0184c8",
+        "parserVersion": "8.18.0",
+        "moduleCount": 248,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "@entry",
+            "properties": [
+              "kT"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    },
+    {
+      "action": "actions/upload-artifact",
+      "entrypoint": "dist/upload/index.js",
+      "sha256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+      "undiciSurface": {
+        "action": "actions/upload-artifact",
+        "entrypoint": "dist/upload/index.js",
+        "sha256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+        "parserVersion": "8.18.0",
+        "moduleCount": 428,
+        "undiciEntry": "6752",
+        "consumers": [
+          {
+            "module": "9659",
+            "properties": [
+              "ProxyAgent"
+            ],
+            "escapes": [],
+            "alias": "undici_1"
+          },
+          {
+            "module": "@entry",
+            "properties": [
+              "ProxyAgent",
+              "fetch"
+            ],
+            "escapes": [],
+            "alias": "undici"
+          }
+        ],
+        "dynamicInternalRequires": [],
+        "features": [
+          {
+            "api": "cookie-helpers",
+            "target": "9061",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "WebSocket",
+            "target": "3726",
+            "callersOutsideUndiciEntry": []
+          },
+          {
+            "api": "EventSource",
+            "target": "1238",
+            "callersOutsideUndiciEntry": []
+          }
+        ],
+        "automaticApplicabilityGranted": false
+      }
+    }
+  ],
+  "npmPolicy": {
+    "schemaVersion": 1,
+    "nodeVersion": "24.22.1",
+    "npm": {
+      "version": "11.21.1",
+      "url": "https://registry.npmjs.org/npm/-/npm-11.21.1.tgz",
+      "integrity": "sha512-YTzL6QBEJXyHcTu0JiUc7RKMp+mzlJtl7rGLmERaXUQeFHIMc9atdr6G9M9C8vDWbv40epoTQAzNL2/PtZVDhQ=="
+    }
+  },
+  "pipVersion": "26.2.2",
+  "pipWheelSHA256": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+  "cases": {
+    "validated-ip-input": {
+      "consumer": "npm-entry",
+      "conclusion": [
+        "字串入口先經 net.isIPv6，另一條回應路徑從固定 16 bytes 的 IPv6 轉成字串。既有 Node 24.22.1 原生正規式證據只允許一次 zone 百分號及受限字元，不符合公告的重複百分號／換行前提；呼叫檔與 Node pin 未變。這是限定入口的限制，不是原套件修補。"
+      ],
+      "sourceFiles": {
+        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+        "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-rxp7-6hxx-x8q5",
+          "scope": "development",
+          "assessment": "字串入口先經 net.isIPv6，另一條回應路徑從固定 16 bytes 的 IPv6 轉成字串。既有 Node 24.22.1 原生正規式證據只允許一次 zone 百分號及受限字元，不符合公告的重複百分號／換行前提；呼叫檔與 Node pin 未變。這是限定入口的限制，不是原套件修補。"
+        }
+      ]
+    },
+    "npm-no-eventsource": {
+      "consumer": "npm-entry",
+      "conclusion": [
+        "目前實際引入點沒有 EventSource；公告要求 EventSource 串流解析，與 node-gyp 的下載功能不同。呼叫檔 hash 與既有分析一致；僅限本筆 EventSource 公告，不推論其他 fetch 告警安全。"
+      ],
+      "sourceFiles": {
+        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+        "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-4qv8-2p9j-2685",
+          "scope": "development",
+          "assessment": "目前實際引入點沒有 EventSource；公告要求 EventSource 串流解析，與 node-gyp 的下載功能不同。呼叫檔 hash 與既有分析一致；僅限本筆 EventSource 公告，不推論其他 fetch 告警安全。"
+        }
+      ]
+    },
+    "npm-no-install-scripts": {
+      "consumer": "npm-entry",
+      "conclusion": [
+        "受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。"
+      ],
+      "sourceFiles": {
+        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+        "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-xjj6-f33q-929c",
+          "scope": "development",
+          "assessment": "受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。"
+        }
+      ]
+    },
+    "offline-pip": {
+      "consumer": "offline-pip",
+      "conclusion": [
+        "實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。"
+      ],
+      "sourceFiles": {
+        "Config/Security/python-tools.json": "35aeb3f74f0a8b839bb36f64ad1f86ebdd3545e9e4ffd3d8d74cdd789ac495b9",
+        "scripts/setup-security-tools.sh": "224d79f9cbc599f9230fd39a711d1b8027b21ff292acc7926c43a21761e45959",
+        "scripts/python-toolchain.py": "da3b2ce8453b0a3b2ebf826702f60976d9fbc8a29c42110671043c1425417ca2",
+        "scripts/python-verifier-wheels.py": "d3bee14506ce1d1daa234f12777bdf19855401b46c038fe1dbefafdde81e32df",
+        "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
+        "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-8988-9cw3-xx77",
+          "scope": "verification-tool",
+          "assessment": "實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。"
+        },
+        {
+          "id": "GHSA-gh4c-6fx4-qh6g",
+          "scope": "verification-tool",
+          "assessment": "實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。"
+        },
+        {
+          "id": "GHSA-vxq7-64xx-v4gw",
+          "scope": "verification-tool",
+          "assessment": "實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。"
+        }
+      ]
+    },
+    "xml-default-entity-option": {
+      "consumer": "xml-options",
+      "conclusion": [
+        "公告要求 processEntities=false。實際 getSerializerOptions 沒有關閉它，builder 預設為 true；目前設定不符合漏洞選項前提。此結論不影響另一筆 XML 數值實體解析告警。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-5wm8-gmm8-39j9",
+          "scope": "github-actions",
+          "assessment": "公告要求 processEntities=false。實際 getSerializerOptions 沒有關閉它，builder 預設為 true；目前設定不符合漏洞選項前提。此結論不影響另一筆 XML 數值實體解析告警。"
+        }
+      ]
+    },
+    "xml-generated-block-list": {
+      "consumer": "xml-options",
+      "conclusion": [
+        "builder 的 __cdata 能力存在，但目前上傳檔案內容以二進位串流送出；XML body 是由 UUID／區塊序號生成的 block ID 清單及固定 mapper 建立，並非把檔案文字放進 comment／CDATA。此次逐段確認 uploadStream、commitBlockList 及 BlockLookupList；限定目前 Action 的上傳路徑，不能證明整個 Azure SDK 的所有功能均不受影響。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-gh4j-gqv2-49f6",
+          "scope": "github-actions",
+          "assessment": "builder 的 __cdata 能力存在，但目前上傳檔案內容以二進位串流送出；XML body 是由 UUID／區塊序號生成的 block ID 清單及固定 mapper 建立，並非把檔案文字放進 comment／CDATA。此次逐段確認 uploadStream、commitBlockList 及 BlockLookupList；限定目前 Action 的上傳路徑，不能證明整個 Azure SDK 的所有功能均不受影響。"
+        }
+      ]
+    },
+    "xml-bounded-entity-options": {
+      "consumer": "xml-options",
+      "conclusion": [
+        "公告要求明確把 maxEntityCount 或 maxEntitySize 設成 0。實際 getParserOptions 沒有這兩個零值設定；一般 entity limit 繞過公告另行保留。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-jp2q-39xq-3w4g",
+          "scope": "github-actions",
+          "assessment": "公告要求明確把 maxEntityCount 或 maxEntitySize 設成 0。實際 getParserOptions 沒有這兩個零值設定；一般 entity limit 繞過公告另行保留。"
+        }
+      ]
+    },
+    "node-explicit-version": {
+      "consumer": "node-version-input",
+      "conclusion": [
+        "三份有 setup-node 的 workflow 均直接指定 node-version=24.22.1，未設定 node-version-file；resolveVersionInput 有版本值就不進讀檔／TOML 分支。三份 workflow 雖有其他修改，此相關設定逐份重新確認。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-r4xh-jqrq-34v2",
+          "scope": "github-actions",
+          "assessment": "三份有 setup-node 的 workflow 均直接指定 node-version=24.22.1，未設定 node-version-file；resolveVersionInput 有版本值就不進讀檔／TOML 分支。三份 workflow 雖有其他修改，此相關設定逐份重新確認。"
+        }
+      ]
+    },
+    "fixed-artifact-patterns": {
+      "consumer": "artifact-input",
+      "conclusion": [
+        "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-3jxr-9vmj-r5cp",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-6j4f-fj2g-mc7p",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-f886-m6hf-6m8v",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-jxxr-4gwj-5jf2",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-mh99-v99m-4gvg",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-q2hr-2g5m-vwhr",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-qhr7-859c-m2p7",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        },
+        {
+          "id": "GHSA-rgw5-rvv9-x895",
+          "scope": "github-actions",
+          "assessment": "四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。"
+        }
+      ]
+    },
+    "undici-fetch-only": {
+      "consumer": "undici-actions",
+      "conclusion": [
+        "公告要求低階 API 接受大小寫混用的重複 Content-Length 陣列。目前呼叫面為 fetch／ProxyAgent，未見將外部資料直接作為該 raw header array；fetch 經 Headers 正規化。低階 dispatcher 仍存在，因此保留為目前輸入條件受限，不宣稱整份 library 排除。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-2mjp-6q6p-2qxm",
+          "scope": "github-actions",
+          "assessment": "公告要求低階 API 接受大小寫混用的重複 Content-Length 陣列。目前呼叫面為 fetch／ProxyAgent，未見將外部資料直接作為該 raw header array；fetch 經 Headers 正規化。低階 dispatcher 仍存在，因此保留為目前輸入條件受限，不宣稱整份 library 排除。"
+        },
+        {
+          "id": "GHSA-3wwx-pv8p-q78v",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-4992-7rv2-5pvq",
+          "scope": "github-actions",
+          "assessment": "公告要求將外部可控字串傳給低階 client.request 的 upgrade 選項。固定 Actions 引入面為 fetch／ProxyAgent，沒有此 upgrade 消費入口；不將套件中保留 upgrade 實作當成專案有使用它。"
+        },
+        {
+          "id": "GHSA-4qv8-2p9j-2685",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-8xcm-r25x-g524",
+          "scope": "github-actions",
+          "assessment": "這些 Actions 是下載／上傳／GitHub API 客戶端，不是轉送 HTTP status／headers／body 的 proxy 或 gateway；目前 workflow 未配置 Undici retry interceptor。Octokit 的應用層重試不等於公告要求的 Undici interceptor＋下游原樣轉送。"
+        },
+        {
+          "id": "GHSA-f269-vfmq-vjvj",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-g8m3-5g58-fq7m",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-m8rv-5g2x-5cg5",
+          "scope": "github-actions",
+          "assessment": "官方公告明確區分低階 dispatcher 的自訂 Blob-like body 與 fetch；fetch 經 Headers 驗證不走該漏洞條件。目前核對的 Actions 呼叫 fetch，未建立該自訂低階 body 路徑。"
+        },
+        {
+          "id": "GHSA-p88m-4jfj-68fv",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-r53p-7pc4-xj5r",
+          "scope": "github-actions",
+          "assessment": "這些 Actions 是下載／上傳／GitHub API 客戶端，不是轉送 HTTP status／headers／body 的 proxy 或 gateway；目前 workflow 未配置 Undici retry interceptor。Octokit 的應用層重試不等於公告要求的 Undici interceptor＋下游原樣轉送。"
+        },
+        {
+          "id": "GHSA-rfgv-xxqx-mfg5",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-v3r7-h72x-cjcm",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-v9p9-hfj2-hcw8",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-vrm6-8vpv-qv8q",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        },
+        {
+          "id": "GHSA-vxpw-j846-p89q",
+          "scope": "github-actions",
+          "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        }
+      ]
+    }
+  }
+}
