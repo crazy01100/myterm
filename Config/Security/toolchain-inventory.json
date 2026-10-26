@@ -19,7 +19,7 @@
       "acceptedBy": "project maintainer",
       "kind": "supplier-managed-limited-subdependency-evidence",
       "component": "firestore-emulator",
-      "firebaseToolsVersion": "15.34.0",
+      "firebaseToolsVersion": "15.34.1",
       "version": "1.22.0",
       "size": 136707194,
       "sha256": "9b6498b7f62714d67f48f59b3818883cd682dbcd46b9f59511de81c97bb5166c",

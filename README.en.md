@@ -179,7 +179,7 @@ Source tests and administration scripts require Python 3.12 or newer through the
 
 Development entries verify the retired Issue #43 acceptance decision and official withdrawal evidence under [security maintenance](SECURITY_MAINTENANCE.en.md). Development/release checks require a fresh online review; other dependencies remain subject to normal security checks. Existing App users are unaffected.
 
-Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
+Before Python security operations, run `scripts/setup-security-tools.sh` to prepare pip and standalone certifi from pinned official wheels/hashes, then independently verify the standalone and pip-vendored CA copies. The official copies may have different versions, but each must match its own pinned version and digest; pip-vendored files are not modified. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
 
 ## SFTP directory bookmarks
 

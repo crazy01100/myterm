@@ -40,7 +40,7 @@ MyTerm 的雲端流程分成兩層：
 
 - Apple Silicon開發Mac的Firestore Rules／Emulator使用專案隔離的Java，先依[開發指南](DEVELOPMENT.md#apple-silicon-的隔離基底與-java)準備；wrapper不再自動選用Homebrew Java。此變更不影響App使用者或雲端服務的Java環境。
 - 專案鎖定的 Firebase CLI；在 repository 根目錄執行 `./scripts/project-node.sh --npm install` 後由 `scripts/firebase-tools.sh` 使用。
-- 開發工具另需 Node.js 24 LTS（Firebase 13 需 24.x 中的 24.12.0 以上版本）與 Python 3.12 以上。使用 `./scripts/project-node.sh --npm ci` 安裝固定相依，再用 `./scripts/project-node.sh --npm run test:development-tools` 驗證。CLI 已原生支援安全串流套件，無須套用相容補丁；啟動前會唯讀核對安裝版本與鎖檔一致。
+- 開發工具另需 Node.js 24 LTS（Firebase 13 需 24.x 中的 24.12.0 以上版本）與 Python 3.12 以上。使用 `./scripts/project-node.sh --npm ci` 安裝固定相依，再用 `./scripts/project-node.sh --npm run test:development-tools` 驗證。CLI 已原生支援安全串流套件，無須套用相容補丁；啟動前會唯讀核對安裝版本與鎖檔一致。 同時核對 Rules 測試套件的 peer 相依宣告與實際安裝封裝一致；若不同，依官方套件重建鎖檔並測試，不使用 force 或 legacy-peer-deps 略過。
 - macOS 26、Apple Silicon 與 Xcode 26 或相容 Command Line Tools，用於建置 MyTerm。
 
 Firebase 工具入口僅支援本指南的 Firestore 部署、基本帳號設定及 `demo-myterm` 本機 Emulator；Auth 匯入、Hosting、替代設定與任意測試子命令會被拒絕。相依例外、期限與限制詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
@@ -241,6 +241,6 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 
 載入 CLI 前，Firebase wrapper 核對通用政策契約、專案工具完整性及實際用途風險；不查詢已結案個案。Rules 使用的 Java 保留相關安全檢查，OS 更新不列為前置。一般來源修改不需額外 revision 核准；安全政策修改併入最終 PR 審閱。雲端寫入仍需明確授權，App 的 Google 登入及同步不依賴本機 CLI。
 
-Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
+Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊準備 pip 與獨立 certifi，分別核對獨立與 pip 內附 CA 後再進行網路驗證。兩份官方 CA 可為不同版本，各自必須符合固定版本與摘要；不修改 pip 內附檔案。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 Linux x86_64 CI 同樣使用專案隔離 Java；以 `project-java-runtime.py setup` 準備固定官方封裝後才使用 wrapper，不繼承 runner 預裝版本。

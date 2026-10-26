@@ -355,6 +355,8 @@ build/dev/MyTerm Dev.app/Contents/MacOS/MySSHClient
 <a id="python-runtime"></a>
 ## Python 工具環境
 
+CI 的安全檢查、監測與部署準備固定使用 Python 3.12.16，兩個受管 venv 必須記錄實際基底與 OpenSSL；升級 Python 不等於更新它動態連結的 OpenSSL。本機 Mac 仍使用既有固定 Astral 封裝，待同供應商修補版另行核對，不以 CI 通過代證本機已修補。
+
 專案管理、測試與發布腳本使用仍受上游支援的 Python 3.12 或更新穩定版，統一入口為 `./scripts/project-python.sh`。它依序使用明確指定的 `MYTERM_PYTHON`、專案 `.build/python-runtime/bin/python3`、專案 `.build/python-base/bin/python3`，或 PATH 中可用的受支援版本；不接受低於 3.12 的版本，也不修改系統 Python。
 
 先準備受管工具，再執行需要網路的開發／安全作業：

@@ -25,6 +25,10 @@ function verify(root = path.resolve(__dirname, '..')) {
         if (!relative.startsWith('node_modules/') || !expected || installed.version !== expected.version) {
           throw Error(name + ': installation differs from lockfile; run npm ci');
         }
+        const peers = value => Object.entries(value || {}).sort(([a], [b]) => a.localeCompare(b));
+        if (JSON.stringify(peers(installed.peerDependencies)) !== JSON.stringify(peers(expected.peerDependencies))) {
+          throw Error(name + ': peer requirements differ from the installed official package');
+        }
         return {file, version: installed.version};
       }
       dir = path.dirname(dir);
@@ -33,6 +37,11 @@ function verify(root = path.resolve(__dirname, '..')) {
   }
   const cli = checkedPackage(createRequire(path.join(root, 'package.json')), 'firebase-tools');
   if (cli.version !== pinned) throw Error('Firebase CLI installation differs from manifest');
+  const rules = checkedPackage(createRequire(path.join(root, 'package.json')), '@firebase/rules-unit-testing');
+  if (rules.version !== manifest.devDependencies['@firebase/rules-unit-testing'] ||
+      rules.version !== lock.packages[''].devDependencies['@firebase/rules-unit-testing']) {
+    throw Error('Firebase Rules test version differs from manifest/lockfile');
+  }
   const resolver = createRequire(cli.file);
   for (const name of ['stream-json', 'stream-chain', 'csv-parse']) checkedPackage(resolver, name);
 }

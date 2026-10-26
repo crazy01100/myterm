@@ -259,7 +259,10 @@ def scan_verifier(report):
     environments=python_tools.inventory(ROOT)
     report['pythonTooling']={'environments':environments,'advisoryScope':'source pins and current runner environments; not other Macs',
                             'networkCA':'reviewed standalone certifi for project Python HTTPS',
-                            'caSHA256':policy['caSHA256']}
+                            'caSHA256':policy['packages']['certifi']['caSHA256'],
+                            'caBundles':{origin:{'version':version,'caSHA256':pin['caSHA256']}
+                                for origin,version,pin in [('certifi',policy['packages']['certifi']['version'],policy['packages']['certifi']),
+                                    ('pip/_vendor/certifi',policy['packages']['pip']['vendoredCertifi'],policy['packages']['pip'])]}}
     for env in environments:
         origins={row['origin'] for row in env['packages']}
         if not {'pip','certifi','pip/_vendor/certifi'} <= origins:
@@ -268,8 +271,14 @@ def scan_verifier(report):
             observe(row['name'],row['version'],('current CI runner / ' if os.environ.get('GITHUB_ACTIONS')=='true' else 'local checkout / ')+env['role']+' → '+row['origin'])
             # A known old version is a finding, not missing evidence. A claimed
             # current version with altered certificates is an operational error.
-            if row['name']=='certifi' and row['version']==policy['packages']['certifi']['version'] and row.get('caSHA256')!=policy['caSHA256']:
-                raise ValueError('CA content differs from reviewed version: '+env['role'])
+            if row['name']=='certifi':
+                origin=row['origin']
+                if origin not in ('certifi','pip/_vendor/certifi'):
+                    raise ValueError('Unknown certificate origin: '+origin)
+                pin=policy['packages']['pip' if origin=='pip/_vendor/certifi' else 'certifi']
+                expected=pin['vendoredCertifi'] if origin=='pip/_vendor/certifi' else pin['version']
+                if row['version']==expected and row.get('caSHA256')!=pin['caSHA256']:
+                    raise ValueError('CA content differs from reviewed version: '+env['role']+' / '+origin)
     grouped={}
     for (name,version),origins in sorted(observations.items()):
         result=get_json('https://api.osv.dev/v1/query',{'package':{'ecosystem':'PyPI','name':name},'version':version})

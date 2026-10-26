@@ -256,7 +256,7 @@ SFTPBookmarkSyncCodec只接受遠端型別，以既有Vault Master Key及專案�
 
 已結案的條件式接受保留為歷史，不再做個案專屬查詢。日常入口使用通用來源政策審閱，與工具清冊、公告查詢及風險gate分開；新公告另案處理，不授予永久豁免。供應商證據有限及未驗證環境明列限制，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
-Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
+Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊準備 pip 與獨立 certifi，分別核對獨立與 pip 內附 CA 後再進行網路驗證。兩份官方 CA 可為不同版本，各自必須符合固定版本與摘要；不修改 pip 內附檔案。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 PR基準審閱由同一評估器讀取GitHub即時PR與review資料；其他作者使用原生APPROVED，本人建立PR可用綁定head/base及政策原始摘要的明確COMMENTED紀錄。API操作只讀，核准資格與安全掃描結果分開判斷；合併前需再次核對，無新增高權限事件或自動合併。此紀錄是維護者決策，非第二人審查或不可修改簽章。
 

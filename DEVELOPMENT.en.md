@@ -355,6 +355,8 @@ Manual security monitoring can enable `refresh_issue_format` to refresh existing
 <a id="python-runtime"></a>
 ## Python tool environment
 
+Security checks, monitoring and deployment preparation pin CI Python to 3.12.16. Both managed venvs record their actual base and OpenSSL; a Python update does not update its dynamically linked OpenSSL. The local Mac retains its existing pinned Astral archive pending a separately verified vendor patch. A CI pass does not prove local remediation.
+
 Project administration, tests, and release scripts use an upstream-supported stable Python 3.12 or newer through `./scripts/project-python.sh`. It selects an explicit `MYTERM_PYTHON`, the project environment at `.build/python-runtime/bin/python3`, the project base at `.build/python-base/bin/python3`, or a supported interpreter on PATH, in that order. It rejects versions below 3.12 and does not replace the system Python.
 
 Prepare managed tooling before networked development/security operations:

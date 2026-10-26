@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "requirementsSHA256": "7d8ed205fd0158707e943f51d9b1d90cdd6d7e66c42c00683f55e462a21b6723",
+  "requirementsSHA256": "2fc92276555d8220e1b27aae49fa64ac6474a4f8ec64cb6f28308bdcf69afa22",
   "wheels": [
     {
       "name": "cryptography",
@@ -1103,10 +1103,10 @@
     },
     {
       "name": "pycparser",
-      "version": "3.11",
-      "filename": "pycparser-3.11-py3-none-any.whl",
-      "url": "https://files.pythonhosted.org/packages/90/11/0e6f11117525ff0eec40ebac3d313376f102df93ca44ad9e893ee85e4f89/pycparser-3.11-py3-none-any.whl",
-      "sha256": "51d5a8ba2be0bbe440b99d2112604c95bbbc3c2748a64260186c541e1729cd80"
+      "version": "3.12",
+      "filename": "pycparser-3.12-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/b6/ae/315bbeee126a769cbde43cf4908acb4b40408d8bf8bbf334dd7368d8dadf/pycparser-3.12-py3-none-any.whl",
+      "sha256": "a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e"
     },
     {
       "name": "typing-extensions",

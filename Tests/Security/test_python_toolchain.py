@@ -28,8 +28,8 @@ class PythonToolchainTests(unittest.TestCase):
         return {'python':'3.12.14','prefix':str(prefix),'basePrefix':'/fixture/shared',
                 'purelib':str(prefix/'lib'),'packages':[
                     {'name':'pip','origin':'pip','version':'26.2.2'},
-                    {'name':'certifi','origin':'certifi','version':'2026.10.19','caPath':ca,'caSHA256':self.policy['caSHA256']},
-                    {'name':'certifi','origin':'pip/_vendor/certifi','version':'2026.10.19','caPath':ca,'caSHA256':self.policy['caSHA256']}]}
+                    {'name':'certifi','origin':'certifi','version':self.policy['packages']['certifi']['version'],'caPath':ca,'caSHA256':self.policy['packages']['certifi']['caSHA256']},
+                    {'name':'certifi','origin':'pip/_vendor/certifi','version':self.policy['packages']['pip']['vendoredCertifi'],'caPath':ca,'caSHA256':self.policy['packages']['pip']['caSHA256']}]}
 
     def test_owned_venv_and_both_ca_copies_required(self):
         info=self.info();self.assertTrue(p.validate_current(info,self.policy,self.root))
@@ -39,6 +39,37 @@ class PythonToolchainTests(unittest.TestCase):
         for origin in ['pip','certifi','pip/_vendor/certifi']:
             changed=copy.deepcopy(info);changed['packages']=[r for r in changed['packages'] if r['origin']!=origin]
             with self.assertRaises(ValueError):p.validate_current(changed,self.policy,self.root)
+
+    def test_distinct_pinned_ca_versions_are_valid_but_swapping_is_rejected(self):
+        info=self.info()
+        self.assertNotEqual(info['packages'][1]['version'],info['packages'][2]['version'])
+        p.validate_current(info,self.policy,self.root)
+        changed=copy.deepcopy(info)
+        changed['packages'][1]['caSHA256'],changed['packages'][2]['caSHA256']=changed['packages'][2]['caSHA256'],changed['packages'][1]['caSHA256']
+        with self.assertRaises(ValueError):p.validate_current(changed,self.policy,self.root)
+        for index in (1,2):
+            changed=copy.deepcopy(info);changed['packages'][index]['version']='2026.10.20'
+            with self.assertRaises(ValueError):p.validate_current(changed,self.policy,self.root)
+
+    def test_each_origin_requires_its_own_fingerprint(self):
+        for name in ('pip','certifi'):
+            changed=copy.deepcopy(self.policy);changed['packages'][name].pop('caSHA256')
+            (self.root/p.CONFIG).write_text(json.dumps(changed))
+            with self.assertRaises(ValueError):p.configuration(self.root)
+        changed=copy.deepcopy(self.policy);changed['schemaVersion']=1
+        (self.root/p.CONFIG).write_text(json.dumps(changed))
+        with self.assertRaises(ValueError):p.configuration(self.root)
+
+    def test_pip_wheel_checks_vendored_version_without_importing_it(self):
+        wheel=self.root/'pip-fixture.whl';ca=b'fixture vendor CA'
+        with zipfile.ZipFile(wheel,'w') as z:
+            z.writestr('pip-26.2.2.dist-info/METADATA','Name: pip\nVersion: 26.2.2\n')
+            z.writestr('pip/_vendor/certifi/cacert.pem',ca)
+            z.writestr('pip/_vendor/certifi/__init__.py','__version__ = "2026.10.19"\nraise RuntimeError("must not execute")')
+        row={'version':'26.2.2','sha256':p.sha(wheel),'caSHA256':hashlib.sha256(ca).hexdigest(),'vendoredCertifi':'2026.10.19'}
+        p.verify_wheel(wheel,'pip',row,{})
+        with self.assertRaises(ValueError):p.verify_wheel(wheel,'pip',{**row,'vendoredCertifi':'2026.10.23'},{})
+        with self.assertRaises(ValueError):p.verify_wheel(wheel,'pip',{**row,'caSHA256':'0'*64},{})
 
     def test_shared_interpreter_external_sites_and_role_mismatch_rejected(self):
         for change in [{'basePrefix':self.info()['prefix']},{'purelib':'/fixture/shared/lib'}, {'prefix':'/fixture/shared'}]:
@@ -56,10 +87,10 @@ class PythonToolchainTests(unittest.TestCase):
         with zipfile.ZipFile(wheel,'w') as z:
             z.writestr('certifi-2026.10.19.dist-info/METADATA','Name: certifi\nVersion: 2026.10.19\n')
             z.writestr('certifi/cacert.pem',ca)
-        row={'version':'2026.10.19','sha256':p.sha(wheel)};policy={'caSHA256':hashlib.sha256(ca).hexdigest()}
+        row={'version':'2026.10.19','sha256':p.sha(wheel),'caSHA256':hashlib.sha256(ca).hexdigest()};policy={}
         p.verify_wheel(wheel,'certifi',row,policy)
         with self.assertRaises(ValueError):p.verify_wheel(wheel,'certifi',{**row,'sha256':'0'*64},policy)
-        with self.assertRaises(ValueError):p.verify_wheel(wheel,'certifi',row,{'caSHA256':'0'*64})
+        with self.assertRaises(ValueError):p.verify_wheel(wheel,'certifi',{**row,'caSHA256':'0'*64},policy)
 
     def test_download_failure_precedes_any_environment_change(self):
         with patch.object(p,'prepare',side_effect=ValueError('hash mismatch')),patch.object(p.subprocess,'run') as run:
@@ -109,7 +140,7 @@ class PythonInventoryAuditTests(unittest.TestCase):
         for role in p.ROLES:
             self.environments.append({'role':role,'packages':[
                 {'name':'pip','version':'25.0.1','origin':'pip'},
-                {'name':'certifi','version':'2026.10.19','origin':'certifi','caSHA256':self.policy['caSHA256']},
+                {'name':'certifi','version':self.policy['packages']['certifi']['version'],'origin':'certifi','caSHA256':self.policy['packages']['certifi']['caSHA256']},
                 {'name':'certifi','version':'2024.08.30','origin':'pip/_vendor/certifi','caSHA256':'old fixture'}]})
 
     def scan(self,fetch):
@@ -133,10 +164,19 @@ class PythonInventoryAuditTests(unittest.TestCase):
         self.assertTrue(any(x['version']=='26.2.2' for x in calls))
         self.assertNotIn(str(self.root),json.dumps(report))
 
+    def test_current_vendor_ca_tamper_is_rejected_independently(self):
+        for env in self.environments:
+            env['packages'][2].update(version=self.policy['packages']['pip']['vendoredCertifi'],caSHA256=self.policy['packages']['pip']['caSHA256'])
+        report=self.scan(lambda *args:{'vulns':[]})
+        bundles=report['pythonTooling']['caBundles']
+        self.assertNotEqual(bundles['certifi']['caSHA256'],bundles['pip/_vendor/certifi']['caSHA256'])
+        self.environments[0]['packages'][2]['caSHA256']=self.policy['packages']['certifi']['caSHA256']
+        with self.assertRaises(ValueError):self.scan(lambda *args:{'vulns':[]})
+
     def test_missing_env_current_ca_tamper_and_query_failure_do_not_pass(self):
         self.environments[0]['packages'][1]['caSHA256']='changed'
         with self.assertRaises(ValueError):self.scan(lambda *args:{'vulns':[]})
-        self.environments[0]['packages'][1]['caSHA256']=self.policy['caSHA256']
+        self.environments[0]['packages'][1]['caSHA256']=self.policy['packages']['certifi']['caSHA256']
         with self.assertRaises(OSError):self.scan(lambda *args:(_ for _ in ()).throw(OSError('offline')))
         self.environments[0]['packages'].pop()
         with self.assertRaises(ValueError):self.scan(lambda *args:{'vulns':[]})
