@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 BOT = 'github-actions[bot]'
 MARKER = re.compile(r'^<!-- myterm-security-risk:v1 key=([0-9a-f]{64}) digest=([0-9a-f]{64}) -->\n')
@@ -102,14 +103,27 @@ render=fmt.render
 
 
 class GitHub:
-    def __init__(self, repo): self.repo = repo
+    def __init__(self, repo):
+        self.repo = repo
+        self.next_write_at = 0.0
 
     def request(self, path, method='GET', payload=None):
         endpoint = 'repos/'+self.repo+('/'+path if path else '')
         cmd = [str(Path(__file__).resolve().parent/'project-gh.sh'),'api',endpoint,'--method',method]
         if payload is not None: cmd += ['--input','-']
-        result = subprocess.run(cmd, input=None if payload is None else json.dumps(payload), capture_output=True, text=True, timeout=60)
-        if result.returncode: raise RuntimeError(f'GitHub {method} {path.split("?")[0]} failed; risk tracking is incomplete')
+        mutating=method not in ('GET','HEAD','OPTIONS')
+        if mutating:
+            remaining=self.next_write_at-time.monotonic()
+            if remaining>0:time.sleep(remaining)
+        try:
+            result = subprocess.run(cmd, input=None if payload is None else json.dumps(payload), capture_output=True, text=True, timeout=60)
+        finally:
+            if mutating:self.next_write_at=time.monotonic()+1.0
+        if result.returncode:
+            status=re.search(r'HTTP ([0-9]{3})',result.stderr or '')
+            detail=' HTTP '+status[1] if status else ''
+            if 'rate limit' in (result.stderr or '').lower():detail+=' (rate-limited)'
+            raise RuntimeError(f'GitHub {method} {path.split("?")[0]} failed{detail}; risk tracking is incomplete')
         return json.loads(result.stdout) if result.stdout.strip() else None
 
     def pages(self, path):
