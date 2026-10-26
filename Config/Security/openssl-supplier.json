@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "grantsRiskException": false,
+  "packages": [
+    {
+      "provider": "Ubuntu",
+      "package": "libssl3t64",
+      "sourcePackage": "openssl",
+      "version": "3.5.5-1ubuntu3.7",
+      "architecture": "amd64",
+      "upstreamVersion": "3.5.5",
+      "url": "https://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl3t64_3.5.5-1ubuntu3.7_amd64.deb",
+      "sha256": "3ff73e121f6cd4f19e80ab4329dfd914108b3936c9db3708200203a9b245b34d",
+      "size": 2368026,
+      "checksumSource": "https://archive.ubuntu.com/ubuntu/dists/resolute-updates/main/binary-amd64/Packages.xz",
+      "libraries": {
+        "/usr/lib/x86_64-linux-gnu/libssl.so.3": "63b47f444efa588e291e9b650a5ba2ab02f856356f2d50f13a2e477db9119e09",
+        "/usr/lib/x86_64-linux-gnu/libcrypto.so.3": "5385f0436ac2e284ba8c5fb1488874057c29c04be72dea32add832694f381e28"
+      },
+      "changelogPath": "usr/share/doc/libssl3t64/changelog.Debian.gz",
+      "changelogSHA256": "c52a9e06f325f2e851fb5f64a042d5276403ce3beeb1544dfa0edbaa85158a54",
+      "fixes": {
+        "CVE-2026-14456": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "d4e804e50651b0328c364193050e64e89fee04ed6bdf97f5dc349186e1921971"
+        },
+        "CVE-2026-14457": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "e65150a21d18125b7f7180be825ca59ea710cb1d12db9ca7361be95f120ca52e"
+        },
+        "CVE-2026-18798": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "3ded8955acf9069945509b4612119f9c7495b251b9bf39a4540d6cac3bd4ab94"
+        },
+        "CVE-2026-2673": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "7a6bfbca4692871bdf5e8bda28a51d502e5996768bac98a29ae8b5cdb7f0aed7"
+        },
+        "CVE-2026-28387": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "cfb58350577f6f3caf0f7a26988ba95d4d3821d919085e597aeb6ba671d0d45a"
+        },
+        "CVE-2026-28388": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "fdddaa244330d11a255b58b0724101bc5ec035b0678f26e37cfd3f6284deaea1"
+        },
+        "CVE-2026-28389": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "ddfd65270cd3237d3f49d442f052dafea65b2f975edfbfc1574ab75b8f84c65d"
+        },
+        "CVE-2026-28390": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "819f43674f650f8c6b80e7662cf8f9aa67c736d272298f52a37df7cccfa1a069"
+        },
+        "CVE-2026-31789": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "fdd51370206a4e6da7a1fe8df06c1be73ec0d46daa2ab89ec61adac157b0434c"
+        },
+        "CVE-2026-31790": {
+          "fixedVersion": "3.5.5-1ubuntu3",
+          "advisorySHA256": "629e1ab8fb9c2e40a1302b9e99a828d79140275d4ef29b3d6fc9f7c9418aac2d"
+        },
+        "CVE-2026-34180": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "d78e6b94d18a8361ca6af65732298f0eb08715b9372dda8fd181bd5e7c7c65ce"
+        },
+        "CVE-2026-34181": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "705fd357fe7fa9f18cfba3792ebc0c4dec9bd2fb8d6a0d555eb8568ea86e6abc"
+        },
+        "CVE-2026-34182": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "4bac63d4267c96cdb0429ab3985aa01584e9038a113316e1b3e329d2705e1ab5"
+        },
+        "CVE-2026-34183": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "aa5c6015369a5f071bdc9ce9892e049bbe217c1f516a7e49370c82bae8cf4a3e"
+        },
+        "CVE-2026-35189": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "bc7f6e1c35de7c225b584a6f2a243ab768f937d237d27d11dbc1d155fc117178"
+        },
+        "CVE-2026-35191": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "f97cd18dbf965a54e37961c623baa3a368526d1c55c6726631aab7e8fcbaa290"
+        },
+        "CVE-2026-42764": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "5d3be32756d9bd14e3bd7834cbb90b99b2a2658455835070b590c119b7894d57"
+        },
+        "CVE-2026-42766": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "1ed62ec6c119d4b1ba337d56b34b17de56b2f75c7893f98c58165233ebf0ba1f"
+        },
+        "CVE-2026-42767": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "18f1249c9daf9239c855b53dca8f69ee2cd167bf4eca2430d697cec10de79c0d"
+        },
+        "CVE-2026-42768": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "715e40c9f06076dd276905a5fa5d0e54e463da974e577147805dd951ec4f847c"
+        },
+        "CVE-2026-42769": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "fe8150342344784a0db75ea68987ee82236265798ff9b0d71cfb211b759d073f"
+        },
+        "CVE-2026-42770": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "6cf869472bfab45a9771dbd9d7a3238013223e05d51d91f42e51fbf6e105939c"
+        },
+        "CVE-2026-42772": {
+          "fixedVersion": "3.5.5-1ubuntu3.7",
+          "advisorySHA256": "99ead951626f87f34d12ae6dbc5deb121b8ba93ad3e38fdb79ca14ec91e5b3fd"
+        },
+        "CVE-2026-45445": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "618b88d4b2c6bde7bfb02f90df8b504a9d34856ce6b665253ec9d888024c3452"
+        },
+        "CVE-2026-45446": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "39ddb8ddd616252f572f628a27643a32615cd35f6433f91ffb51a0a306acc594"
+        },
+        "CVE-2026-45447": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "6cd1f261b01ec71f5961486d9429ebd5bc72b312256d2bb42d3a1bb91bb17226"
+        },
+        "CVE-2026-54872": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "2d1335ff0a84a8194e3624d8c3c916390ca20123e2964969758304bd90e12bd7"
+        },
+        "CVE-2026-54873": {
+          "fixedVersion": "3.5.5-1ubuntu3.7",
+          "advisorySHA256": "53f6c9958bd2aa30e0b3b3ecc21fbc4744ac68cc47fc5170290fdba8515f1f68"
+        },
+        "CVE-2026-54874": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "fd2ae3d26c20b600d52bd20caf643dfd25cc366b86b227cc41ac48ba4f79f436"
+        },
+        "CVE-2026-54875": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "e4901442b16370d0f5c7048487b0104af12150d048d49e9f8254e3e1385e9dd3"
+        },
+        "CVE-2026-63072": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "0bc02b7afc45b4a8cfbb2e29c0801de2ed41f416ffcd3792e016e616f6437c1a"
+        },
+        "CVE-2026-63073": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "fa7aac8dd97431433a2b90d256a504528fdd4b9f6910c1a3c67175e89d548e47"
+        },
+        "CVE-2026-63074": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "4ed7c422b65e042bf05be4602bdb06013e86e3bbb6e0b163b0e108898d393468"
+        },
+        "CVE-2026-63075": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "9ebe69714b9a001a82eb8286547c2965c4e4046c6138debaea07f5f4f01b808e"
+        },
+        "CVE-2026-63076": {
+          "fixedVersion": "3.5.5-1ubuntu3.4",
+          "advisorySHA256": "e3dfa8188c1d3af13773c795ea6ab00c13064ce472a160bcd98dec8e0cd0c0aa"
+        },
+        "CVE-2026-72897": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "eba188b4b56be43ee6860994ad5babe30e3d9dc78fec2bb04314df4be2a6b73b"
+        },
+        "CVE-2026-7383": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "d480bea00ecce9aceba06dea8873af4e7e36ba211d71dae70d1ee81c6448cc4c"
+        },
+        "CVE-2026-75803": {
+          "fixedVersion": "3.5.5-1ubuntu3.5",
+          "advisorySHA256": "09a451635eea316b3217dd7456d6e7e5c573e96971c6e6c4993eb8af707ca846"
+        },
+        "CVE-2026-75804": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "0032a46da3ab2e1c16772aa89e7271eedbbf8a727e8f2ef020c72b14b2856620"
+        },
+        "CVE-2026-75805": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "537e7bbafb0a7ee79e13b81fecca563a3956a6faa5e2436a782fe3c0a3a08dd5"
+        },
+        "CVE-2026-75806": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "27505514357f022671aac5ee2407a927caed1ed2ddb2e8a7ce3153d00befecd2"
+        },
+        "CVE-2026-77696": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "c5ea138ec8b9dcd4ec32db604d2d1d28aa33e0efee3d01ed5b5090a5c6bd3279"
+        },
+        "CVE-2026-84782": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "0a25b0ae9b51ca3ee256e7fe8951f74485b6cdfb3f47d62eec05f507741c0388"
+        },
+        "CVE-2026-84784": {
+          "fixedVersion": "3.5.5-1ubuntu3.6",
+          "advisorySHA256": "edbe1e022da596ebf85df0a2e0e44c028861a1e1323ce8aa83e9caf1a4869451"
+        },
+        "CVE-2026-9076": {
+          "fixedVersion": "3.5.5-1ubuntu3.2",
+          "advisorySHA256": "ce668e33f3cfa488846082981b62607438e8bdb1ab5e6f75a66dfe9af82c735c"
+        }
+      }
+    }
+  ]
+}

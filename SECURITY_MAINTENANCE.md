@@ -80,7 +80,7 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.34.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
+Firebase CLI 固定為 `15.34.1`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。安裝使用 `npm ci` 驗證鎖檔及套件完整性；`scripts/verify-firebase-tools.cjs` 在 wrapper 啟動與 CI 中唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的三項串流相依。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
@@ -222,3 +222,9 @@ GitHub CLI與內附Go模組：監測／發布入口使用 `Config/Security/githu
 Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主機、無關路徑、query 與 fragment 仍拒絕。相同環境／工具來源的版本先合併再比較，首次與後續寫入使用相同格式，避免重複通知或遺失版本觀測；這不改變漏洞判定或解除條件。
 
 同一監測工作續跑可能保留多份同名成果；健康檢查與前次報告恢復依建立時間選取，不以成果 ID 或 API 順序當作新舊依據。健康判定仍嚴格綁定當次 run／attempt／commit／報告雜湊，證據不符不退回舊成功。GitHub 寫入請求至少間隔一秒；限流或其他寫入失敗仍明確標為未完成，後續掃描／授權續跑透過既有去重補齊，不盲目重送可能已成功的 POST。
+
+### 專案 Python 的 OpenSSL 供應商修補
+
+`security-openssl-supplier.py` 只核對兩個受管 Python 環境實際載入的 OpenSSL。Linux 記錄程序映射、檔案內容與所屬套件完整版本；`Config/Security/openssl-supplier.json` 固定官方 HTTPS checksum 清單核對的封裝、函式庫及安全修補紀錄摘要。每次比對官方封裝內的逐 CVE 修補紀錄及目前 OpenSSL CNA，不能用上游版號、映像清單或僅有套件名稱推定已修補。此流程不安裝套件、不掃描 OS 或其他 runner 軟體。
+
+原命中保存在 `rawFindings`，精確供應商修補另存 `supplierFixReviews`；gate 與 Issue 寫入前重新核對。只有同一公告、所有相關環境／origin 與函式庫內容均驗證完整，才可依已修補解除對應 Issue，並保留維護摘要。公告變動、來源不符、缺證據或查詢失敗均保留風險與阻擋；非此精確封裝、未驗證環境與其他原生函式庫不借用此判定。這不是漏洞例外，發布／部署與其他風險門檻不變。

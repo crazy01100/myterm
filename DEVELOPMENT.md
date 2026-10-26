@@ -407,3 +407,5 @@ GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I 
 `Tests/Security/test_runtime_advisories.py`以合成官方公告／封裝與commit回應驗證執行環境核心查詢，不安裝執行環境或執行漏洞輸入；Node資料庫index落後、逐檔缺失、未知範圍及CPython錯誤對應都不得產生成功證據。
 
 監測新增範圍的修補另列待辦，合併 workflow 明確使用 `security-audit.py --merge-gate`，保留既有 collector 的風險門檻與全部必要查詢／覆蓋檢查。預設安全掃描、發布與部署仍採全面風險門檻；不得以合併檢查成功代替發布就緒。用途、證據與限制見[安全維護指南](SECURITY_MAINTENANCE.md)。
+
+OpenSSL 供應商修補證據保存在 `.build/openssl-supplier/`，僅供唯讀封裝核對；不從此目錄安裝或載入函式庫。Linux 驗證使用 runner 既有 `dpkg-query`／`dpkg-deb`／`dpkg`；若缺少工具或精確來源不符，保持待審，不能臨時安裝或以版本字串放行。更新官方封裝指紋時須先核對官方 checksum、內含兩份函式庫與逐 CVE 修補紀錄；資料更新走一般 PR，真正判定／信任變更仍在最終精確 PR 審閱。macOS 沿既有隔離封裝核對，CI 結果不代證本機。

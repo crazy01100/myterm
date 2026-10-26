@@ -281,3 +281,5 @@ pip子集適用性在完整版本命中合併後進行，原始結果與精確�
 `security-audit.py` 在各 collector 完成後、合併與適用性註記之前保存 `collectionEvidence`。合併用途核對完整 collector 分區與原始風險投影，再獨立評估原有四組 collector；擴充結果的相同公告、版本或註記不會移除原有風險。所有結果持續寫入完整報告及通知。缺少分區、報告與證據不一致、查詢失敗或覆蓋不足均阻擋；預設發布用途仍評估完整風險。這份證據不是簽章，CLI 不接受外部報告作為通過依據，來源與精確 PR 審閱仍是修改政策的控制點。
 
 Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對完整檔案與信任清冊；CI 準備專案隔離 JDK，不再繼承 PATH 的 Java。Linux 封裝只接受 manifest 固定的內部授權文件連結；修改或缺漏仍拒絕。
+
+專案 Python 的 OpenSSL 供應商修補由 `security-openssl-supplier.py` 負責：collector 記錄程序實際載入的函式庫身分，獨立驗證器核對精確官方套件內容、逐 CVE 修補紀錄及 live CNA。報告保留原始版本命中與獨立修補證據；gate／Issue 寫入前重驗，解除僅限同公告的全部相關環境／origin，不授予整個 Python collector 一般結案資格。其他內附元件、未知封裝與 OS 排除界線不變。
