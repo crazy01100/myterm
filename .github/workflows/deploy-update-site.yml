@@ -27,6 +27,7 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
+      MYTERM_CI_OPENSSL: required
       MYTERM_RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
     steps:
       - name: Check out public site source
@@ -44,6 +45,8 @@ jobs:
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12.16'
+      - name: Prepare verified OpenSSL for project Python
+        run: '"$pythonLocation/bin/python3" -I -S -B scripts/project-openssl-runtime.py setup'
 
       - name: Prepare trusted Python tooling before network policy checks
         run: |

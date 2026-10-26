@@ -243,7 +243,8 @@ def validate_envelope(report):
             raise ValueError('Unrecognized applicability decision')
         ids.add(finding['id'])
     original = [digest(f) for f in raw]
-    partition = [digest(f) for f in report['findings']] + [digest(r['finding']) for r in reviews]
+    partition = ([digest(f) for f in report['findings']] + [digest(r['finding']) for r in reviews]
+                 + [digest(r['finding']) for r in report.get('supplierFixReviews', [])])
     if len(original) != len(set(original)) or sorted(original) != sorted(partition):
         raise ValueError('Raw version matches were removed or modified')
 
@@ -257,5 +258,6 @@ def revalidate(report, root, fetch):
              'observedEnvironment': report.get('observedEnvironment')}
     classify(fresh, root, fetch)
     if (digest(fresh['applicabilityReviews']) != digest(report['applicabilityReviews'])
-            or digest(fresh['findings']) != digest(report['findings'])):
+            or sorted(map(digest, fresh['findings'])) != sorted(map(digest,
+                report['findings'] + [r['finding'] for r in report.get('supplierFixReviews', [])]))):
         raise ValueError('Applicability evidence changed; preserve Issues and rescan')

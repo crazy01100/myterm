@@ -16,8 +16,11 @@ class ProjectPythonTests(unittest.TestCase):
         (self.root/'scripts').mkdir()
         self.launcher = self.root/'scripts/project-python.sh'
         shutil.copy2(ROOT/'scripts/project-python.sh', self.launcher)
+        shutil.copy2(ROOT/'scripts/python-openssl-env.sh', self.root/'scripts/python-openssl-env.sh')
         self.env = {**os.environ}
         self.env.pop('MYTERM_PYTHON', None)
+        self.env.pop('MYTERM_CI_OPENSSL', None)
+        self.env.pop('GITHUB_ACTIONS', None)  # Interpreter-selection fixtures; isolation has separate tests.
 
     def run_python(self, *args):
         return subprocess.run([str(self.launcher), *args], env=self.env, text=True, capture_output=True, timeout=10)

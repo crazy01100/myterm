@@ -387,6 +387,10 @@ def run(include_release=None):
     except Exception as error:
         report['errors'].append('Precise pip applicability unavailable: '+type(error).__name__)
     try:
+        openssl_supplier().classify(report, ROOT)
+    except Exception as error:
+        report['errors'].append('OpenSSL supplier review unavailable: '+type(error).__name__)
+    try:
         spec=importlib.util.spec_from_file_location('source_review',ROOT/'scripts/security-source-review.py')
         policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
         report['sourceReview']=policy.source_check(ROOT)
@@ -427,6 +431,9 @@ def scan_toolchain(report):
     advisory_module=load('security-toolchain-advisories')
     coverage_module=load('security-toolchain-report')
     observed=inventory_module.inventory(ROOT, purpose='audit')
+    report['opensslLoadedEvidence']=[{'role': e['role'], 'vendorVersion': e.get('vendorVersion'),
+        'loaded': e.get('loadedEvidence')} for c in observed.get('coverage', []) if c.get('id')=='python'
+        for e in c.get('evidence', []) if e.get('component')=='openssl']
     # A failed provider must not prevent collecting other providers' evidence.
     # Failure remains blocking; completed results are diagnostic, not a waiver.
     queried={'findings':[], 'advisoryQueryStatus':'failed'}
@@ -596,6 +603,11 @@ def apply_exceptions(report, document, now=None):
                 finding['exceptionExpiresAt'] = exception['expiresAt']
 
 
+def openssl_supplier():
+    spec=importlib.util.spec_from_file_location('openssl_supplier',Path(__file__).resolve().parent/'security-openssl-supplier.py')
+    helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
+
+
 def pip_applicability():
     spec=importlib.util.spec_from_file_location('pip_applicability',ROOT/'scripts/security-pip-applicability.py')
     helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
@@ -662,7 +674,9 @@ def blocking(report, *, merge_gate=False):
         return True
     # An exclusion in JSON is not authority to pass a gate. Recheck the exact
     # sources and live advisory before allowing an otherwise clean scan.
-    try:pip_applicability().revalidate(report,ROOT,gh)
+    try:
+        pip_applicability().revalidate(report,ROOT,gh)
+        openssl_supplier().revalidate(report,ROOT)
     except Exception:return True
     return False
 
@@ -701,6 +715,8 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- '+html.escape(detail))
     for review in report.get('applicabilityReviews',[]):
         lines.append('- 精確封裝不適用（原版本命中保留）：'+html.escape(review['finding']['id']))
+    for review in report.get('supplierFixReviews', []):
+        lines.append('- 供應商已修補（原版本命中保留）：'+html.escape(review['finding']['id']))
     for error in report['errors']:
         lines.append('- 運作異常：'+html.escape(str(error)))
     for notice in report.get('vendorNotices',{}).get('changes',[]):
@@ -724,7 +740,7 @@ def main():
     previous=json.loads(args.previous.read_text()) if args.previous and args.previous.exists() else None
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
     report['stalePreviousScan']=bool(previous and previous.get('lastSuccessfulScanAt') and (dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(previous['lastSuccessfulScanAt'])).total_seconds()>48*3600)
-    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
+    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','supplierFixReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
         'noticeChanges':r.get('vendorNotices',{}).get('changes',[])},sort_keys=True)
     changed=previous is None or fingerprint(previous)!=fingerprint(report)
     report['changed']=changed

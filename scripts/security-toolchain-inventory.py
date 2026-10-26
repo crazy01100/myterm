@@ -8,6 +8,7 @@ import argparse
 import ast
 import hashlib
 import importlib.metadata
+import importlib.util
 import io
 import json
 import os
@@ -160,8 +161,15 @@ def python_probe():
             raise ValueError('cffi platform native collector is not implemented')
         linkage.append({'component':'cffi-native-binary','sha256':hashlib.sha256(read(binary,prefix,64*1024*1024)).hexdigest(),
                         'advisoryStatus':'vendor-mapping-required'})
+    spec = importlib.util.spec_from_file_location('openssl_supplier', ROOT/'scripts/security-openssl-supplier.py')
+    supplier = importlib.util.module_from_spec(spec); spec.loader.exec_module(supplier)
+    try:
+        loaded = supplier.probe()
+    except Exception as error:
+        loaded = {'status': 'unavailable', 'error': type(error).__name__,
+                  'reason': str(error) if type(error) is ValueError else 'Process identity query failed'}
     return {'prefix': str(prefix), 'basePrefix': sys.base_prefix, 'components': rows, 'native': native,
-            'nativeLinkage':linkage}
+            'nativeLinkage':linkage, 'opensslLoaded': loaded}
 
 
 def run_json(args, cwd=ROOT):
@@ -195,7 +203,8 @@ def collect_python(root):
         for name, version in info['native'].items():
             # Native vendor strings remain separate from ecosystem versions.
             evidence.append({'role': role, 'component': name, 'vendorVersion': version,
-                             'advisoryStatus': 'vendor-mapping-required'})
+                             'advisoryStatus': 'vendor-mapping-required',
+                             **({'loadedEvidence': info.get('opensslLoaded')} if name == 'openssl' else {})})
         evidence.extend({'role':role,**row} for row in info.get('nativeLinkage',[]))
     return rows, evidence
 

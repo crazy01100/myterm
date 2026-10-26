@@ -29,6 +29,7 @@ def safe(value):
 
 def validate_report(report, now=None, additive=False):
     load('security-pip-applicability').validate_envelope(report)
+    load('security-openssl-supplier').validate_envelope(report)
     now = now or dt.datetime.now(dt.timezone.utc)
     incomplete=report.get('scanStatus')!='complete' or report.get('errors')!=[] or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True
     if additive:
@@ -215,7 +216,8 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                 continue
             if issue['state']=='open' and observations:
                 origins=report.get('originCoverage',{})
-                if any(origins.get(o['origin'],{}).get('closureEligible') is not True for o in observations):
+                if (any(origins.get(o['origin'],{}).get('closureEligible') is not True for o in observations)
+                        and not load('security-openssl-supplier').covers_previous(report, f)):
                     actions.append({'action':'preserve','number':issue['number'],'reason':'Origin lacks explicit closure eligibility'})
                     continue
             if enrich:f=enrich({**f,'observedAt':old['checkedAt']})
@@ -230,7 +232,16 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             if resolved:change.update(state='closed',state_reason='completed')
             if body==issue['body'] and title==issue['title'] and not resolved:continue
             action='resolve' if resolved else 'format'
-            operations.append((issue,change,None))
+            comment=None
+            if resolved and load('security-openssl-supplier').covers_previous(report, f):
+                review=next(r for r in report['supplierFixReviews'] if r['finding']['id']==f['id'])
+                proof=review['evidence']['package']
+                comment=('<!-- myterm-supplier-fix:'+digest([f['id'],proof['packageSHA256']])+' -->\n'
+                    '已核對本次 CI 兩個專案 Python 環境實際載入的 OpenSSL 內容，與官方供應商封裝一致；'
+                    '官方封裝內的安全修補紀錄確認此公告已修補。上游版本命中保留，並非用途豁免或降低嚴重度。\n\n'
+                    '官方修補版本：`'+review['fixedVersion']+'`；[官方封裝]('+proof['url']+')。'
+                    '套件 SHA-256：`'+proof['packageSHA256']+'`。其他環境或元件不沿用此結果；後續來源或公告變動會重新核對。')
+            operations.append((issue,change,comment))
         actions.append({'action':action,'number':issue['number'],'key':key})
     for key,f in desired.items():
         if key in managed:continue  # An unrecognized managed record must not be duplicated.
@@ -268,6 +279,7 @@ def main():
         report['publicationMode']='additive'
     audit=load('security-audit');context=load('security-risk-context');cache={}
     load('security-pip-applicability').revalidate(report,Path(__file__).resolve().parents[1],audit.gh)
+    load('security-openssl-supplier').revalidate(report,Path(__file__).resolve().parents[1])
     enrich=lambda finding:context.enrich(finding,audit.gh,audit.affected,historical=True,cache=cache)
     actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions,
