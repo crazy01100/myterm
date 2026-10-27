@@ -394,7 +394,9 @@ Node／npm 統一入口為 `./scripts/project-node.sh`；使用 Node 24 LTS，�
 
 受管Python環境使用`Config/Security/python-runtime.json`固定的Astral CPython基底；首次建立前執行`./scripts/project-python.sh scripts/setup-project-python.py`，再以`MYTERM_SECURITY_PYTHON_BOOTSTRAP="$PWD/.build/python-base/bin/python3.12" ./scripts/setup-security-tools.sh`建立兩個venv。既有環境重建前先確認沒有使用中程序並保存回復資料，不能原地覆蓋共用或系統Python。驗簽相依由固定官方wheel下載、核對hash後離線安裝，pip不自行連線解析套件。
 
-Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官方Temurin封裝。執行`./scripts/project-python.sh scripts/project-java-runtime.py setup`準備`.build/java-runtime`；這不改Homebrew或全域Java。`scripts/project-java.sh`及Firebase入口核對完整檔案清單／hash與信任資料後才使用，內容漂移會停止，不自行修復或換版。直接版本檢查為`./scripts/project-java.sh -version`。已存在且內容不同的runtime不會被setup覆蓋，須先核對差異並另行處理。
+Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官方Temurin封裝。執行`./scripts/project-python.sh scripts/project-java-runtime.py setup`準備`.build/java-runtime`；這不改Homebrew或全域Java。`scripts/project-java.sh`及Firebase入口核對完整檔案清單／hash與信任資料後才使用，內容漂移會停止，不自行修復或換版。直接版本檢查為`./scripts/project-java.sh -version`。setup僅可把完全符合官方來源的既有runtime移轉成`java-trust.json`指定的信任清單；未知修改仍拒絕覆蓋。
+
+原始封裝、官方檔案manifest及原始truststore雜湊保留；另固定移除四類指定根憑證後的`cacerts`雜湊。這是專案套用官方建議的信任措施，不是上游新版或任意刪除憑證。衍生過程核對憑證指紋，且其餘憑證完全相同；只有預設`cacerts`可變，`blocked.certs`及其他JDK檔案不變。移轉前先結束既有專案Emulator，移轉後重新啟動；一般verify不寫入。回退前須確認替代官方封裝已含完整措施，不能直接恢復有風險的信任清單。
 
 一般 App 使用者不需 Java。Linux x86_64 CI 以 `Config/Security/java-runtime-linux.json` 固定獨立的官方 Temurin 21.0.13+9 封裝，使用相同 setup／verify 入口，在工作目錄內準備後才掃描。Mac 與 Linux 的封裝、檔案 manifest 與 home 路徑各自驗證；Linux 僅允許固定 manifest 中的內部授權文件連結。CI 不繼承 runner 預裝 Java，也不修改全域 JAVA_HOME。本機通過不代替 CI 證據；此固定版本仍保留已知風險告警。供應商版號不同，不能只比較patch數字或`blocked.certs`檔名就宣稱信任問題已修補。
 

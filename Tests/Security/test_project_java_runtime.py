@@ -15,6 +15,72 @@ j=importlib.util.module_from_spec(spec);spec.loader.exec_module(j)
 
 
 class JavaRuntimeTests(unittest.TestCase):
+    def test_derived_manifest_allows_only_reviewed_cacerts_change(self):
+        row=j.configuration(ROOT);policy=j.trust_configuration(ROOT,row)
+        name=str(j.java_home(Path('.'),row)/'lib/security/cacerts')
+        original={name:{'sha256':row['truststoreSHA256'],'executable':False},
+                  'bin/fixture':{'sha256':'a'*64,'executable':True}}
+        derived=j.installed_manifest(ROOT,row,original)
+        self.assertEqual(derived['bin/fixture'],original['bin/fixture'])
+        self.assertEqual(derived[name]['sha256'],policy['derivedTruststoreSHA256'])
+        self.assertEqual(original[name]['sha256'],row['truststoreSHA256'])
+        with self.assertRaises(ValueError):j.installed_manifest(ROOT,row,{**original,name:{'sha256':'0'*64,'executable':False}})
+
+    def test_trust_policy_cannot_expand_to_arbitrary_roots_or_a_waiver(self):
+        row=j.configuration(ROOT);policy=j.trust_configuration(ROOT,row)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);path=root/j.TRUST;path.parent.mkdir(parents=True)
+            for change in ({'excludedRootCNs':['unrelated root']}, {'removedCertificateSHA256':['0'*64]},
+                           {'grantsRiskException':True}, {'id':'CVE-2099-1234'},
+                           {'upstreamTruststoreSHA256':'0'*64},{'derivedTruststoreSHA256':row['truststoreSHA256']}):
+                path.write_text(json.dumps({**policy,**change}))
+                with self.subTest(change=change),self.assertRaises(ValueError):j.trust_configuration(root,row)
+
+    def test_inventory_preserves_legacy_roots_without_common_name(self):
+        text=('Alias name: legacy\nEntry type: trustedCertEntry\nOwner: OU=Legacy, O=Fixture\n'
+              'SHA256: '+':'.join(['AB']*32)+'\n')
+        entry=j.certificate_inventory(text)[0]
+        self.assertIsNone(entry['cn']);self.assertEqual(entry['sha256'],'ab'*32)
+        with self.assertRaises(ValueError):j.certificate_inventory(text.replace('SHA256:','SHA1:'))
+        with self.assertRaises(ValueError):j.certificate_inventory(text+text)
+
+    def test_setup_refuses_unknown_drift_instead_of_repairing(self):
+        row=j.configuration(ROOT)
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);(root/j.TARGET).mkdir(parents=True)
+            with patch.object(j,'configuration',return_value=row),patch.object(j,'verify',side_effect=ValueError('drift')), \
+                 patch.object(j,'upstream_manifest',return_value={}),patch.object(j,'verify_tree',side_effect=ValueError('modified')), \
+                 patch.object(j,'derive_trust') as derive:
+                with self.assertRaises(ValueError):j.setup(root)
+                derive.assert_not_called()
+
+    def test_derivation_changes_only_the_pinned_certificate_and_checks_final_bytes(self):
+        from types import SimpleNamespace
+        upstream=b'official inert truststore';derived=b'reviewed inert result'
+        policy={'upstreamTruststoreSHA256':hashlib.sha256(upstream).hexdigest(),
+                'derivedTruststoreSHA256':hashlib.sha256(derived).hexdigest(),
+                'removedCertificateSHA256':['40f6af0346a99aa1cd1d555a4e9cce62c7f9634603ee406615833dc8c8d00367']}
+        def entry(alias,cn,sha):return f'Alias name: {alias}\nEntry type: trustedCertEntry\nOwner: CN={cn}, O=Fixture\nSHA256: {sha.upper()}\n'
+        kept=entry('keep','Unrelated Root','a'*64)
+        removed=entry('remove','emSign Root CA - G1',policy['removedCertificateSHA256'][0])
+        for wrong_hash in (False,True):
+            with self.subTest(wrong_hash=wrong_hash),tempfile.TemporaryDirectory() as directory:
+                home=Path(directory);target=home/'lib/security/cacerts';target.parent.mkdir(parents=True);target.write_bytes(upstream)
+                def keytool(args,**kwargs):
+                    staged=Path(args[args.index('-keystore')+1])
+                    if '-delete' in args:
+                        self.assertEqual(args[-1],'remove');staged.write_bytes(b'wrong' if wrong_hash else derived)
+                        return SimpleNamespace(stdout='')
+                    return SimpleNamespace(stdout=kept+(removed if staged.read_bytes()==upstream else ''))
+                with patch.object(j,'trust_configuration',return_value=policy),patch.object(j.subprocess,'run',side_effect=keytool):
+                    if wrong_hash:
+                        with self.assertRaises(ValueError):j.derive_trust(home,home,{})
+                        self.assertEqual(target.read_bytes(),upstream)
+                    else:
+                        j.derive_trust(home,home,{})
+                        self.assertEqual(target.read_bytes(),derived)
+                self.assertFalse(list(target.parent.glob('.myterm-trust-*')))
+
     def test_platform_policy_and_home_are_separate(self):
         for system,machine,expected,home in [('Darwin','arm64','aarch64-apple-darwin','Contents/Home'),
                                             ('Linux','x86_64','x86_64-linux-gnu','.')]:

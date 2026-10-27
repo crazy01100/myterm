@@ -282,6 +282,8 @@ pip子集適用性在完整版本命中合併後進行，原始結果與精確�
 
 Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對完整檔案與信任清冊；CI 準備專案隔離 JDK，不再繼承 PATH 的 Java。Linux 封裝只接受 manifest 固定的內部授權文件連結；修改或缺漏仍拒絕。
 
+`java-trust.json` 固定官方建議的四類根憑證移除措施。Java setup 從完整核對的官方清單衍生預設 `cacerts`，只移除清單中仍存在的指定憑證；其他憑證及 JDK 程式檔案不變。verify 分別比對官方 manifest 與唯一允許的衍生信任檔案，不自動修復漂移。Rules、Firebase 與盤點共用同一 JDK；supplier 報告將實際信任措施、環境、版本與公告內容綁定，gate／Issue 寫入前重驗。此證據只涵蓋指定公告，不授予其他供應商問題結案資格。
+
 專案 Python 的 OpenSSL 供應商修補由 `security-openssl-supplier.py` 負責：collector 記錄程序實際載入的函式庫身分，獨立驗證器核對精確官方套件內容、逐 CVE 修補紀錄及 live CNA。報告保留原始版本命中與獨立修補證據；gate／Issue 寫入前重驗，解除僅限同公告的全部相關環境／origin，不授予整個 Python collector 一般結案資格。其他內附元件、未知封裝與 OS 排除界線不變。
 
 完整Linux安全流程的Python啟動邊界由 `project-openssl-runtime.py` 與 `python-openssl-env.sh` 共用：只讀取已驗證官方deb中的兩份函式庫，啟動前核對檔案，啟動後由Python自身映射再次確認。`python-toolchain.py` 在當次工具／CA檢查中拒絕回落到系統來源。報告將此副本標示為project-isolated-official-package，保存實際loadedPaths，不虛報為dpkg安裝；獨立健康流程不依賴此準備，所有未知來源仍保留風險。

@@ -611,6 +611,8 @@ def collect_platform(root):
 
 def collect_java(root):
     """Read the JDK selected by the Rules wrapper, not the machine's OS state."""
+    spec=importlib.util.spec_from_file_location('project_java_runtime',root/'scripts/project-java-runtime.py')
+    runtime=importlib.util.module_from_spec(spec);spec.loader.exec_module(runtime)
     result=subprocess.run([str(root/'scripts/project-java.sh'),'--print-home'],
                           capture_output=True,text=True,check=True,timeout=30)
     home=Path(result.stdout.strip())
@@ -621,7 +623,8 @@ def collect_java(root):
         raise ValueError('Selected JDK identity is incomplete')
     return {'component':'java','version':values['JAVA_VERSION'],
             'vendor':values['IMPLEMENTOR'],'runtimeVersion':values.get('JAVA_RUNTIME_VERSION',''),
-            'origin':'emulator/java','use':'Firestore Rules verification'}
+            'origin':'emulator/java','use':'Firestore Rules verification',
+            'trustRemediation':runtime.trust_evidence(root)}
 
 
 def configuration(root):
