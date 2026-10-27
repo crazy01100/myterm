@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import re
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -15,6 +16,9 @@ ROOT=Path(__file__).resolve().parents[1]
 CONFIG='Config/Security/java-runtime.json'
 TARGET='.build/java-runtime'
 MANIFEST='.build/java-runtime-files.json'
+TRUST='Config/Security/java-trust.json'
+EXCLUDED_ROOTS={'emSign Root CA - G1','emSign Root CA - G2',
+                'emSign ECC Root CA - G3','AAA Certificate Services'}
 
 
 def config_path():
@@ -109,16 +113,102 @@ def verify_tree(target,files):
     if seen!=set(files):raise ValueError('Java runtime file inventory changed')
 
 
-def verify(root=ROOT):
-    row=configuration(root);target=storage(root,TARGET);manifest=storage(root,MANIFEST)
+def trust_configuration(root, row):
+    policy=json.loads((root/TRUST).read_text())
+    if (policy.get('schemaVersion')!=1 or policy.get('id')!='CVE-2026-114820' or
+            policy.get('decision')!='vendor-recommended-root-removal' or
+            policy.get('grantsRiskException') is not False or
+            policy.get('source')!='https://ops.java/emudhra' or
+            len(policy.get('excludedRootCNs',[]))!=4 or set(policy['excludedRootCNs'])!=EXCLUDED_ROOTS or
+            policy.get('upstreamTruststoreSHA256')!=row['truststoreSHA256'] or
+            not re.fullmatch('[a-f0-9]{64}',policy.get('derivedTruststoreSHA256','')) or
+            policy['derivedTruststoreSHA256']==policy['upstreamTruststoreSHA256'] or
+            policy.get('removedCertificateSHA256')!=[
+                '40f6af0346a99aa1cd1d555a4e9cce62c7f9634603ee406615833dc8c8d00367']):
+        raise ValueError('Unreviewed Java trust derivation')
+    return policy
+
+
+def installed_manifest(root, row, files):
+    policy=trust_configuration(root,row)
+    name=str(java_home(Path('.'),row)/'lib/security/cacerts')
+    if files.get(name)!={'sha256':policy['upstreamTruststoreSHA256'],'executable':False}:
+        raise ValueError('Upstream truststore manifest differs')
+    return {**files,name:{'sha256':policy['derivedTruststoreSHA256'],'executable':False}}
+
+
+def certificate_inventory(text):
+    """Read English keytool metadata from a hash-verified official keystore."""
+    entries=[]
+    for block in text.split('Alias name: ')[1:]:
+        alias=block.splitlines()[0].strip()
+        owner=re.search(r'^Owner: (.+)$',block,re.M)
+        fingerprint=re.search(r'^\s*SHA256: ([0-9A-F:]+)$',block,re.M)
+        if not owner or not fingerprint or 'Entry type: trustedCertEntry' not in block:
+            raise ValueError('Incomplete Java certificate inventory')
+        cn=re.search(r'(?:^|, )CN=([^,]+)(?:,|$)',owner[1])
+        sha=fingerprint[1].replace(':','').lower()
+        if not re.fullmatch('[a-f0-9]{64}',sha):
+            raise ValueError('Invalid Java root certificate identity')
+        entries.append({'alias':alias,'cn':cn[1] if cn else None,'sha256':sha})
+    if not entries or len({r['alias'] for r in entries})!=len(entries):
+        raise ValueError('Empty or duplicate Java certificate inventory')
+    return entries
+
+
+def derive_trust(home, root, row):
+    policy=trust_configuration(root,row);target=home/'lib/security/cacerts'
+    if target.is_symlink() or digest_file(target)!=policy['upstreamTruststoreSHA256']:
+        raise ValueError('Only the exact official truststore can be derived')
+    keytool=[str(home/'bin/keytool'),'-J-Duser.language=en','-J-Duser.country=US']
+    def run(*args):
+        return subprocess.run(keytool+list(args),env=clean_environment(),capture_output=True,
+                              text=True,timeout=30,check=True).stdout
+    with tempfile.TemporaryDirectory(dir=target.parent,prefix='.myterm-trust-') as directory:
+        staged=Path(directory)/'cacerts';shutil.copyfile(target,staged)
+        arguments=['-keystore',str(staged),'-storepass','changeit']  # Public JDK store-integrity password.
+        before=certificate_inventory(run('-list','-v',*arguments))
+        removed=[r for r in before if r['cn'] in EXCLUDED_ROOTS]
+        if sorted(r['sha256'] for r in removed)!=policy['removedCertificateSHA256']:
+            raise ValueError('Official roots differ from reviewed removal')
+        for entry in removed:run('-delete',*arguments,'-alias',entry['alias'])
+        after=certificate_inventory(run('-list','-v',*arguments))
+        if (any(r['cn'] in EXCLUDED_ROOTS for r in after) or
+                sorted(after,key=lambda r:r['alias'])!=sorted(
+                    [r for r in before if r not in removed],key=lambda r:r['alias']) or
+                digest_file(staged)!=policy['derivedTruststoreSHA256']):
+            raise ValueError('Derived Java truststore differs from reviewed result')
+        staged.chmod(0o644)
+        staged.replace(target)
+
+
+def upstream_manifest(root, row):
+    manifest=storage(root,MANIFEST)
     raw=manifest.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=row['fileManifestSHA256']:
         raise ValueError('Java installed manifest differs from reviewed artifact')
-    files=json.loads(raw);verify_tree(target,files)
+    return json.loads(raw)
+
+
+def verify(root=ROOT):
+    row=configuration(root);target=storage(root,TARGET)
+    files=upstream_manifest(root,row);verify_tree(target,installed_manifest(root,row,files))
     home=java_home(target,row)
-    for name,key in (('cacerts','truststoreSHA256'),('blocked.certs','blockedCertsSHA256')):
-        if digest_file(home/'lib/security'/name)!=row[key]:raise ValueError('Java trust data changed')
+    if digest_file(home/'lib/security/blocked.certs')!=row['blockedCertsSHA256']:
+        raise ValueError('Java blocked certificates changed')
+    if (home/'lib/security/jssecacerts').exists():
+        raise ValueError('Unexpected Java default truststore override')
     return home
+
+
+def trust_evidence(root=ROOT):
+    home=verify(root);row=configuration(root);policy=trust_configuration(root,row)
+    return {'id':policy['id'],'decision':policy['decision'],'source':policy['source'],
+            'version':row['version'],'platform':row['platform'],'archiveSHA256':row['sha256'],
+            'policySHA256':digest_file(root/TRUST),
+            'upstreamTruststoreSHA256':policy['upstreamTruststoreSHA256'],
+            'derivedTruststoreSHA256':digest_file(home/'lib/security/cacerts'),
+            'excludedRootCNs':policy['excludedRootCNs'],'grantsRiskException':False}
 
 
 def clean_environment():
@@ -128,7 +218,13 @@ def clean_environment():
 def setup(root=ROOT):
     row=configuration(root);archive=storage(root,'.build/java-base-download/'+row['url'].rsplit('/',1)[-1]);target=storage(root,TARGET)
     if target.exists():
-        return verify(root)  # Never overwrite an existing or modified runtime.
+        try:return verify(root)
+        except ValueError:
+            # The one explicit migration accepts a completely unchanged official
+            # tree. Unknown drift is never repaired or overwritten by setup.
+            verify_tree(target,upstream_manifest(root,row))
+            derive_trust(java_home(target,row),root,row)
+            return verify(root)
     archive.parent.mkdir(parents=True,exist_ok=True)
     if not archive.exists():
         with tempfile.TemporaryDirectory(dir=archive.parent,prefix='download-') as directory:
@@ -146,6 +242,7 @@ def setup(root=ROOT):
                               env=clean_environment(),capture_output=True,text=True,timeout=20,check=True)
         if 'Temurin-'+row['version'] not in result.stderr:
             raise ValueError('Java vendor/build differs from reviewed runtime')
+        derive_trust(java_home(candidate,row),root,row)
         candidate.rename(target)
     storage(root,MANIFEST).write_bytes(raw)
     return verify(root)

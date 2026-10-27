@@ -14,6 +14,6 @@
     "86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b",
     "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"
   ],
-  "trustRemediation": "Official unmodified archive omits both roots named in Oracle 2026-10-23 remediation; no certificate-chain tests",
+  "trustRemediation": "These hashes describe the official upstream archive. Config/Security/java-trust.json pins the project-derived default cacerts implementing Oracle's four-root removal guidance; all other installed files remain unchanged.",
   "notice": "https://ops.java/emudhra"
 }

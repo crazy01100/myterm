@@ -244,3 +244,5 @@ Rules拒絕跨UID讀寫、額外明文欄位、超過128KiB的密文、跳號rev
 Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊準備 pip 與獨立 certifi，分別核對獨立與 pip 內附 CA 後再進行網路驗證。兩份官方 CA 可為不同版本，各自必須符合固定版本與摘要；不修改 pip 內附檔案。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 Linux x86_64 CI 同樣使用專案隔離 Java；以 `project-java-runtime.py setup` 準備固定官方封裝後才使用 wrapper，不繼承 runner 預裝版本。
+
+Java setup 同時套用 `java-trust.json` 固定的官方根憑證移除措施，原始封裝與衍生信任清單分別驗證。移轉前結束既有專案 Emulator，完成後再啟動；不更改系統 CA，詳細界線見[安全維護指南](SECURITY_MAINTENANCE.md#專案-java-信任清單處置)。

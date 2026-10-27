@@ -10,6 +10,7 @@ import hashlib
 from html.parser import HTMLParser
 import importlib.util
 import json
+import os
 import re
 from pathlib import Path
 import urllib.request
@@ -24,6 +25,7 @@ SOURCES={
  'jdk':('web','https://openjdk.org/groups/vulnerability/advisories/'),
 }
 NOTICE_SOURCES={'jdk-security':('https://openjdk.org/groups/vulnerability/advisories/','openjdk.org')}
+JAVA_TRUST_CVE='CVE-2026-114820'
 
 
 def load(name):
@@ -31,6 +33,33 @@ def load(name):
 
 
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True).encode()).hexdigest()
+
+
+def java_remediation(java,environment,observed,root):
+ evidence=load('project-java-runtime').trust_evidence(root)
+ actual_environment='ci' if os.environ.get('GITHUB_ACTIONS')=='true' else 'local'
+ if (environment!=actual_environment or java.get('trustRemediation')!=evidence or
+     java.get('vendor')!='Eclipse Adoptium' or java.get('origin')!='emulator/java' or
+     java.get('runtimeVersion')!=evidence['version']+'-LTS'):
+  raise ValueError('Java trust evidence does not match this environment and tool')
+ return {'id':JAVA_TRUST_CVE,'component':'Temurin','scope':'development',
+         'environment':environment,'origin':'emulator/java','runtimeVersion':java['runtimeVersion'],
+         'advisoryContentSHA256':digest(observed),'evidence':evidence}
+
+
+def revalidate(report,root=ROOT):
+ supplier=report.get('supplierNotices',{})
+ reviews=supplier.get('remediations',[])
+ if not reviews:return
+ if len(reviews)!=1 or supplier.get('errors') or report.get('observedEnvironment')!=reviews[0].get('environment'):
+  raise ValueError('Invalid Java remediation envelope')
+ java_receipts=[r for r in supplier.get('receipts',[]) if r.get('collector')=='emulator']
+ if len(java_receipts)!=1 or java_receipts[0].get('status')!='complete':
+  raise ValueError('Java remediation requires complete official queries')
+ java=java_receipts[0]['observedTool']
+ expected=java_remediation(java,reviews[0]['environment'],supplier['observed']['jdk'],root)
+ if reviews!=[expected] or any(f.get('id')==JAVA_TRUST_CVE for f in report['findings']):
+  raise ValueError('Java remediation differs from current evidence')
 
 
 class Text(HTMLParser):
@@ -91,7 +120,7 @@ def scan(inventory,root=ROOT,fetcher=fetch,global_fetcher=None):
  cursor=json.loads((root/CURSOR).read_text())
  if policy.get('schemaVersion')!=2 or policy.get('grantsRiskException') is not False:raise ValueError('Invalid project supplier policy')
  domains={r['id']:r for r in inventory['coverage']}
- receipts=[];findings=[];notices=[];errors=[];observed={};now=dt.datetime.now(dt.timezone.utc).isoformat()
+ receipts=[];findings=[];notices=[];errors=[];observed={};remediations=[];now=dt.datetime.now(dt.timezone.utc).isoformat()
  audit=load('security-audit')
  for collector,source,queries in [('deployment','Cloudflare security notices',('workers','workerd')),('emulator','JDK vendor security notices',('jdk',))]:
   domain=domains.get(collector,{})
@@ -152,6 +181,15 @@ def scan(inventory,root=ROOT,fetcher=fetch,global_fetcher=None):
     observed['jdk']=fetcher('jdk')
     for fact in findings:
      if fact.get('dependencyPaths')==['emulator/java']:fact['queryComplete']=True
+    selected=[f for f in findings if f.get('id')==JAVA_TRUST_CVE and
+              f.get('component')=='Temurin' and f.get('scope')=='development' and
+              f.get('dependencyPaths')==['emulator/java']]
+    if selected:
+     if len(selected)!=1:raise ValueError('Ambiguous Java trust advisory')
+     proof=java_remediation(java,inventory['environment'],observed['jdk'],root)
+     row['observedTool']['trustRemediation']=java['trustRemediation']
+     remediations.append(proof)
+     findings.remove(selected[0])
     current=observed['jdk'];url=NOTICE_SOURCES['jdk-security'][0]
     if digest(current)!=cursor.get('jdkNoticeCursor'):
      notices.append({'source':'jdk-security','id':hashlib.sha256(url.encode()).hexdigest(),
@@ -160,6 +198,6 @@ def scan(inventory,root=ROOT,fetcher=fetch,global_fetcher=None):
   except Exception as error:
    row['reason']=type(error).__name__;errors.append(collector+': '+type(error).__name__)
   receipts.append(row)
- return {'checkedAt':now,'receipts':receipts,'findings':findings,'errors':errors,'notices':notices,
+ return {'checkedAt':now,'receipts':receipts,'findings':findings,'errors':errors,'notices':notices,'remediations':remediations,
          'candidateFindings':policy.get('candidateFindings',[]),'observed':observed,
          'allDependenciesScanned':False,'grantsRiskException':False}

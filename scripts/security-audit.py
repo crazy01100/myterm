@@ -612,6 +612,11 @@ def project_applicability():
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
 
+def supplier_notices():
+    spec=importlib.util.spec_from_file_location('supplier_notices',Path(__file__).with_name('security-supplier-notices.py'))
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
+
+
 def openssl_supplier():
     spec=importlib.util.spec_from_file_location('openssl_supplier',Path(__file__).resolve().parent/'security-openssl-supplier.py')
     helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
@@ -687,6 +692,7 @@ def blocking(report, *, merge_gate=False):
         pip_applicability().revalidate(report,ROOT,gh)
         openssl_supplier().revalidate(report,ROOT)
         project_applicability().revalidate(report,ROOT)
+        supplier_notices().revalidate(report,ROOT)
     except Exception:return True
     return False
 
@@ -729,6 +735,8 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- 供應商已修補（原版本命中保留）：'+html.escape(review['finding']['id']))
     for proof in report.get('projectApplicabilityProofs', []):
         lines.append('- 精確平台／封裝不適用（非套件修補）：'+html.escape(proof['id'])+' — '+html.escape(proof['reason']))
+    for proof in report.get('supplierNotices',{}).get('remediations',[]):
+        lines.append('- 已採官方建議的專案 Java 信任處置（非上游新版）：'+html.escape(proof['id']))
     for error in report['errors']:
         lines.append('- 運作異常：'+html.escape(str(error)))
     for notice in report.get('vendorNotices',{}).get('changes',[]):
@@ -753,7 +761,8 @@ def main():
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
     report['stalePreviousScan']=bool(previous and previous.get('lastSuccessfulScanAt') and (dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(previous['lastSuccessfulScanAt'])).total_seconds()>48*3600)
     fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','supplierFixReviews','projectApplicabilityProofs','projectApplicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
-        'noticeChanges':r.get('vendorNotices',{}).get('changes',[])},sort_keys=True)
+        'noticeChanges':r.get('vendorNotices',{}).get('changes',[]),
+        'javaRemediations':r.get('supplierNotices',{}).get('remediations',[])},sort_keys=True)
     changed=previous is None or fingerprint(previous)!=fingerprint(report)
     report['changed']=changed
     args.output.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')

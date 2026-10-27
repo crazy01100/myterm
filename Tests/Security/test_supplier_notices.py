@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 ROOT=Path(__file__).resolve().parents[2]
 def load(name):
@@ -105,5 +107,29 @@ class SupplierTests(unittest.TestCase):
  def test_html_projection_excludes_executable_content(self):
   parser=m.Text();parser.feed('<script>secret</script><table><tr><td>tool notice</td></tr></table>')
   self.assertNotIn('secret',parser.parts);self.assertEqual(parser.rows,['tool notice'])
+ def test_java_mitigation_requires_actual_environment_verified_store_and_complete_query(self):
+  original_load=m.load
+  proof={'id':m.JAVA_TRUST_CVE,'version':'21.0.13+9','derivedTruststoreSHA256':'a'*64}
+  self.java.update(vendor='Eclipse Adoptium',origin='emulator/java',runtimeVersion='21.0.13+9-LTS',trustRemediation=proof)
+  self.fact.update(id=m.JAVA_TRUST_CVE,component='Temurin',scope='development')
+  self.policy['reviewedJDKs']=[dict(self.java)];self.save()
+  def loader(name):return SimpleNamespace(trust_evidence=lambda root:copy.deepcopy(proof)) if name=='project-java-runtime' else original_load(name)
+  with patch.object(m,'load',side_effect=loader),patch.dict(m.os.environ,{'GITHUB_ACTIONS':'false'}):
+   result=self.scan();self.assertEqual(result['findings'],[]);self.assertEqual(len(result['remediations']),1)
+   envelope={'supplierNotices':result,'observedEnvironment':'local','findings':[]}
+   m.revalidate(envelope,self.root)
+   result['remediations'][0]['evidence']['derivedTruststoreSHA256']='b'*64
+   with self.assertRaises(ValueError):m.revalidate(envelope,self.root)
+   self.java['trustRemediation']={**proof,'derivedTruststoreSHA256':'b'*64}
+   mismatch=self.scan();self.assertTrue(mismatch['errors']);self.assertEqual(mismatch['findings'][0]['id'],m.JAVA_TRUST_CVE)
+   self.java['trustRemediation']=proof;self.inventory['environment']='ci'
+   mismatch=self.scan();self.assertTrue(mismatch['errors']);self.assertEqual(len(mismatch['findings']),1)
+   self.inventory['environment']='local'
+   def unavailable(key):
+    if key=='jdk':raise OSError('offline')
+    return self.content[key]
+   failed=m.scan(self.inventory,self.root,unavailable)
+   self.assertEqual(len(failed['findings']),1);self.assertEqual(failed['remediations'],[])
+   self.assertTrue(failed['errors'])
 
 if __name__=='__main__':unittest.main()

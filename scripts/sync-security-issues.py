@@ -309,6 +309,7 @@ def main():
     load('security-pip-applicability').revalidate(report,Path(__file__).resolve().parents[1],audit.gh)
     load('security-openssl-supplier').revalidate(report,Path(__file__).resolve().parents[1])
     load('security-project-applicability').revalidate(report,Path(__file__).resolve().parents[1])
+    load('security-supplier-notices').revalidate(report,Path(__file__).resolve().parents[1])
     enrich=lambda finding:context.enrich(finding,audit.gh,audit.affected,historical=True,cache=cache)
     actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions,
