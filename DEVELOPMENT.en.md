@@ -30,9 +30,11 @@ Google sign-in is isolated by build channel too. Dev/Update Lab must not query o
 
 ### Terminal component source
 
-The SwiftTerm library runtime is tracked under `Vendor/SwiftTerm` for minimal macOS display extensions supporting label highlighting and black/white text contrast. It is not a build cache. Normal builds do not require downloading a fork or editing `.build/checkouts`. See [SwiftTerm source notes](Vendor/SwiftTerm/UPSTREAM.md) for the upstream revision, MIT license, changes to two renderer files, and upgrade procedure. `Package.resolved` locks only the other remote dependencies.
+The SwiftTerm library runtime is tracked under `Vendor/SwiftTerm`, with local changes for label highlighting, black/white text contrast and macOS drag-selection starts. It is not a build cache. Normal builds do not require downloading a fork or editing `.build/checkouts`. See [SwiftTerm source notes](Vendor/SwiftTerm/UPSTREAM.md) for the upstream revision, MIT license, display/selection and send-diagnostic changes, and upgrade procedure. `Package.resolved` locks only the other remote dependencies.
 
-Before an upgrade, obtain the upstream Git checkout at the documented revision and run `bash scripts/verify-swiftterm-vendor.sh /path/to/upstream-checkout`. It compares the runtime file list, unchanged files, and license, and presents the two renderer differences for review. After upgrading, run the full tests, a clean scratch build, Dev interaction checks, and packaged-resource verification. The app includes `SwiftTerm-LICENSE.txt`.
+Before an upgrade, obtain the upstream Git checkout at the documented revision and run `bash scripts/verify-swiftterm-vendor.sh /path/to/upstream-checkout`. It compares the runtime file list, unchanged files, and license, and presents differences in the two renderer files and LocalProcess for review. After upgrading, run the full tests, a clean scratch build, Dev interaction checks, and packaged-resource verification. The app includes `SwiftTerm-LICENSE.txt`.
+
+`SelfTests/TerminalMouseSelectionTests.swift` is included by `run-tests.sh` in the existing isolated regression entry point. It sends down/drag/up events to offscreen SwiftTerm views and checks painted ranges and copied text, including skipped cells, reverse drags, Unicode, wrapping, scrollback, focus cancellation, links and TUI reporting without starting a process. Synthetic events do not replace Dev acceptance of trackpad three-finger and ordinary press-and-drag gestures; split panes, scrolling, zoom and copy/paste must also be checked.
 
 Firebase/OAuth/Cloudflare credentials, Sparkle private keys, and code-signing private keys are not required source files for a normal local build and must never be committed.
 
