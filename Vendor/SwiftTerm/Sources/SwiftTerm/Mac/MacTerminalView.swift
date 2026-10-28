@@ -549,6 +549,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
 
     open override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        resetSelectionDrag()
         startWindowMouseMovedFallback()
 #if canImport(MetalKit)
         guard useMetalRenderer, let currentWindow = window else { return }
@@ -1032,6 +1033,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     public override func resignFirstResponder() -> Bool {
         let response = super.resignFirstResponder()
         if response {
+            resetSelectionDrag()
             caretView.disableAnimations()
             hasFocus = false
             terminal.setTerminalFocus(false)
@@ -2425,6 +2427,18 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     // to re-extend the selection as the auto-scroll timer advances the viewport
     // while the pointer is held still past the top or bottom edge.
     private var lastSelectionDragPoint: CGPoint?
+    // Trackpad dragging also arrives as mouse events. Keep the press location
+    // until the first drag, which may already be several cells away. Do not
+    // activate SelectionService on a plain click: setSoftStart also activates it.
+    private var pendingSelectionStart: (position: Position, buffer: Buffer, line: BufferLine)?
+
+    private func resetSelectionDrag() {
+        pendingSelectionStart = nil
+        stopSelectionAutoScrollTimer()
+        autoScrollDelta = 0
+        lastSelectionDragPoint = nil
+        didSelectionDrag = false
+    }
 
     private func startSelectionAutoScrollTimer() {
         if selectionAutoScrollTimer != nil {
@@ -2471,6 +2485,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     }
 
     open override func mouseDown(with event: NSEvent) {
+        resetSelectionDrag()
         if allowMouseReporting && !shiftBypassesMouseReporting(for: event) && terminal.mouseMode.sendButtonPress() {
             sharedMouseEvent(with: event)
             return
@@ -2480,12 +2495,12 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         
         switch event.clickCount {
         case 1:
-            if selection.active == true {
-                if event.modifierFlags.contains(.shift) {
-                    selection.shiftExtend(bufferPosition: Position(col: hit.col, row: hit.row))
-                } else {
-                    selection.active = false
-                }
+            if selection.active && event.modifierFlags.contains(.shift) {
+                selection.shiftExtend(bufferPosition: hit)
+            } else {
+                selection.active = false
+                let buffer = terminal.displayBuffer
+                pendingSelectionStart = (hit, buffer, buffer.lines[hit.row])
             }
         case 2:
             let displayBuffer = terminal.displayBuffer
@@ -2510,12 +2525,11 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
     var didSelectionDrag: Bool = false
     
     open override func mouseUp(with event: NSEvent) {
-        stopSelectionAutoScrollTimer()
-        autoScrollDelta = 0
-        lastSelectionDragPoint = nil
+        defer { resetSelectionDrag() }
         let hit = calculateMouseHit(with: event).grid
         updateHoverLink(at: hit, commandOverride: commandActive || event.modifierFlags.contains(.command))
-        if let result = linkForClick(at: hit, hasCommandModifier: event.modifierFlags.contains(.command)) {
+        if !didSelectionDrag,
+           let result = linkForClick(at: hit, hasCommandModifier: event.modifierFlags.contains(.command)) {
             terminalDelegate?.requestOpenLink(source: self, link: result.link, params: result.params)
             return
         }
@@ -2529,7 +2543,6 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         //print ("Up at col=\(hit.col) row=\(hit.row) count=\(event.clickCount) selection.active=\(selection.active) didSelectionDrag=\(didSelectionDrag) ")
         #endif
         
-        didSelectionDrag = false
     }
     
     open override func mouseDragged(with event: NSEvent) {
@@ -2538,6 +2551,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         let hit = mouseHit.grid
         if allowMouseReporting && !shiftBypassesMouseReporting(for: event) {
             if terminal.mouseMode.sendButtonTracking() {
+                resetSelectionDrag()
                 let flags = encodeMouseEvent(with: event)
                 let screenRow = max (0, min (displayBuffer.rows - 1, hit.row - displayBuffer.yDisp))
                 terminal.sendMotion(buttonFlags: flags, x: hit.col, y: screenRow, pixelX: mouseHit.pixels.col, pixelY: mouseHit.pixels.row)
@@ -2545,6 +2559,7 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
                 return
             }
             if terminal.mouseMode != .off {
+                resetSelectionDrag()
                 return
             }
         }
@@ -2552,8 +2567,18 @@ open class TerminalView: NSView, NSTextInputClient, NSUserInterfaceValidations, 
         if selection.active {
             selection.dragExtend(bufferPosition: Position(col: hit.col, row: hit.row))
         } else {
-            selection.setSoftStart(bufferPosition: Position(col: hit.col, row: hit.row))
+            guard let anchor = pendingSelectionStart,
+                  anchor.buffer === displayBuffer,
+                  anchor.position.row >= 0, anchor.position.row < displayBuffer.lines.count,
+                  anchor.position.col >= 0, anchor.position.col < displayBuffer.cols,
+                  displayBuffer.lines[anchor.position.row] === anchor.line else {
+                resetSelectionDrag()
+                return
+            }
+            pendingSelectionStart = nil
+            selection.setSoftStart(bufferPosition: anchor.position)
             selection.startSelection()
+            selection.dragExtend(bufferPosition: hit)
         }
         didSelectionDrag = true
         lastSelectionDragPoint = convert(event.locationInWindow, from: nil)

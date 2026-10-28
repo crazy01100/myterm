@@ -148,6 +148,14 @@ swiftc \
 swiftc \
     -I "$terminal_build_dir/Modules" \
     Sources/MySSHClient/Views/TerminalFontZoom.swift \
+    SelfTests/TerminalMouseSelectionTests.swift \
+    "$terminal_build_dir"/SwiftTerm.build/*.o \
+    -o "$test_dir/TerminalMouseSelectionTests"
+"$test_dir/TerminalMouseSelectionTests"
+
+swiftc \
+    -I "$terminal_build_dir/Modules" \
+    Sources/MySSHClient/Views/TerminalFontZoom.swift \
     Sources/MySSHClient/Views/TerminalOutputTheme.swift \
     Sources/MySSHClient/Views/TerminalMessageHighlight.swift \
     SelfTests/TerminalOutputThemeTests.swift \
