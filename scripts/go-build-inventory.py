@@ -1,8 +1,51 @@
 #!/usr/bin/env python3
 """Read inline Go build metadata from a previously verified official executable."""
 import re
+import struct
 
 MAGIC = b'\xff Go buildinf:'
+
+
+def function_names(blob):
+    """Read the reviewed 64-bit little-endian Go 1.20+ pclntab, including inlines.
+
+    Layout follows debug/gosym/pclntab.go. Called only after official asset
+    identity verification; unknown/ambiguous layouts fail closed.
+    """
+    if len(blob) > 128 * 1024 * 1024:
+        raise ValueError('Oversized Go executable')
+    starts = [m.start() for m in re.finditer(b'\xf1\xff\xff\xff\x00\x00[\x01\x02\x04]\x08', blob)]
+    if len(starts) != 1:
+        raise ValueError('Missing or ambiguous Go function table')
+    start = starts[0]
+    if start + 72 > len(blob):
+        raise ValueError('Truncated Go function header')
+    count, files, _, names, cu, filetab, pctab, funcs = struct.unpack_from('<8Q', blob, start + 8)
+    size = len(blob) - start
+    if (not 0 < count <= 1000000 or not 0 < files <= 100000
+            or not 72 <= names < cu <= filetab <= pctab <= funcs < size
+            or funcs + (count * 2 + 1) * 4 > size):
+        raise ValueError('Invalid Go function table bounds')
+    table = blob[start + names:start + cu]
+    values = table.split(b'\x00')
+    if values[-1] or not values[0]:
+        raise ValueError('Incomplete Go function names')
+    try:
+        decoded = [v.decode('utf-8') for v in values if v]
+    except UnicodeDecodeError as error:
+        raise ValueError('Invalid Go function name encoding') from error
+    if not decoded or any(len(n) > 8192 or any(ord(c) < 32 for c in n) for n in decoded):
+        raise ValueError('Invalid Go function names')
+    # Validate every concrete function's name offset, not a raw binary search.
+    for index in range(count):
+        relative = struct.unpack_from('<I', blob, start + funcs + index * 8 + 4)[0]
+        if relative < (count * 2 + 1) * 4 or funcs + relative + 8 > size:
+            raise ValueError('Invalid Go function record')
+        offset = struct.unpack_from('<i', blob, start + funcs + relative + 4)[0]
+        if (offset < 0 or offset >= len(table) or not table[offset]
+                or (offset and table[offset - 1] != 0)):
+            raise ValueError('Invalid Go function name offset')
+    return sorted(set(decoded))
 
 
 def parse(blob):

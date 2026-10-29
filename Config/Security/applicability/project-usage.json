@@ -87,6 +87,14 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "b604bf1c08a471aedf51ddddbd3e8d03041683db270692d66cd1b4b097457818",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          643
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     },
     {
@@ -129,6 +137,14 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "207a598f869d4f64eeb5a3d9e1e847472bba56120b7b12c40f35900d53fd58e4",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          39258
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     },
     {
@@ -180,6 +196,15 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "61462d80fd9850ceb0fd072b80777ce297f537fb2ec2d7c8d87983e80ce7e4fa",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          643,
+          40286
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     },
     {
@@ -222,6 +247,14 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "48e61419c67354e2a1d396bbfbd243e39199fc10e6a19db9e51801c5014df65e",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          41448
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     },
     {
@@ -264,6 +297,14 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "e6cb9c9f1b2f6c9c982c4939eb77dabefd5ef3730d79ff5cde6f63ae8b0184c8",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          41444
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     },
     {
@@ -315,6 +356,15 @@
           }
         ],
         "automaticApplicabilityGranted": false
+      },
+      "tlsOptionsReview": {
+        "entrypointSHA256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
+        "customTlsCallbackCallers": [],
+        "proxyAgentCallSites": [
+          643,
+          80390
+        ],
+        "review": "ProxyAgent constructors pass uri, pipelining and optional proxy auth; no function-valued tls option. No external Agent consumer."
       }
     }
   ],
@@ -382,6 +432,11 @@
       "advisoryConditions": [
         {
           "id": "GHSA-xjj6-f33q-929c",
+          "scope": "development",
+          "assessment": "受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。"
+        },
+        {
+          "id": "GHSA-qrxm-fqhp-jwvm",
           "scope": "development",
           "assessment": "受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。"
         }
@@ -616,6 +671,78 @@
           "id": "GHSA-vxpw-j846-p89q",
           "scope": "github-actions",
           "assessment": "六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。"
+        }
+      ]
+    },
+    "npm-no-custom-tls-callback": {
+      "consumer": "npm-entry",
+      "conclusion": [
+        "唯一外部Undici消費者node-gyp/download使用預設Agent或connect／requestTls／proxyTls的CA設定，沒有函式型tls.checkServerIdentity，公告前提不成立。"
+      ],
+      "sourceFiles": {
+        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+        "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-2m5v-pch6-74hx",
+          "scope": "development",
+          "assessment": "唯一外部Undici消費者node-gyp/download使用預設Agent或connect／requestTls／proxyTls的CA設定，沒有函式型tls.checkServerIdentity，公告前提不成立。"
+        }
+      ]
+    },
+    "npm-no-websocket-consumer": {
+      "consumer": "npm-entry",
+      "conclusion": [
+        "唯一外部Undici消費者為node-gyp/download的HTTP fetch，沒有WebSocket建立或PING／PONG消費路徑。"
+      ],
+      "sourceFiles": {
+        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+        "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-9fm3-97px-rjf6",
+          "scope": "development",
+          "assessment": "唯一外部Undici消費者為node-gyp/download的HTTP fetch，沒有WebSocket建立或PING／PONG消費路徑。"
+        }
+      ]
+    },
+    "undici-no-custom-tls-callback": {
+      "consumer": "undici-actions",
+      "condition": "no-custom-tls-callback",
+      "conclusion": [
+        "六份固定Action入口及ProxyAgent選項已審閱，未傳入公告要求的函式型tls.checkServerIdentity；一般預設TLS驗證不受該公告影響。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-2m5v-pch6-74hx",
+          "scope": "github-actions",
+          "assessment": "六份固定Action入口及ProxyAgent選項已審閱，未傳入公告要求的函式型tls.checkServerIdentity；一般預設TLS驗證不受該公告影響。"
+        }
+      ]
+    },
+    "undici-no-websocket-consumer": {
+      "consumer": "undici-actions",
+      "condition": "no-websocket-consumer",
+      "conclusion": [
+        "六份固定Action入口的Undici呼叫面為fetch／ProxyAgent，WebSocket模組沒有外部消費者；來源與完整入口hash綁定，不因套件含此模組視為專案使用。"
+      ],
+      "sourceFiles": {
+        "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c"
+      },
+      "advisoryConditions": [
+        {
+          "id": "GHSA-9fm3-97px-rjf6",
+          "scope": "github-actions",
+          "assessment": "六份固定Action入口的Undici呼叫面為fetch／ProxyAgent，WebSocket模組沒有外部消費者；來源與完整入口hash綁定，不因套件含此模組視為專案使用。"
         }
       ]
     }

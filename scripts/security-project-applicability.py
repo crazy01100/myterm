@@ -25,6 +25,9 @@ TARGETS = {
     'GO-2026-5932': ('gh-openpgp-absent', 'golang.org/x/crypto', 'development'),
     'GHSA-f23m-r3pf-42rh': ('upload-lodash-subset', 'lodash', 'github-actions'),
     'GHSA-r5fr-rjxr-66jc': ('upload-lodash-subset', 'lodash', 'github-actions'),
+    'GHSA-j586-36cw-2gc2': ('pip-msgpack-c-absent', 'msgpack', 'verification-tool'),
+    'GO-2026-6860': ('gh-html-functions-absent', 'golang.org/x/net', 'development'),
+    'GO-2026-6866': ('gh-html-functions-absent', 'golang.org/x/net', 'development'),
 }
 HEX = re.compile('[a-f0-9]{64}')
 
@@ -57,7 +60,7 @@ def configuration(root):
     policy = json.loads((root/CONFIG).read_text())
     rules = policy.get('rules', [])
     if (policy.get('schemaVersion') != 1 or policy.get('state') != 'approved'
-            or policy.get('grantsRiskException') is not False or len(rules) != 4
+            or policy.get('grantsRiskException') is not False or len(rules) != len(TARGETS)
             or {r.get('id') for r in rules} != set(TARGETS)):
         raise ValueError('Unreviewed project applicability scope')
     for rule in rules:
@@ -66,7 +69,9 @@ def configuration(root):
                 or not rule.get('origins') or len(set(rule['origins'])) != len(rule['origins'])):
             raise ValueError('Invalid project applicability rule')
         expected = ({'python-runtime/cpython', 'security-tools/cpython'} if rule['id'] == 'PSF-2025-2'
-                    else {'platform/project-gh'} if rule['id'] == 'GO-2026-5932' else None)
+                    else {'platform/project-gh'} if rule['id'].startswith('GO-')
+                    else {'python-runtime/pip-vendored', 'security-tools/pip-vendored'}
+                    if rule['decision'] == 'pip-msgpack-c-absent' else None)
         if expected is not None and set(rule['origins']) != expected:
             raise ValueError('Applicability origin scope changed')
     return rules + load('security-usage-applicability').configuration(root)
@@ -85,9 +90,9 @@ def fetch_advisory(rule, root):
     if ident.startswith('PSF-'):
         value = reader.gh_read(root, 'repos/psf/advisory-database/contents/advisories/python/'+ident+'.json')
         return json.loads(base64.b64decode(value['content']))
-    if ident != 'GO-2026-5932':
+    if ident not in {'GO-2026-5932', 'GO-2026-6860', 'GO-2026-6866'}:
         raise ValueError('Unreviewed Go advisory source')
-    url = 'https://vuln.go.dev/ID/GO-2026-5932.json'
+    url = 'https://vuln.go.dev/ID/'+ident+'.json'
     with urllib.request.urlopen(url, context=load('python-toolchain').https_context(root), timeout=30) as response:
         if response.url != url:
             raise ValueError('Go advisory redirected')
@@ -98,7 +103,8 @@ def fetch_advisory(rule, root):
 
 
 def evidence_file(root, rule):
-    names = {'gh-openpgp-absent': 'gh-openpgp.json', 'upload-lodash-subset': 'upload-lodash.json'}
+    names = {'gh-openpgp-absent': 'gh-openpgp.json', 'upload-lodash-subset': 'upload-lodash.json',
+             'gh-html-functions-absent': 'gh-html.json', 'pip-msgpack-c-absent': 'pip-msgpack-c.json'}
     expected = 'Config/Security/applicability/'+names[rule['decision']]
     path = root/expected
     if rule.get('evidenceFile') != expected or path.is_symlink():
@@ -148,6 +154,61 @@ def gh_subset(root, rule):
             'packagePathsSHA256': digest(paths), 'evidenceSHA256': rule['evidenceSHA256']}
 
 
+def gh_html_subset(root, rule):
+    runtime = load('project-gh-runtime'); binary = runtime.verify(root)
+    policy, platform, asset = runtime.selected(root)
+    evidence = evidence_file(root, rule)
+    graph_path = root/'Config/Security/applicability/gh-openpgp.json'
+    if graph_path.is_symlink() or hashlib.sha256(graph_path.read_bytes()).hexdigest() != evidence['buildGraphSHA256']:
+        raise ValueError('Reviewed CLI source/build graph changed')
+    graph = json.loads(graph_path.read_text()); entry = graph['platforms'][platform]
+    reviewed = evidence['platforms'][platform]; blob = binary.read_bytes()
+    inventory = load('go-build-inventory'); info = inventory.parse(blob)
+    if (evidence.get('kind') != 'reviewed-official-gh-html-functions'
+            or policy['version'] != evidence['version'] or graph['version'] != policy['version']
+            or hashlib.sha256(blob).hexdigest() != reviewed['binarySHA256']
+            or reviewed['binarySHA256'] != entry['binarySHA256']
+            or info['compiler'] != entry['compiler'] or reviewed['sourceCommit'] != entry['sourceCommit']
+            or [m['version'] for m in info['modules'] if m['name'] == 'golang.org/x/net'] != [rule['version']]
+            or entry.get('moduleVersionsMatch') is not True or entry.get('customBuildTags') is not False
+            or evidence.get('affectedSourceConsumersInBuild') != []):
+        raise ValueError('Reviewed CLI HTML subset changed')
+    names = inventory.function_names(blob)
+    html = [n for n in names if n.startswith('golang.org/x/net/html.')]
+    if (digest(names) != reviewed['functionNamesSHA256'] or len(names) != reviewed['functionNameCount']
+            or html != reviewed['htmlFunctionNames'] or not any('(*Tokenizer).' in n for n in html)
+            or any(n.startswith(('golang.org/x/net/html.Parse', 'golang.org/x/net/html.Render',
+                                'golang.org/x/net/html.(*parser).', 'golang.org/x/net/html.parser.',
+                                'golang.org/x/net/html.childTextNodesAreLiteral')) for n in html)):
+        raise ValueError('Affected or unknown HTML function table')
+    return {'platform': platform, 'binarySHA256': reviewed['binarySHA256'],
+            'archiveSHA256': asset['sha256'], 'sourceCommit': entry['sourceCommit'],
+            'functionNamesSHA256': reviewed['functionNamesSHA256'], 'htmlFunctionNames': html,
+            'buildGraphSHA256': evidence['buildGraphSHA256'], 'evidenceSHA256': rule['evidenceSHA256']}
+
+
+def pip_msgpack_subset(root, rule):
+    evidence = evidence_file(root, rule)
+    pip = load('security-pip-applicability'); policy = pip.configuration(root)
+    if (evidence.get('kind') != 'reviewed-pip-msgpack-c-absence'
+            or rule.get('version') != '1.1.2' or policy['pipVersion'] != evidence['pipVersion']
+            or policy['wheelSHA256'] != evidence['wheelSHA256']
+            or not policy.get('msgpack') or evidence['affectedFilesPresent'] != []):
+        raise ValueError('Reviewed msgpack subset changed')
+    proof = pip.verify_environments(root, policy)
+    # Independently bind the new advisory's complete official C-only patch.
+    commit = '620b0eb4c89cd72d4098564537624d9dbb2ce141'
+    patch = load('security-source-review').gh_read(root, 'repos/msgpack/msgpack-python/commits/'+commit)
+    files = {f['filename']: f['sha'] for f in patch['files'] if f.get('status') == 'modified'}
+    expected = {'msgpack/_unpacker.pyx', 'msgpack/unpack.h',
+                'msgpack/unpack_container_header.h', 'msgpack/unpack_template.h'}
+    if (patch.get('sha') != commit or len(patch['files']) != len(expected) or set(files) != expected
+            or digest(files) != evidence['patchFilesSHA256']):
+        raise ValueError('Official msgpack C patch changed')
+    return {**proof, 'patchCommit': commit, 'patchFilesSHA256': evidence['patchFilesSHA256'],
+            'evidenceSHA256': rule['evidenceSHA256']}
+
+
 def action_subset(root, rule):
     row = rule['action']
     current = [x for x in json.loads((root/'Config/Security/action-bundles.json').read_text())['bundles']
@@ -194,6 +255,7 @@ def verify(rule, root, fetch=None):
     proof = (load('security-usage-applicability').verify(root, rule)
              if rule['decision'] == 'reviewed-project-usage' else
              {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
+              'gh-html-functions-absent': gh_html_subset, 'pip-msgpack-c-absent': pip_msgpack_subset,
               'upload-lodash-subset': action_subset}[rule['decision']](root, rule))
     config = load('security-usage-applicability').CONFIG if rule['decision'] == 'reviewed-project-usage' else CONFIG
     return {'id': rule['id'], 'decision': rule['decision'], 'component': rule['component'],

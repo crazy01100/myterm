@@ -88,6 +88,19 @@ class UsageTests(unittest.TestCase):
         split['environmentObservations']=[{**o,'versions':[v]} for o in finding['environmentObservations'] for v in o['versions']]
         self.assertTrue(project.covers(proof,split,'ci'))
 
+    def test_new_tls_and_websocket_decisions_require_their_reviewed_evidence(self):
+        origins=['action/actions/checkout@'+self.data['actions'][0]['revision']]
+        group=self.data['cases']['undici-no-custom-tls-callback']
+        self.entry['tlsOptionsReview']['entrypointSHA256']=self.entry['sha256']
+        usage.verify_actions(self.root,self.data,group,origins)
+        self.entry['tlsOptionsReview']['customTlsCallbackCallers']=['unreviewed callback']
+        with self.assertRaisesRegex(ValueError,'TLS option evidence'):
+            usage.verify_actions(self.root,self.data,group,origins)
+        group=self.data['cases']['undici-no-websocket-consumer']
+        self.entry['undiciSurface']['features']=[]
+        with self.assertRaisesRegex(ValueError,'WebSocket consumer evidence'):
+            usage.verify_actions(self.root,self.data,group,origins)
+
     def test_shared_advisory_cannot_borrow_another_scope_decision(self):
         rules=[r for r in self.policy['rules'] if r['id']=='GHSA-4qv8-2p9j-2685']
         self.assertEqual(len(rules),2)

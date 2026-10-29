@@ -4479,6 +4479,10 @@
         {
           "id": "8ddf6c3617ebe69efb198cfca453d3e3feaa4b95306b5b533ce0dde7869f2e0e",
           "contentSHA256": "3c8d2af4bd467f1eb66b0122b3dccf3ec270057c6feafcdfbac62ff17fed03fd"
+        },
+        {
+          "id": "c16d44eb5053770044138d110a5ca60f17c94f43f4664f1606240dbfe28c41e4",
+          "contentSHA256": "0f6a025014de7758625ec8ac44b429c10b6aea60d0ce97ba66a2994204fd3976"
         }
       ],
       "reviewScope": "Change-detection initialization for exact project runtime and trust configuration; historical captures are not vulnerability waivers. Current package/core/native findings remain independently blocking.",
