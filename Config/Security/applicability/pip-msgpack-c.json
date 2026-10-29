@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "kind": "reviewed-pip-msgpack-c-absence",
+  "pipVersion": "26.2.2",
+  "wheelSHA256": "fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70",
+  "affectedFilesPresent": [],
+  "patchCommit": "620b0eb4c89cd72d4098564537624d9dbb2ce141",
+  "patchFilesSHA256": "f264a1e30b91875863af7a9b33a5f671a4ea3bfb4dc6716fbdd91f2e0a3ef2e4",
+  "reason": "The complete official fix changes only C/Cython decoder sources. The pinned universal pip wheel and both managed installations contain only the verified pure-Python msgpack subset."
+}

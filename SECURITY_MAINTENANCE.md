@@ -241,7 +241,10 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 
 ### 精確平台／封裝不適用的結案
 
-`security-project-applicability.py` 僅處理四筆已審範圍：CPython 的 Windows 限定 mimetypes 公告、固定官方 GitHub CLI 未編入的 OpenPGP 公告，以及 upload-artifact 精確 lodash 子集不含受影響實作的兩則公告。`Config/Security/project-applicability.json` 綁定官方公告內容、資產與受審來源圖；`Config/Security/applicability/` 保存必要的公開來源證據。這不涵蓋只有輸入受限、未找到呼叫或背景行為未明的其他版本命中。
+`security-project-applicability.py` 處理明列的已審範圍：CPython 的 Windows 限定 mimetypes 公告、固定官方 GitHub CLI 未編入的 OpenPGP 公告、upload-artifact 精確 lodash 子集不含受影響實作的兩則公告，以及下述精確 C／HTML 函式子集。`Config/Security/project-applicability.json` 綁定官方公告內容、資產與受審來源圖；`Config/Security/applicability/` 保存必要的公開來源證據。這不涵蓋只有輸入受限、未找到呼叫或背景行為未明的其他版本命中。
+
+- msgpack `GHSA-j586-36cw-2gc2`：固定 pip wheel 與兩個受管環境都沒有受影響的 C／Cython 解碼器。每次核對完整官方修補檔身分、純 Python 子集及所有 vendor 來源；外部原生模組／路徑 hook 或來源變化即拒絕。這筆新公告不借用舊 msgpack 公告的內容摘要。
+- Go `GO-2026-6860`／`GO-2026-6866`：固定 gh 的已審引入圖使用 HTML tokenizer，未使用公告的 Parse／Render。每次驗證當次平台官方資產、x/net 版本與來源圖，再解析 Go 函式表（含 inline 名稱）；缺漏／未知表格式、受影響函式或任何身分漂移均保留阻擋。不安裝 Go 或執行漏洞輸入，也不把整個 x/net 說成已修補。
 
 每次核對兩個受管解譯器的實際平台、官方 CLI／Action 內容及公告，並在 gate／Issue 寫入前重驗。原始版本命中保留在 `rawFindings`；`projectApplicabilityReviews` 記錄被排除的命中，`projectApplicabilityProofs` 另保留當次來源證據，供核對仍開啟的歷史 Issue。所有舊環境／origin 必須被明確覆蓋；版本已更新而不再命中，也不能單靠空清單結案。
 
@@ -252,3 +255,5 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 已審的未使用功能或不成立的觸發前提，可由 `security-usage-applicability.py` 產生可重驗證據。判定同時綁定官方公告、精確工具封裝、完整入口與實際專案流程；工作流程新增／變更、工具或版本漂移、公告條件修改、任一來源缺漏均不排除。只限制攻擊面而未排除前提的風險仍保留，不能因子套件已有 patch 或未找到一次呼叫就結案。手動在專案標準流程外使用工具不受此限定結論涵蓋。
 
 GitHub Issue 明列目前判定、原因及使用範圍；符合條件時以不適用結案，保留原始嚴重度與版本紀錄。證據變動且重新命中時重開同一筆，不藉關閉或刪除告警掩蓋風險。這不是套件修補或風險豁免；有實際相關路徑且尚無修補的項目維持原門檻。
+
+Undici `GHSA-2m5v-pch6-74hx` 的判定只涵蓋未使用函式型 `tls.checkServerIdentity` 的固定 npm／Actions 入口；`GHSA-9fm3-97px-rjf6` 只涵蓋未使用 WebSocket 的相同精確工具。`GHSA-qrxm-fqhp-jwvm` 只對標準 npm 安裝流程成立：`ci --ignore-scripts` 不會啟動唯一 Undici 消費者 node-gyp 的下載路徑，直接執行 node-gyp 或更改安裝選項不在此範圍。Actions 的真實 HTTPS／XML 路徑不能借用這個 npm 判定；四筆尚待上游修補的 Actions 告警仍阻擋發布，官方 parent 更新後也必須驗證實際內附版本。

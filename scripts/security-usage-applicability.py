@@ -113,6 +113,14 @@ def verify_actions(root, data, group, origins):
                             set(c['properties']) - {'fetch', 'ProxyAgent', 'kT'} for c in graph['consumers'])
                         or any(f['callersOutsideUndiciEntry'] for f in graph['features'])):
                     raise ValueError('Affected or unknown Undici consumer')
+                if group.get('condition') == 'no-websocket-consumer' and not any(
+                        f.get('api') == 'WebSocket' for f in graph['features']):
+                    raise ValueError('Missing WebSocket consumer evidence')
+                if group.get('condition') == 'no-custom-tls-callback':
+                    tls = entry.get('tlsOptionsReview', {})
+                    if (tls.get('entrypointSHA256') != entry['sha256']
+                            or tls.get('customTlsCallbackCallers') != [] or not tls.get('proxyAgentCallSites')):
+                        raise ValueError('Missing or affected TLS option evidence')
         verified.append({'origin': origin, 'archiveSHA256': row['archiveSHA256'],
                          'entrypoints': {e['entrypoint']: e['sha256'] for e in entries}})
     if {x['origin'] for x in verified} != set(origins):
@@ -152,6 +160,11 @@ def verify(root, rule):
 
 # Explicit reviewed advisory/component/scope identities are populated with this change.
 TARGETS = {('GHSA-2mjp-6q6p-2qxm', 'undici', 'github-actions'): 'undici-fetch-only',
+ ('GHSA-2m5v-pch6-74hx', 'undici', 'development'): 'npm-no-custom-tls-callback',
+ ('GHSA-2m5v-pch6-74hx', 'undici', 'github-actions'): 'undici-no-custom-tls-callback',
+ ('GHSA-9fm3-97px-rjf6', 'undici', 'development'): 'npm-no-websocket-consumer',
+ ('GHSA-9fm3-97px-rjf6', 'undici', 'github-actions'): 'undici-no-websocket-consumer',
+ ('GHSA-qrxm-fqhp-jwvm', 'undici', 'development'): 'npm-no-install-scripts',
  ('GHSA-3jxr-9vmj-r5cp', 'brace-expansion', 'github-actions'): 'fixed-artifact-patterns',
  ('GHSA-3wwx-pv8p-q78v', 'undici', 'github-actions'): 'undici-fetch-only',
  ('GHSA-4992-7rv2-5pvq', 'undici', 'github-actions'): 'undici-fetch-only',

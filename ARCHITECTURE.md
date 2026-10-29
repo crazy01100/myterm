@@ -292,3 +292,5 @@ Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對�
 精確平台／封裝適用性由 `security-project-applicability.py` 產生獨立證據：受管 Python 真實平台、已審官方 gh 建置來源圖及 upload-artifact 子集，分別綁定當次官方公告與實際資產。報告保留 rawFindings 的完整分割與可重驗 proofs；不讓一個來源的判定覆蓋其他環境。Issue writer 在完整來源／正式資產監測後，以 snapshot 中的 applicabilityResolution 辨識本機制的「不適用」結案；後續證據失效且仍命中時重新開啟同一筆，其他 not_planned 歷史不沿用。未來未知來源或不完整查詢維持待審／阻擋。
 
 精確用途判定由 `security-usage-applicability.py` 核對已審官方工具內容、完整 Action 入口、專案工作流程與呼叫腳本，以及逐公告前提。這涵蓋未呼叫的功能及設定明確排除的觸發條件，不把僅降低暴露的情況視為不適用。每個 origin 綁定各自版本集合，跨環境不能借用；多個來源共用公告也分開驗證。流程／來源／公告變動即保留告警，原始版本命中及同 Issue 重開語意不變。
+
+新增公告仍各自綁定證據：pip 的另一筆 C 解碼器公告透過完整官方修補檔與現有純 Python 封裝核對；GitHub CLI 的 HTML Parse／Render 公告同時核對官方 binary、來源建置圖及 Go 函式名稱表（含 inline 名稱），不以模組存在或一次字串搜尋推論可達性。Undici 的自訂 TLS callback、WebSocket 與 npm 安裝流程分別核對實際入口；npm 關閉安裝腳本的判定不套用到 Actions 的實際 HTTPS 呼叫。尚未修補的 Actions HTTP／XML 風險持續保留並阻擋發布。

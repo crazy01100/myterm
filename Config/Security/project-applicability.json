@@ -78,6 +78,52 @@
       "entrypoint": "dist/upload/index.js",
       "bundleSHA256": "c0e58b240360573e6d6c82ea1bb22deff4f85883e00211a52bd27822c3a22617",
       "reason": "此精確官方upload-artifact只內附經完整比對的lodash子集，未包含本公告所影響的程式實作。"
+    },
+    {
+      "id": "GHSA-j586-36cw-2gc2",
+      "decision": "pip-msgpack-c-absent",
+      "component": "msgpack",
+      "scope": "verification-tool",
+      "origins": [
+        "python-runtime/pip-vendored",
+        "security-tools/pip-vendored"
+      ],
+      "version": "1.1.2",
+      "advisoryKind": "ghsa",
+      "advisorySHA256": "0f95b6254410fc5b804bc345bc509d2aafef0411c7e019c16eb182eece5736a3",
+      "evidenceFile": "Config/Security/applicability/pip-msgpack-c.json",
+      "evidenceSHA256": "5d4aa89f2e6c1dbb9396ec3935e4749b16eb93bcf4d3a3d757e37203160e2924",
+      "reason": "固定官方pip wheel及兩個受管環境均無本公告影響的C／Cython解碼器；完整官方修補及295份vendor來源逐次核對。此為精確封裝不適用，非msgpack套件已更新。"
+    },
+    {
+      "id": "GO-2026-6860",
+      "decision": "gh-html-functions-absent",
+      "component": "golang.org/x/net",
+      "scope": "development",
+      "origins": [
+        "platform/project-gh"
+      ],
+      "version": "v0.60.0",
+      "advisoryKind": "go",
+      "advisorySHA256": "833923723109cb853b2d627ade4e9901c5e0c2021b07526009ccbbbfe25722fd",
+      "evidenceFile": "Config/Security/applicability/gh-html.json",
+      "evidenceSHA256": "13c90fb26c3aa0bbaa8021954c973e891f5fb21ddb96aee5e4cea0312b7de3bf",
+      "reason": "精確官方GitHub CLI的來源引入圖與含inline名稱的函式表只保留HTML tokenizer等功能，未含公告所影響的Parse／parser。每次核對當次平台資產、模組及函式表；不是整個x/net已修補。"
+    },
+    {
+      "id": "GO-2026-6866",
+      "decision": "gh-html-functions-absent",
+      "component": "golang.org/x/net",
+      "scope": "development",
+      "origins": [
+        "platform/project-gh"
+      ],
+      "version": "v0.60.0",
+      "advisoryKind": "go",
+      "advisorySHA256": "acc35fc772f0ade00ee474b7f200527354ae8c8f70ab493680d47317f0ce7a77",
+      "evidenceFile": "Config/Security/applicability/gh-html.json",
+      "evidenceSHA256": "13c90fb26c3aa0bbaa8021954c973e891f5fb21ddb96aee5e4cea0312b7de3bf",
+      "reason": "精確官方GitHub CLI的來源引入圖與含inline名稱的函式表未含公告所影響的HTML Render／childTextNodesAreLiteral。每次核對當次平台資產、模組及函式表；不是整個x/net已修補。"
     }
   ]
 }
