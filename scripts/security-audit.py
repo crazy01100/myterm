@@ -331,7 +331,7 @@ def scan_actions(report,cache):
             'checkedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'status':'complete'})
 
 
-def run(include_release=None):
+def run(include_release=None, *, delivery_inventory=None):
     report={'schemaVersion':1,'checkedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'findings':[],'errors':[],'upstreamReleases':{}}
     report['collectionEvidence']={'schemaVersion':1,
         'baselineCommit':'22c3361bd0cce52086527a979ae61c3201d93763','collectors':[]}
@@ -345,6 +345,14 @@ def run(include_release=None):
         source_files=('Package.swift','Package.resolved','Vendor/SwiftTerm/UPSTREAM.md','Config/Security/native-components.json')
         hashes={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in source_files}
         scan_runtime(module.inventory(require_binary=False),'current-source',report,cache)
+        if delivery_inventory is not None:
+            if (not isinstance(delivery_inventory,list) or not delivery_inventory or
+                    any(not isinstance(c,dict) or not re.fullmatch(r'https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',c.get('name',''))
+                        or not (c.get('version') or c.get('revision')) for c in delivery_inventory)):
+                raise ValueError('Invalid authenticated delivery inventory')
+            # An older signed release must not borrow current-source risk results.
+            scan_runtime(delivery_inventory,'delivery-app',report,cache)
+            report['deliveryInventoryDigest']=hashlib.sha256(json.dumps(delivery_inventory,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         if hashes!={name:hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in source_files}:
             raise ValueError('Runtime sources changed during query')
         if len(report['errors'])==error_count:
@@ -674,7 +682,7 @@ def baseline_findings(report):
     return original['findings']
 
 
-def blocking(report, *, merge_gate=False):
+def blocking(report, *, merge_gate=False, release_context=None):
     if (report['errors'] or report.get('conditionalBlocks') or report.get('coverageErrors')
             or report.get('coverageGaps') or
             ('toolchainCoverage' in report and report['toolchainCoverage'].get('checksComplete') is not True)):
@@ -682,7 +690,24 @@ def blocking(report, *, merge_gate=False):
     try:
         findings=baseline_findings(report) if merge_gate else report['findings']
     except (KeyError,ValueError,TypeError,OSError):return True
-    if (not merge_gate and report.get('vendorNotices',{}).get('requiresNoticeReview') or
+    notice_block=not merge_gate and report.get('vendorNotices',{}).get('requiresNoticeReview')
+    if release_context is not None:
+        if merge_gate:return True
+        try:
+            # Validate the complete collector partition before classifying any
+            # risk. A release classification never edits the source report.
+            baseline_findings(report)
+            spec=importlib.util.spec_from_file_location('release_policy',ROOT/'scripts/security-release-policy.py')
+            release_policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(release_policy)
+            decision=release_policy.classify(report,release_context,root=ROOT,reader=gh)
+            report['releaseDecision']=decision
+            excluded={row['findingIndex'] for row in decision['nonBlockingFindings']}
+            findings=[f for index,f in enumerate(findings) if index not in excluded]
+            notice_block=bool(decision['unreviewedNotices'])
+        except Exception as error:
+            report['releaseDecision']={'blocking':True,'error':str(error),'authorizesRelease':False}
+            return True
+    if (notice_block or
             any(f['scope']!='released-app' and not f.get('acceptedRisk',False) and
                 (f['status']=='needs-review' or f['severity'] not in ['low','info']) for f in findings)):
         return True
@@ -693,7 +718,10 @@ def blocking(report, *, merge_gate=False):
         openssl_supplier().revalidate(report,ROOT)
         project_applicability().revalidate(report,ROOT)
         supplier_notices().revalidate(report,ROOT)
-    except Exception:return True
+    except Exception as error:
+        if release_context is not None:
+            report.setdefault('releaseDecision',{})['error']='Existing applicability revalidation failed: '+str(error)
+        return True
     return False
 
 
@@ -741,6 +769,12 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- 運作異常：'+html.escape(str(error)))
     for notice in report.get('vendorNotices',{}).get('changes',[]):
         lines.append('- 官方公告待確認：'+html.escape(notice['title'])+' — '+html.escape(notice['url']))
+    decision=report.get('releaseDecision',{})
+    for row in decision.get('nonBlockingFindings',[]):
+        lines.append('- 發布用途已審、告警保留：'+html.escape(row['id'])+' / '+html.escape(row['classification']))
+    for row in decision.get('reviewedNotices',[]):
+        lines.append('- 公告發布影響已審、維護追蹤保留：'+html.escape(row['url']))
+    if decision.get('error'):lines.append('- 發布判斷未通過：'+html.escape(decision['error']))
     if report.get('stalePreviousScan'):
         lines.append('- 前次成功掃描距今超過 48 小時；本次結果請依上方狀態判讀。')
     with open(path, 'a') as output:
@@ -752,10 +786,30 @@ def main():
     mode=p.add_mutually_exclusive_group()
     mode.add_argument('--monitor',action='store_true')
     mode.add_argument('--merge-gate',action='store_true',help='Preserve original collector risk gates; expanded risks remain monitored. Not for release/deploy.')
-    args=p.parse_args();report=run(args.include_release)
-    gate_blocked=blocking(report,merge_gate=args.merge_gate) if not args.monitor else bool(report['errors'])
+    mode.add_argument('--release-stage',choices=('candidate','publish','deploy'))
+    p.add_argument('--version');p.add_argument('--build');p.add_argument('--assets',type=Path)
+    args=p.parse_args()
+    if (args.version or args.build or args.assets) and not args.release_stage:
+        p.error('Release context requires --release-stage')
+    release_context=None;release_error=None;release_policy=None
+    if args.release_stage:
+        try:
+            spec=importlib.util.spec_from_file_location('release_policy',ROOT/'scripts/security-release-policy.py')
+            release_policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(release_policy)
+            release_context=release_policy.context(args.release_stage,args.version,args.build,args.assets,root=ROOT)
+        except Exception as error:release_error='Release context invalid: '+str(error)
+    inventory=(release_context or {}).get('deliveryInventory')
+    report=run(args.include_release,delivery_inventory=inventory) if inventory is not None else run(args.include_release)
+    if release_error:report['errors'].append(release_error);report['scanStatus']='failed'
+    gate_blocked=blocking(report,merge_gate=args.merge_gate,release_context=release_context) if not args.monitor else bool(report['errors'])
+    if not gate_blocked and release_context and args.release_stage in ('publish','deploy'):
+        try:
+            report['releaseReadiness']=release_policy.remote_readiness(release_context['checkoutCommit'],root=ROOT)
+        except Exception as error:
+            report['errors'].append('Release readiness incomplete: '+str(error));gate_blocked=True
     report['gateEvaluation']={'purpose':'monitor' if args.monitor else 'merge' if args.merge_gate else 'release',
         'blocking':gate_blocked,'grantsRiskException':False,'authorizesRelease':False}
+    if args.release_stage:report['gateEvaluation']['releaseStage']=args.release_stage
     args.output.parent.mkdir(parents=True,exist_ok=True)
     previous=json.loads(args.previous.read_text()) if args.previous and args.previous.exists() else None
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
@@ -766,6 +820,7 @@ def main():
     changed=previous is None or fingerprint(previous)!=fingerprint(report)
     report['changed']=changed
     args.output.write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+    print('MYTERM_SECURITY_REPORT_SHA256='+hashlib.sha256(args.output.read_bytes()).hexdigest())
     print(json.dumps({'status':report['scanStatus'],'findings':len(report['findings']),'errors':len(report['errors']),'changed':changed,'release':report.get('releaseTag')}))
     write_summary(report, args.monitor, merge_gate=args.merge_gate)
     return int(gate_blocked)

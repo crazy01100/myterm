@@ -21,11 +21,11 @@
 
 ## 開發工具風險決策
 
-Issue #43 的條件式接受已依官方公告撤回退役；共用入口仍核對撤回身分、內容及政策來源，失效時停止。退役不是套件修補或永久豁免，其他公告及安全門檻照常生效；Issue 已在 main 驗證完成後以官方撤回理由結案。詳見[安全維護指南](../SECURITY_MAINTENANCE.md)。既有 App 與資料不變；重部署仍先驗證固定工具與政策，再下載已簽署資產。
+共用入口核對通用來源政策、當次工具與用途風險；已結案個案保留歷史，不執行專屬重查。重部署驗證固定工具、已簽署資產與當次發布證據，不能以舊版本已發布代替本次核對。詳見[安全維護指南](../SECURITY_MAINTENANCE.md)。
 
 Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊更新 pip 與兩份 certifi，再進行網路驗證。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](../SECURITY_MAINTENANCE.md)。
 
-部署透過專案Node／npm入口，使用`Tools/Deployment/package-lock.json`固定的Wrangler並停用安裝腳本。工作流程先核對隔離相依圖並執行當次安全掃描，再進入取得Cloudflare憑證的步驟；缺少覆蓋證據或風險未解除即停止部署，不重建或替換既有簽署App資產。詳見[安全維護指南](../SECURITY_MAINTENANCE.md)。
+部署透過專案Node／npm入口，使用`Tools/Deployment/package-lock.json`固定的Wrangler並停用安裝腳本。工作流程先核對隔離相依圖並執行當次安全掃描，再進入取得Cloudflare憑證的步驟；缺少必要覆蓋／簽章／分析證據或存在未審／阻擋風險時停止部署；已審工具告警依跨版本用途政策重驗，仍保留追蹤，不重建或替換既有簽署App資產。詳見[安全維護指南](../SECURITY_MAINTENANCE.md)。
 
 
 下載發布資產使用 `scripts/project-gh.sh`，由前置步驟準備並驗證官方隔離CLI；不回退使用runner預裝的gh。

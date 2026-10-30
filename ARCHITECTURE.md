@@ -293,4 +293,7 @@ Java 入口依 macOS arm64／Linux x86_64 選擇各自固定封裝，先核對�
 
 精確用途判定由 `security-usage-applicability.py` 核對已審官方工具內容、完整 Action 入口、專案工作流程與呼叫腳本，以及逐公告前提。這涵蓋未呼叫的功能及設定明確排除的觸發條件，不把僅降低暴露的情況視為不適用。每個 origin 綁定各自版本集合，跨環境不能借用；多個來源共用公告也分開驗證。流程／來源／公告變動即保留告警，原始版本命中及同 Issue 重開語意不變。
 
-新增公告仍各自綁定證據：pip 的另一筆 C 解碼器公告透過完整官方修補檔與現有純 Python 封裝核對；GitHub CLI 的 HTML Parse／Render 公告同時核對官方 binary、來源建置圖及 Go 函式名稱表（含 inline 名稱），不以模組存在或一次字串搜尋推論可達性。Undici 的自訂 TLS callback、WebSocket 與 npm 安裝流程分別核對實際入口；npm 關閉安裝腳本的判定不套用到 Actions 的實際 HTTPS 呼叫。尚未修補的 Actions HTTP／XML 風險持續保留並阻擋發布。
+新增公告仍各自綁定證據：pip 的另一筆 C 解碼器公告透過完整官方修補檔與現有純 Python 封裝核對；GitHub CLI 的 HTML Parse／Render 公告同時核對官方 binary、來源建置圖及 Go 函式名稱表（含 inline 名稱），不以模組存在或一次字串搜尋推論可達性。Undici 的自訂 TLS callback、WebSocket 與 npm 安裝流程分別核對實際入口；npm 關閉安裝腳本的判定不套用到 Actions 的實際 HTTPS 呼叫。尚未修補的 Actions HTTP／XML 風險持續保留，發布影響由獨立用途政策核對，不藉不適用分類解除。
+
+
+發布決策由`security-release-policy.py`讀取`release-decisions.json`，在完整當次掃描上產生獨立`releaseDecision`，不改findings、嚴重度、acceptedRisk或Issue結案語意。用途明分candidate／publish／deploy；精確官方資產、已審消費來源與公告變動時拒絕沿用，App版號變動本身不構成失效。公開入口與部署驗證資產簽章、來源及當次GitHub main／CodeQL；監測artifact還要對照獨立run日誌中的掃描報告摘要，避免以同包自述hash冒充完整性。此證據不代表完整供應鏈無風險；必要證據缺漏與未審影響仍阻擋。狀態明分維護子項及版本交付，正式更新驗收／清理前不結案。

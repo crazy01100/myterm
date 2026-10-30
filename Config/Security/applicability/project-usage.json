@@ -3,7 +3,7 @@
   "kind": "reviewed-project-entry-paths",
   "reviewedCommit": "148dc15158496a3450ca7ee5c46b8ea6c3b0d7b4",
   "workflows": {
-    ".github/workflows/deploy-update-site.yml": "3748813969a1b7bcd9d3a11db669509d47547cdea346bc3e5d4ffd3beba1fbe9",
+    ".github/workflows/deploy-update-site.yml": "5c5ced4b55eb5abbe38038ac244c8748465b71b61563831d315d4c353d1844cd",
     ".github/workflows/security-checks.yml": "192df2ea00ef055c3a6df0a69fcef3d3bb045aa1bf971ffe36e3546ff265654f",
     ".github/workflows/security-gate.yml": "87c9ca7f73b0ef110c0882668bbd5087f06a8fac48b484fbac6ef4534da0c213",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"

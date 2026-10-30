@@ -280,6 +280,15 @@ The five production assets are:
 
 The Draft requires human confirmation before publication. Candidate apps, packaged ZIPs, and assets downloaded again from GitHub undergo the same resource checks. Publishing the GitHub Release triggers `.github/workflows/deploy-update-site.yml`, which checks the downloaded ZIP again before Cloudflare deployment. Production acceptance still requires updating an existing app through Sparkle and completing manual checks; directly replacing `/Applications/MyTerm.app` is not a substitute.
 
+Before publication, use the single entry to download the Draft again, verify signatures, and check the current scan/CI/CodeQL/monitor receipt plus the independent execution-log digest. It validates only by default; add `--publish` only with explicit release authorization:
+
+```sh
+./scripts/publish-release.sh --version X.Y.Z --build <build>
+./scripts/publish-release.sh --version X.Y.Z --build <build> --publish
+```
+
+Reviewed tool classifications carry across versions while their conditions hold, without per-version acceptance or 31-day renewal. Unfixed alerts remain visible. Failed checks or mismatched sources/assets still stop release; see [security maintenance](SECURITY_MAINTENANCE.en.md#release-classification-and-delivery-completion). Feature, test or maintenance completion is not production delivery: the version remains unfinished until update acceptance and cleanup are complete.
+
 After all manual acceptance is complete and the corresponding plan is ready to close, run:
 
 ```sh
@@ -410,7 +419,7 @@ Security applicability regression includes synthetic archive/advisory cases in `
 
 `Tests/Security/test_runtime_advisories.py` uses synthetic advisory archives and commit responses to verify runtime core queries without installing runtimes or executing vulnerability inputs. A stale aggregate Node index, missing individual records, unknown ranges or incorrect CPython mappings must not produce successful evidence.
 
-Expanded monitoring remediation is tracked separately. The merge workflow explicitly uses `security-audit.py --merge-gate`, preserving original collector risk thresholds and all required query/coverage checks. Default audits, release and deployment retain all-risk gates; passing merge checks does not establish release readiness. See [security maintenance](SECURITY_MAINTENANCE.en.md) for purposes, evidence and limits.
+Expanded monitoring remediation is tracked separately. The merge workflow explicitly uses `security-audit.py --merge-gate`, preserving original collector risk thresholds and all required query/coverage checks. Audits without a purpose retain the original full gate; publication and deployment use purpose-based classification and current evidence. Neither passing merge checks nor Issue counts establish release readiness. See [security maintenance](SECURITY_MAINTENANCE.en.md) for purposes, evidence and limits.
 
 OpenSSL supplier evidence is cached in `.build/openssl-supplier/` for read-only package verification; libraries are never installed or loaded from this directory. Linux verification uses the runner's existing `dpkg-query`, `dpkg-deb` and `dpkg`. Missing tools or mismatched exact sources remain pending, without ad-hoc installation or version-string overrides. Updating official package pins requires checking vendor checksums, both library contents and per-CVE fix records. Data updates use normal PR review; actual decision or trust changes still require final exact PR approval. macOS retains its existing isolated vendor checks; CI cannot attest local environments.
 

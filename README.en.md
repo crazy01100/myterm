@@ -177,7 +177,7 @@ Dependency alerts, isolated tests and public-key deployment verification: [Secur
 
 Source tests and administration scripts require Python 3.12 or newer through the project launcher; see [Python tool environment](DEVELOPMENT.en.md#python-runtime). App users do not need Python.
 
-Development entries verify the retired Issue #43 acceptance decision and official withdrawal evidence under [security maintenance](SECURITY_MAINTENANCE.en.md). Development/release checks require a fresh online review; other dependencies remain subject to normal security checks. Existing App users are unaffected.
+Development and release entries verify the general source policy, current dependencies and purpose-specific risks under [security maintenance](SECURITY_MAINTENANCE.en.md). Closed cases retain their history without dedicated rechecks. Existing App users are unaffected.
 
 Before Python security operations, run `scripts/setup-security-tools.sh` to prepare pip and standalone certifi from pinned official wheels/hashes, then independently verify the standalone and pip-vendored CA copies. The official copies may have different versions, but each must match its own pinned version and digest; pip-vendored files are not modified. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
 
@@ -189,6 +189,6 @@ Local bookmarks stay on each Mac. Remote bookmarks are scoped to the saved host 
 
 Successful sync has no popup; failures retain local content. Concurrent renames appear as reviewable candidates in Manage Bookmarks. Deleted bookmarks are not automatically resurrected by offline copies. Explicit sign-out hides that account’s remote bookmarks until signing back in; local bookmarks are unaffected. Self-hosted services must first deploy Firestore Rules supporting `sftpBookmarks`; older apps retain their existing sync functionality.
 
-Development security tooling is isolated from the App: managed Python/pip, Node/npm, Java and GitHub CLI are prepared through project entries; deployment dependencies have a separate lockfile. Inventory success is not a clean security scan. Unresolved findings and coverage gaps remain visible and blocking; see [tooling and coverage](SECURITY_MAINTENANCE.en.md#tool-inventory-coverage-and-official-notices). App users do not need these tools.
+Development security tooling is isolated from the App: managed Python/pip, Node/npm, Java and GitHub CLI are prepared through project entries; deployment dependencies have a separate lockfile. Inventory success is not a clean security scan. Unresolved alerts remain tracked; release decisions use reviewed actual use and current evidence, while required coverage gaps still block; see [tooling and coverage](SECURITY_MAINTENANCE.en.md#tool-inventory-coverage-and-official-notices). App users do not need these tools.
 
 Security monitoring covers MyTerm code, actual project dependencies and tools on a 12-hour schedule. OS updates are not project notifications or gates; see the security maintenance guide for bundled-evidence limits.

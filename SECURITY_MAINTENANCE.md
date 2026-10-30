@@ -25,10 +25,10 @@ npm 相依同時比對 `npm audit` 與 GitHub Advisory Database：以鎖檔內�
 
 需要已登入且有適當讀取權限的 `gh`、Python 3.12 以上、Node.js 24 LTS及 npm。只查詢公開公告與必要來源／版本資訊，不讀取本機雲端設定或簽章私鑰。`Config/Security/native-components.json` 將 libsodium 版本綁定到 swift-sodium revision；更新 wrapper 後必須重新核對實際 XCFramework header。上游修復版以 commit 公告的 Vendor，使用 commit ancestry 判斷，不捏造版本號。
 
-新增中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。一般期限例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
+未完成用途評估的中高風險、未知適用範圍或查詢錯誤會阻擋發布前檢查；已審工具風險依下述長期發布分類核對，不以Issue數量直接決定是否發布。最新已發布 App 的舊漏洞仍列在監測報告，但不阻擋用已修復來源建立後續更新。一般期限例外只可使用 `Config/Security/exceptions.json` 明確列出的公告、元件、版本及 development scope，附接受人、理由與期限；最長 31 天，逾期自動恢復阻擋。不因屬於 devDependency 就整類忽略。
 
 
-`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。預設發布前檢查（不加用途旗標）維持全部未處理風險阻擋。`--merge-gate` 只供 PR／main 合併檢查：擴充工具／內附相依的風險與待審官方公告持續告警並另列修補待辦，尚不增加自動合併阻擋。所有必要查詢失敗或覆蓋不足仍阻擋；同一公告若也命中原有 collector，原有結果照舊阻擋。此分工不表示風險已接受或修復，不改 Issue 結案條件，也不授權發布／部署。兩個用途旗標互斥，發布與部署入口不得使用 `--merge-gate`。自行發行者應建立自己的風險追蹤流程。未知新漏洞、私人測試證據與使用者資料不屬於自動公開範圍，通報方式見 [安全設計](SECURITY.md)。
+`security-audit.py --monitor` 只在掃描運作異常時回傳失敗；風險清單仍完整保存在報告。不加用途旗標的安全檢查保留原完整風險門檻；正式入口以`--release-stage candidate|publish|deploy`啟用下述用途分類。`--merge-gate` 只供 PR／main 合併檢查：擴充工具／內附相依的風險與待審官方公告持續告警並另列修補待辦，尚不增加自動合併阻擋。所有必要查詢失敗或覆蓋不足仍阻擋；同一公告若也命中原有 collector，原有結果照舊阻擋。此分工不表示風險已接受或修復，不改 Issue 結案條件，也不授權發布／部署。監測、合併與發布用途旗標互斥，發布與部署入口不得使用 `--merge-gate`。自行發行者應建立自己的風險追蹤流程。未知新漏洞、私人測試證據與使用者資料不屬於自動公開範圍，通報方式見 [安全設計](SECURITY.md)。
 
 
 發布安全門檻以失敗的檢查結果表示來源不符合政策；它不等於 GitHub 已強制設定分支保護。分支保護須由維護者在 GitHub 另外設定並核對，不因 workflow 存在或儲存庫改為公開就視為已啟用；維護者不得合併未通過檢查的變更，本機發布入口亦會重新檢查。
@@ -113,7 +113,7 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 日常入口使用 `Config/Security/source-review.json` 與 `security-source-review.py` 核對政策契約及 Git checkout 身分，不再逐檔要求人工指紋核准。一般程式、測試、文件與公告游標修改沿 Git／CI 審查；已結案個案不再專屬查詢，歷史資料保留。新的安全公告另案處理，不恢復已終止測試。
 
-來源核對不等於漏洞掃描、環境完整性或風險接受。本機允許未提交修改以進行開發；CI 要求原儲存庫、受支援事件、乾淨 checkout 與事件 commit 一致。PR 可先執行唯讀驗證，但不得寫入監測 Issue。合併依原有 collector 風險門檻，擴充風險另行告警；發布／部署維持全面風險門檻。所有必要查詢失敗與覆蓋缺口仍阻擋，不以取消人工指紋迴圈放行。
+來源核對不等於漏洞掃描、環境完整性或風險接受。本機允許未提交修改以進行開發；CI 要求原儲存庫、受支援事件、乾淨 checkout 與事件 commit 一致。PR 可先執行唯讀驗證，但不得寫入監測 Issue。合併依原有 collector 風險門檻，擴充風險另行告警；發布／部署依長期用途分類判定，保留原始風險與當次必要證據。所有必要查詢失敗與覆蓋缺口仍阻擋，不以取消人工指紋迴圈放行。
 
 ```sh
 ./scripts/project-python.sh scripts/security-source-review.py \
@@ -256,4 +256,22 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 
 GitHub Issue 明列目前判定、原因及使用範圍；符合條件時以不適用結案，保留原始嚴重度與版本紀錄。證據變動且重新命中時重開同一筆，不藉關閉或刪除告警掩蓋風險。這不是套件修補或風險豁免；有實際相關路徑且尚無修補的項目維持原門檻。
 
-Undici `GHSA-2m5v-pch6-74hx` 的判定只涵蓋未使用函式型 `tls.checkServerIdentity` 的固定 npm／Actions 入口；`GHSA-9fm3-97px-rjf6` 只涵蓋未使用 WebSocket 的相同精確工具。`GHSA-qrxm-fqhp-jwvm` 只對標準 npm 安裝流程成立：`ci --ignore-scripts` 不會啟動唯一 Undici 消費者 node-gyp 的下載路徑，直接執行 node-gyp 或更改安裝選項不在此範圍。Actions 的真實 HTTPS／XML 路徑不能借用這個 npm 判定；四筆尚待上游修補的 Actions 告警仍阻擋發布，官方 parent 更新後也必須驗證實際內附版本。
+Undici `GHSA-2m5v-pch6-74hx` 的判定只涵蓋未使用函式型 `tls.checkServerIdentity` 的固定 npm／Actions 入口；`GHSA-9fm3-97px-rjf6` 只涵蓋未使用 WebSocket 的相同精確工具。`GHSA-qrxm-fqhp-jwvm` 只對標準 npm 安裝流程成立：`ci --ignore-scripts` 不會啟動唯一 Undici 消費者 node-gyp 的下載路徑，直接執行 node-gyp 或更改安裝選項不在此範圍。Actions 的真實 HTTPS／XML 路徑不能借用這個 npm 判定；四筆尚待上游修補的 Actions 告警仍保留；是否阻擋發布另由下述用途分類判斷，不能稱為不適用。官方 parent 更新後仍須驗證實際內附版本。
+
+
+## 發布風險分類與交付完成
+
+`security-release-policy.py`與`Config/Security/release-decisions.json`分離監測結果及發布影響。此流程適用後續版本，不限定某個App版號，不每31天展延。每次必須取得當次有效證據；相同公告、工具封裝、用途、輸入與權限條件成立時沿用分類。來源雜湊是機器核對證據，不是新的人工revision流程；無關App程式或文件變更不要求重新接受風險。
+
+- App實際使用風險、發布內容／簽章、憑證、更新信任或必要安全判斷完整性受影響時仍阻擋；未知風險與必要查詢／覆蓋失敗也不自動放行。
+- 已審且影響限於工具可用性、或必要交付判斷有充分獨立驗證的風險，可以保留告警而不阻擋該用途。四筆Actions HTTP／XML公告逐一綁定官方內容、精確封裝及受審消費路徑；這不是套件已修補或不適用，原嚴重度、findings與Issue保持不變。實際工作失敗仍不能通過。
+- 回應錯置的`GHSA-35p6-xmwp-9g52`屬完整性風險。upload-artifact只傳遞診斷資料；正式資產來自本機簽署及獨立驗簽。公開／部署前獨立讀取相同commit的main gate、四語言CodeQL分析與可讀成果，核對正式監測run／attempt／commit／收據。另從GitHub執行日誌取得掃描程序輸出的`MYTERM_SECURITY_REPORT_SHA256`，比對artifact內實際報告；只比對同一壓縮檔內的hash不算充分證據。任何替換或缺漏均停止。
+- 公告發布影響審閱與維護待辦分開。已核對的Node24.22.2公告不要求目前工具用途立即升級；Firebase15.34.2所述body-parser修補需每次確認實際1.20.9／2.4.0已滿足。兩則公告仍保留追蹤；新公告或內容變動不能借用已審結論。
+
+真正需要暫時越過仍屬阻擋的風險，才走`exceptions.json`既有明確接受及最長31天流程；不能把臨時例外改名而永久化。正常發布分類不使用該期限。新增實質安全影響、信任／權限或門檻變更集中在最終政策PR審閱；一般跨版本驗證不逐次要求人工授權。套件／環境更新仍依已核准範圍辦理。
+
+候選建置檢查當次來源／工具，公開入口`publish-release.sh`重新下載Draft五項資產並驗簽，再執行發布分類及遠端完整性檢查；部署在資產驗簽與網站準備後、取得Cloudflare憑證前執行同一政策。各階段不能提前宣稱尚未完成的檢查通過。掃描只接受本程序收集的報告，不能拿外部JSON當放行證明。
+
+功能修正、Dev驗收、安全維護子項與正式交付分別記錄。只有Release公開、部署、外部資產核對、使用者Sparkle更新驗收及標準清理全數完成，版本才可結案；保留的工具Issue不因此被關閉，也不把尚未發布的版本標為完成。
+
+公開／重部署直接使用驗簽程序輸出的相依清單，另以delivery-app範圍查詢；重部署舊tag不能借用目前來源的較新修補結果。

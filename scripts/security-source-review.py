@@ -196,7 +196,7 @@ def policy_sensitive(path):
     return path.startswith(('scripts/security-','scripts/sync-security-',
                             'scripts/project-','scripts/setup-','scripts/python-',
                             'scripts/node-toolchain','scripts/firebase-')) or path in (
-        'scripts/release.sh','scripts/prepare-release-build.sh','scripts/verify-signed-release.py',
+        'scripts/release.sh','scripts/prepare-release-build.sh','scripts/publish-release.sh','scripts/verify-signed-release.py',
         'scripts/cleanup-build-artifacts.sh','scripts/restore-security-monitor.py',
         'scripts/run-policy-tests.py')
 
