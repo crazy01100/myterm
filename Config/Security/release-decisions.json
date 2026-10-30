@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "policy": "purpose-based-release",
+  "repository": "crazy01100/myterm",
+  "preserveFindings": true,
+  "grantsRiskException": false,
+  "rules": [
+    {
+      "id": "GHSA-35p6-xmwp-9g52",
+      "component": "undici",
+      "scope": "github-actions",
+      "classification": "diagnostic-transport-integrity",
+      "advisorySHA256": "89e4bb6fa5a89b5c5f9039019f01a75f744c3e71bae9a4c17ddbc6eb67dbaeb1",
+      "originVersions": {
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "6.23.0"
+        ]
+      },
+      "rationale": "upload-artifact only transports diagnostics. Essential release verdicts use independent GitHub run/analysis APIs, readable SARIF and the audit digest obtained from run logs; signed release assets are produced locally and independently verified. Missing or mismatched evidence blocks."
+    },
+    {
+      "id": "GHSA-8gc5-j5rx-235r",
+      "component": "fast-xml-parser",
+      "scope": "github-actions",
+      "classification": "tool-availability",
+      "advisorySHA256": "42e06ad249e6a7c53a7ab3bb7ba64ab8664ce6b16e8fbb2457293a3393660ce5",
+      "originVersions": {
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "5.4.1"
+        ]
+      },
+      "rationale": "The artifact SDK parses service XML and remains affected. Reviewed consequence is upload resource exhaustion; it does not parse App update feeds. Required job/receipt failures still block."
+    },
+    {
+      "id": "GHSA-qrxm-fqhp-jwvm",
+      "component": "undici",
+      "scope": "github-actions",
+      "classification": "tool-availability",
+      "advisorySHA256": "6d2d342c1f993fc030c69e36b2c0ab4463d829dde40b86a6a5af5f5f04f605b8",
+      "originVersions": {
+        "action/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1": [
+          "6.27.0"
+        ],
+        "action/actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1": [
+          "6.29.0"
+        ],
+        "action/actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0": [
+          "6.29.0"
+        ],
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "6.23.0"
+        ]
+      },
+      "rationale": "The advisory describes Node termination during a TLS hostname mismatch, not acceptance of the wrong certificate. Certificate verification and fail-stop behavior remain mandatory."
+    },
+    {
+      "id": "GHSA-xjj6-f33q-929c",
+      "component": "undici",
+      "scope": "github-actions",
+      "classification": "tool-availability",
+      "advisorySHA256": "ea61e9f2f6edfa5d6ccb6fb21af76a2abb4d3cc090c95126c2a690ba95fad958",
+      "originVersions": {
+        "action/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1": [
+          "6.27.0"
+        ],
+        "action/actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1": [
+          "6.29.0"
+        ],
+        "action/actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0": [
+          "6.29.0"
+        ],
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "6.23.0"
+        ]
+      },
+      "rationale": "The reviewed Actions fetch paths remain affected by process termination. No failed or incomplete setup/upload job may satisfy required release checks; no claim of inapplicability."
+    }
+  ],
+  "notices": [
+    {
+      "id": "e2bdf0707ac4f0995dce61cc596890e91aa3e10e3cb81f28247b995cd53f50cd",
+      "source": "node-blog",
+      "url": "https://nodejs.org/en/blog/release/v24.22.2",
+      "contentSHA256": "7e48489b368e52e3c535dac0fb00838be48cf1908ee0574fe86bb4317fa3e36c",
+      "classification": "reviewed-maintenance",
+      "reason": "Reviewed Node stack/stream changes do not require an upgrade for the current trusted tool use."
+    },
+    {
+      "id": "f4c2e83180faa7973c4518fc33e728be21e79c9e4f79c41c99deed964659d7d0",
+      "source": "firebase-releases",
+      "url": "https://github.com/firebase/firebase-tools/releases/tag/v15.34.2",
+      "contentSHA256": "a4bff90f72724ba18c9154f5c176ebfc3d3f1f68336947b4254bf3cc6b008b13",
+      "classification": "reviewed-maintenance",
+      "reason": "body-parser 1.20.9 / 2.4.0 fixes are already installed; other CLI changes are maintenance outside the release path."
+    },
+    {
+      "id": "87bde7772d064313d2bc033b287d0b50c9b98bd982caa5c5a6a797f273f582f6",
+      "source": "node-blog",
+      "url": "https://nodejs.org/en/blog/release/v27.0.0-alpha.0.0.0",
+      "contentSHA256": "2067412cb732e40bb998455027b026335382b0b0a7211730dfe54c20fec700f1",
+      "classification": "reviewed-maintenance",
+      "reason": "Official Node 27 Alpha major-release announcement reviewed; project remains on Node 24.22.1 LTS. Its CVE-2026-58042 changelog entry was already fixed in 24.18.1 per nodejs/security-wg vuln/core/191.json. No Alpha upgrade is required; current Node 24 package/runtime advisory checks remain mandatory.",
+      "evidenceURL": "https://github.com/nodejs/security-wg/blob/f643f84d4977d0ba379dc7c5805c9b65206369b5/vuln/core/191.json"
+    }
+  ],
+  "sourceFiles": {
+    ".github/workflows/deploy-update-site.yml": "5c5ced4b55eb5abbe38038ac244c8748465b71b61563831d315d4c353d1844cd",
+    ".github/workflows/security-checks.yml": "192df2ea00ef055c3a6df0a69fcef3d3bb045aa1bf971ffe36e3546ff265654f",
+    ".github/workflows/security-gate.yml": "87c9ca7f73b0ef110c0882668bbd5087f06a8fac48b484fbac6ef4534da0c213",
+    ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
+    "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
+    "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
+    "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+    "package-lock.json": "6f523f898d9da9ea24b012570d34aa7f21f218354b9ddaf8dc35072a25dbc099",
+    "scripts/prepare-pages-deployment.sh": "1448a81e44ca324778fa4c858842f692c02dfa4bfe9a64f50d235eab48e586c9",
+    "scripts/prepare-release-assets.sh": "734a01db109730c55797c5c93b1835d923ca4876958ee9575c9c0eb865c5ac1f",
+    "scripts/prepare-release-build.sh": "1cad63cade753cebb210772dae20e39d2a932543e4534b43a3a632af7828e3e3",
+    "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+    "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c",
+    "scripts/publish-release.sh": "3142846d333d3086e1c6b42296494b118ad4f8b8fdd6d8b481860106a716d68f",
+    "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
+    "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
+    "scripts/verify-public-update-site.sh": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
+    "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
+    "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27"
+  },
+  "workflows": [
+    ".github/workflows/deploy-update-site.yml",
+    ".github/workflows/security-checks.yml",
+    ".github/workflows/security-gate.yml",
+    ".github/workflows/security-monitor-health.yml"
+  ]
+}

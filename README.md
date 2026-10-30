@@ -175,7 +175,7 @@ MyTerm 原創程式碼與文件採用 [MIT License](LICENSE)，Copyright (c) 202
 
 原始碼測試與管理腳本需要 Python 3.12 以上；使用統一入口，設定方式見 [Python 工具環境](DEVELOPMENT.md#python-runtime)。一般 App 使用者不需安裝 Python。
 
-開發入口另依[安全維護指南](SECURITY_MAINTENANCE.md)核對已退役的 Issue #43 接受決策及官方撤回證據；開發／發布前需重新連線查核，其他相依仍通過正常安全檢查，不影響使用既有 App 的使用者。
+開發與發布入口依[安全維護指南](SECURITY_MAINTENANCE.md)核對通用來源政策、當次相依與用途風險；已結案個案只保留歷史，不執行專屬重查。不影響使用既有 App 的使用者。
 
 Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官方 wheel／雜湊準備 pip 與獨立 certifi，分別核對獨立與 pip 內附 CA 後再進行網路驗證。兩份官方 CA 可為不同版本，各自必須符合固定版本與摘要；不修改 pip 內附檔案。監測同時盤點來源與當次受管環境；既有 App 不含這些工具，不需更新 App。只對專案安全入口使用已核對 CA，不修改系統信任；詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
@@ -187,6 +187,6 @@ Python 安全工具須先執行 `scripts/setup-security-tools.sh`：以固定官
 
 同步成功不彈提示；失敗保留本機內容。不同裝置同時修改名稱時，在「管理書籤」檢視候選並選擇使用或捨棄。已刪除書籤不會由離線舊副本自動復活。明確登出會隱藏該帳號遠端書籤，重新登入原帳號可恢復；本機書籤不受帳號切換影響。自架服務須先部署包含 `sftpBookmarks` 集合的新版 Firestore Rules，舊版 App 的其他同步功能仍可使用。
 
-開發安全工具與App隔離：受管Python／pip、Node／npm、Java及GitHub CLI使用專案入口準備，部署工具另有獨立鎖檔。清冊成功不代表安全掃描無風險；未解除的告警與覆蓋缺口仍保留及阻擋，詳見[工具與覆蓋說明](SECURITY_MAINTENANCE.md#工具清冊覆蓋與公告追蹤)。一般App使用者不需安裝這些工具。
+開發安全工具與App隔離：受管Python／pip、Node／npm、Java及GitHub CLI使用專案入口準備，部署工具另有獨立鎖檔。清冊成功不代表安全掃描無風險；未解除告警保留追蹤，發布依已審實際用途與當次證據判斷，必要覆蓋缺口仍阻擋，詳見[工具與覆蓋說明](SECURITY_MAINTENANCE.md#工具清冊覆蓋與公告追蹤)。一般App使用者不需安裝這些工具。
 
 安全監測只涵蓋 MyTerm 程式碼、實際專案相依與工具；每 12 小時查詢。OS 更新不納入專案提醒或阻擋，內附證據限制見安全維護指南。

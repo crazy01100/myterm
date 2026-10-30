@@ -116,3 +116,5 @@ Closed conditional-acceptance records remain historical and are no longer querie
 Before Python security operations, run `scripts/setup-security-tools.sh` to bootstrap pip and both certifi copies from pinned official wheels/hashes. Monitoring covers source pins and current managed environments. These tools are not bundled in the App, so no App update is required. Reviewed CA trust is scoped to project security entries without changing system trust; see [security maintenance](SECURITY_MAINTENANCE.en.md).
 
 Project monitoring excludes OS/entire runner-image updates. It tracks actual project code, packages, tools and failures of this monitor; unknown applicability and unresolved risks remain tied to their actual uses.
+
+Release decisions consider actual delivery impact. Retained development-tool alerts are not claimed fixed, and Issue count alone does not block an update. Essential App, signature, credential and update-trust checks remain; see [security maintenance](SECURITY_MAINTENANCE.en.md#release-classification-and-delivery-completion) for purpose classifications, reassessment and temporary exceptions.

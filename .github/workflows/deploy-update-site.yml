@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  security-events: read
   deployments: write
 
 concurrency:
@@ -69,9 +71,6 @@ jobs:
           ./scripts/project-node.sh --npm ci --prefix Tools/Deployment --ignore-scripts --no-fund --no-audit --userconfig=/dev/null --registry=https://registry.npmjs.org
           ./scripts/project-python.sh -B scripts/security-toolchain-inventory.py --purpose deployment --output build/deployment-toolchain-inventory.json
 
-      - name: Enforce current toolchain security before deployment credentials
-        run: ./scripts/project-python.sh scripts/security-audit.py --output build/deployment-security-report.json
-
       - name: Download signed release assets
         shell: bash
         run: |
@@ -112,6 +111,12 @@ jobs:
             --version "$version" \
             --output build/pages
           ./scripts/verify-pages-site.sh build/pages
+
+      - name: Enforce release impact and verified evidence before deployment credentials
+        run: |
+          ./scripts/project-python.sh scripts/security-audit.py \
+            --release-stage deploy --version "${MYTERM_RELEASE_TAG#v}" \
+            --assets build/release-assets --output build/deployment-security-report.json
 
       - name: Deploy to Cloudflare Pages
         env:

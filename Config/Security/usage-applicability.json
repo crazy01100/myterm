@@ -20,7 +20,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "730861197305591fdb67a9b3dc4f9bafb1ed78b8d23b99fb78afc39db83a5cef",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；字串入口先經 net.isIPv6，另一條回應路徑從固定 16 bytes 的 IPv6 轉成字串。既有 Node 24.22.1 原生正規式證據只允許一次 zone 百分號及受限字元，不符合公告的重複百分號／換行前提；呼叫檔與 Node pin 未變。這是限定入口的限制，不是原套件修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -40,7 +40,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "6ea360253d69a0f95eb3a1eb69ddd0ddb73927e3edc70dd95fa8abe15a1d3f7b",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；公告要求低階 API 接受大小寫混用的重複 Content-Length 陣列。目前呼叫面為 fetch／ProxyAgent，未見將外部資料直接作為該 raw header array；fetch 經 Headers 正規化。低階 dispatcher 仍存在，因此保留為目前輸入條件受限，不宣稱整份 library 排除。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -62,7 +62,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "c896368a90678354cfa39a041cacbffdba17f2031dd1c80396d6e0d0a93188ec",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -82,7 +82,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d2228b40e4a2a0aff45e2a6da4f8036a9a274da2a1438ed683315c3bad405c39",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -102,7 +102,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d6c8973bd8daf8a4d41cd1d55eeee6d5a7c8f6ccfc19cec8812b11e2f4b09c77",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；公告要求將外部可控字串傳給低階 client.request 的 upgrade 選項。固定 Actions 引入面為 fetch／ProxyAgent，沒有此 upgrade 消費入口；不將套件中保留 upgrade 實作當成專案有使用它。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -122,7 +122,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "ce491a3632901671b2837925417b110ae78da2db1f4a3ac19af3278366303f21",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；目前實際引入點沒有 EventSource；公告要求 EventSource 串流解析，與 node-gyp 的下載功能不同。呼叫檔 hash 與既有分析一致；僅限本筆 EventSource 公告，不推論其他 fetch 告警安全。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -154,7 +154,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "ce491a3632901671b2837925417b110ae78da2db1f4a3ac19af3278366303f21",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -174,7 +174,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "30033ee977f605674ff670a3d8a684aaa0e42f8fce73cd1a869017f069465285",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；公告要求 processEntities=false。實際 getSerializerOptions 沒有關閉它，builder 預設為 true；目前設定不符合漏洞選項前提。此結論不影響另一筆 XML 數值實體解析告警。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -196,7 +196,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5b35879175ef8af6083ac34fcf5aaf78b132548bc1f5bed4835220d97c4b9692",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -220,7 +220,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "9c63012d745b453bdb7026c2c204896c09fe2014f0f4dcbae50d685ac5caac55",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -244,7 +244,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "b9d76f84083e39ab920523c0dd8c252b04fb9fa62fe9a952243103902eabf155",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；這些 Actions 是下載／上傳／GitHub API 客戶端，不是轉送 HTTP status／headers／body 的 proxy 或 gateway；目前 workflow 未配置 Undici retry interceptor。Octokit 的應用層重試不等於公告要求的 Undici interceptor＋下游原樣轉送。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -264,7 +264,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "3fb2faf7567838aa2c2e6c089d13e106095afef9271f651847f8c6f0f01258af",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -286,7 +286,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "149c6000860b687a1c405b6ca3e064d8aa143c6a58222d56be117081f4e5c187",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -306,7 +306,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "88aca2a1f2ea575e1a2af81877943c4ca416b2da842e79eb9f36bbc4a5a589bb",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -330,7 +330,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "eb0e79fed344288bf1a893f379557201ae16949a0283cca363f4c1bcb8c648bf",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -350,7 +350,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "e8633e7344069f8c455eb1949e4023db573c1239255f68bfced5fc23b72336f1",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；builder 的 __cdata 能力存在，但目前上傳檔案內容以二進位串流送出；XML body 是由 UUID／區塊序號生成的 block ID 清單及固定 mapper 建立，並非把檔案文字放進 comment／CDATA。此次逐段確認 uploadStream、commitBlockList 及 BlockLookupList；限定目前 Action 的上傳路徑，不能證明整個 Azure SDK 的所有功能均不受影響。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -370,7 +370,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "eac3652af85a5bc2f356b9906cb128c42895534c45c06c1bdaf72d0a5bc0ba76",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；公告要求明確把 maxEntityCount 或 maxEntitySize 設成 0。實際 getParserOptions 沒有這兩個零值設定；一般 entity limit 繞過公告另行保留。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -390,7 +390,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "bbd5df4769d37f68d04012ce3b5ce2e806ffe06e756dffb764f19fa1be80782b",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -414,7 +414,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "b7c324e252691acd8567c2fbe6a529b14f6c2adef5555c8033abedd857017fc5",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；官方公告明確區分低階 dispatcher 的自訂 Blob-like body 與 fetch；fetch 經 Headers 驗證不走該漏洞條件。目前核對的 Actions 呼叫 fetch，未建立該自訂低階 body 路徑。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -436,7 +436,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "19825dbc7d638325b01b2ab6952ac84eaccc35b026ac754b5b2201264e1c50c3",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -456,7 +456,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5a199f7788476c78018b3af1537e62532e803189780b57305e3983bb45fa44f9",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -478,7 +478,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "2d0e30c40e46de4584a93451c30d7853e7eb8419859b5dd37b45d643e18cf5f8",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -500,7 +500,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "041fab9319faa14e24d82c7580c7efae827bf338762759348e2e903e9c7b3d5f",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -520,7 +520,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "9b8ab07db2ae0cceed0b5fb3d52ad09dfa01f023f1f5fc6c0f8b1c1be5a39c45",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；三份有 setup-node 的 workflow 均直接指定 node-version=24.22.1，未設定 node-version-file；resolveVersionInput 有版本值就不進讀檔／TOML 分支。三份 workflow 雖有其他修改，此相關設定逐份重新確認。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -544,7 +544,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d4c52c2353bfc87e95b4698e0e5a36d67158fae00cd66d8bc7534c5dba09df0c",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；這些 Actions 是下載／上傳／GitHub API 客戶端，不是轉送 HTTP status／headers／body 的 proxy 或 gateway；目前 workflow 未配置 Undici retry interceptor。Octokit 的應用層重試不等於公告要求的 Undici interceptor＋下游原樣轉送。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -568,7 +568,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5b50dda1cf0248863168a291a52ab4061a5ab8ef8a2f046d0397f51ac5c5b6c3",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -590,7 +590,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "561a8ef3453d7603146bb2b74e7464917f6ae5f300d0452d9b39f74f7e96df79",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；四份 workflow 的 artifact path 都是維護者寫定的 build/ 相對路徑，沒有把外部 PR 文字／使用者輸入作為大括號模式。漏洞展開程式仍在，但惡意 brace pattern 的前提不在目前設定；檔案內容不是這個 glob pattern。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -614,7 +614,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d0f9f44e87e3d41ebfdd79fe7cb6a5af037c12d78e67bb325cd42495ea7672ee",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -634,7 +634,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "daa36bdc36fdf61884690425782c9856bd62d23319794dfd5b75cc126db46a1c",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -654,7 +654,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "122d5b255e029db1ad1581edeeccdb414a64ae452836cbc239bc4d52a802d04e",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -674,7 +674,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "0c3b1c6e8d36088664c9c430e8c95cc961d0efb285c9daf75e37e5485ba3ea36",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；六份實際入口已逐份對回官方固定 tar 資產，既有 AST 呼叫證據仍對應。公告涉及的 WebSocket／EventSource／Cookie helper 沒有入口外部消費者，也無繞過主入口的動態引用。這支持目前功能未使用的限定結論，不是整套 Undici 已修補。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -698,7 +698,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "3ed2722cadb86f17747adc60bd8f1fe49640d4276b4d45f2e6ab4c784c36c1ea",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；實際安裝入口使用 --no-index／--no-deps／--no-cache-dir／停用版本檢查，且只接受固定官方 wheel 經 hash 核對後的本機路徑；網路下載由 Python urllib＋ssl 負責，不經 pip urllib3。公告中的 HTTPS proxy／HTTP chunk／deflate 前提不在此安裝流程。手動繞過入口執行線上 pip 不在這個結論內。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -718,7 +718,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5f79b50d806d11d8a109eab224f4732e973074fdcedf0c31c07ddaf25d4a3cad",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153",
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a",
       "reason": "已核對此精確官方工具與專案工作流程；受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。 此判定限於已驗證的專案入口，來源或使用方式改變須重新核對。"
     },
     {
@@ -739,7 +739,7 @@
       "advisorySHA256": "62e440239d3f75abbfe4c443e45fb03bdfc2ac674e1ca91683060555b2af8762",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "唯一外部Undici消費者node-gyp/download使用預設Agent或connect／requestTls／proxyTls的CA設定，沒有函式型tls.checkServerIdentity，公告前提不成立。 僅限精確專案用途；來源、選項或入口變動須重新核對，原版本命中保留，非套件已修補。",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153"
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a"
     },
     {
       "id": "GHSA-2m5v-pch6-74hx",
@@ -771,7 +771,7 @@
       "advisorySHA256": "62e440239d3f75abbfe4c443e45fb03bdfc2ac674e1ca91683060555b2af8762",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "六份固定Action入口及ProxyAgent選項已審閱，未傳入公告要求的函式型tls.checkServerIdentity；一般預設TLS驗證不受該公告影響。 僅限精確專案用途；來源、選項或入口變動須重新核對，原版本命中保留，非套件已修補。",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153"
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a"
     },
     {
       "id": "GHSA-9fm3-97px-rjf6",
@@ -791,7 +791,7 @@
       "advisorySHA256": "09779ce63a095d9acfddbbaab2035df7680b62a605183cbb0806b69e004dabed",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "唯一外部Undici消費者為node-gyp/download的HTTP fetch，沒有WebSocket建立或PING／PONG消費路徑。 僅限精確專案用途；來源、選項或入口變動須重新核對，原版本命中保留，非套件已修補。",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153"
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a"
     },
     {
       "id": "GHSA-9fm3-97px-rjf6",
@@ -823,7 +823,7 @@
       "advisorySHA256": "09779ce63a095d9acfddbbaab2035df7680b62a605183cbb0806b69e004dabed",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "六份固定Action入口的Undici呼叫面為fetch／ProxyAgent，WebSocket模組沒有外部消費者；來源與完整入口hash綁定，不因套件含此模組視為專案使用。 僅限精確專案用途；來源、選項或入口變動須重新核對，原版本命中保留，非套件已修補。",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153"
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a"
     },
     {
       "id": "GHSA-qrxm-fqhp-jwvm",
@@ -843,7 +843,7 @@
       "advisorySHA256": "b656ad3f1a4e553a295e4bab7b84a1aec43694b2558489767b63f46a7a26a126",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "受影響下載程式確實存在；目前根與部署 npm ci 都有 --ignore-scripts，不會由安裝生命週期自動啟動 node-gyp 下載。之後若直接使用 node-gyp 或允許 lifecycle scripts，此限制不再成立；不能套用到 Actions 的 fetch。 僅限精確專案用途；來源、選項或入口變動須重新核對，原版本命中保留，非套件已修補。",
-      "evidenceSHA256": "0cfee6005c98ac73c648398dfb1c87c87a910e25c1068907efde6ae881695153"
+      "evidenceSHA256": "5c444cbea97820a2bf0215d07980681cb5879a83115bc08197b96aea2796d14a"
     }
   ]
 }

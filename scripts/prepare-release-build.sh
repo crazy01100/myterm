@@ -74,7 +74,9 @@ candidate_app="$candidate_dir/MyTerm.app"
 candidate_build_state="$project_dir/build/candidates/.last-build-number"
 "$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-source-review.py" --purpose release --task "release-$version-$build_number"
 "$project_dir/scripts/check-release-safety.sh"
-"$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-audit.py" --output "$project_dir/build/security-preflight.json"
+"$project_dir/scripts/project-python.sh" "$project_dir/scripts/security-audit.py" \
+    --release-stage candidate --version "$version" --build "$build_number" \
+    --output "$project_dir/build/security-preflight.json"
 sparkle_arguments=()
 if [[ -n "$sparkle_feed_url" ]]; then
     sparkle_arguments+=(--sparkle-feed-url "$sparkle_feed_url")
