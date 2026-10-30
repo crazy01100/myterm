@@ -287,6 +287,8 @@ Before publication, use the single entry to download the Draft again, verify sig
 ./scripts/publish-release.sh --version X.Y.Z --build <build> --publish
 ```
 
+The entry resolves the Draft's numeric ID through the official CLI, then reads that Release by ID rather than using the REST by-tag endpoint, which returns published releases only. It resolves and compares identity and assets before publication; failed queries or changed metadata still stop the operation.
+
 Reviewed tool classifications carry across versions while their conditions hold, without per-version acceptance or 31-day renewal. Unfixed alerts remain visible. Failed checks or mismatched sources/assets still stop release; see [security maintenance](SECURITY_MAINTENANCE.en.md#release-classification-and-delivery-completion). Feature, test or maintenance completion is not production delivery: the version remains unfinished until update acceptance and cleanup are complete.
 
 After all manual acceptance is complete and the corresponding plan is ready to close, run:

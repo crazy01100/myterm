@@ -117,7 +117,7 @@
     "scripts/prepare-release-build.sh": "1cad63cade753cebb210772dae20e39d2a932543e4534b43a3a632af7828e3e3",
     "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
     "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c",
-    "scripts/publish-release.sh": "3142846d333d3086e1c6b42296494b118ad4f8b8fdd6d8b481860106a716d68f",
+    "scripts/publish-release.sh": "bdd82f34ad3ae3b9aa66d3e16bbb4a811720640088620ba7ea9878f581d9553d",
     "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
     "scripts/verify-public-update-site.sh": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
