@@ -30,7 +30,15 @@ evidence_dir="$(mktemp -d "$project_dir/build/publication-$version-$build_number
 mkdir "$evidence_dir/assets"
 tag="v$version"
 metadata() {
-  ./scripts/project-gh.sh api --method GET "repos/crazy01100/myterm/releases/tags/$tag" \
+  # The REST by-tag endpoint only returns published releases. Resolve Drafts
+  # through gh, then read their numeric ID in this repository on every check.
+  local release_id
+  release_id="$(./scripts/project-gh.sh release view "$tag" --repo crazy01100/myterm \
+    --json databaseId --jq .databaseId)" || return 1
+  [[ "$release_id" =~ ^[1-9][0-9]*$ ]] || {
+    echo 'Invalid release database ID' >&2; return 65;
+  }
+  ./scripts/project-gh.sh api --method GET "repos/crazy01100/myterm/releases/$release_id" \
     --jq '{id,draft,prerelease,tag_name,target_commitish,assets:[.assets[]|{id,name,size,digest,updated_at}]}'
 }
 metadata > "$evidence_dir/release-before.json"

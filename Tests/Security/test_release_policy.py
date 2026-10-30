@@ -305,9 +305,20 @@ elif name=='project-gh.sh':
  record(' '.join(args[:2]))
  if args[:2]==['release','edit']:pass
  elif args[:2]==['release','download']:pass
+ elif args[:2]==['release','view']:
+  if os.environ.get('FIXTURE_LOOKUP_FAIL')=='1':sys.exit(1)
+  count=root/'lookup-count'
+  n=int(count.read_text())+1 if count.exists() else 1;count.write_text(str(n))
+  print('null' if os.environ.get('FIXTURE_BAD_ID')=='1' else
+        2 if os.environ.get('FIXTURE_CHANGED_ID')=='1' and n>1 else 1)
  elif args[-1]=='.sha':print('a'*40)
  else:
-  r={'id':1,'draft':True,'tag_name':'v1.10.1','target_commitish':'a'*40,'assets':[]}
+  # GitHub's REST by-tag endpoint cannot return an unpublished Draft.
+  endpoint=next((arg for arg in args if arg.startswith('repos/')), '')
+  if '/releases/tags/' in endpoint:sys.exit('Not Found (HTTP 404)')
+  if endpoint not in ('repos/crazy01100/myterm/releases/1','repos/crazy01100/myterm/releases/2'):
+   sys.exit('Unexpected metadata endpoint')
+  r={'id':int(endpoint.rsplit('/',1)[1]),'draft':True,'tag_name':'v1.10.1','target_commitish':'a'*40,'assets':[]}
   if os.environ.get('FIXTURE_BAD_DRAFT')=='1':r['draft']=False
   print(json.dumps(r))
 elif name=='project-python.sh':
@@ -320,11 +331,16 @@ else:record('verify-assets')
                 path = root/('bin' if name=='git' else 'scripts')/name
                 path.write_text('#!'+sys.executable+'\n'+driver);path.chmod(0o755)
             env = {**os.environ, 'PATH': str(root/'bin')+':'+os.environ['PATH']}
-            for mode in ('validate', 'publish', 'audit-failed', 'bad-draft'):
+            for mode in ('validate', 'publish', 'audit-failed', 'bad-draft',
+                         'lookup-failed', 'bad-id', 'changed-id'):
                 with self.subTest(mode=mode):
                     (root/'calls').write_text('')
+                    (root/'lookup-count').unlink(missing_ok=True)
                     env.update(FIXTURE_AUDIT_FAIL='1' if mode=='audit-failed' else '0',
-                               FIXTURE_BAD_DRAFT='1' if mode=='bad-draft' else '0')
+                               FIXTURE_BAD_DRAFT='1' if mode=='bad-draft' else '0',
+                               FIXTURE_LOOKUP_FAIL='1' if mode=='lookup-failed' else '0',
+                               FIXTURE_BAD_ID='1' if mode=='bad-id' else '0',
+                               FIXTURE_CHANGED_ID='1' if mode=='changed-id' else '0')
                     command = [str(entry), '--version', '1.10.1', '--build', '123']
                     if mode != 'validate':command.append('--publish')
                     result = subprocess.run(command,cwd=root,env=env,capture_output=True,text=True,timeout=20)
@@ -332,6 +348,7 @@ else:record('verify-assets')
                     if mode in ('validate','publish'):
                         self.assertEqual(result.returncode,0,result.stderr)
                         self.assertIn('audit',calls)
+                        self.assertEqual(calls.count('release view'),2)
                     else:self.assertNotEqual(result.returncode,0)
                     self.assertEqual('release edit' in calls,mode=='publish')
                     if mode=='publish':self.assertLess(calls.index('audit'),calls.index('release edit'))
