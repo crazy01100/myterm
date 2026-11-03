@@ -7,9 +7,10 @@ app_path=""
 expected_version=""
 expected_build=""
 require_stable_signing=0
+update_lab_key=0
 
 usage() {
-    echo "Usage: scripts/verify-app.sh --app /path/to/App.app --version VERSION --build BUILD [--require-stable-signing]"
+    echo "Usage: scripts/verify-app.sh --app PATH --version VERSION --build BUILD [--require-stable-signing] [--update-lab-key]"
 }
 
 while (( $# > 0 )); do
@@ -31,6 +32,10 @@ while (( $# > 0 )); do
             ;;
         --require-stable-signing)
             require_stable_signing=1
+            shift
+            ;;
+        --update-lab-key)
+            update_lab_key=1
             shift
             ;;
         --help|-h)
@@ -110,7 +115,9 @@ for required_type in "${required_drag_types[@]}"; do
 done
 
 sparkle_public_key_file="$project_dir/Config/Release/SparklePublicKey.txt"
-if [[ -f "$sparkle_public_key_file" ]]; then
+if (( update_lab_key == 1 )); then
+    "$project_dir/scripts/project-python.sh" "$project_dir/scripts/update-lab-key.py" verify --app "$app_path"
+elif [[ -f "$sparkle_public_key_file" ]]; then
     expected_sparkle_public_key="$(/usr/bin/tr -d '\r\n' < "$sparkle_public_key_file")"
     actual_sparkle_public_key="$(/usr/bin/plutil -extract SUPublicEDKey raw "$plist" 2>/dev/null || true)"
     [[ "$actual_sparkle_public_key" == "$expected_sparkle_public_key" ]] || {

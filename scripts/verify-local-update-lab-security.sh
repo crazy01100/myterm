@@ -6,11 +6,11 @@ feed_dir="$project_dir/build/update-lab/feed"
 archive="$feed_dir/MyTerm-1.0.0-beta.2-build-20260810050200-arm64.zip"
 appcast="$feed_dir/appcast.xml"
 sign_update="$project_dir/.build-app/artifacts/sparkle/Sparkle/bin/sign_update"
-sparkle_account="MyTerm.Release.ed25519"
+private_key_file="$project_dir/build/update-lab/test-private-key.txt"
 test_dir="$(mktemp -d /private/tmp/MyTerm-update-security.XXXXXX)"
 trap '/bin/rm -rf -- "$test_dir"' EXIT
 
-[[ -f "$archive" && -f "$appcast" && -x "$sign_update" ]] || {
+[[ -f "$archive" && -f "$appcast" && -f "$private_key_file" && -x "$sign_update" ]] || {
     print -u2 -- "缺少本機更新實驗室產物。"
     exit 66
 }
@@ -18,13 +18,13 @@ trap '/bin/rm -rf -- "$test_dir"' EXIT
 signature="$(/usr/bin/xmllint --xpath "string(//*[local-name()='enclosure']/@*[local-name()='edSignature'])" "$appcast")"
 [[ -n "$signature" ]] || { print -u2 -- "appcast 缺少更新簽章。"; exit 1; }
 
-"$sign_update" --account "$sparkle_account" --verify "$archive" "$signature"
-"$sign_update" --account "$sparkle_account" --verify "$appcast"
+"$sign_update" --ed-key-file "$private_key_file" --verify "$archive" "$signature"
+"$sign_update" --ed-key-file "$private_key_file" --verify "$appcast"
 
 tampered_archive="$test_dir/tampered.zip"
 /bin/cp "$archive" "$tampered_archive"
 print -rn -- 'MyTerm tamper test' >> "$tampered_archive"
-if "$sign_update" --account "$sparkle_account" --verify "$tampered_archive" "$signature" >/dev/null 2>&1; then
+if "$sign_update" --ed-key-file "$private_key_file" --verify "$tampered_archive" "$signature" >/dev/null 2>&1; then
     print -u2 -- "安全失敗：遭竄改的 ZIP 通過驗章。"
     exit 1
 fi
@@ -32,7 +32,7 @@ fi
 wrong_first_character="A"
 [[ "${signature[1]}" == "A" ]] && wrong_first_character="B"
 wrong_signature="$wrong_first_character${signature[2,-1]}"
-if "$sign_update" --account "$sparkle_account" --verify "$archive" "$wrong_signature" >/dev/null 2>&1; then
+if "$sign_update" --ed-key-file "$private_key_file" --verify "$archive" "$wrong_signature" >/dev/null 2>&1; then
     print -u2 -- "安全失敗：錯誤簽章通過驗證。"
     exit 1
 fi
@@ -40,7 +40,7 @@ fi
 tampered_appcast="$test_dir/tampered-appcast.xml"
 /bin/cp "$appcast" "$tampered_appcast"
 /usr/bin/sed -i '' 's/1\.0\.0-beta\.2/1.0.0-beta.X/g' "$tampered_appcast"
-if "$sign_update" --account "$sparkle_account" --verify "$tampered_appcast" >/dev/null 2>&1; then
+if "$sign_update" --ed-key-file "$private_key_file" --verify "$tampered_appcast" >/dev/null 2>&1; then
     print -u2 -- "安全失敗：遭竄改的 appcast 通過驗章。"
     exit 1
 fi

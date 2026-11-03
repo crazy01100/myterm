@@ -7,9 +7,10 @@ output_dir=""
 version=""
 build_number=""
 require_stable_signing=0
+update_lab_key=0
 
 usage() {
-    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD --app PATH --output DIR [--require-stable-signing]"
+    echo "Usage: scripts/package-app.sh --version VERSION --build BUILD --app PATH --output DIR [--require-stable-signing] [--update-lab-key]"
 }
 
 while (( $# > 0 )); do
@@ -38,6 +39,10 @@ while (( $# > 0 )); do
             require_stable_signing=1
             shift
             ;;
+        --update-lab-key)
+            update_lab_key=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -58,6 +63,9 @@ done
 verify_arguments=(--app "$app_path" --version "$version" --build "$build_number")
 if (( require_stable_signing == 1 )); then
     verify_arguments+=(--require-stable-signing)
+fi
+if (( update_lab_key == 1 )); then
+    verify_arguments+=(--update-lab-key)
 fi
 "$project_dir/scripts/verify-app.sh" "${verify_arguments[@]}"
 
@@ -83,6 +91,9 @@ extracted_verify_arguments=(
 )
 if (( require_stable_signing == 1 )); then
     extracted_verify_arguments+=(--require-stable-signing)
+fi
+if (( update_lab_key == 1 )); then
+    extracted_verify_arguments+=(--update-lab-key)
 fi
 "$project_dir/scripts/verify-app.sh" "${extracted_verify_arguments[@]}"
 

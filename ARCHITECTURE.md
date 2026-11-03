@@ -187,6 +187,8 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 - 更新站部署 job 只允許原庫，手動觸發限 main，並綁定 `production`。實際 reviewer／可部署 refs／environment Secrets 由 GitHub 管理設定控制；沒有遠端設定與 repository Secrets 移轉時，不能宣稱已建立部署核准及憑證隔離。配置與改回私人前的方案限制見 [開發指南](DEVELOPMENT.md#正式部署保護)。
 - GitHub Releases 保存正式 ZIP、`appcast.xml`、更新說明、校驗碼與 manifest。
 - Cloudflare Pages 提供安裝頁、更新說明與 Sparkle feed；不需要 Cloudflare Worker。
+
+- UpdateLab 更新實驗使用本機 feed、獨立 Bundle ID／資料／Keychain 與臨時 Sparkle 金鑰。準備與封裝驗證透過明確的 `--update-lab-key` 選項核對測試公鑰，且要求隔離身分完整、未內附雲端設定；一般發布與候選版仍使用正式公鑰。
 - Sparkle 以 App 內嵌的 Ed25519 公鑰驗證更新。修改過、錯誤簽章或下載不完整的封裝會被拒絕。
 - MyTerm 自有的 SVG 平台圖示由建置腳本放入標準 `Contents/Resources/PlatformIcons`，執行期只從 `Bundle.main` 載入，不使用會嵌入建置機 fallback 路徑的 executable-target `Bundle.module`。候選 App、封裝 ZIP、GitHub 回下載資產與 Cloudflare 部署前會共同驗證圖示內容並拒絕不安全的 MyTerm SwiftPM resource accessor。
 - Sparkle 不要求 App 路徑名稱必須是 `/Applications`，但會拒絕從 App Translocation、唯讀映像、暫時位置或無法替換 App 的位置更新。正式安裝一律先將 `MyTerm.app` 移到「應用程式」資料夾；專案 `build/` 內的 App 只供開發測試。

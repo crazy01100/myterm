@@ -7,8 +7,8 @@ feed_dir="$lab_root/feed"
 beta1_app="$lab_root/beta1/MyTerm.app"
 beta2_app="$lab_root/beta2/MyTerm.app"
 build_state_file="$lab_root/.last-build-number"
-public_key_file="$project_dir/Config/Release/SparklePublicKey.txt"
-sparkle_account="MyTerm.Release.ed25519"
+public_key_file="$lab_root/test-public-key.txt"
+private_key_file="$lab_root/test-private-key.txt"
 port="${MYTERM_UPDATE_LAB_PORT:-48123}"
 base_url="http://127.0.0.1:$port"
 beta1_version="1.0.0-beta.1"
@@ -16,15 +16,15 @@ beta2_version="1.0.0-beta.2"
 beta1_build="20260810050100"
 beta2_build="20260810050200"
 
-[[ -f "$public_key_file" ]] || { print -u2 -- "缺少正式 Sparkle 公鑰。"; exit 66; }
 [[ "$port" =~ '^[1-9][0-9]{3,4}$' ]] || { print -u2 -- "本機測試連接埠格式錯誤：$port"; exit 64; }
-public_key="$(/usr/bin/tr -d '\r\n' < "$public_key_file")"
 
-if [[ -d "$lab_root" ]]; then
-    /bin/chmod -R u+w "$lab_root"
-    /bin/rm -rf -- "$lab_root"
-fi
+[[ ! -e "$lab_root" && ! -L "$lab_root" ]] || {
+    print -u2 -- "既有 UpdateLab 尚在，請先確認程序與驗收資料，再清理該目錄。"
+    exit 65
+}
 /bin/mkdir -p "$feed_dir" "${beta1_app:h}" "${beta2_app:h}"
+"$project_dir/scripts/security-python.sh" "$project_dir/scripts/update-lab-key.py" prepare
+public_key="$(/usr/bin/tr -d '\r\n' < "$public_key_file")"
 
 common_arguments=(
     --sparkle-feed-url "$base_url/appcast.xml"
@@ -41,7 +41,7 @@ common_arguments=(
     --app-output "$beta1_app" \
     "${common_arguments[@]}"
 "$project_dir/scripts/verify-app.sh" \
-    --app "$beta1_app" --version "$beta1_version" --build "$beta1_build"
+    --app "$beta1_app" --version "$beta1_version" --build "$beta1_build" --update-lab-key
 
 "$project_dir/scripts/build-app.sh" \
     --version "$beta2_version" \
@@ -50,13 +50,13 @@ common_arguments=(
     --app-output "$beta2_app" \
     "${common_arguments[@]}"
 "$project_dir/scripts/verify-app.sh" \
-    --app "$beta2_app" --version "$beta2_version" --build "$beta2_build"
+    --app "$beta2_app" --version "$beta2_version" --build "$beta2_build" --update-lab-key
 
 "$project_dir/scripts/package-app.sh" \
     --version "$beta2_version" \
     --build "$beta2_build" \
     --app "$beta2_app" \
-    --output "$feed_dir"
+    --output "$feed_dir" --update-lab-key
 
 archive_name="MyTerm-$beta2_version-build-$beta2_build-arm64.zip"
 /bin/cp \
@@ -71,13 +71,13 @@ sign_update="$project_dir/.build-app/artifacts/sparkle/Sparkle/bin/sign_update"
 }
 
 "$generate_appcast" \
-    --account "$sparkle_account" \
+    --ed-key-file "$private_key_file" \
     --download-url-prefix "$base_url/" \
     --embed-release-notes \
     --maximum-versions 1 \
     --maximum-deltas 0 \
     "$feed_dir"
-"$sign_update" --account "$sparkle_account" --verify "$feed_dir/appcast.xml"
+"$sign_update" --ed-key-file "$private_key_file" --verify "$feed_dir/appcast.xml"
 
 enclosure_version="$(/usr/bin/xmllint --xpath "string(//*[local-name()='version'])" "$feed_dir/appcast.xml")"
 short_version="$(/usr/bin/xmllint --xpath "string(//*[local-name()='shortVersionString'])" "$feed_dir/appcast.xml")"
