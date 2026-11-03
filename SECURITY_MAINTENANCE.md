@@ -243,6 +243,7 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 
 `security-project-applicability.py` 處理明列的已審範圍：CPython 的 Windows 限定 mimetypes 公告、固定官方 GitHub CLI 未編入的 OpenPGP 公告、upload-artifact 精確 lodash 子集不含受影響實作的兩則公告，以及下述精確 C／HTML 函式子集。`Config/Security/project-applicability.json` 綁定官方公告內容、資產與受審來源圖；`Config/Security/applicability/` 保存必要的公開來源證據。這不涵蓋只有輸入受限、未找到呼叫或背景行為未明的其他版本命中。
 
+- OpenPGP `GO-2026-5932`：公告同時列出 `golang.org/x/crypto` 與獨立的 `golang.org/x/crypto/openpgp` 模組。原判定僅涵蓋已核對的 GitHub CLI 封裝中母模組的命中：三份受審建置圖均未編入受影響套件。獨立模組若出現在清單中，不沿用母模組的排除。
 - msgpack `GHSA-j586-36cw-2gc2`：固定 pip wheel 與兩個受管環境都沒有受影響的 C／Cython 解碼器。每次核對完整官方修補檔身分、純 Python 子集及所有 vendor 來源；外部原生模組／路徑 hook 或來源變化即拒絕。這筆新公告不借用舊 msgpack 公告的內容摘要。
 - Go `GO-2026-6860`／`GO-2026-6866`：固定 gh 的已審引入圖使用 HTML tokenizer，未使用公告的 Parse／Render。每次驗證當次平台官方資產、x/net 版本與來源圖，再解析 Go 函式表（含 inline 名稱）；缺漏／未知表格式、受影響函式或任何身分漂移均保留阻擋。不安裝 Go 或執行漏洞輸入，也不把整個 x/net 說成已修補。
 
