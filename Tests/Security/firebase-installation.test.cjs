@@ -9,10 +9,10 @@ function fixture(t, {prepared = true} = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'myterm-firebase-install-'));
   t.after(() => fs.rmSync(root, {recursive:true, force:true}));
   const write = (file, value) => { const p=path.join(root,file);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,JSON.stringify(value)); };
-  const manifest = {devDependencies:{'firebase-tools':'15.34.1','@firebase/rules-unit-testing':'6.0.0'}};
+  const manifest = {devDependencies:{'firebase-tools':'15.34.2','@firebase/rules-unit-testing':'6.0.0'}};
   const lock = {packages:{'':manifest}};
   write('package.json',manifest);
-  for(const [name,version] of Object.entries({'firebase-tools':'15.34.1','@firebase/rules-unit-testing':'6.0.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2','superstatic':'10.0.0','minimatch':'11.0.4'})) {
+  for(const [name,version] of Object.entries({'firebase-tools':'15.34.2','@firebase/rules-unit-testing':'6.0.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2','superstatic':'10.0.0','minimatch':'11.0.4'})) {
     const peerDependencies = name === '@firebase/rules-unit-testing' ? {firebase:'^13.0.0'} : undefined;
     write('node_modules/'+name+'/package.json',{name,version,main:'index.js',peerDependencies});
     fs.writeFileSync(path.join(root,'node_modules',name,'index.js'),'throw Error("must not execute package code");');
