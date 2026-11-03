@@ -3,9 +3,9 @@
   "kind": "reviewed-project-entry-paths",
   "reviewedCommit": "148dc15158496a3450ca7ee5c46b8ea6c3b0d7b4",
   "workflows": {
-    ".github/workflows/deploy-update-site.yml": "5c5ced4b55eb5abbe38038ac244c8748465b71b61563831d315d4c353d1844cd",
-    ".github/workflows/security-checks.yml": "192df2ea00ef055c3a6df0a69fcef3d3bb045aa1bf971ffe36e3546ff265654f",
-    ".github/workflows/security-gate.yml": "87c9ca7f73b0ef110c0882668bbd5087f06a8fac48b484fbac6ef4534da0c213",
+    ".github/workflows/deploy-update-site.yml": "7d072cf92404b5f527f9567493b8fbf60d1ade4157b0ea979e415579c5990ef6",
+    ".github/workflows/security-checks.yml": "d1a6a9a156ba6e1334297d06185a86e0db17016dc4695660c15be5018f37aefe",
+    ".github/workflows/security-gate.yml": "78f44aac577e9792e71eab3c9d3c0065c595b303aef6d9d4f9810d1f0cb21814",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"
   },
   "actions": [
@@ -389,7 +389,7 @@
         "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+        "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221"
       },
       "advisoryConditions": [
         {
@@ -408,7 +408,7 @@
         "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+        "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221"
       },
       "advisoryConditions": [
         {
@@ -427,7 +427,7 @@
         "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+        "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221"
       },
       "advisoryConditions": [
         {
@@ -683,7 +683,7 @@
         "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+        "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221"
       },
       "advisoryConditions": [
         {
@@ -702,7 +702,7 @@
         "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "97580ebac29b2c0167c8b68d613ea8b4539ef1ba02166334fb56a29a71d8201e"
+        "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221"
       },
       "advisoryConditions": [
         {

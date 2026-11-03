@@ -77,6 +77,32 @@ class ApplicabilityTests(unittest.TestCase):
             self.assertEqual(r['findings'], [self.finding]); self.assertTrue(r['errors'])
             self.assertFalse(r['projectApplicabilityProofs'])
 
+    def test_revised_openpgp_advisory_only_excludes_reviewed_parent_match(self):
+        # Replay the official record which stopped the monitor on 2026-11-03.
+        record = json.loads((Path(__file__).parent/'fixtures'/'GO-2026-5932.json').read_text())
+        rule = next(rule for rule in self.policy['rules'] if rule['id'] == record['id'])
+        child = 'golang.org/x/crypto/openpgp'
+        self.assertEqual({row['package']['name'] for row in record['affected']},
+                         {rule['component'], child})
+        parent = {**self.finding, 'id': rule['id'], 'component': rule['component'],
+                  'version': rule['version'], 'dependencyPaths': rule['origins'],
+                  'environmentObservations': [{'origin': 'platform/project-gh', 'environment': 'ci',
+                                               'versions': [rule['version']]}]}
+        # Even identical origin/version and advisory ID cannot cover the new module.
+        standalone = {**parent, 'component': child}
+        report = self.report([parent, standalone]); report['observedOrigins'] = rule['origins']
+        with patch.object(s, 'configuration', return_value=[rule]), \
+             patch.object(s, 'gh_subset', return_value={'platform': 'Linux-x86_64'}):
+            s.classify(report, self.root, lambda *_: record)
+            self.assertEqual(report['errors'], [])
+            self.assertEqual(report['findings'], [standalone])
+            self.assertEqual(report['rawFindings'], [parent, standalone])
+            s.revalidate(report, self.root, lambda *_: record)
+            changed = copy.deepcopy(record)
+            changed['affected'] = [row for row in changed['affected'] if row['package']['name'] != child]
+            with self.assertRaisesRegex(ValueError, 'evidence changed'):
+                s.revalidate(report, self.root, lambda *_: changed)
+
     def test_go_advisory_uses_only_fixed_official_source_and_rejects_redirect(self):
         rule=self.policy['rules'][1];url='https://vuln.go.dev/ID/GO-2026-5932.json'
         response=MagicMock();response.__enter__.return_value=response;response.url=url

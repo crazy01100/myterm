@@ -50,7 +50,7 @@ jobs:
           ./scripts/project-node.sh --npm ci --ignore-scripts --no-fund --no-audit
           ./scripts/project-node.sh --npm ci --prefix Tools/Deployment --ignore-scripts --no-fund --no-audit --userconfig=/dev/null --registry=https://registry.npmjs.org
           ./scripts/project-python.sh scripts/security-source-review.py --purpose ci --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" --output build/security-source-review.json
-          ./scripts/project-node.sh scripts/verify-firebase-tools.cjs
+          ./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
       - name: Verify development tool consumers (full profile only)
         if: steps.verification.outputs.profile == 'full'
         run: ./scripts/project-node.sh --npm run test:development-tools

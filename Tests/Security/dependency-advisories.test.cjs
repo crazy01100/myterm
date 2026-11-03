@@ -6,10 +6,19 @@ const path=require('node:path');
 const local=createRequire(path.resolve(__dirname,'../../package.json'));
 const cli=createRequire(local.resolve('firebase-tools/package.json'));
 const glob=createRequire(cli.resolve('glob'));
-const readdir=createRequire(cli.resolve('readdir-glob'));
-const bracePaths=[...new Set([cli.resolve('minimatch'),glob.resolve('minimatch'),readdir.resolve('minimatch')].map(p=>createRequire(p).resolve('brace-expansion')))];
+const archiver=createRequire(cli.resolve('archiver'));
+const readdir=createRequire(archiver.resolve('readdir-glob'));
+const hosting=createRequire(cli.resolve('superstatic'));
+const consumers=[cli,glob,readdir,hosting];
+const lock=local('./package-lock.json');
+const bracePaths=Object.keys(lock.packages).filter(p=>p.endsWith('/brace-expansion')).map(p=>local.resolve('./'+p));
 test('all installed brace branches preserve normal patterns',()=>{
- assert.equal(bracePaths.length,3);
+ assert.equal(cli('glob/package.json').version,'14.0.3');
+ const used=new Set(consumers.map(consumer=>{
+  assert.equal(consumer('minimatch/package.json').version,'11.0.4');
+  return createRequire(consumer.resolve('minimatch')).resolve('brace-expansion');
+ }));
+ assert.deepEqual(new Set(bracePaths),used);
  for(const file of bracePaths){const mod=require(file);const expand=mod.expand||mod;assert.deepEqual(expand('file-{a,b}-{1..2}'),['file-a-1','file-a-2','file-b-1','file-b-2']);}
 });
 test('brace advisories stay bounded on comma lists, nesting and rewrite input',()=>{
