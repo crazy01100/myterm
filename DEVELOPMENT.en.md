@@ -138,6 +138,12 @@ Before launching the CLI, the wrapper verifies both prepared files and the resol
 
 The upstream repository also provides `scripts/invite-sync-user.sh --help` for maintainer administration. It requires local Google Cloud CLI and administrator authorization; it is not an app build dependency or an expansion of the existing Firebase CLI wrapper. Run its isolated safety suite with `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`; normal Python test discovery under `Tests/Security` also runs it. Administrator settings, credentials, and private operating notes stay out of Git. This tool is not part of the independent source export.
 
+### UpdateLab test keys
+
+Run `scripts/prepare-local-update-lab.sh` to create a dedicated temporary Ed25519 key pair and two test Apps under `build/update-lab/`. Preparation requires that directory to be absent so it cannot overwrite an active experiment. The private key file has mode 0600 and is managed with the experiment artifacts.
+
+`verify-app.sh` and `package-app.sh` read the test public key only when `--update-lab-key` is explicit. They also require the UpdateLab Bundle ID, isolated data directory, Keychain service, channel flag and cloud-configuration isolation. Other invocations use `Config/Release/SparklePublicKey.txt`. Both the source App and the extracted archive undergo the same checks. After packaging, use `serve-local-update-lab.sh` for the loopback site and `verify-local-update-lab-security.sh` for valid and invalid signatures.
+
 ### Source review before development and publication
 
 Verify the policy contract, checkout identity and tools/monitoring results for the actual operation. Ordinary source changes no longer require revision fingerprint approval; required package integrity and risk gates remain. OS updates are outside project monitoring and are not development prerequisites.

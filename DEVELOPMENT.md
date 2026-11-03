@@ -138,6 +138,12 @@ CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./
 
 原庫另有維護者管理入口 `scripts/invite-sync-user.sh --help`，需本機 Google Cloud CLI 與管理員授權，不是 App 建置依賴或既有 Firebase CLI wrapper 的擴權。隔離安全測試為 `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`，也由既有 `Tests/Security` Python 測試探索納入。管理設定、憑證與私人操作紀錄不進 Git；此工具未納入獨立來源輸出。
 
+### UpdateLab 測試金鑰
+
+執行 `scripts/prepare-local-update-lab.sh` 會在 `build/update-lab/` 建立專用的臨時 Ed25519 金鑰及兩份測試 App。準備程序要求該目錄尚未存在，避免覆寫仍在驗收的 App 或簽章。私鑰檔權限為 0600，隨本次實驗產物管理。
+
+`verify-app.sh` 與 `package-app.sh` 只有明確使用 `--update-lab-key` 時，才讀取這份測試公鑰；同時強制核對 UpdateLab 的 Bundle ID、獨立資料目錄、Keychain service、通道及雲端設定隔離。其他呼叫沿用 `Config/Release/SparklePublicKey.txt`。測試來源與解壓後 App 均需通過相同核對。封裝完成後可使用 `serve-local-update-lab.sh` 啟動本機站台，再用 `verify-local-update-lab-security.sh` 驗證正常及錯誤簽章。
+
 ### 開發與發布前來源複核
 
 依安全維護指南核對政策契約、checkout 身分與實際用途的工具／監測結果。一般來源修改不再要求 revision 指紋核准；必要套件完整性與風險門檻保留。OS 更新不屬專案監測或開發前置。
