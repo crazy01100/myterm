@@ -65,6 +65,7 @@ jobs:
         run: |
           ./scripts/project-node.sh --npm ci --ignore-scripts --no-fund --no-audit
           ./scripts/project-python.sh scripts/security-source-review.py --purpose redeploy --task "github-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          ./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 
       - name: Prepare and verify the isolated deployment dependency graph
         run: |

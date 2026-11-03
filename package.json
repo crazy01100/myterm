@@ -27,6 +27,15 @@
     },
     "qs": "6.16.1",
     "@grpc/grpc-js": "1.14.5",
-    "glob": "13.0.6"
+    "glob": "14.0.3",
+    "firebase-tools@15.34.1": {
+      "minimatch": "11.0.4"
+    },
+    "superstatic@10.0.0": {
+      "minimatch": "11.0.4"
+    },
+    "readdir-glob@1.1.3": {
+      "minimatch": "11.0.4"
+    }
   }
 }

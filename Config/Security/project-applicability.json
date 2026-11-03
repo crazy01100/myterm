@@ -26,7 +26,7 @@
       ],
       "version": "v0.58.0",
       "advisoryKind": "go",
-      "advisorySHA256": "6fdf2875141e3cceb034c2d2b5fda7849cc68904bb72bb74b46797ecb2d5d97b",
+      "advisorySHA256": "144cfddc7a25af4f4f91053bff73bf0880f6bc736c109216df7bcf9de353524f",
       "evidenceFile": "Config/Security/applicability/gh-openpgp.json",
       "evidenceSHA256": "6b636badd6446779755260c69d752fbcedb98ef6d5423fc9cb114ba34e65f422",
       "reason": "此精確官方GitHub CLI資產對應的已審來源／建置引入圖未編入公告所影響的OpenPGP套件。"

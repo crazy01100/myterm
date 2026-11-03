@@ -104,14 +104,14 @@
     }
   ],
   "sourceFiles": {
-    ".github/workflows/deploy-update-site.yml": "5c5ced4b55eb5abbe38038ac244c8748465b71b61563831d315d4c353d1844cd",
-    ".github/workflows/security-checks.yml": "192df2ea00ef055c3a6df0a69fcef3d3bb045aa1bf971ffe36e3546ff265654f",
-    ".github/workflows/security-gate.yml": "87c9ca7f73b0ef110c0882668bbd5087f06a8fac48b484fbac6ef4534da0c213",
+    ".github/workflows/deploy-update-site.yml": "7d072cf92404b5f527f9567493b8fbf60d1ade4157b0ea979e415579c5990ef6",
+    ".github/workflows/security-checks.yml": "d1a6a9a156ba6e1334297d06185a86e0db17016dc4695660c15be5018f37aefe",
+    ".github/workflows/security-gate.yml": "78f44aac577e9792e71eab3c9d3c0065c595b303aef6d9d4f9810d1f0cb21814",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
     "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
     "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
-    "package-lock.json": "6f523f898d9da9ea24b012570d34aa7f21f218354b9ddaf8dc35072a25dbc099",
+    "package-lock.json": "b8c3bbedbf63b9c3356afe1447c430fd028b0f944b571611d6aad7e663fd4b7e",
     "scripts/prepare-pages-deployment.sh": "1448a81e44ca324778fa4c858842f692c02dfa4bfe9a64f50d235eab48e586c9",
     "scripts/prepare-release-assets.sh": "734a01db109730c55797c5c93b1835d923ca4876958ee9575c9c0eb865c5ac1f",
     "scripts/prepare-release-build.sh": "1cad63cade753cebb210772dae20e39d2a932543e4534b43a3a632af7828e3e3",
@@ -120,6 +120,7 @@
     "scripts/publish-release.sh": "bdd82f34ad3ae3b9aa66d3e16bbb4a811720640088620ba7ea9878f581d9553d",
     "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
+    "scripts/verify-firebase-tools.cjs": "368db00ba981083da93b6d60d0366ba872690b22ea4f3c0fb7d9d4adfacdc221",
     "scripts/verify-public-update-site.sh": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
     "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27"

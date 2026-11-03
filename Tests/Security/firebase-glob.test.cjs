@@ -19,6 +19,20 @@ test('Firebase listFiles preserves exclusions, dotfiles and symlink traversal',t
  const dir=fixture(t);const files=cli('./lib/listFiles.js').listFiles(dir,['ignored/**']).sort();
  assert.deepEqual(files,['.hidden','linked/nested.js','linked/schema.gql','linked/schema.graphql','main.js','sub/nested.js','sub/schema.gql','sub/schema.graphql'].sort());
 });
+test('Firebase recursive listing applies minimatch ignore rules', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'myterm-ignore-'));
+  t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
+  fs.writeFileSync(path.join(dir, 'keep.txt'), 'keep');
+  fs.writeFileSync(path.join(dir, 'ignored.tmp'), 'omit');
+  const files = await cli('./lib/fsAsync.js').readdirRecursive({path: dir, ignoreStrings: ['*.tmp']});
+  assert.deepEqual(files.map(file => path.basename(file.name)), ['keep.txt']);
+});
+test('superstatic matches only the configured Hosting path', () => {
+  const hosting = createRequire(cli.resolve('superstatic/package.json'));
+  const {configMatcher} = hosting('./lib/utils/patterns.js');
+  assert.equal(configMatcher('/assets/a.css', {source: '/assets/**'}), true);
+  assert.equal(configMatcher('/news/index.html', {source: '/assets/**'}), false);
+});
 test('glob sync, async and stream preserve Data Connect style brace patterns',async t=>{
  const dir=fixture(t);const glob=cli('glob');const options={cwd:dir,absolute:true,nodir:true,follow:false};
  const expected=['sub/schema.gql','sub/schema.graphql'].map(f=>path.join(dir,f)).sort();

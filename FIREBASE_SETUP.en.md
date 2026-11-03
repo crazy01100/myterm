@@ -39,8 +39,8 @@ The actual access boundaries are Firebase Authentication, the project's [Firesto
 - Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13); [package.json](package.json) defines the version requirement.
 
 - On an Apple Silicon development Mac, Firestore Rules/emulator operations use the isolated project JDK. Prepare it using the [development guide](DEVELOPMENT.en.md#isolated-base-and-java-on-apple-silicon); the wrapper no longer automatically selects Homebrew Java. This does not change App users’ or hosted services’ Java environments.
-- The repository's pinned Firebase CLI, used through `scripts/firebase-tools.sh` after running `./scripts/project-node.sh --npm install` at the repository root.
-- Development tools also require Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13) and Python 3.12 or later. Install pinned dependencies with `./scripts/project-node.sh --npm ci`, then verify with `./scripts/project-node.sh --npm run test:development-tools`. The CLI natively supports the patched stream packages, so no compatibility patch is required. A read-only check verifies installed versions against the lockfile before launch. It also compares Rules test peer requirements with the installed package; on mismatch, regenerate the lockfile from official package metadata and test it, without force or legacy-peer-deps bypasses.
+- Install and prepare the pinned Firebase CLI as shown in section 7, then use `scripts/firebase-tools.sh` to run it.
+- Development tools also require Python 3.12 or later. Before launch, the wrapper verifies the lockfile, Rules test peer requirements and both minimatch imports. Run `./scripts/project-node.sh --npm run test:development-tools` to test the actual consumers.
 - macOS 26, Apple Silicon, and Xcode 26 or compatible Command Line Tools to build MyTerm.
 
 The Firebase wrapper supports only this guide's Firestore deployment, basic account setup and local `demo-myterm` emulators. Auth import, Hosting, alternate configurations and arbitrary test subprocess commands are rejected. See [Security maintenance](SECURITY_MAINTENANCE.en.md) for dependency exceptions, expiry and limitations.
@@ -149,7 +149,8 @@ jq -e '.installed.client_id and .installed.client_secret and .installed.project_
 Install the pinned tools and run the Emulator tests first:
 
 ```sh
-./scripts/project-node.sh --npm install
+./scripts/project-node.sh --npm ci --ignore-scripts
+./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 ./scripts/project-node.sh --npm run test:firestore-rules
 ```
 
