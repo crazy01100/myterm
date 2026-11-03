@@ -39,8 +39,8 @@ MyTerm 的雲端流程分成兩層：
 - Node.js 24 LTS（Firebase 13 需 24.x 中的 24.12.0 以上版本）；版本要求以 [package.json](package.json) 為準。
 
 - Apple Silicon開發Mac的Firestore Rules／Emulator使用專案隔離的Java，先依[開發指南](DEVELOPMENT.md#apple-silicon-的隔離基底與-java)準備；wrapper不再自動選用Homebrew Java。此變更不影響App使用者或雲端服務的Java環境。
-- 專案鎖定的 Firebase CLI；在 repository 根目錄執行 `./scripts/project-node.sh --npm install` 後由 `scripts/firebase-tools.sh` 使用。
-- 開發工具另需 Node.js 24 LTS（Firebase 13 需 24.x 中的 24.12.0 以上版本）與 Python 3.12 以上。使用 `./scripts/project-node.sh --npm ci` 安裝固定相依，再用 `./scripts/project-node.sh --npm run test:development-tools` 驗證。CLI 已原生支援安全串流套件，無須套用相容補丁；啟動前會唯讀核對安裝版本與鎖檔一致。 同時核對 Rules 測試套件的 peer 相依宣告與實際安裝封裝一致；若不同，依官方套件重建鎖檔並測試，不使用 force 或 legacy-peer-deps 略過。
+- 專案固定 Firebase CLI，安裝及準備方式見下方第 7 節。後續命令使用 `scripts/firebase-tools.sh`。
+- 開發工具需要 Python 3.12 以上。CLI 啟動前會核對鎖檔、Rules 測試套件的 peer 相依與兩處 minimatch 匯入。執行 `./scripts/project-node.sh --npm run test:development-tools` 可驗證實際消費端。
 - macOS 26、Apple Silicon 與 Xcode 26 或相容 Command Line Tools，用於建置 MyTerm。
 
 Firebase 工具入口僅支援本指南的 Firestore 部署、基本帳號設定及 `demo-myterm` 本機 Emulator；Auth 匯入、Hosting、替代設定與任意測試子命令會被拒絕。相依例外、期限與限制詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
@@ -149,7 +149,8 @@ jq -e '.installed.client_id and .installed.client_secret and .installed.project_
 安裝專案鎖定工具並先執行 Emulator 測試：
 
 ```sh
-./scripts/project-node.sh --npm install
+./scripts/project-node.sh --npm ci --ignore-scripts
+./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 ./scripts/project-node.sh --npm run test:firestore-rules
 ```
 

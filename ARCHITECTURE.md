@@ -231,7 +231,7 @@ Logs 使用 `users/<UID>/connectionLogs/<record UUID>` 的獨立不可變文件�
 
 `render-release-notes.py` 是私人／公開發布共用的更新說明 HTML 產生器，保留文字 escaping 與原段落內容，統一版本標題。專用 release-notes.css 只負責窄幅深淺色呈現；HTML 仍在既有流程中簽署並驗證，不包含網站導覽。
 
-Firebase 開發工具原生支援修補後的 `stream-json` 串流介面，安裝時不再改寫第三方來源。`scripts/verify-firebase-tools.cjs` 在 CLI wrapper 啟動及 CI 時唯讀核對 CLI 精確版本、manifest／lockfile 與實際解析到的串流相依；`npm ci` 負責依鎖檔安裝及套件完整性驗證。此開發工具邊界不改 App 資料流，深度限制、命令 allow-list 與安全掃描保留；細節見 [安全維護指南](SECURITY_MAINTENANCE.md)。
+Firebase 開發工具使用鎖檔與 npm 封裝完整性驗證。明確的安裝步驟核對 firebase-tools 和 superstatic 各一份官方來源後，將舊的 minimatch 匯入改為具名匯入；兩份來源都有固定的修前及修後雜湊。CLI 啟動時唯讀核對準備後的檔案及實際相依。命令限制、深度驗證與公告監測仍各自執行。詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 `scripts/project-python.sh` 是管理／測試／發布腳本的 Python 選擇入口，接受明確指定的受支援執行檔、專案隔離環境或 PATH；拒絕低於3.12，不覆蓋系統Python。`setup-security-tools.sh` 使用相同選擇建立獨立驗簽venv；此工具環境不隨App封裝。
 

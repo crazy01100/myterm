@@ -1,11 +1,20 @@
 #!/usr/bin/env node
-// Read-only installation consistency check. npm ci verifies archive integrity;
-// advisory scanning and consumer tests remain separate required CI checks.
+// Read-only unless installation explicitly requests the two reviewed imports.
 const fs = require('node:fs');
 const path = require('node:path');
+const {hash, randomUUID} = require('node:crypto');
 const {createRequire} = require('node:module');
 
-function verify(root = path.resolve(__dirname, '..')) {
+const minimatchImports = [
+  {name: 'firebase-tools', version: '15.34.1', source: 'lib/fsAsync.js',
+   upstream: 'c8989264cfe50f902dfd1015a4c060ff36e114cbf24ac63dc5e254284a3ab3a2',
+   prepared: '570ed4eb07c0cffeb81dd5775258af2c17691c1568b36351aca210f9b207ced9'},
+  {name: 'superstatic', version: '10.0.0', source: 'lib/utils/patterns.js',
+   upstream: '072c6a97a1979527cfb5bbbbe4e86c94d3a822105de529ee924fb9b6540c65c3',
+   prepared: 'cde84d89fc51e6c50540a8c9c43e4071fc5150afb38907d063bbfd997d13835c'},
+];
+
+function verify(root = path.resolve(__dirname, '..'), {applyMinimatch = false} = {}) {
   root = fs.realpathSync(root);
   const read = file => JSON.parse(fs.readFileSync(file, 'utf8'));
   const manifest = read(path.join(root, 'package.json'));
@@ -44,10 +53,50 @@ function verify(root = path.resolve(__dirname, '..')) {
   }
   const resolver = createRequire(cli.file);
   for (const name of ['stream-json', 'stream-chain', 'csv-parse']) checkedPackage(resolver, name);
+
+  // Validate both consumers before writing either. A retry also accepts an
+  // already prepared file after an interrupted installation.
+  const pending = [];
+  for (const spec of minimatchImports) {
+    const consumer = spec.name === 'firebase-tools' ? cli : checkedPackage(resolver, spec.name);
+    const file = path.join(path.dirname(consumer.file), spec.source);
+    if (fs.realpathSync(file) !== file || !fs.statSync(file).isFile()) {
+      throw Error('Unexpected Firebase import path: ' + file);
+    }
+    const matcher = checkedPackage(createRequire(file), 'minimatch');
+    if (consumer.version !== spec.version || matcher.version !== '11.0.4') {
+      throw Error('Unreviewed minimatch or consumer version for ' + spec.name);
+    }
+    const bytes = fs.readFileSync(file);
+    const digest = hash('sha256', bytes);
+    if (digest === spec.prepared) continue;
+    if (digest !== spec.upstream) throw Error('Unreviewed minimatch import in ' + spec.name);
+    if (!applyMinimatch) throw Error('Run scripts/verify-firebase-tools.cjs --apply-minimatch with project Node after npm ci');
+    const updated = bytes.toString('utf8').replace('const minimatch = require("minimatch");',
+                                                'const { minimatch } = require("minimatch");');
+    if (hash('sha256', updated) !== spec.prepared) throw Error('Unexpected result for ' + spec.name);
+    pending.push({file, updated});
+  }
+  for (const {file, updated} of pending) {
+    const temp = file + '.' + randomUUID() + '.tmp';
+    try {
+      fs.writeFileSync(temp, updated, {flag: 'wx', mode: fs.statSync(file).mode & 0o777});
+      fs.renameSync(temp, file);
+    } finally {
+      fs.rmSync(temp, {force: true});
+    }
+  }
 }
 
 module.exports = {verify};
 if (require.main === module) {
-  try { verify(); console.log('Firebase tool installation matches the lockfile.'); }
+  try {
+    const args = process.argv.slice(2);
+    if (args.length && (args.length !== 1 || args[0] !== '--apply-minimatch')) {
+      throw Error('Expected no arguments or --apply-minimatch');
+    }
+    verify(undefined, {applyMinimatch: args.length === 1});
+    console.log('Firebase tool installation and minimatch imports verified.');
+  }
   catch (error) { console.error('Firebase installation verification failed: ' + error.message); process.exitCode = 1; }
 }

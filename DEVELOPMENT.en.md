@@ -127,7 +127,14 @@ Run `zsh scripts/run-sftp-list-tests.sh` for sorting/search regression, also inc
 
 ### Firebase development tool compatibility
 
-Development tools require Node.js 24 LTS (24.12.0 or later within 24.x for Firebase 13) and Python 3.12 or later. Install from the lockfile with `./scripts/project-node.sh --npm ci`. Firebase CLI natively supports the patched stream dependencies; installed source files are no longer rewritten. Before each CLI launch, `scripts/verify-firebase-tools.cjs` checks that the CLI and its resolved stream dependencies match the lockfile without modifying them; reinstall with `npm ci` if they differ. `./scripts/project-node.sh --npm run test:development-tools` verifies installation consistency, retained overrides, real CLI consumers, and depth limits. `./scripts/project-node.sh --npm run test:firestore-rules` uses the local demo emulator. See [security maintenance](SECURITY_MAINTENANCE.en.md) for the security boundaries.
+Development tools require Node.js 24 LTS (24.12.0 or later for Firebase 13) and Python 3.12 or later. Run both commands at the repository root to install from the lockfile and prepare Firebase file matching. Repeat the second step after every clean install.
+
+```sh
+./scripts/project-node.sh --npm ci --ignore-scripts
+./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
+```
+
+Before launching the CLI, the wrapper verifies both prepared files and the resolved dependencies without writing to them. Run `./scripts/project-node.sh --npm run test:development-tools` for the installation and its consumers, then `./scripts/project-node.sh --npm run test:firestore-rules` for the local demo emulator. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
 The upstream repository also provides `scripts/invite-sync-user.sh --help` for maintainer administration. It requires local Google Cloud CLI and administrator authorization; it is not an app build dependency or an expansion of the existing Firebase CLI wrapper. Run its isolated safety suite with `./scripts/project-node.sh --test Tests/Security/invite-sync-user.test.mjs`; normal Python test discovery under `Tests/Security` also runs it. Administrator settings, credentials, and private operating notes stay out of Git. This tool is not part of the independent source export.
 
