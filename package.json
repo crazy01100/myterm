@@ -28,7 +28,7 @@
     "qs": "6.16.1",
     "@grpc/grpc-js": "1.14.5",
     "glob": "14.0.3",
-    "firebase-tools@15.34.1": {
+    "firebase-tools@15.34.2": {
       "minimatch": "11.0.4"
     },
     "superstatic@10.0.0": {

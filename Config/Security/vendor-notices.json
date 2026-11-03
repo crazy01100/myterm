@@ -4532,6 +4532,10 @@
         {
           "id": "dfd9b66c4b3197da69f418eea91ea41310ba5c4eecd32732846e447cee28b356",
           "contentSHA256": "c68be97aaf87ed70d1b1d643e0ad52c7ddb16533b58cdf0d01d0a676f95c8ece"
+        },
+        {
+          "id": "f4c2e83180faa7973c4518fc33e728be21e79c9e4f79c41c99deed964659d7d0",
+          "contentSHA256": "a4bff90f72724ba18c9154f5c176ebfc3d3f1f68336947b4254bf3cc6b008b13"
         }
       ],
       "reviewScope": "Release notice change-detection baseline for exact local Firebase CLI and loopback emulator policy; package advisories remain independently blocking"

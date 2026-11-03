@@ -6,7 +6,7 @@ const {hash, randomUUID} = require('node:crypto');
 const {createRequire} = require('node:module');
 
 const minimatchImports = [
-  {name: 'firebase-tools', version: '15.34.1', source: 'lib/fsAsync.js',
+  {name: 'firebase-tools', version: '15.34.2', source: 'lib/fsAsync.js',
    upstream: 'c8989264cfe50f902dfd1015a4c060ff36e114cbf24ac63dc5e254284a3ab3a2',
    prepared: '570ed4eb07c0cffeb81dd5775258af2c17691c1568b36351aca210f9b207ced9'},
   {name: 'superstatic', version: '10.0.0', source: 'lib/utils/patterns.js',
