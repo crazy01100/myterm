@@ -5,6 +5,7 @@ const os=require('node:os');
 const path=require('node:path');
 const {createRequire}=require('node:module');
 const {once}=require('node:events');
+const {setTimeout: delay}=require('node:timers/promises');
 const local=createRequire(path.resolve(__dirname,'../../package.json'));
 const cli=createRequire(local.resolve('firebase-tools/package.json'));
 function fixture(t){
@@ -64,6 +65,10 @@ test('exegesis controller loader retains nested aliases',t=>{
 test('Firestore-style literal Rules watcher still reloads after file edits',{timeout:8000},async t=>{
  const dir=fixture(t);const file=path.join(dir,'規則 (local).rules');fs.writeFileSync(file,'first');
  const watcher=cli('chokidar').watch(file,{persistent:true,ignoreInitial:true});t.after(()=>watcher.close());
- await once(watcher,'ready');const changed=once(watcher,'change');fs.writeFileSync(file,'second');
+ await once(watcher,'ready');
+ // Chokidar 4 reports ready in nextTick; let the native watcher start before
+ // simulating a user save on a subsequent event-loop turn.
+ await delay(0);
+ const changed=once(watcher,'change');fs.writeFileSync(file,'second');
  const [updated]=await changed;assert.equal(updated,file);assert.equal(fs.readFileSync(updated,'utf8'),'second');
 });
