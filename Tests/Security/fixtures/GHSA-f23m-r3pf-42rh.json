@@ -1,0 +1,54 @@
+{
+  "ghsa_id": "GHSA-f23m-r3pf-42rh",
+  "html_url": "https://github.com/advisories/GHSA-f23m-r3pf-42rh",
+  "withdrawn_at": null,
+  "summary": "lodash vulnerable to prototype pollution via array-path bypass in `_.unset`, `_.omit`, and `_.pullAt",
+  "description": "### Impact\n\nThe `_.unset`, `_.omit`, and `_.pullAt` functions are vulnerable to prototype pollution. The fix for [CVE-2025-13465](https://github.com/lodash/lodash/security/advisories/GHSA-xxjr-mmjv-4gpg) only guards against string key members, so an attacker can bypass the check by passing array-wrapped path segments. This allows deletion of properties from built-in prototypes such as `Object.prototype`, `Number.prototype`, and `String.prototype`.\n\nThe issue permits deletion of prototype properties but does not allow overwriting their original behavior.\n\n### Patches\n\nThe issue is patched from 4.18.0 to 4.18.1 depending on the package: `lodash`, `lodash-es`, and `lodash-amd` in 4.18.1, and the standalone `lodash.unset` and `lodash.omit` packages in 4.18.0.\n\n### Workarounds\n\nNone. Upgrade to the patched version.\n\n### References\n\n- [CVE-2025-13465 / GHSA-xxjr-mmjv-4gpg](https://github.com/lodash/lodash/security/advisories/GHSA-xxjr-mmjv-4gpg) (original fix that this bypasses)",
+  "vulnerabilities": [
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "lodash"
+      },
+      "vulnerable_version_range": "= 4.17.23",
+      "first_patched_version": "4.18.1",
+      "vulnerable_functions": []
+    },
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "lodash-es"
+      },
+      "vulnerable_version_range": "= 4.17.23",
+      "first_patched_version": "4.18.1",
+      "vulnerable_functions": []
+    },
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "lodash-amd"
+      },
+      "vulnerable_version_range": "= 4.17.23",
+      "first_patched_version": "4.18.1",
+      "vulnerable_functions": []
+    },
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "lodash.unset"
+      },
+      "vulnerable_version_range": "< 4.18.0",
+      "first_patched_version": "4.18.0",
+      "vulnerable_functions": []
+    },
+    {
+      "package": {
+        "ecosystem": "npm",
+        "name": "lodash.omit"
+      },
+      "vulnerable_version_range": "< 4.18.0",
+      "first_patched_version": "4.18.0",
+      "vulnerable_functions": []
+    }
+  ]
+}

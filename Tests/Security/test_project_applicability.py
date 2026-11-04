@@ -116,6 +116,31 @@ class ApplicabilityTests(unittest.TestCase):
             with self.assertRaises(ValueError):s.fetch_advisory(rule,self.root)
             with self.assertRaises(ValueError):s.fetch_advisory({**rule,'id':'GO-unreviewed'},self.root)
 
+    def test_revised_lodash_advisory_keeps_other_packages_and_future_changes_pending(self):
+        record = json.loads((Path(__file__).parent/'fixtures'/'GHSA-f23m-r3pf-42rh.json').read_text())
+        rule = next(rule for rule in self.policy['rules'] if rule['id'] == record['ghsa_id'])
+        self.assertIn('_.pullAt', record['description'])
+        packages = {row['package']['name'] for row in record['vulnerabilities']}
+        self.assertTrue({'lodash', 'lodash-es', 'lodash-amd', 'lodash.unset', 'lodash.omit'} <= packages)
+        finding = {**self.finding, 'id': rule['id'], 'component': rule['component'],
+                   'scope': rule['scope'], 'version': rule['version'], 'dependencyPaths': rule['origins'],
+                   'environmentObservations': [{'origin': rule['origins'][0], 'environment': 'ci',
+                                                'versions': [rule['version']]}]}
+        others = [{**finding, 'component': name} for name in sorted(packages - {'lodash'})]
+        report = self.report([finding, *others]); report['observedOrigins'] = rule['origins']
+        with patch.object(s, 'configuration', return_value=[rule]), \
+             patch.object(s, 'action_subset', return_value={'bundleSHA256': rule['bundleSHA256']}):
+            s.classify(report, self.root, lambda *_: record)
+            self.assertEqual(report['errors'], [])
+            self.assertEqual(report['findings'], others)
+            self.assertEqual(report['rawFindings'], [finding, *others])
+            s.revalidate(report, self.root, lambda *_: record)
+            for field, value in [('description', record['description'] + '\nChanged condition'),
+                                 ('vulnerabilities', record['vulnerabilities'][:-1])]:
+                with self.subTest(field=field):
+                    with self.assertRaisesRegex(ValueError, 'evidence changed'):
+                        s.revalidate(report, self.root, lambda *_: {**record, field: value})
+
     def test_other_platforms_and_unknown_process_version_are_rejected(self):
         trust = SimpleNamespace(configuration=lambda _: {}, inspect_environment=lambda *_: {'python': '3.12.15'},
                                 validate_current=lambda *_: None)
@@ -204,8 +229,9 @@ class ApplicabilityTests(unittest.TestCase):
         self.assertEqual(issues.verification_links(r,{**env,'GITHUB_RUN_ID':'bad/path'}),'')
         self.assertEqual(issues.verification_links(r,{**env,'GITHUB_REPOSITORY':'other/repository'}),'')
 
-    def action_fixture(self):
-        rule=copy.deepcopy(self.policy['rules'][3]);row=rule['action'];body=b'fixture commonjs bundle'
+    def action_fixture(self, advisory_id='GHSA-r5fr-rjxr-66jc'):
+        rule=copy.deepcopy(next(r for r in self.policy['rules'] if r['id']==advisory_id))
+        row=rule['action'];body=b'fixture commonjs bundle'
         archive=self.root/row['cacheFile'];archive.parent.mkdir(parents=True,exist_ok=True)
         with tarfile.open(archive,'w:gz') as tar:
             item=tarfile.TarInfo('official/'+rule['entrypoint']);item.size=len(body);tar.addfile(item,io.BytesIO(body))
@@ -233,6 +259,27 @@ class ApplicabilityTests(unittest.TestCase):
         rule,e,path,archive=self.action_fixture();e['unresolvedDependencies']=['unknown']
         path.write_text(json.dumps(e));rule['evidenceSHA256']=hashlib.sha256(path.read_bytes()).hexdigest()
         with self.assertRaises(ValueError):s.action_subset(self.root,rule)
+
+    def test_revised_lodash_entrypoints_and_shared_helpers_rejected(self):
+        for name in ('unset.js', 'omit.js', 'pullAt.js', '_basePullAt.js', '_baseUnset.js'):
+            with self.subTest(source=name):
+                rule,e,path,archive=self.action_fixture('GHSA-f23m-r3pf-42rh')
+                s.action_subset(self.root,rule)
+                e['matches'].append({'module':2,'source':['package/'+name]})
+                path.write_text(json.dumps(e))
+                rule['evidenceSHA256']=hashlib.sha256(path.read_bytes()).hexdigest()
+                with self.assertRaisesRegex(ValueError,'Affected lodash implementation'):
+                    s.action_subset(self.root,rule)
+
+    def test_lodash_missing_or_changed_bundle_evidence_is_rejected(self):
+        rule,e,path,archive=self.action_fixture('GHSA-f23m-r3pf-42rh')
+        archive.unlink()
+        with self.assertRaises(FileNotFoundError):s.action_subset(self.root,rule)
+        rule,e,path,archive=self.action_fixture('GHSA-f23m-r3pf-42rh')
+        e['bundleSHA256']='0'*64
+        path.write_text(json.dumps(e));rule['evidenceSHA256']=hashlib.sha256(path.read_bytes()).hexdigest()
+        with self.assertRaisesRegex(ValueError,'Incomplete lodash subset evidence'):
+            s.action_subset(self.root,rule)
 
     def test_gh_binary_must_match_reviewed_graph_and_exclude_openpgp(self):
         rule=copy.deepcopy(self.policy['rules'][1]);binary=self.root/'gh';binary.write_bytes(b'fixture')

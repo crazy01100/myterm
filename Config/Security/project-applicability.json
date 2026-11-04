@@ -41,7 +41,7 @@
       ],
       "version": "4.17.23",
       "advisoryKind": "ghsa",
-      "advisorySHA256": "62771ee0abd76d2627ce931919190bb06499f12d0b052dc76aa3ba7fb1972521",
+      "advisorySHA256": "812cfa74f96141e51714dc35bb597bad7b3086d4c218ba647f838f8173ad9764",
       "evidenceFile": "Config/Security/applicability/upload-lodash.json",
       "evidenceSHA256": "d50393c1397b49cf9bef69026f8962dcb49f97f3fd901a0cad796e74fe760781",
       "action": {
