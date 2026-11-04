@@ -238,7 +238,9 @@ def action_subset(root, rule):
     if aliases != set(evidence['ambiguousIdentityCandidates']):
         raise ValueError('Unresolved lodash module identity')
     sources = {name for match in evidence['matches'] if match['module'] not in aliases for name in match['source']}
-    affected = ({'package/unset.js', 'package/omit.js', 'package/_baseUnset.js'}
+    # pullAt reaches the same vulnerable helper through basePullAt.
+    affected = ({'package/unset.js', 'package/omit.js', 'package/pullAt.js',
+                 'package/_basePullAt.js', 'package/_baseUnset.js'}
                 if rule['id'] == 'GHSA-f23m-r3pf-42rh' else {'package/template.js'})
     if sources & affected or not sources:
         raise ValueError('Affected lodash implementation is included')
