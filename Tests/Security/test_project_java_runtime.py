@@ -4,8 +4,10 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import subprocess
 import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +17,67 @@ j=importlib.util.module_from_spec(spec);spec.loader.exec_module(j)
 
 
 class JavaRuntimeTests(unittest.TestCase):
+    def test_download_retry_preserves_limits_and_validates_before_install(self):
+        # Only the version probe and trust-store derivation are inert stand-ins.
+        for platform in ('aarch64-apple-darwin','x86_64-linux-gnu'):
+            for outcome in ('valid','download-error','timeout','size','hash','manifest','layout'):
+                with self.subTest(platform=platform,outcome=outcome),tempfile.TemporaryDirectory() as directory:
+                    root=Path(directory);fixture=root/'fixture.tar.gz'
+                    prefix='Contents/Home/' if platform=='aarch64-apple-darwin' else ''
+                    members={prefix+'bin/java':(b'inert JVM fixture',0o755),
+                             prefix+'lib/security/cacerts':(b'upstream fixture',0o644),
+                             prefix+'lib/security/blocked.certs':(b'blocked fixture',0o644)}
+                    with tarfile.open(fixture,'w:gz') as archive:
+                        for name,(body,mode) in members.items():
+                            item=tarfile.TarInfo(('other' if outcome=='layout' else 'jdk-fixture')+'/'+name)
+                            item.size=len(body);item.mode=mode;archive.addfile(item,io.BytesIO(body))
+                    files={name:{'sha256':hashlib.sha256(body).hexdigest(),'executable':bool(mode&0o111)}
+                           for name,(body,mode) in members.items()}
+                    raw=json.dumps(files,sort_keys=True,separators=(',',':')).encode()
+                    row={'platform':platform,'version':'21.0.13+9','url':'https://example.invalid/fixture.tar.gz',
+                         'archiveRoot':'jdk-fixture','size':fixture.stat().st_size,'sha256':j.digest_file(fixture),
+                         'fileManifestSHA256':hashlib.sha256(raw).hexdigest(),
+                         'blockedCertsSHA256':files[prefix+'lib/security/blocked.certs']['sha256'],
+                         'truststoreSHA256':files[prefix+'lib/security/cacerts']['sha256']}
+                    if outcome=='size':row['size']+=1
+                    if outcome=='hash':row['sha256']='0'*64
+                    if outcome=='manifest':row['fileManifestSHA256']='0'*64
+                    trust=j.trust_configuration(ROOT,j.configuration(ROOT))
+                    trust.update(upstreamTruststoreSHA256=row['truststoreSHA256'],
+                                 derivedTruststoreSHA256=hashlib.sha256(b'derived fixture').hexdigest())
+                    policy=root/j.TRUST;policy.parent.mkdir(parents=True);policy.write_text(json.dumps(trust))
+                    def derive(home,*_):
+                        (home/'lib/security/cacerts').write_bytes(b'derived fixture')
+                    def run(args,**kwargs):
+                        if args[0]=='/usr/bin/curl':
+                            self.assertEqual(args[-1],row['url'])
+                            for flag,value in {'--retry':'2','--retry-delay':'2','--retry-max-time':'60',
+                                               '--proto':'=https','--proto-redir':'=https','--max-time':'180',
+                                               '--max-filesize':str(row['size'])}.items():
+                                self.assertEqual(args.count(flag),1);self.assertEqual(args[args.index(flag)+1],value)
+                            self.assertTrue({'--disable','--fail','--location'}.issubset(args))
+                            self.assertFalse({'--insecure','--retry-all-errors','--retry-connrefused'}&set(args))
+                            self.assertEqual(kwargs,{'check':True,'timeout':185})
+                            Path(args[args.index('--output')+1]).write_bytes(fixture.read_bytes())
+                            if outcome=='download-error':raise subprocess.CalledProcessError(22,args)
+                            if outcome=='timeout':raise subprocess.TimeoutExpired(args,185)
+                            return SimpleNamespace(returncode=0)
+                        self.assertEqual(Path(args[0]).name,'java');self.assertEqual(args[1:],['-version'])
+                        self.assertEqual(outcome,'valid')
+                        return SimpleNamespace(stderr='Temurin-21.0.13+9 fixture')
+                    with patch.object(j,'configuration',return_value=row), \
+                         patch.object(j.subprocess,'run',side_effect=run) as calls, \
+                         patch.object(j,'derive_trust',side_effect=derive) as trust_step:
+                        if outcome=='valid':
+                            self.assertEqual(j.setup(root),j.java_home(root/j.TARGET,row))
+                            self.assertEqual(calls.call_count,2);trust_step.assert_called_once()
+                        else:
+                            with self.assertRaises((ValueError,subprocess.SubprocessError)):j.setup(root)
+                            self.assertFalse((root/j.TARGET).exists());self.assertEqual(calls.call_count,1)
+                            self.assertFalse((root/'.build/java-base-download'/fixture.name).exists())
+                            trust_step.assert_not_called()
+                    self.assertFalse(list((root/'.build/java-base-download').glob('download-*')))
+
     def test_derived_manifest_allows_only_reviewed_cacerts_change(self):
         row=j.configuration(ROOT);policy=j.trust_configuration(ROOT,row)
         name=str(j.java_home(Path('.'),row)/'lib/security/cacerts')

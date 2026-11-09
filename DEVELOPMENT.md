@@ -438,6 +438,8 @@ Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官�
 GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup`，再以 `./scripts/project-gh.sh` 取代本專案操作中的全域 `gh`。官方封裝與全部安裝檔案由 `Config/Security/github-cli.json` 固定；入口每次檢查內容與權限，缺少或漂移不回退至 PATH。macOS arm64 與 CI Linux 的封裝各自驗證。監測、來源審閱、資產下載及發布／清理腳本共用此入口；沿用既有認證，不重寫 Homebrew、全域 CLI 或登入設定。獨立健康檢查只準備這個固定工具，不安裝專案 pip/npm 相依或執行回歸。
 
 
+GitHub CLI 與 Java 的官方封裝下載只對 curl 原有暫時錯誤額外重試最多兩次，通常間隔兩秒，重試啟動視窗為 60 秒；既有外層硬期限分別維持 125／185 秒，單次傳輸限制為 120／180 秒。60 秒不是整段下載的硬期限。固定網址、HTTPS、大小、hash、manifest 與安裝後驗證不變；下載失敗或驗證不符仍停止，不改鏡像、不換版本，也不因完整性失敗再重試。
+
 安全適用性回歸另含`Tests/Security/test_pip_applicability.py`的合成封裝／公告案例，驗證來源漂移、跨環境誤用、偽造判定與Issue保留；不需要安裝新套件或執行漏洞payload。新增適用性判定屬政策變更，納入最終 PR 集中審閱，不另設來源 revision 核准。
 
 `Tests/Security/test_runtime_advisories.py`以合成官方公告／封裝與commit回應驗證執行環境核心查詢，不安裝執行環境或執行漏洞輸入；Node資料庫index落後、逐檔缺失、未知範圍及CPython錯誤對應都不得產生成功證據。

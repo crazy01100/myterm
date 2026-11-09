@@ -213,6 +213,8 @@ scripts/security-test-profile.py依PR的base/head、push的before/after或監測
 GitHub CLI與內附Go模組：監測／發布入口使用 `Config/Security/github-cli.json` 固定的專案CLI；不依賴PATH中的舊副本。官方封裝hash與安裝manifest逐次核對，Go建置資料列出的父模組、子模組與stdlib各自查OSV；無法解析或套件替換來源不明即保留覆蓋缺口。Go公告的package／symbol限制仍需適用性判讀，版本命中不宣稱可利用，也不因父工具已修補就關閉未知子相依告警。全域 CLI 與 OS 更新不納入此監測。
 
 
+GitHub CLI／Java 準備入口的官方下載最多額外重試兩次，只使用 curl 的暫時錯誤分類及既有總時間上限；詳細期限見 [開發指南](DEVELOPMENT.md)。重試不改固定來源或資產驗證，也不重試 hash／manifest 不符。耗盡重試、下載逾時或完整性驗證失敗仍中止準備及後續檢查，不能當作風險接受、監測成功或 gate 豁免。
+
 ### pip 精確封裝適用性
 
 `security-pip-applicability.py`只判斷已審閱的三筆setuptools子集公告，以及一筆msgpack C解碼器公告。固定官方pip wheel未包含前者受影響的setuptools實作，也只包含msgpack純Python實作；每次比對公告條件、msgpack官方修補身分、兩個受管環境及完整vendor來源。新增原生模組、外部套件、路徑hook或來源漂移均保留待審。原始版本命中保存於`rawFindings`，具體證據另存`applicabilityReviews`，不修改官方嚴重度或授予例外。未驗證的環境不借用本機結果。通過gate前及Issue寫入前重新驗證，既有Issue不因這項分類自動以版本修復關閉；仍須同範圍與main驗證後維護。其他風險按上述合併／發布用途處理；必要覆蓋缺口仍阻擋。

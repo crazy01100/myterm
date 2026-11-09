@@ -231,6 +231,7 @@ def setup(root=ROOT):
             temporary=Path(directory)/'java.tar.gz'
             subprocess.run(['/usr/bin/curl','--disable','--fail','--silent','--show-error','--location',
                             '--proto','=https','--proto-redir','=https','--max-time','180','--max-filesize',str(row['size']),
+                            '--retry','2','--retry-delay','2','--retry-max-time','60',
                             '--output',str(temporary),row['url']],check=True,timeout=185)
             archive_manifest(temporary,row);temporary.replace(archive)
     files,raw=archive_manifest(archive,row)
