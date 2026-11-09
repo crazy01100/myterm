@@ -178,6 +178,14 @@ Run `zsh scripts/run-ssh-pq-tests.sh` for standalone post-quantum policy/local-c
 
 `SelfTests/SSHPostQuantumLoopbackTests.swift` supports separately prepared ordinary localhost handshake, rekey and SFTP protocol validation. This is not App acceptance: use Dev to exercise successful/rejected connections, in-place retry, split panes and SFTP transfers, checking each badge's actual algorithm. Temporary services use independent keys, authorization files and synthetic data, bind only to loopback, and do not enable system Remote Login. Close test connections and services and remove keys afterward. If Dev sync is enabled, confirm the scope of test-host and Logs retention first instead of silently changing the sync switch. Record two-Mac policy sync and per-Mac capability differences separately; local protocol results do not replace them.
 
+### Protected credentials validation
+
+`zsh scripts/run-protected-credentials-tests.sh` checks page authorization deadlines, cancellation and late callbacks, host identity changes, and clipboard ownership. It uses synthetic data and a private named pasteboard; it does not read the user's general clipboard or Keychain, request system authentication, access the network, launch the App, or run other test suites. The execution environment must permit AppKit access to the test pasteboard. This entry is included in core regression; the full suite still requires authorization for the current task.
+
+The page integrates HostStore and the existing KeychainStore. Its reader cancels queued work and uses synchronous change generations to reject stale replies. Targeted regression includes metadata search, live identity checks and background notification interleavings. Automated checks use synthetic data; agents must not collect real passwords or inspect the user's clipboard as proof of success. System authentication, screen lock/sleep, actual passwords, two-Mac sync and shared toolbar interactions require user acceptance in isolated Dev.
+
+System authentication temporarily takes foreground focus, so a resign notification alone must not cancel an outstanding request. The page separately checks the activated application, exact system authentication-agent identity and path, other windows, and system interruptions. A successful reply may wait up to two seconds for the original window to regain focus; it grants no credential access while waiting. Unknown transitions and expiry leave the page locked; focus loss is not universally ignored during authentication.
+
 ### Document languages and synchronized maintenance
 
 GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.
