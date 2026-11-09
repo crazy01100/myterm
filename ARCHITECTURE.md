@@ -51,6 +51,14 @@ MyTerm 的核心功能不依賴雲端。登入 Google 時會經過 Google OAuth 
 - SwiftUI 負責狀態、macOS 原生 toolbar 中的單一工作區列與主要 App 外殼；隱藏原生文字標題及 toolbar 的共享膠囊背景，但保留系統視窗拖動、縮放與全螢幕行為。工作區分頁與內容畫布分屬 toolbar／content view hierarchy，因此以輕量 AppKit frame reader 將兩者矩形及滑鼠事件統一成視窗左上座標；同一套座標供分頁重排、四向合併預覽及窗格拖回拆分使用，不依賴固定 toolbar 高度。Terminal 工作區以 AppKit 原生分割容器作為界線清楚的 native island，處理穩定 pane hosting、live divider tracking、macOS 游標與終端機尺寸調整。主視窗提供較大的預設尺寸並保留可縮放能力。
 - 主機庫不使用側邊欄；Known Hosts 與 Logs 由主機頁面的操作區開啟，子頁透過返回動作回到所有主機。HostLibraryView 管理此範圍內的內容切換，ContentView 保留主機／SFTP／連線的共用工具列與穩定工作區，不因子頁導覽重建連線。所有主機、分類與未分類主機都在主內容區瀏覽，分類 breadcrumb 固定以可返回根頁面的「所有主機」開頭。主機庫、SFTP 主機選擇器及兩側檔案列表共用一致的互動原則：滑鼠移入提供視覺回饋、單擊立即選取、雙擊才進入分類／資料夾或建立連線。「所有主機」內容區另允許把主機拖到分類卡片；放手只建立確認請求，確認後才由 `HostStore` 寫入，群組內頁、Known Hosts 與 Logs 不接收主機分類投放。
 
+### 受保護登入資訊
+
+`ContentView` 在頂部主機前提供固定「登入資訊」入口及獨立內容選取，不將它加入 Terminal 分頁排序。`ProtectedCredentialsView` 依真實可見性切換鎖定畫面與主機搜尋／詳細資料；清單僅使用 `HostStore` 中繼資料。`ProtectedCredentialsPolicy` 保存每頁獨立的單調期限及認證世代，`LocalUserAuthentication` 封裝新的 LAContext；`ProtectedCredentialsWindowObserver` 區分系統認證代理的焦點交接與真實 App／視窗切換、鎖屏及睡眠。成功回覆與授權生效分離，晚到或過期結果不使頁面重新解鎖。
+
+`ProtectedCredentialsLiveSource` 注入目前主機來源與 `KeychainStore.passwordData(for:)`；`ProtectedCredentialReadRequest` 在背景讀取，只取消尚未開始的作業並丟棄已取消的結果，不強制中斷系統 Keychain 呼叫。`CredentialChangeTracker` 在密碼變更通知的發送執行緒同步更新非機密世代；`ProtectedCredentialsStore` 在取用及回覆時再次核對目前主機、密碼世代、選取與頁面授權。實際畫面變更通知另外在主執行緒清除舊顯示；搜尋不讀密碼，顯示及複製資料不進 inventory、同步或診斷。
+
+`SensitiveClipboardStore` 為 App 生命週期共用的密碼剪貼簿所有權管理器，使用 `currentHostOnly`、隨機標記與變更計數，原始密碼不另存於清理收據。離頁後仍完成到期清理，主機／密碼變更觀察也獨立於頁面。這個頁面不改 Vault schema、根金鑰 ACL 或快取、同步格式及 SSH／SFTP 自動登入；完整安全界線見 [安全設計](SECURITY.md#受保護的登入資訊頁)。
+
 ### 主機與本機資料
 
 - `HostStore` 保存主機及多階層群組，負責以交易式操作驗證並移動主機分類，並使用獨立的 `HostConnectionRecencyIndex` 排列主機庫卡片；本機資料檔權限都限制為目前使用者。分類移動保留主機 UUID，只更新 `groupID` 與 `updatedAt`，所以密碼、平台及最近連線關聯不變。「所有主機」內容區只在目前可見、未進入分類且沒有待確認搬移時啟用 `HostLibraryDragMonitor`；主機頁被 Terminal 等功能遮住、切入分類或開啟確認時會停止追蹤，避免不可見卡片攔截其他畫面的拖曳。啟用時 monitor 在目前視窗追蹤由主機卡片開始的拖曳，並把游標位置直接和 SwiftUI 回報的完整分類卡矩形比對；一般單擊、雙擊與右鍵仍由卡片本身處理。Monitor 的 AppKit 資源生命週期與 SwiftUI 拖曳狀態分離：視窗拆除、Coordinator 釋放或重新安裝 monitor 時只移除事件 token 與內部追蹤，不回寫已進入銷毀流程的 SwiftUI state；只有畫面存活期間的使用者取消才通知 SwiftUI 清除拖曳狀態。

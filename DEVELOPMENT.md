@@ -178,6 +178,14 @@ CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./
 
 `SelfTests/SSHPostQuantumLoopbackTests.swift` 用於另行準備的普通 localhost 握手／rekey／SFTP 協定驗證。這不等同 App 驗收：仍需從 Dev 操作成功／拒絕連線、原位重連、雙窗格及 SFTP 傳輸，並核對徽章的實際演算法。臨時服務使用獨立金鑰、授權檔與合成檔案，只綁定 loopback，不開啟系統遠端登入；完成後關閉測試連線、服務與清除金鑰。若 Dev 已啟用同步，先確認測試主機與 Logs 的保存範圍，不默默改同步開關。雙 Mac 政策同步與每台 Mac 的能力差異需另行記錄；本機協定結果不能代替。
 
+### 登入資訊保護驗證
+
+`zsh scripts/run-protected-credentials-tests.sh` 只驗證本頁的授權期限、取消與晚到回覆、主機身分變更，以及剪貼簿所有權。使用合成資料與獨立命名剪貼簿，不讀取使用者的一般剪貼簿或 Keychain，不呼叫系統身分驗證、不連網、不啟動 App，也不執行其他測試套件；執行環境須允許 AppKit 存取測試剪貼簿。此入口已納入核心回歸，但完整回歸仍須依當次授權範圍執行。
+
+頁面整合 `HostStore` 與既有 `KeychainStore`，讀取器可取消排隊工作，並以同步變更世代拒絕過期回覆；限定回歸包含中繼資料搜尋、即時身分核對及背景通知交錯。自動驗證一律使用合成資料，不以代理擷取真實密碼或讀取使用者剪貼簿來證明成功；系統認證、鎖屏／睡眠、真正密碼與雙 Mac 同步，以及共享工具列回歸須在隔離 Dev 由使用者驗收。
+
+系統認證面板會讓 App 暫時失去前景，認證中不可單憑 resign 通知取消。頁面另外核對實際前景程式與系統認證代理的精確身分／路徑、其他視窗與系統中斷；成功回覆最多等待原視窗恢復 2 秒，等待期間不提供密碼取用。無法辨識或逾時即保持鎖定，不把認證中的所有失焦一律忽略。
+
 ### 文件語系與同步維護
 
 GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [README.en.md](README.en.md)。專案自有的文件配對如下；現行指南在頁首提供雙向語言切換，英文文件優先連到英文版，中文文件優先連到中文版。
@@ -429,6 +437,8 @@ Firestore Rules測試的Java另由`Config/Security/java-runtime.json`固定官�
 
 GitHub CLI 使用專案隔離入口：先執行 `./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup`，再以 `./scripts/project-gh.sh` 取代本專案操作中的全域 `gh`。官方封裝與全部安裝檔案由 `Config/Security/github-cli.json` 固定；入口每次檢查內容與權限，缺少或漂移不回退至 PATH。macOS arm64 與 CI Linux 的封裝各自驗證。監測、來源審閱、資產下載及發布／清理腳本共用此入口；沿用既有認證，不重寫 Homebrew、全域 CLI 或登入設定。獨立健康檢查只準備這個固定工具，不安裝專案 pip/npm 相依或執行回歸。
 
+
+GitHub CLI 與 Java 的官方封裝下載只對 curl 原有暫時錯誤額外重試最多兩次，通常間隔兩秒，重試啟動視窗為 60 秒；既有外層硬期限分別維持 125／185 秒，單次傳輸限制為 120／180 秒。60 秒不是整段下載的硬期限。固定網址、HTTPS、大小、hash、manifest 與安裝後驗證不變；下載失敗或驗證不符仍停止，不改鏡像、不換版本，也不因完整性失敗再重試。
 
 安全適用性回歸另含`Tests/Security/test_pip_applicability.py`的合成封裝／公告案例，驗證來源漂移、跨環境誤用、偽造判定與Issue保留；不需要安裝新套件或執行漏洞payload。新增適用性判定屬政策變更，納入最終 PR 集中審閱，不另設來源 revision 核准。
 

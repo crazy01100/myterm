@@ -6,7 +6,10 @@ import io
 import json
 from pathlib import Path
 import stat
+import subprocess
+import tarfile
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -27,6 +30,58 @@ def build_info(lines):
 
 
 class GitHubRuntimeTests(unittest.TestCase):
+    def test_download_retry_preserves_limits_and_validates_before_install(self):
+        # Exercise setup with inert macOS/Linux archives; never run a real CLI.
+        for suffix in ('.zip', '.tar.gz'):
+            for outcome in ('valid', 'download-error', 'timeout', 'size', 'hash', 'manifest', 'layout'):
+                with self.subTest(suffix=suffix, outcome=outcome), tempfile.TemporaryDirectory() as directory:
+                    root=Path(directory);fixture=root/('fixture'+suffix);body=b'inert CLI fixture'
+                    name=('other' if outcome=='layout' else 'gh-fixture')+'/bin/gh'
+                    if suffix=='.zip':
+                        with zipfile.ZipFile(fixture,'w') as archive:
+                            item=zipfile.ZipInfo(name);item.external_attr=(stat.S_IFREG|0o755)<<16
+                            archive.writestr(item,body)
+                    else:
+                        with tarfile.open(fixture,'w:gz') as archive:
+                            item=tarfile.TarInfo(name);item.size=len(body);item.mode=0o755
+                            archive.addfile(item,io.BytesIO(body))
+                    row={'filename':fixture.name,'url':'https://example.invalid/fixture'+suffix,
+                         'archiveRoot':'gh-fixture','size':fixture.stat().st_size,'sha256':g.sha(fixture),
+                         'manifestSHA256':hashlib.sha256(g.manifest({'bin/gh':(body,0o755)})).hexdigest()}
+                    if outcome=='size':row['size']+=1
+                    if outcome=='hash':row['sha256']='0'*64
+                    if outcome=='manifest':row['manifestSHA256']='0'*64
+                    target=root/'.build/gh-runtime/fixture';cache=root/'.build/gh-downloads'
+                    def run(args,**kwargs):
+                        if args[0]=='curl':
+                            self.assertEqual(args[-1],row['url'])
+                            for flag,value in {'--retry':'2','--retry-delay':'2','--retry-max-time':'60',
+                                               '--proto':'=https','--proto-redir':'=https','--max-time':'120',
+                                               '--max-filesize':str(row['size'])}.items():
+                                self.assertEqual(args.count(flag),1);self.assertEqual(args[args.index(flag)+1],value)
+                            self.assertTrue({'--disable','--fail','--location'}.issubset(args))
+                            self.assertFalse({'--insecure','--retry-all-errors','--retry-connrefused'}&set(args))
+                            self.assertEqual(kwargs,{'check':True,'timeout':125})
+                            Path(args[args.index('--output')+1]).write_bytes(fixture.read_bytes())
+                            if outcome=='download-error':raise subprocess.CalledProcessError(22,args)
+                            if outcome=='timeout':raise subprocess.TimeoutExpired(args,125)
+                            return SimpleNamespace(returncode=0)
+                        self.assertEqual(args,[str(target/'bin/gh'),'--version'])
+                        self.assertEqual(outcome,'valid')
+                        return SimpleNamespace(stdout='gh version 2.103.2 (fixture)\n')
+                    with patch.object(g,'selected',return_value=({'version':'2.103.2'},'fixture',row)), \
+                         patch.object(g.subprocess,'run',side_effect=run) as calls:
+                        if outcome=='valid':
+                            self.assertEqual(g.setup(root),target/'bin/gh')
+                            self.assertEqual((target/'bin/gh').read_bytes(),body)
+                            self.assertEqual(calls.call_count,2)
+                        else:
+                            with self.assertRaises((ValueError,subprocess.SubprocessError)):g.setup(root)
+                            self.assertFalse(target.exists());self.assertEqual(calls.call_count,1)
+                            # CLI content-manifest validation follows the hash-verified cache write.
+                            if outcome!='manifest':self.assertFalse((cache/fixture.name).exists())
+                    self.assertFalse(list(cache.glob('download-*')))
+
     def test_pinned_policy_rejects_foreign_sources_and_missing_platforms(self):
         original=g.policy(ROOT)
         with tempfile.TemporaryDirectory() as directory:
