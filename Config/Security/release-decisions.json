@@ -23,7 +23,7 @@
       "component": "fast-xml-parser",
       "scope": "github-actions",
       "classification": "tool-availability",
-      "advisorySHA256": "42e06ad249e6a7c53a7ab3bb7ba64ab8664ce6b16e8fbb2457293a3393660ce5",
+      "advisorySHA256": "869917c62d4a3feabded3266c17991a76529bc26acf6d390079ec8072aae13a0",
       "originVersions": {
         "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
           "5.4.1"
