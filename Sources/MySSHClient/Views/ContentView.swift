@@ -148,6 +148,23 @@ struct ContentView: View {
     private var workspaceTabBar: some View {
         HStack(spacing: 7) {
             Button {
+                libraryWorkspace = .credentials
+                sessionManager.showHostLibrary()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "lock.shield")
+                    Text("登入資訊")
+                }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(tabBackground(isSelected: sessionManager.selectedSessionID == nil && libraryWorkspace == .credentials))
+                    .clipShape(.rect(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .fixedSize()
+            .accessibilityLabel("登入資訊")
+            Divider().frame(height: 24)
+            Button {
                 libraryWorkspace = .hosts
                 hostLibrarySelection = .all
                 sessionManager.showHostLibrary()
@@ -512,6 +529,10 @@ struct ContentView: View {
 
     private var workspaceContent: some View {
         ZStack {
+            ProtectedCredentialsView(isActive: sessionManager.selectedSessionID == nil && libraryWorkspace == .credentials)
+                .opacity(sessionManager.selectedSessionID == nil && libraryWorkspace == .credentials ? 1 : 0)
+                .allowsHitTesting(sessionManager.selectedSessionID == nil && libraryWorkspace == .credentials)
+                .accessibilityHidden(sessionManager.selectedSessionID != nil || libraryWorkspace != .credentials)
             HostLibraryView(
                 selection: $hostLibrarySelection,
                 isActive: sessionManager.selectedSessionID == nil && libraryWorkspace == .hosts,
@@ -1102,6 +1123,7 @@ private struct WindowTopLeftFrameReader: NSViewRepresentable {
 }
 
 private enum LibraryWorkspace {
+    case credentials
     case hosts
     case sftp
 }

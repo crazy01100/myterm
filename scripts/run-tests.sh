@@ -31,6 +31,7 @@ trap 'rm -rf "$test_dir"' EXIT
 cd "$project_dir"
 zsh "$project_dir/scripts/run-local-terminal-file-drop-tests.sh"
 zsh "$project_dir/scripts/run-ssh-pq-tests.sh"
+zsh "$project_dir/scripts/run-protected-credentials-tests.sh"
 swiftc -D MYTERM_SELF_TESTS \
     Sources/MySSHClient/Models/HostProfile.swift \
     Sources/MySSHClient/Models/QuickSSHRequest.swift \

@@ -143,6 +143,7 @@ def setup(root=ROOT):
             # Bootstrap is hash-pinned and credential-free; no pip/npm or gh download.
             subprocess.run(['curl', '--disable', '--fail', '--silent', '--show-error', '--location',
                             '--proto', '=https', '--proto-redir', '=https', '--max-time', '120',
+                            '--retry', '2', '--retry-delay', '2', '--retry-max-time', '60',
                             '--max-filesize', str(row['size']), '--output', str(temporary), row['url']],
                            check=True, timeout=125)
             files_in_archive(temporary, row)
