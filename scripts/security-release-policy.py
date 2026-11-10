@@ -21,10 +21,14 @@ CONFIG = 'Config/Security/release-decisions.json'
 REPOSITORY = 'crazy01100/myterm'
 STAGES = ('candidate', 'publish', 'deploy')
 TARGETS = {
-    'GHSA-35p6-xmwp-9g52': ('undici', 'diagnostic-transport-integrity'),
-    'GHSA-8gc5-j5rx-235r': ('fast-xml-parser', 'tool-availability'),
-    'GHSA-xjj6-f33q-929c': ('undici', 'tool-availability'),
-    'GHSA-qrxm-fqhp-jwvm': ('undici', 'tool-availability'),
+    ('GHSA-35p6-xmwp-9g52', 'github-actions'): ('undici', 'diagnostic-transport-integrity'),
+    ('GHSA-8gc5-j5rx-235r', 'github-actions'): ('fast-xml-parser', 'tool-availability'),
+    ('GHSA-xjj6-f33q-929c', 'github-actions'): ('undici', 'tool-availability'),
+    ('GHSA-qrxm-fqhp-jwvm', 'github-actions'): ('undici', 'tool-availability'),
+    ('GHSA-3g3m-2fjr-6pw4', 'development'): ('glob', 'tool-availability'),
+    ('GHSA-3g3m-2fjr-6pw4', 'github-actions'): ('glob', 'tool-availability'),
+    ('GHSA-g3hv-75wg-m249', 'development'): ('minimatch', 'tool-availability'),
+    ('GHSA-g3hv-75wg-m249', 'github-actions'): ('minimatch', 'tool-availability'),
 }
 ADVISORY_FIELDS = ('ghsa_id', 'html_url', 'withdrawn_at', 'summary', 'description',
                    'vulnerabilities', 'severity', 'cvss', 'cwes')
@@ -57,13 +61,22 @@ def policy(root):
     if (data.get('schemaVersion') != 1 or data.get('policy') != 'purpose-based-release'
             or data.get('repository') != REPOSITORY or data.get('preserveFindings') is not True
             or data.get('grantsRiskException') is not False or
-            {r['id'] for r in data['rules']} != set(TARGETS) or len(data['rules']) != len(TARGETS)):
+            {(r['id'], r['scope']) for r in data['rules']} != set(TARGETS) or len(data['rules']) != len(TARGETS)):
         raise ValueError('Invalid release classification policy')
     for r in data['rules']:
-        if ((r.get('component'), r.get('classification')) != TARGETS[r['id']]
-                or r.get('scope') != 'github-actions' or not r.get('originVersions')
+        if ((r.get('component'), r.get('classification')) != TARGETS[(r['id'], r['scope'])]
+                or not r.get('originVersions')
+                or (r['scope'] == 'development' and set(r['originVersions']) != {'project-npm-tool'})
+                or any(not versions or versions != sorted(set(versions))
+                       for versions in r['originVersions'].values())
                 or not re.fullmatch('[a-f0-9]{64}', r.get('advisorySHA256', ''))):
             raise ValueError('Unreviewed release classification')
+        assets = r.get('originAssetVersions', r['originVersions'])
+        if (set(assets) != set(r['originVersions']) or
+                any(not versions or versions != sorted(set(versions)) or
+                    not set(r['originVersions'][origin]) <= set(versions)
+                    for origin, versions in assets.items())):
+            raise ValueError('Unreviewed release asset inventory')
     return data
 
 
@@ -76,7 +89,9 @@ def verify_sources(root, data):
     required = {'scripts/release.sh', 'scripts/prepare-release-build.sh', 'scripts/publish-release.sh',
                 'scripts/verify-signed-release.py', 'scripts/prepare-pages-deployment.sh',
                 'scripts/verify-public-update-site.sh', 'Config/Security/action-bundles.json',
-                'Config/Security/node-tools.json', 'package-lock.json'}
+                'Config/Security/node-tools.json', 'package-lock.json', 'package.json',
+                'Tools/Deployment/package.json', 'Tools/Deployment/package-lock.json',
+                'scripts/node-toolchain.py', 'scripts/security-audit.py', 'scripts/project-node.sh'}
     if not required <= set(files):
         raise ValueError('Missing reviewed release consumers')
     for name, expected in files.items():
@@ -93,12 +108,57 @@ def action_assets(root, data):
         rows, proof = inventory.action_bundle(root, b['repository'], b['revision'])
         origin = 'action/'+b['repository']+'@'+b['revision']
         result[origin] = {name: sorted({r['version'] for r in rows if r['name'] == name})
-                          for name in ('undici', 'fast-xml-parser')}
+                          for name in ('undici', 'fast-xml-parser', 'glob', 'minimatch')}
     for rule in data['rules']:
+        if rule['scope'] != 'github-actions':
+            continue
+        # An archive may also contain unaffected majors. Verify the entire
+        # reviewed inventory, but classify only the affected observation set.
         if any(result.get(origin, {}).get(rule['component']) != versions
-               for origin, versions in rule['originVersions'].items()):
+               for origin, versions in rule.get('originAssetVersions', rule['originVersions']).items()):
             raise ValueError('Reviewed Action package/asset identity changed')
     return result
+
+
+def npm_asset(root, data):
+    """Reverify the selected official archive and complete installed npm tree."""
+    tooling = load('node-toolchain')
+    entry = tooling.verify(root)
+    if entry != root/'.build/npm-runtime/bin/npm-cli.js':
+        raise ValueError('Unexpected selected npm entry')
+    rows = load('security-toolchain-inventory').npm_rows(entry.parents[1], 'project-npm-tool')
+    versions = {name: sorted({row['version'] for row in rows if row['name'] == name})
+                for name in ('glob', 'minimatch')}
+    for rule in data['rules']:
+        if rule['scope'] == 'development' and rule['originVersions'] != {
+                'project-npm-tool': versions[rule['component']]}:
+            raise ValueError('Reviewed npm package/asset identity changed')
+    return versions
+
+
+def observed_versions(finding, environment):
+    """Union overlapping observations only within the verified environment/origin.
+
+    Collectors may report both aggregate and individual versions. Keep the input
+    intact; reject empty/foreign identities rather than dropping their rows.
+    """
+    observations = finding.get('environmentObservations', [])
+    paths = finding.get('dependencyPaths', [])
+    if (not observations or not paths or len(paths) != len(set(paths))):
+        raise ValueError('Unreviewed risk origin/version/environment')
+    grouped = {}
+    for item in observations:
+        versions = item.get('versions')
+        if (item.get('environment') != environment or item.get('origin') not in paths
+                or not isinstance(versions, list) or not versions
+                or any(not isinstance(v, str) or not v for v in versions)
+                or len(versions) != len(set(versions))):
+            raise ValueError('Unreviewed risk origin/version/environment')
+        grouped.setdefault(item['origin'], set()).update(versions)
+    if (set(grouped) != set(paths) or
+            set(finding['version'].split(', ')) != set().union(*grouped.values())):
+        raise ValueError('Unreviewed risk origin/version/environment')
+    return {origin: sorted(versions) for origin, versions in grouped.items()}
 
 
 def context(stage, version, build=None, assets=None, *, root=ROOT):
@@ -155,6 +215,7 @@ def classify(report, ctx, *, root=ROOT, reader=None):
     data = policy(root)
     source_digest = verify_sources(root, data)
     action_assets(root, data)
+    npm_asset(root, data)
     now = dt.datetime.now(dt.timezone.utc)
     stamp = dt.datetime.fromisoformat(report['checkedAt'])
     if (ctx.get('stage') not in STAGES or stamp.tzinfo is None or
@@ -171,21 +232,15 @@ def classify(report, ctx, *, root=ROOT, reader=None):
             not ctx.get('deliveryInventory') or report.get('deliveryInventoryDigest') != digest(ctx['deliveryInventory'])):
         raise ValueError('The actual signed delivery inventory was not scanned')
     decisions = []; notices = []; unresolved_notices = []
-    rules = {r['id']: r for r in data['rules']}
+    rules = {(r['id'], r['scope']): r for r in data['rules']}
     for index, finding in enumerate(report['findings']):
-        rule = rules.get(finding.get('id'))
+        rule = rules.get((finding.get('id'), finding.get('scope')))
         if rule is None or any(finding.get(k) != rule[k] for k in ('component', 'scope')):
             continue
         if finding.get('queryComplete') is not True:
             raise ValueError('Incomplete release risk query')
-        observations = finding.get('environmentObservations', [])
-        paths = finding.get('dependencyPaths', [])
-        if (not observations or len(paths) != len(set(paths)) or
-                set(paths) != {o['origin'] for o in observations} or
-                len(observations) != len(paths) or
-                any(o.get('environment') != ctx['observedEnvironment'] or
-                    rule['originVersions'].get(o.get('origin')) != o.get('versions') for o in observations) or
-                set(finding['version'].split(', ')) != {v for o in observations for v in o['versions']}):
+        observed = observed_versions(finding, ctx['observedEnvironment'])
+        if any(rule['originVersions'].get(origin) != versions for origin, versions in observed.items()):
             raise ValueError('Unreviewed risk origin/version/environment')
         advisory = reader('advisories/'+rule['id'])
         if advisory.get('withdrawn_at') or advisory_digest(advisory) != rule['advisorySHA256']:
@@ -205,6 +260,10 @@ def classify(report, ctx, *, root=ROOT, reader=None):
                                     capture_output=True, text=True, check=True, timeout=20).stdout.strip()
             if actual != 'v'+expected: raise ValueError('Reviewed Node use changed')
         elif notice['source'] == 'firebase-releases':
+            if notice['url'].endswith('/v15.35.0'):
+                subprocess.run([str(root/'scripts/project-node.sh'),
+                                str(root/'scripts/verify-firebase-tools.cjs')],
+                               capture_output=True, text=True, check=True, timeout=30)
             lock = json.loads(owned(root, 'package-lock.json').read_bytes())['packages']
             for name, version in (('node_modules/body-parser', '1.20.9'),
                                   ('node_modules/@modelcontextprotocol/sdk/node_modules/body-parser', '2.4.0')):

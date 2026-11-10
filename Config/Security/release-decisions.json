@@ -74,6 +74,79 @@
         ]
       },
       "rationale": "The reviewed Actions fetch paths remain affected by process termination. No failed or incomplete setup/upload job may satisfy required release checks; no claim of inapplicability."
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "component": "glob",
+      "scope": "development",
+      "classification": "tool-availability",
+      "advisorySHA256": "c0c23041bdc9952bf30b0822fd8bf417f7c9ae86a45ae5c7e43bbd39e3885556",
+      "originVersions": {
+        "project-npm-tool": [
+          "13.0.6"
+        ]
+      },
+      "rationale": "The selected official npm is used for locked ci --ignore-scripts and package-lock-only audit, without workspaces. Affected glob cancellation branches can continue filesystem traversal after abort. This is retained tool-availability risk, not remediation or inapplicability. Fresh asset/source verification and complete successful jobs, audit logs, receipts and independent release evidence remain mandatory; missing evidence or new effects block."
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "component": "glob",
+      "scope": "github-actions",
+      "classification": "tool-availability",
+      "advisorySHA256": "c0c23041bdc9952bf30b0822fd8bf417f7c9ae86a45ae5c7e43bbd39e3885556",
+      "originVersions": {
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "10.5.0"
+        ]
+      },
+      "rationale": "Pinned Actions use the reviewed workflow inputs; setup caching is not enabled and artifact paths are explicit. Affected glob cancellation branches can continue filesystem traversal after abort. This is retained tool-availability risk, not remediation or inapplicability. Fresh asset/source verification and complete successful jobs, audit logs, receipts and independent release evidence remain mandatory; missing evidence or new effects block."
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "component": "minimatch",
+      "scope": "development",
+      "classification": "tool-availability",
+      "advisorySHA256": "11ec7cfb013fb31449dafed7d460e1dc0a9b3bff8a099358f31c198dcab77350",
+      "originVersions": {
+        "project-npm-tool": [
+          "10.2.5"
+        ]
+      },
+      "rationale": "The selected official npm is used for locked ci --ignore-scripts and package-lock-only audit, without workspaces. Affected minimatch optimization can amplify patterns and exhaust CPU/memory, including indirect glob consumers. This is retained tool-availability risk, not remediation or inapplicability. Fresh asset/source verification and complete successful jobs, audit logs, receipts and independent release evidence remain mandatory; missing evidence or new effects block."
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "component": "minimatch",
+      "scope": "github-actions",
+      "classification": "tool-availability",
+      "advisorySHA256": "11ec7cfb013fb31449dafed7d460e1dc0a9b3bff8a099358f31c198dcab77350",
+      "originVersions": {
+        "action/actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1": [
+          "10.2.6"
+        ],
+        "action/actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0": [
+          "10.2.5"
+        ],
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "10.2.4",
+          "9.0.8"
+        ]
+      },
+      "rationale": "Pinned Actions use the reviewed workflow inputs; setup caching is not enabled and artifact paths are explicit. Affected minimatch optimization can amplify patterns and exhaust CPU/memory, including indirect glob consumers. This is retained tool-availability risk, not remediation or inapplicability. Fresh asset/source verification and complete successful jobs, audit logs, receipts and independent release evidence remain mandatory; missing evidence or new effects block.",
+      "originAssetVersions": {
+        "action/actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1": [
+          "10.2.6"
+        ],
+        "action/actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0": [
+          "10.2.5"
+        ],
+        "action/actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9": [
+          "10.2.4",
+          "3.1.5",
+          "5.1.8",
+          "9.0.8"
+        ]
+      }
     }
   ],
   "notices": [
@@ -101,6 +174,22 @@
       "classification": "reviewed-maintenance",
       "reason": "Official Node 27 Alpha major-release announcement reviewed; project remains on Node 24.22.1 LTS. Its CVE-2026-58042 changelog entry was already fixed in 24.18.1 per nodejs/security-wg vuln/core/191.json. No Alpha upgrade is required; current Node 24 package/runtime advisory checks remain mandatory.",
       "evidenceURL": "https://github.com/nodejs/security-wg/blob/f643f84d4977d0ba379dc7c5805c9b65206369b5/vuln/core/191.json"
+    },
+    {
+      "id": "f90c8232aa75cc8a1e4ad0850b3b04935733113208b96effd46a6091c7aedd51",
+      "source": "node-blog",
+      "url": "https://nodejs.org/en/blog/announcements/notable-v8-changes-from-node-js-26-to-27-alpha",
+      "contentSHA256": "5459af8363a3d3b6babb21a4724fc372660c7b1727c29307316e1d6e15722a62",
+      "classification": "reviewed-maintenance",
+      "reason": "Node 26-to-27 Alpha V8 behavior/ABI announcement; project remains on verified Node 24.22.1. No Alpha adoption. The separate November security preannouncement remains unresolved."
+    },
+    {
+      "id": "d791c072f91adc853ff27b6bf7e0154952b3b5baf8dcb4d93a8a44fbab80faa2",
+      "source": "firebase-releases",
+      "url": "https://github.com/firebase/firebase-tools/releases/tag/v15.35.0",
+      "contentSHA256": "00edb1e4290b60bb6f80f9e43505df2ea5f8c10568e5267bc356f338524c1b07",
+      "classification": "reviewed-maintenance",
+      "reason": "Firebase CLI 15.35.0 reviewed for existing Firestore Rules use. PGlite/Crashlytics MCP and Windows-specific functionality are not enabled here; Emulator UI changes are maintenance. Exact CLI installation, normal consumer tests and all package checks remain required."
     }
   ],
   "sourceFiles": {
@@ -111,7 +200,11 @@
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
     "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
     "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
-    "package-lock.json": "4475ceb323463787adfa9027601b9c639c5e90b78d9a332a4cd34d0e829e160b",
+    "Tools/Deployment/package-lock.json": "38510d9ed9c5fca6165ab26b579603dde90bf1b265ea455b0920d734fc81e65b",
+    "Tools/Deployment/package.json": "e2a742d8849689fb6077f14a1227de251f74e86679636e6571d6b18caf2575f9",
+    "package-lock.json": "bd81f8d4f2a5d04fd1853ce24b8c3a18510e00da063f10a1bae270f9d7a8875e",
+    "package.json": "bc680d133d07b283e2e17301f23f2331c8da453d6f72ea95481cbbf70376081c",
+    "scripts/node-toolchain.py": "47da8b56aac6bcf0d422a60816e9b7e9a7bdb74b51466f17d89667aca40b9216",
     "scripts/package-app.sh": "8dcbfe070e5b54785ed5446a06f780329a25243992fab0ca998fa873331093e4",
     "scripts/prepare-local-update-lab.sh": "1663ea7aff0188bd3d3f340e0613785872c6062c34ecd6df5bf0408ede7dfaa6",
     "scripts/prepare-pages-deployment.sh": "1448a81e44ca324778fa4c858842f692c02dfa4bfe9a64f50d235eab48e586c9",
@@ -121,10 +214,11 @@
     "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c",
     "scripts/publish-release.sh": "bdd82f34ad3ae3b9aa66d3e16bbb4a811720640088620ba7ea9878f581d9553d",
     "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
+    "scripts/security-audit.py": "18d17591f4edee655e181d5be07a95b129f19812f5e36ae20e4eb480f75f4de1",
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
     "scripts/update-lab-key.py": "1465b13e70e8e5532218a394178fd946b9a252f4301b62dfede1ef41c7277334",
     "scripts/verify-app.sh": "285a08aa75a1574a17eb131d58002b6460199b23a0e1d13a18e5da98e2c1086a",
-    "scripts/verify-firebase-tools.cjs": "3d828f7a20ae2c3ff74e5913990d1eef91ccfc3ad8f2661717e69ffb880c781c",
+    "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b",
     "scripts/verify-local-update-lab-security.sh": "4b09d6a1edbac3ff75757b76de9d3f6e43fce005c68fef167ad167616e0b5557",
     "scripts/verify-public-update-site.sh": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",

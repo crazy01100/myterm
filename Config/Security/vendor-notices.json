@@ -221,6 +221,10 @@
       "state": "reviewed",
       "entries": [
         {
+          "id": "f90c8232aa75cc8a1e4ad0850b3b04935733113208b96effd46a6091c7aedd51",
+          "contentSHA256": "5459af8363a3d3b6babb21a4724fc372660c7b1727c29307316e1d6e15722a62"
+        },
+        {
           "id": "ec14786212f2e284b00713ccd2006399d9f560edbefb801317cfb0b0d0899834",
           "contentSHA256": "b3986456dceee260ee4d06c7c9ba4d032aaf312c00951ed7136c319b2ba284ff"
         },
@@ -4493,6 +4497,10 @@
       "url": "https://github.com/firebase/firebase-tools/releases.atom",
       "state": "reviewed",
       "entries": [
+        {
+          "id": "d791c072f91adc853ff27b6bf7e0154952b3b5baf8dcb4d93a8a44fbab80faa2",
+          "contentSHA256": "00edb1e4290b60bb6f80f9e43505df2ea5f8c10568e5267bc356f338524c1b07"
+        },
         {
           "id": "a8350ca97664b7c5a8ba560a30fe9cf16ea99388f73fe9f6423c1c550b709043",
           "contentSHA256": "6f6bb3e100d8740b20b8d914bec00096b30e1e3b17d790004f5c56c177dccdba"

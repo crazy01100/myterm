@@ -80,7 +80,7 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 `scripts/firebase-tools.sh` 僅允許 Firestore Rules／indexes 部署、`demo-myterm` 的本機 Auth／Firestore Emulator 與基本登入／專案查詢。部署須明確提供 `--project` 和 Firestore `--only`；Emulator 只接受 loopback 設定，`emulators:exec` 只執行本專案固定的 Rules 測試。Auth 匯入、Hosting、替代設定檔與任意 Emulator 子命令均拒絕。這是專案入口限制，不能阻止本機擁有者直接執行 `node_modules` 中的 CLI。
 
-Firebase CLI 固定為 `15.34.2`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。以 `npm ci --ignore-scripts` 核對鎖檔及封裝。接著以專案 Node 執行 `scripts/verify-firebase-tools.cjs --apply-minimatch`，只在 firebase-tools 15.34.2 與 superstatic 10.0.0 的檔案符合官方雜湊、且實際解析到 minimatch 11.0.4 時套用兩處具名匯入。重裝後可重跑。一般 wrapper 啟動只驗證修後雜湊、CLI 精確版本及串流相依；漂移時停止。上游改用相容介面後，以消費端回歸確認再移除對應補丁。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
+Firebase CLI 固定為 `15.35.0`，上游已原生支援安全版本的 `stream-json`、`stream-chain` 與 `csv-parse`；舊的來源改寫補丁、postinstall 及這兩項專用覆寫已退役。以 `npm ci --ignore-scripts` 核對鎖檔及封裝。接著以專案 Node 執行 `scripts/verify-firebase-tools.cjs --apply-minimatch`，只在 firebase-tools 15.35.0 與 superstatic 10.0.0 的檔案符合官方雜湊、且實際解析到 minimatch 11.0.4 時套用兩處具名匯入。重裝後可重跑。一般 wrapper 啟動只驗證修後雜湊、CLI 精確版本及串流相依；漂移時停止。上游改用相容介面後，以消費端回歸確認再移除對應補丁。此檢查不驗證每份已安裝來源的雜湊，也不取代完整性安裝、安全掃描與消費端測試。回歸涵蓋真實 Auth JSON／CSV 和 DatabaseImporter（攔截傳輸）、分段資料、Next.js 管線語意、過深輸入拒絕，以及缺漏／過期／巢狀相依漂移。命令 allow-list 與其他仍必要的 npm overrides 保留。間接相依的安全修正優先在原相容範圍更新鎖檔，不為解決可相容更新的告警新增覆寫。
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
@@ -270,8 +270,11 @@ Undici `GHSA-2m5v-pch6-74hx` 的判定只涵蓋未使用函式型 `tls.checkServ
 
 - App實際使用風險、發布內容／簽章、憑證、更新信任或必要安全判斷完整性受影響時仍阻擋；未知風險與必要查詢／覆蓋失敗也不自動放行。
 - 已審且影響限於工具可用性、或必要交付判斷有充分獨立驗證的風險，可以保留告警而不阻擋該用途。四筆Actions HTTP／XML公告逐一綁定官方內容、精確封裝及受審消費路徑；這不是套件已修補或不適用，原嚴重度、findings與Issue保持不變。實際工作失敗仍不能通過。
+- glob／minimatch的四筆額外分類只限固定npm11.21.1與setup-node、setup-python、upload-artifact的受審封裝。已知影響是取消後持續走訪及模式放大造成資源耗盡；並未證明所有間接呼叫不可達。以公告ID＋scope分開匹配，npm條件不能套到Actions；每次重驗官方npm完整安裝樹、Actions封裝、實際版本與受審入口。Actions封裝中的未受影響舊主版另列完整資產清單，不擴大可分類的受影響版本。同一環境／來源的重疊觀測僅彙總版本集合供比對，原始觀測不刪除；額外版本、跨環境、來源或證據不符仍阻擋。八筆工具告警繼續保留，任何執行失敗或缺少完整結果都不能發布。
 - 回應錯置的`GHSA-35p6-xmwp-9g52`屬完整性風險。upload-artifact只傳遞診斷資料；正式資產來自本機簽署及獨立驗簽。公開／部署前獨立讀取相同commit的main gate、四語言CodeQL分析與可讀成果，核對正式監測run／attempt／commit／收據。另從GitHub執行日誌取得掃描程序輸出的`MYTERM_SECURITY_REPORT_SHA256`，比對artifact內實際報告；只比對同一壓縮檔內的hash不算充分證據。任何替換或缺漏均停止。
 - 公告發布影響審閱與維護待辦分開。已核對的Node24.22.2公告不要求目前工具用途立即升級；Firebase15.34.2所述body-parser修補需每次確認實際1.20.9／2.4.0已滿足。兩則公告仍保留追蹤；新公告或內容變動不能借用已審結論。
+
+Node27 Alpha／V8功能公告及Firebase CLI15.35.0維護公告已依現有Node24／Firestore Rules用途審閱；精確公告游標保留變動偵測。Node安全更新預告須等官方公布受影響條件與修補細節後再判斷，不能借用一般功能公告的結論。
 
 真正需要暫時越過仍屬阻擋的風險，才走`exceptions.json`既有明確接受及最長31天流程；不能把臨時例外改名而永久化。正常發布分類不使用該期限。新增實質安全影響、信任／權限或門檻變更集中在最終政策PR審閱；一般跨版本驗證不逐次要求人工授權。套件／環境更新仍依已核准範圍辦理。
 
