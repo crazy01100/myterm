@@ -12,8 +12,8 @@
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "6.0.0",
-    "firebase": "13.1.0",
-    "firebase-tools": "15.34.2"
+    "firebase": "13.2.0",
+    "firebase-tools": "15.35.0"
   },
   "engines": {
     "node": ">=24 <25"
@@ -28,7 +28,7 @@
     "qs": "6.16.1",
     "@grpc/grpc-js": "1.14.5",
     "glob": "14.0.3",
-    "firebase-tools@15.34.2": {
+    "firebase-tools@15.35.0": {
       "minimatch": "11.0.4"
     },
     "superstatic@10.0.0": {

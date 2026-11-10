@@ -54,16 +54,16 @@ def fixtures():
 class ReleaseClassificationTests(unittest.TestCase):
     def setUp(self):
         self.data, self.advisories, self.report, self.ctx = fixtures()
-        for name, value in (('policy', self.data), ('verify_sources', 'f'*64), ('action_assets', {})):
+        for name, value in (('policy', self.data), ('verify_sources', 'f'*64), ('action_assets', {}), ('npm_asset', {})):
             p = patch.object(r, name, return_value=value); p.start(); self.addCleanup(p.stop)
 
     def classify(self):
         return r.classify(self.report, self.ctx, reader=self.advisories.__getitem__)
 
-    def test_four_reviewed_risks_remain_in_report_without_exception_flags(self):
+    def test_eight_reviewed_risks_remain_in_report_without_exception_flags(self):
         before = copy.deepcopy(self.report)
         decision = self.classify()
-        self.assertEqual(len(decision['nonBlockingFindings']), 4)
+        self.assertEqual(len(decision['nonBlockingFindings']), 8)
         self.assertEqual(self.report, before)
         self.assertFalse(decision['grantsRiskException'])
         self.assertEqual(decision['nonBlockingFindings'][0]['classification'], 'diagnostic-transport-integrity')
@@ -85,7 +85,7 @@ class ReleaseClassificationTests(unittest.TestCase):
         self.report['checkedAt'] = future.isoformat()
         with patch.object(r.dt, 'datetime', wraps=dt.datetime) as clock:
             clock.now.return_value = future
-            self.assertEqual(len(self.classify()['nonBlockingFindings']), 4)
+            self.assertEqual(len(self.classify()['nonBlockingFindings']), 8)
 
     def test_origin_version_environment_or_query_drift_rejected(self):
         original = copy.deepcopy(self.report)
@@ -98,12 +98,12 @@ class ReleaseClassificationTests(unittest.TestCase):
                 if mode == 'query': f['queryComplete'] = False
                 if mode == 'path': f['dependencyPaths'].append('unreviewed')
                 if mode == 'aggregate': f['version'] = '9.9.9'
-                if mode == 'duplicate': f['environmentObservations'] *= 2
+                if mode == 'duplicate': f['dependencyPaths'] *= 2
                 with self.assertRaises(ValueError): self.classify()
 
     def test_new_or_changed_advisory_never_inherits_classification(self):
         f = copy.deepcopy(self.report['findings'][0]); f['id'] = 'GHSA-new'; self.report['findings'].append(f)
-        self.assertEqual(len(self.classify()['nonBlockingFindings']), 4)
+        self.assertEqual(len(self.classify()['nonBlockingFindings']), 8)
         self.advisories['advisories/'+self.data['rules'][0]['id']]['description'] = 'New credential impact'
         with self.assertRaises(ValueError): self.classify()
 
@@ -120,9 +120,9 @@ class ReleaseClassificationTests(unittest.TestCase):
     def test_same_id_in_app_or_different_component_not_classified(self):
         f = self.report['findings'][0]
         f['scope'] = 'current-source'
-        self.assertEqual(len(self.classify()['nonBlockingFindings']), 3)
+        self.assertEqual(len(self.classify()['nonBlockingFindings']), 7)
         f['scope'] = 'github-actions'; f['component'] = 'another-package'
-        self.assertEqual(len(self.classify()['nonBlockingFindings']), 3)
+        self.assertEqual(len(self.classify()['nonBlockingFindings']), 7)
 
     def test_missing_coverage_commit_and_stage_evidence_rejected(self):
         for field in ('toolchainCoverage', 'packageMonitoring', 'vendorNotices', 'sourceReview'):
@@ -135,7 +135,7 @@ class ReleaseClassificationTests(unittest.TestCase):
         self.ctx['assetVerification'] = 'verified-signatures-and-release-identity'
         self.ctx['deliveryInventory'] = [{'name': 'https://github.com/example/app', 'version': '1.0.0'}]
         self.report['deliveryInventoryDigest'] = r.digest(self.ctx['deliveryInventory'])
-        self.assertEqual(len(self.classify()['nonBlockingFindings']), 4)
+        self.assertEqual(len(self.classify()['nonBlockingFindings']), 8)
 
     def test_changed_or_new_notice_remains_pending(self):
         notice = copy.deepcopy(self.data['notices'][0]); notice['contentSHA256'] = '0'*64
@@ -161,6 +161,54 @@ class ReleaseClassificationTests(unittest.TestCase):
         self.report['vendorNotices']['requiresNoticeReview'] = True
         with self.assertRaises(ValueError): self.classify()
 
+    def test_same_advisory_npm_and_actions_are_separate_decisions(self):
+        decisions = self.classify()['nonBlockingFindings']
+        for advisory in ('GHSA-3g3m-2fjr-6pw4', 'GHSA-g3hv-75wg-m249'):
+            self.assertEqual({d['scope'] for d in decisions if d['id'] == advisory},
+                             {'development', 'github-actions'})
+        # The same ID does not let an Actions origin borrow the npm decision.
+        finding = next(f for f in self.report['findings'] if f['id'] == 'GHSA-3g3m-2fjr-6pw4'
+                       and f['scope'] == 'github-actions')
+        finding['scope'] = 'development'
+        with self.assertRaisesRegex(ValueError, 'origin/version/environment'): self.classify()
+
+    def test_overlapping_versions_are_retained_but_foreign_evidence_is_rejected(self):
+        f = next(f for f in self.report['findings'] if f['id'] == 'GHSA-g3hv-75wg-m249'
+                 and f['scope'] == 'github-actions')
+        aggregate = next(o for o in f['environmentObservations'] if len(o['versions']) == 2)
+        f['environmentObservations'].extend({**aggregate, 'versions': [v]} for v in aggregate['versions'])
+        before = copy.deepcopy(self.report)
+        self.assertEqual(len(self.classify()['nonBlockingFindings']), 8)
+        self.assertEqual(self.report, before)
+        for change in ({'versions': ['unreviewed']}, {'environment': 'ci'}, {'origin': 'unknown'},
+                       {'versions': []}, {'versions': ['10.2.4', '10.2.4']}):
+            with self.subTest(change=change):
+                f['environmentObservations'].append({**aggregate, **change})
+                with self.assertRaises(ValueError): self.classify()
+                f['environmentObservations'].pop()
+
+    def test_npm_full_asset_verification_failure_blocks_classification(self):
+        with patch.object(r, 'npm_asset', side_effect=ValueError('changed official tree')):
+            with self.assertRaisesRegex(ValueError, 'changed official tree'): self.classify()
+
+    def test_pending_node_security_notice_cannot_borrow_maintenance_review(self):
+        n = {'id': '130d9bc72a1a0f48649a0bf11fa18461afd053fe8c4b029d9153099e507309e4',
+             'source': 'node-blog',
+             'url': 'https://nodejs.org/en/blog/vulnerability/november-2026-security-releases',
+             'contentSHA256': '4abeaa671cd8c7908fe2c9cf9fbb496c0cab9d6930d9f26ac2a36984470bed1d'}
+        self.report['vendorNotices'].update(changes=[n], requiresNoticeReview=True)
+        decision = self.classify()
+        self.assertEqual(decision['unreviewedNotices'], [n])
+        self.assertFalse(decision['authorizesRelease'])
+        self.report['releaseDecision'] = decision
+        with patch.object(a, 'baseline_findings', return_value=[]), \
+             patch.object(a.importlib.util, 'module_from_spec', return_value=r), \
+             patch.object(r, 'classify', return_value=decision), \
+             patch.object(a.importlib.util, 'spec_from_file_location') as spec:
+            spec.return_value.loader.exec_module = lambda m: None
+            self.assertTrue(a.blocking(self.report, release_context=self.ctx))
+        self.assertEqual(self.report['releaseDecision']['unreviewedNotices'], [n])
+
 
 class ReleaseSourceTests(unittest.TestCase):
     def test_real_reviewed_source_and_official_archives_are_consistent(self):
@@ -168,6 +216,18 @@ class ReleaseSourceTests(unittest.TestCase):
         data = r.policy(ROOT)
         self.assertEqual(len(r.verify_sources(ROOT, data)), 64)
         self.assertEqual(len(r.action_assets(ROOT, data)), 4)
+        self.assertEqual(r.npm_asset(ROOT, data), {'glob': ['13.0.6'], 'minimatch': ['10.2.5']})
+
+    def test_policy_rejects_duplicate_scope_and_unreviewed_npm_origin(self):
+        for mutate in ('scope', 'origin'):
+            data = copy.deepcopy(CONFIG)
+            rule = next(x for x in data['rules'] if x['scope'] == 'development')
+            if mutate == 'scope': rule['scope'] = 'github-actions'
+            else: rule['originVersions'] = {'project-npm': ['13.0.6']}
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp); path = root/r.CONFIG; path.parent.mkdir(parents=True)
+                path.write_text(json.dumps(data))
+                with self.assertRaises(ValueError): r.policy(root)
 
     def test_changed_source_and_new_workflow_stop_reuse(self):
         data = copy.deepcopy(CONFIG)
@@ -373,7 +433,7 @@ class ReleaseGateTests(unittest.TestCase):
         _, _, report, ctx = fixtures()
         before = copy.deepcopy(report['findings'])
         helper = module('security-release-policy')
-        decision = {'nonBlockingFindings': [{'findingIndex': i} for i in range(4)], 'unreviewedNotices': []}
+        decision = {'nonBlockingFindings': [{'findingIndex': i} for i in range(8)], 'unreviewedNotices': []}
         # Patch only the external evidence boundaries; exercise the real gate.
         with patch.object(a, 'baseline_findings', return_value=[]), \
              patch.object(a.importlib.util, 'module_from_spec', return_value=helper), \

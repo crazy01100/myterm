@@ -34,6 +34,32 @@ test('superstatic matches only the configured Hosting path', () => {
   assert.equal(configMatcher('/assets/a.css', {source: '/assets/**'}), true);
   assert.equal(configMatcher('/news/index.html', {source: '/assets/**'}), false);
 });
+test('Firebase listing honors parent and nested gitignore rules', async t => {
+  const dir = fixture(t);
+  fs.writeFileSync(path.join(dir, '.gitignore'), 'sub/*.gql\nsub/*.js\n*.log\n');
+  fs.writeFileSync(path.join(dir, 'sub', '.gitignore'), '!nested.js\n*.graphql\n');
+  const {readdirRecursive} = cli('./lib/fsAsync.js');
+  const files = await readdirRecursive({path: path.join(dir, 'sub'), gitIgnoreRoot: dir,
+    supportGitIgnore: true, ignoreSymlinks: true});
+  assert.deepEqual(files.map(file => path.basename(file.name)).sort(), ['.gitignore', 'nested.js']);
+  const withoutParents = await readdirRecursive({path: path.join(dir, 'sub'), supportGitIgnore: true});
+  assert.ok(withoutParents.some(file => path.basename(file.name) === 'schema.gql'));
+});
+test('Firebase listing stops on unreadable gitignore instead of ignoring exclusions', async t => {
+  const dir = fixture(t);
+  const ignoreFile = path.join(dir, '.gitignore');
+  fs.writeFileSync(ignoreFile, '*.js\n');
+  const extra = cli('fs-extra');
+  const original = extra.readFileSync;
+  t.mock.method(extra, 'readFileSync', function(file, ...args) {
+    if (file === ignoreFile) throw Object.assign(new Error('fixture read failure'), {code: 'EACCES'});
+    return original.call(this, file, ...args);
+  });
+  const {readdirRecursive} = cli('./lib/fsAsync.js');
+  await assert.rejects(readdirRecursive({path: dir, supportGitIgnore: true}), /Could not read .*\.gitignore/);
+  await assert.rejects(readdirRecursive({path: path.join(dir, 'sub'), gitIgnoreRoot: dir,
+    supportGitIgnore: true}), /Could not read .*\.gitignore/);
+});
 test('glob sync, async and stream preserve Data Connect style brace patterns',async t=>{
  const dir=fixture(t);const glob=cli('glob');const options={cwd:dir,absolute:true,nodir:true,follow:false};
  const expected=['sub/schema.gql','sub/schema.graphql'].map(f=>path.join(dir,f)).sort();
