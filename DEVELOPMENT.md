@@ -457,3 +457,5 @@ OpenSSL 供應商修補證據保存在 `.build/openssl-supplier/`，僅供唯讀
 受管 macOS Python 基底已固定為 Astral 20261026／CPython 3.12.16；官方 asset digest、SHA256SUMS、下載內容與 OpenSSL 門檻均須核對。升級基底時先確認兩個環境未被程序使用，保留可復原副本，再由新基底重新建立 venv；pip、獨立及內附 certifi 的固定版本／驗證維持各自政策。
 
 `Config/Security/usage-applicability.json` 與 `applicability/project-usage.json` 保存限定專案入口的適用性證據。變更 workflow、消費腳本、官方工具或公告後須重新核對，不能只更新雜湊讓檢查通過；新增／未知入口不沿用原結論。`test_usage_applicability.py` 使用惰性封裝、合成 metadata 與記憶體 Issue API 驗證漂移拒絕、跨來源版本、結案去重及重開；不執行新增漏洞輸入。真正判定變更集中最終精確 PR 審閱，不增加逐筆 revision。
+
+安全報告的工具版本候選由既有彙總待審清單保存，與獨立修補Issue及發布阻擋分開。原始命中不刪除；具體交付風險與必要來源／簽章／CI／收據失敗仍阻擋。已核對的預告只在來源與內容未變時保留待細節通知。轉候選不是套件已修補或期限例外，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。

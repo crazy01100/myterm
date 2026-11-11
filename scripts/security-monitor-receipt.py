@@ -3,6 +3,7 @@
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,12 @@ def build(report_path, env):
         if report_path.stat().st_size>8*1024*1024:raise ValueError('Oversized report')
         raw=report_path.read_bytes();report=json.loads(raw)
         result['reportSHA256']=hashlib.sha256(raw).hexdigest()
+        expected_candidates=None
+        if 'riskTriage' in report:
+            spec=importlib.util.spec_from_file_location('receipt_triage',Path(__file__).with_name('security-risk-triage.py'))
+            triage=importlib.util.module_from_spec(spec);spec.loader.exec_module(triage)
+            expected_candidates=triage.digest(triage.candidate_payload(report))
+            result['candidateDigest']=expected_candidates
         for filename in ('security-issues-result.json','security-monitor-status-result.json'):
             path=report_path.with_name(filename)
             if path.stat().st_size>8*1024*1024:raise ValueError('Oversized publication result')
@@ -32,6 +39,8 @@ def build(report_path, env):
             if (published.get('applied') is not True
                     or published.get('reportSHA256')!=result['reportSHA256']):
                 raise ValueError('Publication was not applied to this report')
+            if expected_candidates is not None and published.get('candidateDigest')!=expected_candidates:
+                raise ValueError('Candidate transfer was not saved for this report')
         result['complete']=(report.get('scanStatus')=='complete' and report.get('errors')==[]
             and env.get('SCAN_OUTCOME')=='success'
             and result['riskIssues']==result['noticeIssues']=='success')

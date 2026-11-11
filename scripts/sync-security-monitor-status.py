@@ -38,7 +38,7 @@ def notice_url(row):
         raise ValueError('Unexpected Firestore notice path')
 
 
-def snapshot(report):
+def snapshot(report,root=ROOT):
     review=report.get('sourceReview',{})
     if (review.get('sourceVerified') is not True or review.get('grantsRiskException') is not False or
             not re.fullmatch('[a-f0-9]{64}',review.get('policySHA256',''))):
@@ -61,10 +61,19 @@ def snapshot(report):
                 not re.fullmatch('[a-f0-9]{64}',row.get('observedDigest',''))):
             raise ValueError('Invalid initial notice review evidence')
         baselines.append({k:row[k] for k in ('id','observedItems','observedDigest','reviewState','historyGap')})
-    return {'checkedAt':report['checkedAt'],'notices':notices,'gaps':gaps,
+    result={'checkedAt':report['checkedAt'],'notices':notices,'gaps':gaps,
             'baselineReviews':baselines,
             'operationalErrorCount':len(report.get('errors',[])),
             'checksComplete':report.get('scanStatus')=='complete' and report.get('toolchainCoverage',{}).get('checksComplete') is True}
+    if 'riskTriage' in report:
+        triage=load('security-risk-triage')
+        triage.verify(report,root)
+        rows=triage.candidate_payload(report)
+        result['candidateDigest']=triage.digest(rows)
+        result['candidates']=[{**r,'observationHistory':[r['finding']]} for r in rows]
+        result['triagePolicySHA256']=report['riskTriage']['policySHA256']
+        result['candidateKeys']=[r['key'] for r in result['candidates']]
+    return result
 
 
 def render(state):
@@ -84,11 +93,22 @@ def render(state):
         body+='\n## 官方公告待確認\n'
         for row in state['notices'][:50]:body+='- ['+safe(row['title'])+']('+row['url']+')\n'
         if len(state['notices'])>50:body+='\n其餘公告見對應監測報告。\n'
+    if state.get('candidates'):
+        body+='\n## 工具候選監測（不是已修補或已確認適用）\n'
+        for row in state['candidates']:
+            f=row['finding']; reference=('；原 Issue #'+str(row['originalIssue'])) if row.get('originalIssue') else ''
+            body+='- ['+safe(f['id'])+']('+f['url']+')：'+safe(f['component'])+'／'+safe(f['version'])+reference+'\n'
+            body+='  '+safe(row['reason'])+'\n'
+            if row['key'] not in state.get('candidateKeys',[]):
+                body+='  本輪未列為候選，保留歷史；以當次完整報告與原 Issue 狀態判斷。\n'
+        body+='\n完整觀測、歷史版本與來源環境保存在本頁狀態及監測報告；新適用證據出現時重開原 Issue。\n'
+    if len(body.encode('utf-8'))>60000:
+        raise ValueError('Monitor aggregate exceeds publication bound; nothing was dropped')
     return body
 
 
 def synchronize(report,api,*,apply=False,environ=None,root=ROOT):
-    state=snapshot(report);env=os.environ if environ is None else environ
+    state=snapshot(report,root);env=os.environ if environ is None else environ
     repo=api.request('')
     if apply and (env.get('GITHUB_ACTIONS')!='true' or env.get('GITHUB_EVENT_NAME') not in ('schedule','workflow_dispatch') or
                   env.get('GITHUB_REF')!='refs/heads/'+repo['default_branch']):
@@ -102,6 +122,17 @@ def synchronize(report,api,*,apply=False,environ=None,root=ROOT):
         match=re.search(r'<!-- myterm-monitor-state:([A-Za-z0-9_=+-]+) -->',issue['body'])
         if not match:raise ValueError('Unrecognized monitor review state; preserve it')
         old=json.loads(base64.urlsafe_b64decode(match[1]))
+        if old.get('candidates') or 'candidates' in state:
+            current={r['key']:r for r in state.get('candidates',[])}
+            for previous in old.get('candidates',[]):
+                item=current.get(previous['key'])
+                if item is None:
+                    current[previous['key']]=previous
+                else:
+                    history=previous.get('observationHistory',[])+[previous['finding'],item['finding']]
+                    unique={load('security-risk-triage').digest(f):f for f in history}
+                    item['observationHistory']=[unique[k] for k in sorted(unique)]
+            state['candidates']=[current[k] for k in sorted(current)]
         # A notice falling out of the feed is not a resolution. Only an exact
         # explicit baseline review can remove a previously recorded notice.
         policy=json.loads((root/'Config/Security/vendor-notices.json').read_text())
@@ -131,9 +162,9 @@ def synchronize(report,api,*,apply=False,environ=None,root=ROOT):
             state['gaps']=[gaps[k] for k in sorted(gaps)]
         if {k:v for k,v in old.items() if k!='checkedAt'}=={k:v for k,v in state.items() if k!='checkedAt'}:
             return {'action':'unchanged','number':issue['number']}
-    resolved=state['checksComplete'] and not state['gaps'] and not state['notices'] and not state['baselineReviews'] and not state['operationalErrorCount']
+    resolved=state['checksComplete'] and not state['gaps'] and not state['notices'] and not state['baselineReviews'] and not state['operationalErrorCount'] and not state.get('candidates')
     if not issue and resolved:return {'action':'none'}
-    change={'title':'安全監測：覆蓋範圍與官方公告待確認','body':render(state)}
+    change={'title':'安全監測：候選風險、官方公告與檢查狀態' if 'candidates' in state else '安全監測：覆蓋範圍與官方公告待確認','body':render(state)}
     if issue and resolved:change.update(state='closed',state_reason='completed')
     if apply:
         if issue:
@@ -142,7 +173,7 @@ def synchronize(report,api,*,apply=False,environ=None,root=ROOT):
             comments=api.pages(f"issues/{issue['number']}/comments")
             if not any(c.get('user',{}).get('login')=='github-actions[bot]' and marker in c.get('body','') for c in comments):
                 text=('覆蓋與公告待確認事項已處理完成。' if resolved else
-                      f"監測紀錄更新：{len(state['notices'])} 則公告、{len(state['baselineReviews'])} 個公告來源及 {len(state['gaps'])} 項覆蓋待確認。")
+                      f"監測紀錄更新：{len(state.get('candidateKeys',[]))} 筆候選、{len(state['notices'])} 則公告、{len(state['baselineReviews'])} 個公告來源及 {len(state['gaps'])} 項覆蓋待確認。")
                 api.request(f"issues/{issue['number']}/comments",'POST',{'body':marker+'\n'+text})
             api.request(f"issues/{issue['number']}",'PATCH',change)
         else:issue=api.request('issues','POST',change)
@@ -166,8 +197,14 @@ if __name__=='__main__':
         raise ValueError('Only verified default-branch monitoring may publish')
     if actual['policySHA256']!=report.get('sourceReview',{}).get('policySHA256'):
         raise ValueError('Monitor publication source policy differs from scan')
+    if actual['checkoutCommit']!=report.get('sourceReview',{}).get('checkoutCommit'):
+        raise ValueError('Monitor publication checkout differs from scan')
     result=synchronize(report,issue_tools.GitHub(repo),apply=args.apply)
     result['applied']=args.apply
     result['reportSHA256']=hashlib.sha256(args.report.read_bytes()).hexdigest()
+    if 'riskTriage' in report:
+        triage=load('security-risk-triage')
+        if args.apply:triage.require_saved(report,issue_tools.GitHub(repo))
+        result['candidateDigest']=triage.digest(triage.candidate_payload(report))
     args.report.with_name('security-monitor-status-result.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result))

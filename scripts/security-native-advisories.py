@@ -89,6 +89,7 @@ def scan_openssl(inventory, fetcher=fetch):
             if ranges and ranges[0]['status']=='affected':
                 rows.append({'id':identifier,'component':'OpenSSL','version':source['version'],
                              'scope':'development','severity':severity,'status':'needs-review',
+                             'matchBasis':'version-only',
                              'url':url,'title':cna.get('title',identifier),
                              'fixedVersion':', '.join(sorted({r['lessThan'] for r in ranges if 'lessThan' in r})),
                              'dependencyPaths':[source['origin']],
