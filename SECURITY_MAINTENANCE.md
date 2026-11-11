@@ -235,6 +235,8 @@ Issue 發布器接受已盤點的 OpenJDK 官方日期公告網址；其他主�
 
 ### 專案 Python 的 OpenSSL 供應商修補
 
+OpenSSL 官方 CNA 的嚴重度文字會先去除前後空白並統一大小寫，再比對既有等級；未知文字或非官方 metric 不自動接受。等級正規化只修正資料解讀，版本命中仍保持 `needs-review`，不代表已修補、不適用或允許發布。官方公告即使列出修補版號，也須另核對實際封裝是否已發布及專案使用的版本／用途。
+
 `security-openssl-supplier.py` 只核對兩個受管 Python 環境實際載入的 OpenSSL。Linux 記錄程序映射、檔案內容與所屬套件完整版本；`Config/Security/openssl-supplier.json` 固定官方 HTTPS checksum 清單核對的封裝、函式庫及安全修補紀錄摘要。每次比對官方封裝內的逐 CVE 修補紀錄及目前 OpenSSL CNA，不能用上游版號、映像清單或僅有套件名稱推定已修補。此流程不安裝套件、不掃描 OS 或其他 runner 軟體。
 
 原命中保存在 `rawFindings`，精確供應商修補另存 `supplierFixReviews`；gate 與 Issue 寫入前重新核對。只有同一公告、所有相關環境／origin 與函式庫內容均驗證完整，才可依已修補解除對應 Issue，並保留維護摘要。公告變動、來源不符、缺證據或查詢失敗均保留風險與阻擋；非此精確封裝、未驗證環境與其他原生函式庫不借用此判定。這不是漏洞例外，發布／部署與其他風險門檻不變。
