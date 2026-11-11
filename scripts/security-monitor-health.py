@@ -3,6 +3,7 @@
 import argparse
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import io
 import zipfile
@@ -117,6 +118,12 @@ def retained_report(blob, *, expected_run=None):
         for field in ('runId','runAttempt','headSHA'):
             if expected_run.get(field) is None or receipt.get(field)!=expected_run[field]:
                 raise ValueError('Notification receipt belongs to another run or attempt')
+    if 'riskTriage' in report:
+        spec=importlib.util.spec_from_file_location('health_triage',Path(__file__).with_name('security-risk-triage.py'))
+        triage=importlib.util.module_from_spec(spec);spec.loader.exec_module(triage)
+        expected=triage.digest(triage.candidate_payload(report))
+        if receipt.get('candidateDigest')!=expected:
+            raise ValueError('Candidate aggregate receipt missing or substituted')
     if report.get('scanStatus')!='complete' or report.get('errors')!=[] or not report.get('releaseTag'):
         raise ValueError('Retained monitor scan was incomplete')
     coverage=report.get('toolchainCoverage',{})

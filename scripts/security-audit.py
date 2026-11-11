@@ -409,6 +409,11 @@ def run(include_release=None, *, delivery_inventory=None):
     except (ValueError,KeyError,TypeError,OSError) as error:
         report['errors'].append('Security source policy unavailable: '+str(error))
     report['scanStatus']='failed' if report['errors'] else 'complete'
+    try:
+        report['riskTriage']=risk_triage().build(report,ROOT)
+    except (OSError,ValueError,KeyError,TypeError) as error:
+        report['errors'].append('Risk triage unavailable: '+str(error))
+        report['scanStatus']='failed'
     return report
 
 
@@ -431,6 +436,7 @@ def query_toolchain_github(npm_components, environment):
                     'status':'needs-review' if match is None or component.get('runtimeReachability')=='not-established' else 'affected',
                     'url':advisory['html_url'],'fixedVersion':vulnerability.get('first_patched_version') or '',
                     'queryComplete':True,'dependencyPaths':[origin],
+                    'matchBasis':'version-only' if match is True else 'unresolved-version',
                     'environmentObservations':[{'environment':environment,'origin':origin,'versions':[component['version']]}]})
     return {'advisoryQueryStatus':'complete','checkedAt':dt.datetime.now(dt.timezone.utc).isoformat(),
             'componentDigest':provider_digest(npm_components),'findings':findings}
@@ -556,7 +562,7 @@ def scan_toolchain(report):
         for scope,origins in groups.items():
             versions=sorted({v for values in origins.values() for v in values})
             report['findings'].append({'id':finding['id'],'component':finding['component'],'scope':scope,
-                'queryComplete':True,
+                'queryComplete':True,'matchBasis':finding.get('matchBasis','unresolved-version'),
                 'version':', '.join(versions),'severity':finding['severity'],'status':finding['status'],
                 'url':finding['url'],'fixedVersion':', '.join(finding['fixedVersions']),
                 'dependencyPaths':sorted(origins),
@@ -592,6 +598,8 @@ def merge_findings(findings):
             if values:row[field]=[values[k] for k in sorted(values)]
         row['severity']=max((row['severity'],finding['severity']),key=lambda s:severity_order.get(s,6))
         if finding['status']=='needs-review':row['status']='needs-review'
+        if row.get('matchBasis')!=finding.get('matchBasis'):
+            row['matchBasis']='unresolved-version'
     return [merged[key] for key in sorted(merged)]
 
 
@@ -620,6 +628,11 @@ def project_applicability():
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
 
+def risk_triage():
+    spec=importlib.util.spec_from_file_location('risk_triage',Path(__file__).with_name('security-risk-triage.py'))
+    helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
+
+
 def supplier_notices():
     spec=importlib.util.spec_from_file_location('supplier_notices',Path(__file__).with_name('security-supplier-notices.py'))
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
@@ -636,7 +649,7 @@ def pip_applicability():
 
 
 BASELINE_COLLECTORS=frozenset(('app-source','npm-project','python-verifier','actions-repository'))
-RISK_FIELDS=('id','component','version','scope','severity','status','url','fixedVersion')
+RISK_FIELDS=('id','component','version','scope','severity','status','url','fixedVersion','matchBasis')
 
 
 def risk_projection(finding):
@@ -707,6 +720,14 @@ def blocking(report, *, merge_gate=False, release_context=None):
         except Exception as error:
             report['releaseDecision']={'blocking':True,'error':str(error),'authorizesRelease':False}
             return True
+    if not merge_gate and 'riskTriage' in report:
+        try:
+            triage=risk_triage().verify(report,ROOT)
+            if any(row['releaseEffect']=='block' for row in triage['rows']):return True
+            candidate_keys={row['key'] for row in triage['rows'] if row['disposition']=='candidate'}
+            findings=[f for f in findings if risk_triage().key(f) not in candidate_keys]
+            # No-context checks remain conservative about official notices.
+        except (OSError,ValueError,KeyError,TypeError):return True
     if (notice_block or
             any(f['scope']!='released-app' and not f.get('acceptedRisk',False) and
                 (f['status']=='needs-review' or f['severity'] not in ['low','info']) for f in findings)):
@@ -736,12 +757,15 @@ def write_summary(report, monitor, *, merge_gate=False):
     if report['errors']:
         title = '安全檢查運作異常：本次無法判定完整結果'
     elif monitor:
-        title = f"掃描完成：發現 {len(report['findings'])} 項風險，交由 Issue 追蹤"
+        title = f"掃描完成：保留 {len(report['findings'])} 項觀測，依專案影響分流"
     elif gate_blocked:
         title = ('合併' if merge_gate else '發布')+'安全門檻未通過'
     else:
         title = ('合併' if merge_gate else '發布')+'安全門檻通過'
     lines = ['## '+title, '', '掃描成功不等於沒有漏洞；正式版風險與目前來源分別記錄。', '']
+    if 'riskTriage' in report:
+        counts=report['riskTriage']['counts']
+        lines += [f"候選待審 {counts['candidates']} 項；獨立 Issue 追蹤 {counts['individual']} 項。原始命中未刪除，候選不代表已修補或不適用。", '']
     if merge_gate:
         lines += ['合併保留既有 App、根 npm、Python 驗簽與 Actions 本體門檻；擴充工具風險仍告警，查詢／覆蓋失敗仍阻擋。此結果不授權發布或部署。', '']
     packages = report.get('packageMonitoring', {})
@@ -771,9 +795,12 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- 官方公告待確認：'+html.escape(notice['title'])+' — '+html.escape(notice['url']))
     decision=report.get('releaseDecision',{})
     for row in decision.get('nonBlockingFindings',[]):
-        lines.append('- 發布用途已審、告警保留：'+html.escape(row['id'])+' / '+html.escape(row['classification']))
+        label='工具版本候選持續待審：' if row['classification']=='candidate-monitoring' else '發布用途已審、告警保留：'
+        lines.append('- '+label+html.escape(row['id'])+' / '+html.escape(row['classification']))
     for row in decision.get('reviewedNotices',[]):
         lines.append('- 公告發布影響已審、維護追蹤保留：'+html.escape(row['url']))
+    for row in decision.get('preannouncements',[]):
+        lines.append('- 官方預告待細節、未宣稱無影響：'+html.escape(row['url']))
     if decision.get('error'):lines.append('- 發布判斷未通過：'+html.escape(decision['error']))
     if report.get('stalePreviousScan'):
         lines.append('- 前次成功掃描距今超過 48 小時；本次結果請依上方狀態判讀。')
@@ -814,7 +841,7 @@ def main():
     previous=json.loads(args.previous.read_text()) if args.previous and args.previous.exists() else None
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
     report['stalePreviousScan']=bool(previous and previous.get('lastSuccessfulScanAt') and (dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(previous['lastSuccessfulScanAt'])).total_seconds()>48*3600)
-    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','applicabilityReviews','supplierFixReviews','projectApplicabilityProofs','projectApplicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
+    fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','riskTriage','applicabilityReviews','supplierFixReviews','projectApplicabilityProofs','projectApplicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
         'noticeChanges':r.get('vendorNotices',{}).get('changes',[]),
         'javaRemediations':r.get('supplierNotices',{}).get('remediations',[])},sort_keys=True)
     changed=previous is None or fingerprint(previous)!=fingerprint(report)

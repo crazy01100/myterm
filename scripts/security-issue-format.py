@@ -50,7 +50,7 @@ def semantic(f):
     return result
 
 
-def render(key,f,report,resolved=False,resolutions=None,applicability=None):
+def render(key,f,report,resolved=False,resolutions=None,applicability=None,candidate=None):
     f=public_finding(f);resolutions=list(resolutions or [])
     if resolved and not resolutions: resolutions=[report['checkedAt']]
     snapshot={'finding':f,'checkedAt':report['checkedAt'],'resolutions':resolutions}
@@ -60,11 +60,19 @@ def render(key,f,report,resolved=False,resolutions=None,applicability=None):
             raise ValueError('Invalid applicability resolution')
         display_time(applicability['checkedAt'])
         snapshot['applicabilityResolution']=applicability
+    if candidate is not None:
+        if (applicability is not None or resolved or candidate.get('kind')!='candidate-monitoring'
+                or type(candidate.get('aggregateIssue')) is not int or candidate['aggregateIssue']<1
+                or candidate.get('key')!=key):
+            raise ValueError('Invalid candidate transfer')
+        snapshot['candidateTransfer']=candidate
     encoded=base64.urlsafe_b64encode(json.dumps(snapshot,ensure_ascii=False,sort_keys=True).encode()).decode()
     marker=f'<!-- myterm-security-risk:v1 key={key} digest={digest({"risk":f,"resolved":bool(resolutions)})} -->\n'
     title=f"[{LEVELS.get(f['severity'],'待確認')}] {f['component']}：{SCOPES[f['scope']]}安全風險（{f['id']}）"
     if applicability is not None:
         title=f"[不適用] {f['component']}：{SCOPES[f['scope']]}公告（{f['id']}）"
+    if candidate is not None:
+        title=f"[轉候選監測] {f['component']}：公告（{f['id']}）"
     if len(title)>240: raise ValueError('Issue title too long')
     body=marker+FORMAT+'<!-- myterm-security-snapshot:'+encoded+' -->\n'
     body+='- **公告**：['+safe(f['id'])+']('+f['url']+')\n'
@@ -110,6 +118,11 @@ def render(key,f,report,resolved=False,resolutions=None,applicability=None):
     if applicability is not None:
         body+='\n## 不適用結案\n- '+display_time(applicability['checkedAt'])+'：'+safe(applicability['reason'])+'\n'
         body+='- 原始版本命中及嚴重度保留；此判定不是套件已修補或風險例外。證據失效且仍命中時重新評估並開啟原紀錄。\n'
+    if candidate is not None:
+        body+='\n## 轉入候選監測\n'
+        body+='- 已保存至 #'+str(candidate['aggregateIssue'])+'；獨立修補 Issue 關閉，原始命中與歷史保留。\n'
+        body+='- 尚未建立受影響操作與正常專案用途的具體連結；不是已修補、已確認不適用或風險例外。\n'
+        body+='- 出現具體適用／交付影響證據時重新開啟原 Issue。\n'
     return title,body
 
 

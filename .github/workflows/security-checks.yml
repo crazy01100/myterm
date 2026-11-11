@@ -73,19 +73,19 @@ jobs:
             --include-release "$GITHUB_REPOSITORY" \
             --previous build/previous-security-report.json \
             --output build/security-report.json
+      - name: Record coverage and official notice review
+        id: notice_issues
+        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped'
+        run: ./scripts/project-python.sh scripts/sync-security-monitor-status.py --report build/security-report.json --apply
       - name: Record published advisory risks in Issues
         id: risk_issues
-        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped'
+        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped' && steps.notice_issues.outcome == 'success'
         env:
           REFRESH_ISSUE_FORMAT: ${{ inputs.refresh_issue_format }}
         run: |
           args=()
           if [[ "$REFRESH_ISSUE_FORMAT" == "true" ]]; then args+=(--refresh-format); fi
           ./scripts/project-python.sh scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
-      - name: Record coverage and official notice review
-        id: notice_issues
-        if: always() && steps.dependencies.outcome == 'success' && steps.scan.outcome != 'skipped'
-        run: ./scripts/project-python.sh scripts/sync-security-monitor-status.py --report build/security-report.json --apply
       - name: Bind scan and notification receipt
         if: always()
         env:

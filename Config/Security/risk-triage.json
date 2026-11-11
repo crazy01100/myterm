@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "policy": "project-tool-candidates",
+  "grantsRiskException": false,
+  "candidateCollector": "expanded-toolchain",
+  "retainIndividual": [
+    {
+      "id": "GHSA-35p6-xmwp-9g52",
+      "component": "undici",
+      "scope": "github-actions"
+    },
+    {
+      "id": "GHSA-8gc5-j5rx-235r",
+      "component": "fast-xml-parser",
+      "scope": "github-actions"
+    },
+    {
+      "id": "GHSA-qrxm-fqhp-jwvm",
+      "component": "undici",
+      "scope": "github-actions"
+    },
+    {
+      "id": "GHSA-xjj6-f33q-929c",
+      "component": "undici",
+      "scope": "github-actions"
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "component": "glob",
+      "scope": "development"
+    },
+    {
+      "id": "GHSA-3g3m-2fjr-6pw4",
+      "component": "glob",
+      "scope": "github-actions"
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "component": "minimatch",
+      "scope": "development"
+    },
+    {
+      "id": "GHSA-g3hv-75wg-m249",
+      "component": "minimatch",
+      "scope": "github-actions"
+    }
+  ],
+  "migrationIssues": [
+    {
+      "number": 198,
+      "id": "CVE-2026-107496",
+      "component": "OpenSSL",
+      "scope": "development"
+    },
+    {
+      "number": 199,
+      "id": "CVE-2026-88822",
+      "component": "OpenSSL",
+      "scope": "development"
+    },
+    {
+      "number": 200,
+      "id": "CVE-2026-88823",
+      "component": "OpenSSL",
+      "scope": "development"
+    },
+    {
+      "number": 201,
+      "id": "CVE-2026-95691",
+      "component": "OpenSSL",
+      "scope": "development"
+    },
+    {
+      "number": 202,
+      "id": "CVE-2026-95692",
+      "component": "OpenSSL",
+      "scope": "development"
+    },
+    {
+      "number": 204,
+      "id": "GHSA-474x-hrwr-fgx4",
+      "component": "fast-xml-parser",
+      "scope": "github-actions"
+    },
+    {
+      "number": 205,
+      "id": "GO-2026-6859",
+      "component": "stdlib",
+      "scope": "development"
+    }
+  ],
+  "projectRisks": [],
+  "preannouncements": [
+    {
+      "id": "130d9bc72a1a0f48649a0bf11fa18461afd053fe8c4b029d9153099e507309e4",
+      "source": "node-blog",
+      "url": "https://nodejs.org/en/blog/vulnerability/november-2026-security-releases",
+      "contentSHA256": "4abeaa671cd8c7908fe2c9cf9fbb496c0cab9d6930d9f26ac2a36984470bed1d",
+      "runtime": "node",
+      "runtimeVersion": "24.22.1"
+    }
+  ]
+}

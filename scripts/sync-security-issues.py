@@ -148,7 +148,12 @@ class GitHub:
         raise ValueError('GitHub pagination limit reached')
 
 
-def synchronize(report, api, apply=False, environ=None, allow_public=False, refresh_format=False, enrich=None):
+def synchronize(report, api, apply=False, environ=None, allow_public=False, refresh_format=False, enrich=None, root=None):
+    root=root or Path(__file__).resolve().parents[1]
+    triage=load('security-risk-triage')
+    candidate_rows={r['key']:r for r in triage.candidates(report,root)}
+    if 'riskTriage' in report and report['riskTriage'].get('checksComplete') is not True:
+        raise ValueError('Incomplete triage cannot change independent risk Issues')
     additive=report.get('publicationMode')=='additive'
     validate_report(report,additive=additive)
     if additive and refresh_format:raise ValueError('Partial scans cannot rewrite historical formatting')
@@ -164,6 +169,7 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
         env = os.environ if environ is None else environ
         if env.get('GITHUB_ACTIONS')!='true' or env.get('GITHUB_EVENT_NAME') not in ['schedule','workflow_dispatch'] or env.get('GITHUB_REF')!='refs/heads/'+metadata['default_branch']:
             raise ValueError('Issue writes require a default-branch scheduled/manual Actions run')
+    aggregate=triage.require_saved(report,api,root) if candidate_rows else None
     managed = {}
     for issue in api.pages('issues?state=all&creator=github-actions%5Bbot%5D'):
         match = MARKER.match(issue.get('body') or '')
@@ -173,7 +179,9 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
         if issue['state']=='closed' and issue.get('state_reason')=='not_planned':
             try: project_closed=load('security-project-applicability').owned_resolution(fmt.parse_issue(issue))
             except (ValueError,KeyError,TypeError): project_closed=False
-            if not project_closed:continue
+            try: transferred=triage.owned_transfer(fmt.parse_issue(issue))
+            except (ValueError,KeyError,TypeError): transferred=False
+            if not project_closed and not transferred:continue
         if match[1] in managed: raise ValueError('Duplicate managed Issues require review')
         managed[match[1]] = issue
     # Prepare every write first: a malformed record or enrichment failure must not
@@ -188,6 +196,28 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
         if digest([old['finding'][k] for k in ['id','component','scope']]) != key:
             raise ValueError('Issue snapshot identity differs from its marker')
         f=desired.pop(key,None)
+        if triage.owned_transfer(old) and additive:
+            continue  # A failed scan cannot undo a saved transfer or declare a fix.
+        if f is not None and key in candidate_rows:
+            row=candidate_rows[key]
+            if row.get('originalIssue')!=issue['number'] and not triage.owned_transfer(old):
+                continue  # Only the approved seven legacy Issues are migrated.
+            if (triage.owned_transfer(old) and issue['state']=='closed'
+                    and old['candidateTransfer']['aggregateIssue']==aggregate):
+                continue  # Updated observations live in the aggregate, not repeat closure comments.
+            transfer={'kind':'candidate-monitoring','key':key,'aggregateIssue':aggregate,
+                      'checkedAt':report['checkedAt']}
+            title,body=fmt.render(key,f,report,resolutions=old['resolutions'],candidate=transfer)
+            comment=('<!-- myterm-candidate-transfer:'+key+' -->\n'
+                     '版本命中已保存並讀回 #'+str(aggregate)+'，轉入候選監測。尚未建立正常用途的具體適用路徑；'
+                     '此次關閉獨立修補 Issue 不代表套件已修補或已確認不適用。原始命中與歷史保留，'
+                     '後續有具體專案影響證據時重開原 Issue。')
+            comment+=verification_links(report,os.environ if environ is None else environ)
+            operations.append((issue,{'title':title,'body':body,'state':'closed','state_reason':'not_planned'},comment))
+            actions.append({'action':'transfer-candidate','number':issue['number'],'key':key,'aggregateIssue':aggregate})
+            continue
+        if f is None and triage.owned_transfer(old):
+            continue  # Candidate absence is not a proven repair; the aggregate retains it.
         if f is not None:
             if additive:
                 previous=old['finding']
@@ -273,6 +303,7 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
         actions.append({'action':action,'number':issue['number'],'key':key})
     for key,f in desired.items():
         if key in managed:continue  # An unrecognized managed record must not be duplicated.
+        if key in candidate_rows:continue  # Already saved and read back in the aggregate.
         title,body=render(key,f,report)
         action={'action':'create','key':key,'title':title};actions.append(action)
         operations.append((None,{'title':title,'body':body},action))
@@ -286,6 +317,11 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                 if not any(c.get('user',{}).get('login')==BOT and change_marker in (c.get('body') or '') for c in comments):
                     api.request(f"issues/{issue['number']}/comments",'POST',{'body':comment})
             api.request(f"issues/{issue['number']}",'PATCH',change)
+            if 'myterm-candidate-transfer:' in (comment or '') or triage.owned_transfer(fmt.parse_issue(issue)):
+                stored=api.request(f"issues/{issue['number']}")
+                if (any(stored.get(k)!=v for k,v in change.items())
+                        or stored.get('user',{}).get('login')!=BOT):
+                    raise ValueError('Candidate Issue transition readback differs')
     return actions
 
 
@@ -303,6 +339,8 @@ def main():
             raise ValueError('Only verified default-branch monitoring may publish')
         if actual['policySHA256']!=report.get('sourceReview',{}).get('policySHA256'):
             raise ValueError('Publication source policy differs from scan')
+        if actual['checkoutCommit']!=report.get('sourceReview',{}).get('checkoutCommit'):
+            raise ValueError('Publication checkout differs from scan')
     if report.get('errors') or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True:
         report['publicationMode']='additive'
     audit=load('security-audit');context=load('security-risk-context');cache={}
@@ -314,6 +352,10 @@ def main():
     actions=synchronize(report,GitHub(repo),args.apply,allow_public=args.allow_public,refresh_format=args.refresh_format,enrich=enrich)
     result={'applied':args.apply,'riskCount':len(report['findings']),'changes':actions,
             'reportSHA256':hashlib.sha256(args.report.read_bytes()).hexdigest()}
+    if 'riskTriage' in report:
+        triage=load('security-risk-triage')
+        result['candidateDigest']=triage.digest(triage.candidate_payload(report))
+        result['triageCounts']=report['riskTriage']['counts']
     args.report.with_name('security-issues-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     summary=os.environ.get('GITHUB_STEP_SUMMARY')
     if summary:

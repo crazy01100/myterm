@@ -231,7 +231,15 @@ def classify(report, ctx, *, root=ROOT, reader=None):
     if ctx['stage'] in ('publish', 'deploy') and (
             not ctx.get('deliveryInventory') or report.get('deliveryInventoryDigest') != digest(ctx['deliveryInventory'])):
         raise ValueError('The actual signed delivery inventory was not scanned')
-    decisions = []; notices = []; unresolved_notices = []
+    decisions = []; notices = []; unresolved_notices = []; preannouncements = []
+    triage = load('security-risk-triage').verify(report, root)
+    if triage is not None:
+        if any(row['releaseEffect'] == 'block' for row in triage['rows']):
+            raise ValueError('Concrete project delivery risk remains unresolved')
+        decisions.extend({'findingIndex': row['findingIndex'], 'id': row['identity'][0],
+                          'scope': row['identity'][2], 'classification': 'candidate-monitoring',
+                          'issueDisposition': 'aggregate-candidate', 'reason': row['reason']}
+                         for row in triage['rows'] if row['disposition'] == 'candidate')
     rules = {(r['id'], r['scope']): r for r in data['rules']}
     for index, finding in enumerate(report['findings']):
         rule = rules.get((finding.get('id'), finding.get('scope')))
@@ -249,6 +257,10 @@ def classify(report, ctx, *, root=ROOT, reader=None):
                           'classification': rule['classification'], 'issueDisposition': 'retain-open',
                           'reason': 'Reviewed conditions verified; mandatory stage checks still apply'})
     for notice in report['vendorNotices'].get('changes', []):
+        if triage is not None and load('security-risk-triage').preannouncement(notice, report, root):
+            preannouncements.append({**notice, 'classification': 'awaiting-details',
+                                     'issueDisposition': 'retain-aggregate'})
+            continue
         match = next((n for n in data['notices'] if all(notice.get(k) == n[k]
                       for k in ('id', 'source', 'url', 'contentSHA256'))), None)
         if match is None:
@@ -276,7 +288,8 @@ def classify(report, ctx, *, root=ROOT, reader=None):
         raise ValueError('Notice baseline requires review')
     return {'schemaVersion': 1, 'context': ctx, 'sourceDigest': source_digest,
             'nonBlockingFindings': decisions, 'reviewedNotices': notices,
-            'unreviewedNotices': unresolved_notices, 'grantsRiskException': False,
+            'unreviewedNotices': unresolved_notices, 'preannouncements': preannouncements,
+            'grantsRiskException': False,
             'authorizesRelease': False, 'preservesFindings': True}
 
 

@@ -156,6 +156,7 @@ def lookup(components,fetch=get_json):
         if severity not in ('critical','high','moderate','low','info'):severity='unknown'
         group=findings.setdefault((preferred,eco,name),{'id':preferred,'ecosystem':eco,'component':name,'versions':set(),
             'origins':set(),'observations':set(),'severity':severity,'status':'affected','fixedVersions':set(),
+            'matchBasis':'version-only',
             'url':'https://github.com/advisories/'+preferred if preferred.startswith('GHSA-') else 'https://osv.dev/vulnerability/'+preferred})
         if group['severity']!=severity:group['severity']='unknown'
         group['versions'].add(version)
