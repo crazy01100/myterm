@@ -57,6 +57,32 @@ class NativeAdvisoryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             n.scan_openssl(inventory, lambda _: '<html>maintenance</html>')
 
+    def test_vendor_severity_whitespace_keeps_findings_pending_and_blocking(self):
+        inventory, record = self.fixture()
+        audit = load('security-audit')
+        for label, expected in [('Low ', 'low'), (' \tLOW\r\n', 'low'),
+                                (' Moderate ', 'moderate'), ('HIGH\n', 'high'),
+                                (' critical ', 'critical'), ('', 'unknown'),
+                                (' low/medium ', 'unknown'), (' lo w ', 'unknown')]:
+            with self.subTest(label=label):
+                record['containers']['cna']['metrics'] = [{'other': {
+                    'type': 'https://openssl-library.org/policies/general/security-policy/',
+                    'content': {'text': label}}}]
+                findings = n.scan_openssl(inventory, self.fetcher(record))['findings']
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0]['severity'], expected)
+                self.assertEqual(findings[0]['status'], 'needs-review')
+                self.assertEqual(findings[0]['dependencyPaths'], ['python-runtime/openssl'])
+                self.assertTrue(audit.blocking({'errors': [], 'findings': findings}))
+
+    def test_severity_from_unreviewed_metric_provider_is_not_accepted(self):
+        inventory, record = self.fixture()
+        record['containers']['cna']['metrics'] = [{'other': {
+            'type': 'https://example.invalid/severity', 'content': {'text': 'Low '}}}]
+        finding = n.scan_openssl(inventory, self.fetcher(record))['findings'][0]
+        self.assertEqual(finding['severity'], 'unknown')
+        self.assertEqual(finding['status'], 'needs-review')
+
     def test_changed_identity_state_or_default_status_blocks(self):
         inventory, original = self.fixture()
         for field, value in [('state', 'REJECTED'), ('cveId', 'CVE-2099-9999')]:

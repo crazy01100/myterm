@@ -80,7 +80,7 @@ def scan_openssl(inventory, fetcher=fetch):
         for metric in cna.get('metrics',[]):
             other=metric.get('other',{})
             if other.get('type')=='https://openssl-library.org/policies/general/security-policy/':
-                value=other.get('content',{}).get('text','').lower()
+                value=other.get('content',{}).get('text','').strip().lower()
                 severity=value if value in ('critical','high','moderate','low') else 'unknown'
         rows=[]
         for source in sources:
