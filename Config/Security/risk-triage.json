@@ -90,14 +90,5 @@
     }
   ],
   "projectRisks": [],
-  "preannouncements": [
-    {
-      "id": "130d9bc72a1a0f48649a0bf11fa18461afd053fe8c4b029d9153099e507309e4",
-      "source": "node-blog",
-      "url": "https://nodejs.org/en/blog/vulnerability/november-2026-security-releases",
-      "contentSHA256": "4abeaa671cd8c7908fe2c9cf9fbb496c0cab9d6930d9f26ac2a36984470bed1d",
-      "runtime": "node",
-      "runtimeVersion": "24.22.1"
-    }
-  ]
+  "preannouncements": []
 }

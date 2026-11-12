@@ -327,7 +327,7 @@ Cleanup accepts only a production version that is GitHub's latest non-Draft, non
 
 ### Production deployment protection
 
-The update-site workflow runs only in `crazy01100/myterm`. Manual redeployment must select `main` and an existing `release_tag`; release publication can still trigger it from a release tag. The deployment job declares `environment: production`, selects Node 24.21.0, and downloads and verifies existing signed assets before deployment.
+The update-site workflow runs only in `crazy01100/myterm`. Manual redeployment must select `main` and an existing `release_tag`; release publication can still trigger it from a release tag. The deployment job declares `environment: production`, pins the Node 24 LTS version matching `Config/Security/node-tools.json`, and downloads and verifies existing signed assets before deployment.
 
 An administrator must separately configure required reviewers in GitHub's `production` environment, allow only the `main` branch and `v*` tags, and disallow bypassing protection rules. A sole maintainer may approve deployments they triggered; this is an explicit deployment confirmation, not a second-person review. Declaring an environment does not create approval rules or restrict workflows that do not reference it.
 
