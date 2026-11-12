@@ -3,16 +3,17 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const {hash} = require('node:crypto');
 const {verify} = require('../../scripts/verify-firebase-tools.cjs');
 
 function fixture(t, {prepared = true} = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'myterm-firebase-install-'));
   t.after(() => fs.rmSync(root, {recursive:true, force:true}));
   const write = (file, value) => { const p=path.join(root,file);fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,JSON.stringify(value)); };
-  const manifest = {devDependencies:{'firebase-tools':'15.35.0','@firebase/rules-unit-testing':'6.0.0'}};
+  const manifest = {devDependencies:{'firebase-tools':'15.36.0','@firebase/rules-unit-testing':'6.0.0'}};
   const lock = {packages:{'':manifest}};
   write('package.json',manifest);
-  for(const [name,version] of Object.entries({'firebase-tools':'15.35.0','@firebase/rules-unit-testing':'6.0.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2','superstatic':'10.0.0','minimatch':'11.0.4'})) {
+  for(const [name,version] of Object.entries({'firebase-tools':'15.36.0','@firebase/rules-unit-testing':'6.0.0','stream-json':'3.6.0','stream-chain':'4.2.5','csv-parse':'7.0.2','superstatic':'10.0.0','minimatch':'11.0.4'})) {
     const peerDependencies = name === '@firebase/rules-unit-testing' ? {firebase:'^13.0.0'} : undefined;
     write('node_modules/'+name+'/package.json',{name,version,main:'index.js',peerDependencies});
     fs.writeFileSync(path.join(root,'node_modules',name,'index.js'),'throw Error("must not execute package code");');
@@ -98,4 +99,19 @@ test('missing locked Rules peer metadata is rejected',t=>{
   delete lock.packages['node_modules/@firebase/rules-unit-testing'].peerDependencies;
   write('package-lock.json',lock);
   assert.throws(()=>verify(root),/peer requirements differ/);
+});
+
+test('installed emulator handlers match the reviewed official 15.36.0 fix without executing them', () => {
+  // Exact bytes from the integrity-verified npm archive: the Hub now returns
+  // after rejecting an Origin, and async handlers forward failures correctly.
+  // Do not launch the Hub or send requests to test this source-level update.
+  const expected = {
+    'lib/emulator/hub.js': '2da5e7a26d68fe8bc7f057b85a1cce4b51dcc454f3c23b49de61e0fe11164bd5',
+    'lib/emulator/shared/express.js': 'baa0882f5be6d6607da076d7a26e6af3b2c5e3a567edde6badbdb5b4b1893ec8',
+  };
+  const root = path.resolve(__dirname, '../../node_modules/firebase-tools');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version, '15.36.0');
+  for (const [relative, digest] of Object.entries(expected)) {
+    assert.equal(hash('sha256', fs.readFileSync(path.join(root, relative))), digest, relative);
+  }
 });

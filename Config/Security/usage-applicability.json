@@ -20,7 +20,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "730861197305591fdb67a9b3dc4f9bafb1ed78b8d23b99fb78afc39db83a5cef",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u5b57\u4e32\u5165\u53e3\u5148\u7d93 net.isIPv6\uff0c\u53e6\u4e00\u689d\u56de\u61c9\u8def\u5f91\u5f9e\u56fa\u5b9a 16 bytes \u7684 IPv6 \u8f49\u6210\u5b57\u4e32\u3002\u5df2\u975c\u614b\u6838\u5c0d\u5b98\u65b9 Node 24.22.3 \u7684 internal/net \u4f86\u6e90\u8207\u539f24.22.1\u9010\u4f4d\u5143\u76f8\u540c\uff0c\u53ea\u5141\u8a31\u4e00\u6b21 zone \u767e\u5206\u865f\u53ca\u53d7\u9650\u5b57\u5143\uff0c\u4e0d\u7b26\u5408\u516c\u544a\u7684\u91cd\u8907\u767e\u5206\u865f\uff0f\u63db\u884c\u524d\u63d0\uff1b\u547c\u53eb\u6a94\u672a\u8b8a\uff0cNode pin \u5df2\u66f4\u65b0\u4e26\u91cd\u65b0\u6838\u5c0d\u3002\u9019\u662f\u9650\u5b9a\u5165\u53e3\u7684\u9650\u5236\uff0c\u4e0d\u662f\u539f\u5957\u4ef6\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -40,7 +40,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "6ea360253d69a0f95eb3a1eb69ddd0ddb73927e3edc70dd95fa8abe15a1d3f7b",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516c\u544a\u8981\u6c42\u4f4e\u968e API \u63a5\u53d7\u5927\u5c0f\u5beb\u6df7\u7528\u7684\u91cd\u8907 Content-Length \u9663\u5217\u3002\u76ee\u524d\u547c\u53eb\u9762\u70ba fetch\uff0fProxyAgent\uff0c\u672a\u898b\u5c07\u5916\u90e8\u8cc7\u6599\u76f4\u63a5\u4f5c\u70ba\u8a72 raw header array\uff1bfetch \u7d93 Headers \u6b63\u898f\u5316\u3002\u4f4e\u968e dispatcher \u4ecd\u5b58\u5728\uff0c\u56e0\u6b64\u4fdd\u7559\u70ba\u76ee\u524d\u8f38\u5165\u689d\u4ef6\u53d7\u9650\uff0c\u4e0d\u5ba3\u7a31\u6574\u4efd library \u6392\u9664\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -62,7 +62,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "c896368a90678354cfa39a041cacbffdba17f2031dd1c80396d6e0d0a93188ec",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -82,7 +82,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d2228b40e4a2a0aff45e2a6da4f8036a9a274da2a1438ed683315c3bad405c39",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -102,7 +102,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d6c8973bd8daf8a4d41cd1d55eeee6d5a7c8f6ccfc19cec8812b11e2f4b09c77",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516c\u544a\u8981\u6c42\u5c07\u5916\u90e8\u53ef\u63a7\u5b57\u4e32\u50b3\u7d66\u4f4e\u968e client.request \u7684 upgrade \u9078\u9805\u3002\u56fa\u5b9a Actions \u5f15\u5165\u9762\u70ba fetch\uff0fProxyAgent\uff0c\u6c92\u6709\u6b64 upgrade \u6d88\u8cbb\u5165\u53e3\uff1b\u4e0d\u5c07\u5957\u4ef6\u4e2d\u4fdd\u7559 upgrade \u5be6\u4f5c\u7576\u6210\u5c08\u6848\u6709\u4f7f\u7528\u5b83\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -122,7 +122,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "ce491a3632901671b2837925417b110ae78da2db1f4a3ac19af3278366303f21",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u76ee\u524d\u5be6\u969b\u5f15\u5165\u9ede\u6c92\u6709 EventSource\uff1b\u516c\u544a\u8981\u6c42 EventSource \u4e32\u6d41\u89e3\u6790\uff0c\u8207 node-gyp \u7684\u4e0b\u8f09\u529f\u80fd\u4e0d\u540c\u3002\u547c\u53eb\u6a94 hash \u8207\u65e2\u6709\u5206\u6790\u4e00\u81f4\uff1b\u50c5\u9650\u672c\u7b46 EventSource \u516c\u544a\uff0c\u4e0d\u63a8\u8ad6\u5176\u4ed6 fetch \u544a\u8b66\u5b89\u5168\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -154,7 +154,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "ce491a3632901671b2837925417b110ae78da2db1f4a3ac19af3278366303f21",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -174,7 +174,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "30033ee977f605674ff670a3d8a684aaa0e42f8fce73cd1a869017f069465285",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516c\u544a\u8981\u6c42 processEntities=false\u3002\u5be6\u969b getSerializerOptions \u6c92\u6709\u95dc\u9589\u5b83\uff0cbuilder \u9810\u8a2d\u70ba true\uff1b\u76ee\u524d\u8a2d\u5b9a\u4e0d\u7b26\u5408\u6f0f\u6d1e\u9078\u9805\u524d\u63d0\u3002\u6b64\u7d50\u8ad6\u4e0d\u5f71\u97ff\u53e6\u4e00\u7b46 XML \u6578\u503c\u5be6\u9ad4\u89e3\u6790\u544a\u8b66\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -196,7 +196,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5b35879175ef8af6083ac34fcf5aaf78b132548bc1f5bed4835220d97c4b9692",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -220,7 +220,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "9c63012d745b453bdb7026c2c204896c09fe2014f0f4dcbae50d685ac5caac55",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u5be6\u969b\u5b89\u88dd\u5165\u53e3\u4f7f\u7528 --no-index\uff0f--no-deps\uff0f--no-cache-dir\uff0f\u505c\u7528\u7248\u672c\u6aa2\u67e5\uff0c\u4e14\u53ea\u63a5\u53d7\u56fa\u5b9a\u5b98\u65b9 wheel \u7d93 hash \u6838\u5c0d\u5f8c\u7684\u672c\u6a5f\u8def\u5f91\uff1b\u7db2\u8def\u4e0b\u8f09\u7531 Python urllib\uff0bssl \u8ca0\u8cac\uff0c\u4e0d\u7d93 pip urllib3\u3002\u516c\u544a\u4e2d\u7684 HTTPS proxy\uff0fHTTP chunk\uff0fdeflate \u524d\u63d0\u4e0d\u5728\u6b64\u5b89\u88dd\u6d41\u7a0b\u3002\u624b\u52d5\u7e5e\u904e\u5165\u53e3\u57f7\u884c\u7dda\u4e0a pip \u4e0d\u5728\u9019\u500b\u7d50\u8ad6\u5167\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -244,7 +244,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "b9d76f84083e39ab920523c0dd8c252b04fb9fa62fe9a952243103902eabf155",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u9019\u4e9b Actions \u662f\u4e0b\u8f09\uff0f\u4e0a\u50b3\uff0fGitHub API \u5ba2\u6236\u7aef\uff0c\u4e0d\u662f\u8f49\u9001 HTTP status\uff0fheaders\uff0fbody \u7684 proxy \u6216 gateway\uff1b\u76ee\u524d workflow \u672a\u914d\u7f6e Undici retry interceptor\u3002Octokit \u7684\u61c9\u7528\u5c64\u91cd\u8a66\u4e0d\u7b49\u65bc\u516c\u544a\u8981\u6c42\u7684 Undici interceptor\uff0b\u4e0b\u6e38\u539f\u6a23\u8f49\u9001\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -264,7 +264,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "3fb2faf7567838aa2c2e6c089d13e106095afef9271f651847f8c6f0f01258af",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -286,7 +286,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "149c6000860b687a1c405b6ca3e064d8aa143c6a58222d56be117081f4e5c187",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -306,7 +306,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "88aca2a1f2ea575e1a2af81877943c4ca416b2da842e79eb9f36bbc4a5a589bb",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -330,7 +330,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "eb0e79fed344288bf1a893f379557201ae16949a0283cca363f4c1bcb8c648bf",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u5be6\u969b\u5b89\u88dd\u5165\u53e3\u4f7f\u7528 --no-index\uff0f--no-deps\uff0f--no-cache-dir\uff0f\u505c\u7528\u7248\u672c\u6aa2\u67e5\uff0c\u4e14\u53ea\u63a5\u53d7\u56fa\u5b9a\u5b98\u65b9 wheel \u7d93 hash \u6838\u5c0d\u5f8c\u7684\u672c\u6a5f\u8def\u5f91\uff1b\u7db2\u8def\u4e0b\u8f09\u7531 Python urllib\uff0bssl \u8ca0\u8cac\uff0c\u4e0d\u7d93 pip urllib3\u3002\u516c\u544a\u4e2d\u7684 HTTPS proxy\uff0fHTTP chunk\uff0fdeflate \u524d\u63d0\u4e0d\u5728\u6b64\u5b89\u88dd\u6d41\u7a0b\u3002\u624b\u52d5\u7e5e\u904e\u5165\u53e3\u57f7\u884c\u7dda\u4e0a pip \u4e0d\u5728\u9019\u500b\u7d50\u8ad6\u5167\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -350,7 +350,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "e8633e7344069f8c455eb1949e4023db573c1239255f68bfced5fc23b72336f1",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1bbuilder \u7684 __cdata \u80fd\u529b\u5b58\u5728\uff0c\u4f46\u76ee\u524d\u4e0a\u50b3\u6a94\u6848\u5167\u5bb9\u4ee5\u4e8c\u9032\u4f4d\u4e32\u6d41\u9001\u51fa\uff1bXML body \u662f\u7531 UUID\uff0f\u5340\u584a\u5e8f\u865f\u751f\u6210\u7684 block ID \u6e05\u55ae\u53ca\u56fa\u5b9a mapper \u5efa\u7acb\uff0c\u4e26\u975e\u628a\u6a94\u6848\u6587\u5b57\u653e\u9032 comment\uff0fCDATA\u3002\u6b64\u6b21\u9010\u6bb5\u78ba\u8a8d uploadStream\u3001commitBlockList \u53ca BlockLookupList\uff1b\u9650\u5b9a\u76ee\u524d Action \u7684\u4e0a\u50b3\u8def\u5f91\uff0c\u4e0d\u80fd\u8b49\u660e\u6574\u500b Azure SDK \u7684\u6240\u6709\u529f\u80fd\u5747\u4e0d\u53d7\u5f71\u97ff\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -370,7 +370,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "eac3652af85a5bc2f356b9906cb128c42895534c45c06c1bdaf72d0a5bc0ba76",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516c\u544a\u8981\u6c42\u660e\u78ba\u628a maxEntityCount \u6216 maxEntitySize \u8a2d\u6210 0\u3002\u5be6\u969b getParserOptions \u6c92\u6709\u9019\u5169\u500b\u96f6\u503c\u8a2d\u5b9a\uff1b\u4e00\u822c entity limit \u7e5e\u904e\u516c\u544a\u53e6\u884c\u4fdd\u7559\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -390,7 +390,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "bbd5df4769d37f68d04012ce3b5ce2e806ffe06e756dffb764f19fa1be80782b",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -414,7 +414,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "b7c324e252691acd8567c2fbe6a529b14f6c2adef5555c8033abedd857017fc5",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u5b98\u65b9\u516c\u544a\u660e\u78ba\u5340\u5206\u4f4e\u968e dispatcher \u7684\u81ea\u8a02 Blob-like body \u8207 fetch\uff1bfetch \u7d93 Headers \u9a57\u8b49\u4e0d\u8d70\u8a72\u6f0f\u6d1e\u689d\u4ef6\u3002\u76ee\u524d\u6838\u5c0d\u7684 Actions \u547c\u53eb fetch\uff0c\u672a\u5efa\u7acb\u8a72\u81ea\u8a02\u4f4e\u968e body \u8def\u5f91\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -436,7 +436,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "19825dbc7d638325b01b2ab6952ac84eaccc35b026ac754b5b2201264e1c50c3",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -456,7 +456,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5a199f7788476c78018b3af1537e62532e803189780b57305e3983bb45fa44f9",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -478,7 +478,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "2d0e30c40e46de4584a93451c30d7853e7eb8419859b5dd37b45d643e18cf5f8",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -500,7 +500,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "041fab9319faa14e24d82c7580c7efae827bf338762759348e2e903e9c7b3d5f",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -520,7 +520,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "9b8ab07db2ae0cceed0b5fb3d52ad09dfa01f023f1f5fc6c0f8b1c1be5a39c45",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u4e09\u4efd\u6709 setup-node \u7684 workflow \u5747\u76f4\u63a5\u6307\u5b9a node-version=24.22.1\uff0c\u672a\u8a2d\u5b9a node-version-file\uff1bresolveVersionInput \u6709\u7248\u672c\u503c\u5c31\u4e0d\u9032\u8b80\u6a94\uff0fTOML \u5206\u652f\u3002\u4e09\u4efd workflow \u96d6\u6709\u5176\u4ed6\u4fee\u6539\uff0c\u6b64\u76f8\u95dc\u8a2d\u5b9a\u9010\u4efd\u91cd\u65b0\u78ba\u8a8d\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -544,7 +544,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d4c52c2353bfc87e95b4698e0e5a36d67158fae00cd66d8bc7534c5dba09df0c",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u9019\u4e9b Actions \u662f\u4e0b\u8f09\uff0f\u4e0a\u50b3\uff0fGitHub API \u5ba2\u6236\u7aef\uff0c\u4e0d\u662f\u8f49\u9001 HTTP status\uff0fheaders\uff0fbody \u7684 proxy \u6216 gateway\uff1b\u76ee\u524d workflow \u672a\u914d\u7f6e Undici retry interceptor\u3002Octokit \u7684\u61c9\u7528\u5c64\u91cd\u8a66\u4e0d\u7b49\u65bc\u516c\u544a\u8981\u6c42\u7684 Undici interceptor\uff0b\u4e0b\u6e38\u539f\u6a23\u8f49\u9001\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -568,7 +568,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5b50dda1cf0248863168a291a52ab4061a5ab8ef8a2f046d0397f51ac5c5b6c3",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -590,7 +590,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "561a8ef3453d7603146bb2b74e7464917f6ae5f300d0452d9b39f74f7e96df79",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u56db\u4efd workflow \u7684 artifact path \u90fd\u662f\u7dad\u8b77\u8005\u5beb\u5b9a\u7684 build/ \u76f8\u5c0d\u8def\u5f91\uff0c\u6c92\u6709\u628a\u5916\u90e8 PR \u6587\u5b57\uff0f\u4f7f\u7528\u8005\u8f38\u5165\u4f5c\u70ba\u5927\u62ec\u865f\u6a21\u5f0f\u3002\u6f0f\u6d1e\u5c55\u958b\u7a0b\u5f0f\u4ecd\u5728\uff0c\u4f46\u60e1\u610f brace pattern \u7684\u524d\u63d0\u4e0d\u5728\u76ee\u524d\u8a2d\u5b9a\uff1b\u6a94\u6848\u5167\u5bb9\u4e0d\u662f\u9019\u500b glob pattern\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -614,7 +614,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "d0f9f44e87e3d41ebfdd79fe7cb6a5af037c12d78e67bb325cd42495ea7672ee",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -634,7 +634,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "daa36bdc36fdf61884690425782c9856bd62d23319794dfd5b75cc126db46a1c",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -654,7 +654,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "122d5b255e029db1ad1581edeeccdb414a64ae452836cbc239bc4d52a802d04e",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -674,7 +674,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "0c3b1c6e8d36088664c9c430e8c95cc961d0efb285c9daf75e37e5485ba3ea36",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u516d\u4efd\u5be6\u969b\u5165\u53e3\u5df2\u9010\u4efd\u5c0d\u56de\u5b98\u65b9\u56fa\u5b9a tar \u8cc7\u7522\uff0c\u65e2\u6709 AST \u547c\u53eb\u8b49\u64da\u4ecd\u5c0d\u61c9\u3002\u516c\u544a\u6d89\u53ca\u7684 WebSocket\uff0fEventSource\uff0fCookie helper \u6c92\u6709\u5165\u53e3\u5916\u90e8\u6d88\u8cbb\u8005\uff0c\u4e5f\u7121\u7e5e\u904e\u4e3b\u5165\u53e3\u7684\u52d5\u614b\u5f15\u7528\u3002\u9019\u652f\u6301\u76ee\u524d\u529f\u80fd\u672a\u4f7f\u7528\u7684\u9650\u5b9a\u7d50\u8ad6\uff0c\u4e0d\u662f\u6574\u5957 Undici \u5df2\u4fee\u88dc\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -698,7 +698,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "3ed2722cadb86f17747adc60bd8f1fe49640d4276b4d45f2e6ab4c784c36c1ea",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u5be6\u969b\u5b89\u88dd\u5165\u53e3\u4f7f\u7528 --no-index\uff0f--no-deps\uff0f--no-cache-dir\uff0f\u505c\u7528\u7248\u672c\u6aa2\u67e5\uff0c\u4e14\u53ea\u63a5\u53d7\u56fa\u5b9a\u5b98\u65b9 wheel \u7d93 hash \u6838\u5c0d\u5f8c\u7684\u672c\u6a5f\u8def\u5f91\uff1b\u7db2\u8def\u4e0b\u8f09\u7531 Python urllib\uff0bssl \u8ca0\u8cac\uff0c\u4e0d\u7d93 pip urllib3\u3002\u516c\u544a\u4e2d\u7684 HTTPS proxy\uff0fHTTP chunk\uff0fdeflate \u524d\u63d0\u4e0d\u5728\u6b64\u5b89\u88dd\u6d41\u7a0b\u3002\u624b\u52d5\u7e5e\u904e\u5165\u53e3\u57f7\u884c\u7dda\u4e0a pip \u4e0d\u5728\u9019\u500b\u7d50\u8ad6\u5167\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -718,7 +718,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "5f79b50d806d11d8a109eab224f4732e973074fdcedf0c31c07ddaf25d4a3cad",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69",
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403",
       "reason": "\u5df2\u6838\u5c0d\u6b64\u7cbe\u78ba\u5b98\u65b9\u5de5\u5177\u8207\u5c08\u6848\u5de5\u4f5c\u6d41\u7a0b\uff1b\u53d7\u5f71\u97ff\u4e0b\u8f09\u7a0b\u5f0f\u78ba\u5be6\u5b58\u5728\uff1b\u76ee\u524d\u6839\u8207\u90e8\u7f72 npm ci \u90fd\u6709 --ignore-scripts\uff0c\u4e0d\u6703\u7531\u5b89\u88dd\u751f\u547d\u9031\u671f\u81ea\u52d5\u555f\u52d5 node-gyp \u4e0b\u8f09\u3002\u4e4b\u5f8c\u82e5\u76f4\u63a5\u4f7f\u7528 node-gyp \u6216\u5141\u8a31 lifecycle scripts\uff0c\u6b64\u9650\u5236\u4e0d\u518d\u6210\u7acb\uff1b\u4e0d\u80fd\u5957\u7528\u5230 Actions \u7684 fetch\u3002 \u6b64\u5224\u5b9a\u9650\u65bc\u5df2\u9a57\u8b49\u7684\u5c08\u6848\u5165\u53e3\uff0c\u4f86\u6e90\u6216\u4f7f\u7528\u65b9\u5f0f\u6539\u8b8a\u9808\u91cd\u65b0\u6838\u5c0d\u3002"
     },
     {
@@ -739,7 +739,7 @@
       "advisorySHA256": "62e440239d3f75abbfe4c443e45fb03bdfc2ac674e1ca91683060555b2af8762",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "\u552f\u4e00\u5916\u90e8Undici\u6d88\u8cbb\u8005node-gyp/download\u4f7f\u7528\u9810\u8a2dAgent\u6216connect\uff0frequestTls\uff0fproxyTls\u7684CA\u8a2d\u5b9a\uff0c\u6c92\u6709\u51fd\u5f0f\u578btls.checkServerIdentity\uff0c\u516c\u544a\u524d\u63d0\u4e0d\u6210\u7acb\u3002 \u50c5\u9650\u7cbe\u78ba\u5c08\u6848\u7528\u9014\uff1b\u4f86\u6e90\u3001\u9078\u9805\u6216\u5165\u53e3\u8b8a\u52d5\u9808\u91cd\u65b0\u6838\u5c0d\uff0c\u539f\u7248\u672c\u547d\u4e2d\u4fdd\u7559\uff0c\u975e\u5957\u4ef6\u5df2\u4fee\u88dc\u3002",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69"
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403"
     },
     {
       "id": "GHSA-2m5v-pch6-74hx",
@@ -771,7 +771,7 @@
       "advisorySHA256": "62e440239d3f75abbfe4c443e45fb03bdfc2ac674e1ca91683060555b2af8762",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "\u516d\u4efd\u56fa\u5b9aAction\u5165\u53e3\u53caProxyAgent\u9078\u9805\u5df2\u5be9\u95b1\uff0c\u672a\u50b3\u5165\u516c\u544a\u8981\u6c42\u7684\u51fd\u5f0f\u578btls.checkServerIdentity\uff1b\u4e00\u822c\u9810\u8a2dTLS\u9a57\u8b49\u4e0d\u53d7\u8a72\u516c\u544a\u5f71\u97ff\u3002 \u50c5\u9650\u7cbe\u78ba\u5c08\u6848\u7528\u9014\uff1b\u4f86\u6e90\u3001\u9078\u9805\u6216\u5165\u53e3\u8b8a\u52d5\u9808\u91cd\u65b0\u6838\u5c0d\uff0c\u539f\u7248\u672c\u547d\u4e2d\u4fdd\u7559\uff0c\u975e\u5957\u4ef6\u5df2\u4fee\u88dc\u3002",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69"
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403"
     },
     {
       "id": "GHSA-9fm3-97px-rjf6",
@@ -791,7 +791,7 @@
       "advisorySHA256": "09779ce63a095d9acfddbbaab2035df7680b62a605183cbb0806b69e004dabed",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "\u552f\u4e00\u5916\u90e8Undici\u6d88\u8cbb\u8005\u70banode-gyp/download\u7684HTTP fetch\uff0c\u6c92\u6709WebSocket\u5efa\u7acb\u6216PING\uff0fPONG\u6d88\u8cbb\u8def\u5f91\u3002 \u50c5\u9650\u7cbe\u78ba\u5c08\u6848\u7528\u9014\uff1b\u4f86\u6e90\u3001\u9078\u9805\u6216\u5165\u53e3\u8b8a\u52d5\u9808\u91cd\u65b0\u6838\u5c0d\uff0c\u539f\u7248\u672c\u547d\u4e2d\u4fdd\u7559\uff0c\u975e\u5957\u4ef6\u5df2\u4fee\u88dc\u3002",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69"
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403"
     },
     {
       "id": "GHSA-9fm3-97px-rjf6",
@@ -823,7 +823,7 @@
       "advisorySHA256": "09779ce63a095d9acfddbbaab2035df7680b62a605183cbb0806b69e004dabed",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "\u516d\u4efd\u56fa\u5b9aAction\u5165\u53e3\u7684Undici\u547c\u53eb\u9762\u70bafetch\uff0fProxyAgent\uff0cWebSocket\u6a21\u7d44\u6c92\u6709\u5916\u90e8\u6d88\u8cbb\u8005\uff1b\u4f86\u6e90\u8207\u5b8c\u6574\u5165\u53e3hash\u7d81\u5b9a\uff0c\u4e0d\u56e0\u5957\u4ef6\u542b\u6b64\u6a21\u7d44\u8996\u70ba\u5c08\u6848\u4f7f\u7528\u3002 \u50c5\u9650\u7cbe\u78ba\u5c08\u6848\u7528\u9014\uff1b\u4f86\u6e90\u3001\u9078\u9805\u6216\u5165\u53e3\u8b8a\u52d5\u9808\u91cd\u65b0\u6838\u5c0d\uff0c\u539f\u7248\u672c\u547d\u4e2d\u4fdd\u7559\uff0c\u975e\u5957\u4ef6\u5df2\u4fee\u88dc\u3002",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69"
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403"
     },
     {
       "id": "GHSA-qrxm-fqhp-jwvm",
@@ -843,7 +843,7 @@
       "advisorySHA256": "b656ad3f1a4e553a295e4bab7b84a1aec43694b2558489767b63f46a7a26a126",
       "evidenceFile": "Config/Security/applicability/project-usage.json",
       "reason": "\u53d7\u5f71\u97ff\u4e0b\u8f09\u7a0b\u5f0f\u78ba\u5be6\u5b58\u5728\uff1b\u76ee\u524d\u6839\u8207\u90e8\u7f72 npm ci \u90fd\u6709 --ignore-scripts\uff0c\u4e0d\u6703\u7531\u5b89\u88dd\u751f\u547d\u9031\u671f\u81ea\u52d5\u555f\u52d5 node-gyp \u4e0b\u8f09\u3002\u4e4b\u5f8c\u82e5\u76f4\u63a5\u4f7f\u7528 node-gyp \u6216\u5141\u8a31 lifecycle scripts\uff0c\u6b64\u9650\u5236\u4e0d\u518d\u6210\u7acb\uff1b\u4e0d\u80fd\u5957\u7528\u5230 Actions \u7684 fetch\u3002 \u50c5\u9650\u7cbe\u78ba\u5c08\u6848\u7528\u9014\uff1b\u4f86\u6e90\u3001\u9078\u9805\u6216\u5165\u53e3\u8b8a\u52d5\u9808\u91cd\u65b0\u6838\u5c0d\uff0c\u539f\u7248\u672c\u547d\u4e2d\u4fdd\u7559\uff0c\u975e\u5957\u4ef6\u5df2\u4fee\u88dc\u3002",
-      "evidenceSHA256": "9cd930451c6e2c38256980ad3ae3e81d630357e42419bf3bb462c7387c0f5c69"
+      "evidenceSHA256": "a34135dd9ee92f85c23fae5635bd4f2d9c2bef4f3a0c3bc2a87363272e471403"
     }
   ]
 }

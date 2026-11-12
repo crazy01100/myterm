@@ -389,7 +389,7 @@
         "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
+        "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
       },
       "advisoryConditions": [
         {
@@ -408,7 +408,7 @@
         "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
+        "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
       },
       "advisoryConditions": [
         {
@@ -427,7 +427,7 @@
         "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
+        "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
       },
       "advisoryConditions": [
         {
@@ -683,7 +683,7 @@
         "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
+        "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
       },
       "advisoryConditions": [
         {
@@ -702,7 +702,7 @@
         "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
-        "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
+        "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
       },
       "advisoryConditions": [
         {
