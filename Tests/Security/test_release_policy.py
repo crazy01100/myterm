@@ -147,7 +147,7 @@ class ReleaseClassificationTests(unittest.TestCase):
         notice = copy.deepcopy(self.data['notices'][0])
         self.report['vendorNotices'].update(changes=[notice], requiresNoticeReview=True)
         with patch.object(r.subprocess, 'run') as run:
-            run.return_value.stdout = 'v24.22.1\n'
+            run.return_value.stdout = 'v'+json.loads((ROOT/'Config/Security/node-tools.json').read_text())['nodeVersion']+'\n'
             self.assertEqual(len(self.classify()['reviewedNotices']), 1)
         self.assertTrue(self.report['vendorNotices']['requiresNoticeReview'])
 

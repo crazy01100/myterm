@@ -3,9 +3,9 @@
   "kind": "reviewed-project-entry-paths",
   "reviewedCommit": "148dc15158496a3450ca7ee5c46b8ea6c3b0d7b4",
   "workflows": {
-    ".github/workflows/deploy-update-site.yml": "7d072cf92404b5f527f9567493b8fbf60d1ade4157b0ea979e415579c5990ef6",
-    ".github/workflows/security-checks.yml": "250a4d15c8d0205de6767c189f4d448c1ba62b96506db633a64545b5bb472da4",
-    ".github/workflows/security-gate.yml": "78f44aac577e9792e71eab3c9d3c0065c595b303aef6d9d4f9810d1f0cb21814",
+    ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
+    ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
+    ".github/workflows/security-gate.yml": "24c6d354273c87c118c437aee5902048904c4e5d5b942cf3be982d79f8b7882a",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"
   },
   "actions": [
@@ -370,7 +370,7 @@
   ],
   "npmPolicy": {
     "schemaVersion": 1,
-    "nodeVersion": "24.22.1",
+    "nodeVersion": "24.22.3",
     "npm": {
       "version": "11.21.1",
       "url": "https://registry.npmjs.org/npm/-/npm-11.21.1.tgz",
@@ -383,10 +383,10 @@
     "validated-ip-input": {
       "consumer": "npm-entry",
       "conclusion": [
-        "\u5b57\u4e32\u5165\u53e3\u5148\u7d93 net.isIPv6\uff0c\u53e6\u4e00\u689d\u56de\u61c9\u8def\u5f91\u5f9e\u56fa\u5b9a 16 bytes \u7684 IPv6 \u8f49\u6210\u5b57\u4e32\u3002\u65e2\u6709 Node 24.22.1 \u539f\u751f\u6b63\u898f\u5f0f\u8b49\u64da\u53ea\u5141\u8a31\u4e00\u6b21 zone \u767e\u5206\u865f\u53ca\u53d7\u9650\u5b57\u5143\uff0c\u4e0d\u7b26\u5408\u516c\u544a\u7684\u91cd\u8907\u767e\u5206\u865f\uff0f\u63db\u884c\u524d\u63d0\uff1b\u547c\u53eb\u6a94\u8207 Node pin \u672a\u8b8a\u3002\u9019\u662f\u9650\u5b9a\u5165\u53e3\u7684\u9650\u5236\uff0c\u4e0d\u662f\u539f\u5957\u4ef6\u4fee\u88dc\u3002"
+        "\u5b57\u4e32\u5165\u53e3\u5148\u7d93 net.isIPv6\uff0c\u53e6\u4e00\u689d\u56de\u61c9\u8def\u5f91\u5f9e\u56fa\u5b9a 16 bytes \u7684 IPv6 \u8f49\u6210\u5b57\u4e32\u3002\u5df2\u975c\u614b\u6838\u5c0d\u5b98\u65b9 Node 24.22.3 \u7684 internal/net \u4f86\u6e90\u8207\u539f24.22.1\u9010\u4f4d\u5143\u76f8\u540c\uff0c\u53ea\u5141\u8a31\u4e00\u6b21 zone \u767e\u5206\u865f\u53ca\u53d7\u9650\u5b57\u5143\uff0c\u4e0d\u7b26\u5408\u516c\u544a\u7684\u91cd\u8907\u767e\u5206\u865f\uff0f\u63db\u884c\u524d\u63d0\uff1b\u547c\u53eb\u6a94\u672a\u8b8a\uff0cNode pin \u5df2\u66f4\u65b0\u4e26\u91cd\u65b0\u6838\u5c0d\u3002\u9019\u662f\u9650\u5b9a\u5165\u53e3\u7684\u9650\u5236\uff0c\u4e0d\u662f\u539f\u5957\u4ef6\u4fee\u88dc\u3002"
       ],
       "sourceFiles": {
-        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
         "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
@@ -395,7 +395,7 @@
         {
           "id": "GHSA-rxp7-6hxx-x8q5",
           "scope": "development",
-          "assessment": "\u5b57\u4e32\u5165\u53e3\u5148\u7d93 net.isIPv6\uff0c\u53e6\u4e00\u689d\u56de\u61c9\u8def\u5f91\u5f9e\u56fa\u5b9a 16 bytes \u7684 IPv6 \u8f49\u6210\u5b57\u4e32\u3002\u65e2\u6709 Node 24.22.1 \u539f\u751f\u6b63\u898f\u5f0f\u8b49\u64da\u53ea\u5141\u8a31\u4e00\u6b21 zone \u767e\u5206\u865f\u53ca\u53d7\u9650\u5b57\u5143\uff0c\u4e0d\u7b26\u5408\u516c\u544a\u7684\u91cd\u8907\u767e\u5206\u865f\uff0f\u63db\u884c\u524d\u63d0\uff1b\u547c\u53eb\u6a94\u8207 Node pin \u672a\u8b8a\u3002\u9019\u662f\u9650\u5b9a\u5165\u53e3\u7684\u9650\u5236\uff0c\u4e0d\u662f\u539f\u5957\u4ef6\u4fee\u88dc\u3002"
+          "assessment": "\u5b57\u4e32\u5165\u53e3\u5148\u7d93 net.isIPv6\uff0c\u53e6\u4e00\u689d\u56de\u61c9\u8def\u5f91\u5f9e\u56fa\u5b9a 16 bytes \u7684 IPv6 \u8f49\u6210\u5b57\u4e32\u3002\u5df2\u975c\u614b\u6838\u5c0d\u5b98\u65b9 Node 24.22.3 \u7684 internal/net \u4f86\u6e90\u8207\u539f24.22.1\u9010\u4f4d\u5143\u76f8\u540c\uff0c\u53ea\u5141\u8a31\u4e00\u6b21 zone \u767e\u5206\u865f\u53ca\u53d7\u9650\u5b57\u5143\uff0c\u4e0d\u7b26\u5408\u516c\u544a\u7684\u91cd\u8907\u767e\u5206\u865f\uff0f\u63db\u884c\u524d\u63d0\uff1b\u547c\u53eb\u6a94\u672a\u8b8a\uff0cNode pin \u5df2\u66f4\u65b0\u4e26\u91cd\u65b0\u6838\u5c0d\u3002\u9019\u662f\u9650\u5b9a\u5165\u53e3\u7684\u9650\u5236\uff0c\u4e0d\u662f\u539f\u5957\u4ef6\u4fee\u88dc\u3002"
         }
       ]
     },
@@ -405,7 +405,7 @@
         "\u76ee\u524d\u5be6\u969b\u5f15\u5165\u9ede\u6c92\u6709 EventSource\uff1b\u516c\u544a\u8981\u6c42 EventSource \u4e32\u6d41\u89e3\u6790\uff0c\u8207 node-gyp \u7684\u4e0b\u8f09\u529f\u80fd\u4e0d\u540c\u3002\u547c\u53eb\u6a94 hash \u8207\u65e2\u6709\u5206\u6790\u4e00\u81f4\uff1b\u50c5\u9650\u672c\u7b46 EventSource \u516c\u544a\uff0c\u4e0d\u63a8\u8ad6\u5176\u4ed6 fetch \u544a\u8b66\u5b89\u5168\u3002"
       ],
       "sourceFiles": {
-        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
         "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
@@ -424,7 +424,7 @@
         "\u53d7\u5f71\u97ff\u4e0b\u8f09\u7a0b\u5f0f\u78ba\u5be6\u5b58\u5728\uff1b\u76ee\u524d\u6839\u8207\u90e8\u7f72 npm ci \u90fd\u6709 --ignore-scripts\uff0c\u4e0d\u6703\u7531\u5b89\u88dd\u751f\u547d\u9031\u671f\u81ea\u52d5\u555f\u52d5 node-gyp \u4e0b\u8f09\u3002\u4e4b\u5f8c\u82e5\u76f4\u63a5\u4f7f\u7528 node-gyp \u6216\u5141\u8a31 lifecycle scripts\uff0c\u6b64\u9650\u5236\u4e0d\u518d\u6210\u7acb\uff1b\u4e0d\u80fd\u5957\u7528\u5230 Actions \u7684 fetch\u3002"
       ],
       "sourceFiles": {
-        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
         "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
@@ -680,7 +680,7 @@
         "\u552f\u4e00\u5916\u90e8Undici\u6d88\u8cbb\u8005node-gyp/download\u4f7f\u7528\u9810\u8a2dAgent\u6216connect\uff0frequestTls\uff0fproxyTls\u7684CA\u8a2d\u5b9a\uff0c\u6c92\u6709\u51fd\u5f0f\u578btls.checkServerIdentity\uff0c\u516c\u544a\u524d\u63d0\u4e0d\u6210\u7acb\u3002"
       ],
       "sourceFiles": {
-        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
         "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"
@@ -699,7 +699,7 @@
         "\u552f\u4e00\u5916\u90e8Undici\u6d88\u8cbb\u8005\u70banode-gyp/download\u7684HTTP fetch\uff0c\u6c92\u6709WebSocket\u5efa\u7acb\u6216PING\uff0fPONG\u6d88\u8cbb\u8def\u5f91\u3002"
       ],
       "sourceFiles": {
-        "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+        "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
         "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
         "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
         "scripts/verify-firebase-tools.cjs": "866188aad7bb511c29152e052be29f43108e5c821c73fdee6af611084cf95b9b"

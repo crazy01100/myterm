@@ -172,7 +172,7 @@
       "url": "https://nodejs.org/en/blog/release/v27.0.0-alpha.0.0.0",
       "contentSHA256": "2067412cb732e40bb998455027b026335382b0b0a7211730dfe54c20fec700f1",
       "classification": "reviewed-maintenance",
-      "reason": "Official Node 27 Alpha major-release announcement reviewed; project remains on Node 24.22.1 LTS. Its CVE-2026-58042 changelog entry was already fixed in 24.18.1 per nodejs/security-wg vuln/core/191.json. No Alpha upgrade is required; current Node 24 package/runtime advisory checks remain mandatory.",
+      "reason": "Official Node 27 Alpha major-release announcement reviewed; project remains on Node 24.22.3 LTS. Its CVE-2026-58042 changelog entry was already fixed in 24.18.1 per nodejs/security-wg vuln/core/191.json. No Alpha upgrade is required; current Node 24 package/runtime advisory checks remain mandatory.",
       "evidenceURL": "https://github.com/nodejs/security-wg/blob/f643f84d4977d0ba379dc7c5805c9b65206369b5/vuln/core/191.json"
     },
     {
@@ -181,7 +181,7 @@
       "url": "https://nodejs.org/en/blog/announcements/notable-v8-changes-from-node-js-26-to-27-alpha",
       "contentSHA256": "5459af8363a3d3b6babb21a4724fc372660c7b1727c29307316e1d6e15722a62",
       "classification": "reviewed-maintenance",
-      "reason": "Node 26-to-27 Alpha V8 behavior/ABI announcement; project remains on verified Node 24.22.1. No Alpha adoption. The separate November security preannouncement remains unresolved."
+      "reason": "Node 26-to-27 Alpha V8 behavior/ABI announcement; project remains on verified Node 24.22.3. No Alpha adoption. The November security release is handled by the pinned Node 24.22.3 update and mandatory current advisory checks, without an Alpha upgrade."
     },
     {
       "id": "d791c072f91adc853ff27b6bf7e0154952b3b5baf8dcb4d93a8a44fbab80faa2",
@@ -193,13 +193,13 @@
     }
   ],
   "sourceFiles": {
-    ".github/workflows/deploy-update-site.yml": "7d072cf92404b5f527f9567493b8fbf60d1ade4157b0ea979e415579c5990ef6",
-    ".github/workflows/security-checks.yml": "250a4d15c8d0205de6767c189f4d448c1ba62b96506db633a64545b5bb472da4",
-    ".github/workflows/security-gate.yml": "78f44aac577e9792e71eab3c9d3c0065c595b303aef6d9d4f9810d1f0cb21814",
+    ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
+    ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
+    ".github/workflows/security-gate.yml": "24c6d354273c87c118c437aee5902048904c4e5d5b942cf3be982d79f8b7882a",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
     "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
-    "Config/Security/node-tools.json": "5d85abe92a7025028797628372c284d6885e3feea4a42de5a9627ef77eda79f9",
+    "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
     "Tools/Deployment/package-lock.json": "38510d9ed9c5fca6165ab26b579603dde90bf1b265ea455b0920d734fc81e65b",
     "Tools/Deployment/package.json": "e2a742d8849689fb6077f14a1227de251f74e86679636e6571d6b18caf2575f9",
     "package-lock.json": "bd81f8d4f2a5d04fd1853ce24b8c3a18510e00da063f10a1bae270f9d7a8875e",
@@ -224,7 +224,7 @@
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
     "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27",
     "scripts/security-risk-triage.py": "f03bde9fa105e8fd13823f7097992f669b452156e1c67d43c398763288027d4b",
-    "Config/Security/risk-triage.json": "a76e8c6688b0bca9c291efe038759dd015ed54dee9a982f97b5014fc38fa2d52"
+    "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297"
   },
   "workflows": [
     ".github/workflows/deploy-update-site.yml",

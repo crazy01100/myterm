@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "nodeVersion": "24.22.1",
+  "nodeVersion": "24.22.3",
   "npm": {
     "version": "11.21.1",
     "url": "https://registry.npmjs.org/npm/-/npm-11.21.1.tgz",

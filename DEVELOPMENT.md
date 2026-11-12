@@ -327,7 +327,7 @@ Draft 必須經人工確認後才能發布。候選 App、封裝後 ZIP 與 GitH
 
 ### 正式部署保護
 
-更新站 workflow 僅在 `crazy01100/myterm` 執行；手動重新部署須選擇 `main` 並指定既有的 `release_tag`，Release 發布事件仍可從正式 tag 觸發。部署 job 宣告 `environment: production`，使用 Node 24.21.0，下載並驗證原有簽署資產後才部署。
+更新站 workflow 僅在 `crazy01100/myterm` 執行；手動重新部署須選擇 `main` 並指定既有的 `release_tag`，Release 發布事件仍可從正式 tag 觸發。部署 job 宣告 `environment: production`，固定使用與 `Config/Security/node-tools.json` 一致的 Node 24 LTS 版本，下載並驗證原有簽署資產後才部署。
 
 管理員必須另外在 GitHub 的 `production` 設定必要 reviewer、只允許 `main` branch 與 `v*` tags，並禁止略過保護。單人維護可允許本人核准自己觸發的部署；這仍是一次明確的部署確認，不是第二人審查。宣告 environment 不會自動建立核准規則，也不會限制其他未綁定該環境的 workflow。
 

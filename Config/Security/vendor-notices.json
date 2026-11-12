@@ -210,6 +210,10 @@
         {
           "id": "c03d43a4c5741eb39531579ca9e31e8655f4c4a49628237542ecf7633b95dc52",
           "contentSHA256": "c98bb7caba2b515d4cbf9b590537cd7d42ad026dd2cb5b5f7c8a3931d937e30c"
+        },
+        {
+          "id": "d4af201e3a6bd934ce42a09433ecb098b2a9a6c8c34b1a9bc4c46c696000e0cb",
+          "contentSHA256": "054769387639acdef93b57ec1b9a35f28abce63f69004929d3fe24600e90613b"
         }
       ],
       "reviewScope": "Change-detection initialization for exact project runtime and trust configuration; historical captures are not vulnerability waivers. Current package/core/native findings remain independently blocking.",
@@ -4487,6 +4491,22 @@
         {
           "id": "c16d44eb5053770044138d110a5ca60f17c94f43f4664f1606240dbfe28c41e4",
           "contentSHA256": "0f6a025014de7758625ec8ac44b429c10b6aea60d0ce97ba66a2994204fd3976"
+        },
+        {
+          "id": "d3184b2762c02168cd93f060bcee056655b355d59e0a2fb462a75a78b62b66ea",
+          "contentSHA256": "8acb55dd2c3acc4c086fe893593e87ad8f55c93cac0c40b6e1dc09acd01b1bba"
+        },
+        {
+          "id": "e20d2a84556e4a562988ab6ec5d8ee086f9218596a566202b244981150b3bac2",
+          "contentSHA256": "e128ba41bb3bd08827d9ab3a5ced7e93f73570087c9bcf5d94638c27f8bad45b"
+        },
+        {
+          "id": "38268f43236983b7708a3515b6fba7b65469c6251341cbe0239f20efc313c82a",
+          "contentSHA256": "74ef7cbc5220044a004edc808302961c770d16986ecbfa68fdf78231ac806103"
+        },
+        {
+          "id": "130d9bc72a1a0f48649a0bf11fa18461afd053fe8c4b029d9153099e507309e4",
+          "contentSHA256": "4abeaa671cd8c7908fe2c9cf9fbb496c0cab9d6930d9f26ac2a36984470bed1d"
         }
       ],
       "reviewScope": "Change-detection initialization for exact project runtime and trust configuration; historical captures are not vulnerability waivers. Current package/core/native findings remain independently blocking.",

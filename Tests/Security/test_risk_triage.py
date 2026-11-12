@@ -28,6 +28,13 @@ class CandidateTests(unittest.TestCase):
         for name in ('risk-triage.json','node-tools.json','vendor-notices.json','supplier-notice-cursor.json','exceptions.json','release-decisions.json'):
             (cfg/name).write_bytes((ROOT/'Config/Security'/name).read_bytes())
         self.policy=json.loads((cfg/'risk-triage.json').read_text())
+        # Exercise notice expiry with a synthetic fixture, independent of live
+        # preannouncements being retired after an official security release.
+        self.policy['preannouncements']=[{'id':'1'*64,'source':'node-blog',
+            'url':'https://nodejs.org/en/blog/vulnerability/synthetic-security-release',
+            'contentSHA256':'2'*64,'runtime':'node',
+            'runtimeVersion':json.loads((cfg/'node-tools.json').read_text())['nodeVersion']}]
+        (cfg/'risk-triage.json').write_text(json.dumps(self.policy))
         f={'id':'CVE-2026-107496','component':'OpenSSL','scope':'development','version':'3.5.9',
            'status':'needs-review','severity':'low','queryComplete':True,'matchBasis':'version-only',
            'url':'https://openssl-library.org/news/secjson/cve-2026-107496.json',
