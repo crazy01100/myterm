@@ -134,7 +134,7 @@ SFTP 排序／搜尋回歸可執行 `zsh scripts/run-sftp-list-tests.sh`，並�
 ./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 ```
 
-目前固定SDK13.2.0／CLI15.35.0與Rules測試6.0.0；版本限定的minimatch覆寫必須與CLI一致。SDK僅供Rules開發測試，未啟用其Crashlytics／OpenTelemetry功能，也未加入App封裝。CLI回歸包含父層與巢狀.gitignore、忽略檔讀取失敗時停止，以及既有檔案封裝／篩選。
+目前固定SDK13.2.0／CLI15.36.0與Rules測試6.0.0；版本限定的minimatch覆寫必須與CLI一致。SDK僅供Rules開發測試，未啟用其Crashlytics／OpenTelemetry功能，也未加入App封裝。CLI回歸包含父層與巢狀.gitignore、忽略檔讀取失敗時停止，以及既有檔案封裝／篩選。
 
 CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./scripts/project-node.sh --npm run test:development-tools` 測試安裝與消費端，再用 `./scripts/project-node.sh --npm run test:firestore-rules` 測試本機 demo Emulator。詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 

@@ -134,7 +134,7 @@ Development tools require Node.js 24 LTS (24.12.0 or later for Firebase 13) and 
 ./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 ```
 
-The pinned versions are SDK13.2.0, CLI15.35.0 and Rules testing6.0.0; the version-qualified minimatch override must match the CLI. The SDK is used only in Rules development tests: its Crashlytics/OpenTelemetry features are not enabled or packaged in the App. CLI regressions cover parent/nested .gitignore rules, stopping on ignore-file read failures, and existing archive/filter behavior.
+The pinned versions are SDK13.2.0, CLI15.36.0 and Rules testing6.0.0; the version-qualified minimatch override must match the CLI. The SDK is used only in Rules development tests: its Crashlytics/OpenTelemetry features are not enabled or packaged in the App. CLI regressions cover parent/nested .gitignore rules, stopping on ignore-file read failures, and existing archive/filter behavior.
 
 Before launching the CLI, the wrapper verifies both prepared files and the resolved dependencies without writing to them. Run `./scripts/project-node.sh --npm run test:development-tools` for the installation and its consumers, then `./scripts/project-node.sh --npm run test:firestore-rules` for the local demo emulator. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
