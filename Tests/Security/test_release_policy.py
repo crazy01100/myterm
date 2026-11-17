@@ -469,7 +469,8 @@ class ReleaseGateTests(unittest.TestCase):
              patch.object(a, 'scan_actions'), patch.object(a, 'scan_toolchain'), \
              patch.object(a, 'pip_applicability', return_value=noop), \
              patch.object(a, 'openssl_supplier', return_value=noop), \
-             patch.object(a, 'project_applicability', return_value=noop):
+             patch.object(a, 'project_applicability', return_value=noop), \
+             patch.object(a, 'sparkle_applicability', return_value=noop):
             report = a.run(delivery_inventory=delivered)
         self.assertIn(('delivery-app', delivered), seen)
         self.assertEqual(report['deliveryInventoryDigest'], r.digest(delivered))
