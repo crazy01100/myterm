@@ -195,7 +195,7 @@
   "sourceFiles": {
     ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
     ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
-    ".github/workflows/security-gate.yml": "24c6d354273c87c118c437aee5902048904c4e5d5b942cf3be982d79f8b7882a",
+    ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
     "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
@@ -224,7 +224,10 @@
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
     "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27",
     "scripts/security-risk-triage.py": "f03bde9fa105e8fd13823f7097992f669b452156e1c67d43c398763288027d4b",
-    "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297"
+    "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297",
+    "scripts/security-source-review.py": "12f59878b56d3b62909ba625b3aed6c9caa3a69494ab5234574f37fb7a56e64b",
+    "scripts/security-release-policy.py": "20ffc89d1b23382281558f3abae3f4a73837ad1a9a30c3e9201b91f6fe0dcf45",
+    "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc"
   },
   "workflows": [
     ".github/workflows/deploy-update-site.yml",

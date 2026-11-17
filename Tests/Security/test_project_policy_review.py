@@ -46,7 +46,7 @@ class ProjectPolicyTests(unittest.TestCase):
  def trees(self,changes):
   base=[{'path':s.POLICY,'sha':'1'*40,'mode':'100644'},{'path':'scripts/security-audit.py','sha':'2'*40,'mode':'100644'}]
   head=copy.deepcopy(base);changes(head)
-  with patch.object(s,'gh_read',side_effect=[{'tree':base,'truncated':False},{'tree':head,'truncated':False}]):
+  with patch.object(s,'gh_read',side_effect=[{'tree':base,'truncated':False},{'tree':head,'truncated':False},(ROOT/'scripts/security-source-review.py').read_bytes()]):
    return s.reviewed_base_changed(self.root,{'_reviewHead':'a'*40},'b'*40)
  def test_document_test_and_notice_cursor_edits_need_no_policy_revision(self):
   for path in ('README.md','Tests/Security/test_fixture.py','Config/Security/vendor-notices.json','Config/Security/supplier-notice-cursor.json'):

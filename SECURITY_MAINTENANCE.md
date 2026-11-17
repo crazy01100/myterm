@@ -133,6 +133,10 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 
 涉及安全設定、信任、權限、豁免、gate 或其執行入口的修改，在最終 PR 集中審閱一次；比較 head／base 的受保護檔案樹，包含刪除、改名與權限變更。一般文件、測試與公告游標不單獨要求政策核准。自建 PR 使用 `MYTERM-POLICY-REVIEW-V2`、`action=approve-policy`，綁定維護者身分、精確 head／base 與政策原始內容摘要；撤銷或 head／base 改變必須重核。唯讀 CI 可先完成測試，政策核准是獨立的合併前必要條件。成功仍回報 `mergeAuthorized=false`；必要 CI／CodeQL、討論與分支保護不得略過。
 
+`security-gate.yml` 將技術驗證、`policy-approval` 等待及最終彙總分成三個job。缺少最終Review時正常等待，不把已通過測試標成失敗；等待環境沒有機密、禁止管理員繞過，須先配置並讀回。其他作者的原生Approve也須使用工具產生的V2正文，明確綁定base及政策摘要；一般「Approved」文字不作政策接受證據。分類取自已審base的predicate與實際雙方檔案樹，不由PR新規則決定自己免審。
+
+`security-ci-gate.py`只讀取當次技術receipt、完整報告、GitHub artifact摘要、實際成功technical job與獨立掃描步驟日誌，重驗精確run／技術attempt／head／base／測試commit。核准接續不重新執行回歸或掃描；receipt仍限定既有48小時證據範圍，錯誤／過期／被替換即停止，不授予風險例外。政策PR最終關卡核對四語言有效CodeQL與可讀SARIF；普通PR保持獨立分析，所有PR在合併前verify命令均須通過同樣核對；main及發布沿原後續驗證，發布不得沿用PR通過。合併前仍須重新核對Review撤銷、最新提交及討論；具體新風險使原證據失效時重新驗證，不因核准而永久重用舊結果。
+
 ### 工具清冊、覆蓋與公告追蹤
 
 初始公告游標尚未審閱時，即使 feed 未變，也列出來源、當次觀測筆數與待審狀態；不把上千則歷史版本新聞全部灌入 Issue。來源查詢失敗不得移除先前待審項目，完整指紋留在受審設定與報告中。公告／覆蓋 Issue 寫入後讀回核對內容與狀態，讀回不符或失敗不能產生成功通知收據。

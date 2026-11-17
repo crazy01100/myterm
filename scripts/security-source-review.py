@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Version-controlled policy provenance and exact policy-change PR review. GET-only."""
 import argparse
+import ast
 import datetime as dt
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -110,6 +112,11 @@ def select_review(pages, identity, decision, policy_bytes):
         raise ValueError('Maintainer review is stale')
     state = latest.get('state')
     if state == 'APPROVED' and not self_authored:
+        body = latest['body']
+        if not body.startswith(REVIEW_MARKER + '\n') or len(body) > 8192:
+            raise ValueError('Native approval must bind the exact head/base and policy')
+        if digest(strict_json(body[len(REVIEW_MARKER) + 1:])) != digest(review_document(identity, decision, policy_bytes)):
+            raise ValueError('Native approval does not match current head/base and policy')
         mode = 'github-approved'
     elif state == 'COMMENTED' and self_authored:
         body = latest['body']
@@ -141,8 +148,8 @@ def inspect_pr_review(root, decision, number, head, base, *, template=False, act
         raise ValueError('Local policy is not the policy at the exact PR head')
     baseline_changed = reviewed_base_changed(root, {**decision,'_reviewHead':head}, base)
     if template:
-        if not is_maintainer(identity['author']):
-            raise ValueError('Use native APPROVED review for another author')
+        # The same document binds both native APPROVED and self-authored COMMENTED
+        # reviews. The event type remains determined by the actual PR author.
         result = REVIEW_MARKER + '\n' + json.dumps(
             review_document(identity, decision, policy_bytes, action), ensure_ascii=False, indent=2)
     else:
@@ -201,6 +208,23 @@ def policy_sensitive(path):
         'scripts/run-policy-tests.py')
 
 
+def base_classifier(source):
+    """Use only the predicate in the already-reviewed base, not PR policy code."""
+    nodes = [n for n in ast.parse(source).body if isinstance(n, ast.FunctionDef)
+             and n.name == 'policy_sensitive']
+    if len(nodes) != 1:
+        raise ValueError('Missing trusted base classifier')
+    namespace = {'__builtins__': {}}
+    exec(compile(ast.Module(body=nodes, type_ignores=[]), '<reviewed-base-classifier>', 'exec'), namespace)
+    predicate = namespace['policy_sensitive']
+    def checked(path):
+        result = predicate(path)
+        if type(result) is not bool:
+            raise ValueError('Unknown policy classification')
+        return result
+    return checked
+
+
 def reviewed_base_changed(root, decision, base):
     tree=gh_read(root,f'repos/{REPOSITORY}/git/trees/{base}?recursive=1')
     if tree.get('truncated') or not isinstance(tree.get('tree'),list):
@@ -219,7 +243,9 @@ def reviewed_base_changed(root, decision, base):
     if not re.fullmatch('[a-f0-9]{40}',head or ''):raise ValueError('Missing exact review head')
     current=gh_read(root,f'repos/{REPOSITORY}/git/trees/{head}?recursive=1')
     if current.get('truncated') or not isinstance(current.get('tree'),list):raise ValueError('Incomplete head source tree')
-    project=lambda t:{e['path']:(e.get('sha'),e.get('mode')) for e in t if policy_sensitive(e['path'])}
+    trusted = gh_read(root, f'repos/{REPOSITORY}/contents/scripts/security-source-review.py?ref={base}', raw=True)
+    predicate = base_classifier(trusted.decode('utf-8'))
+    project=lambda t:{e['path']:(e.get('sha'),e.get('mode')) for e in t if predicate(e['path'])}
     return project(tree['tree'])!=project(current['tree'])
 
 
@@ -258,6 +284,20 @@ def source_check(root=ROOT):
             'grantsRiskException':False,'policySHA256':hashlib.sha256(raw).hexdigest()}
 
 
+def verify_pr_codeql(root, number, head):
+    """Independent pre-merge check; pending CodeQL is not a failed test job."""
+    if type(number) is not int or number < 1 or not re.fullmatch('[a-f0-9]{40}', head or ''):
+        raise ValueError('Invalid CodeQL PR identity')
+    spec = importlib.util.spec_from_file_location('release_policy', ROOT/'scripts/security-release-policy.py')
+    release = importlib.util.module_from_spec(spec); spec.loader.exec_module(release)
+    ref = f'refs/pull/{number}/head'
+    rows = gh_read(root, f'repos/{REPOSITORY}/code-scanning/analyses?ref='+ref.replace('/', '%2F')+'&per_page=100')
+    analyses = release.require_analyses(rows, head, ref=ref)
+    for identifier in analyses.values():
+        release.validate_sarif(release.sarif_result(identifier, root))
+    return analyses
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--purpose',choices=('development','firebase','ci','monitor','release','publish','redeploy'))
@@ -279,9 +319,10 @@ def main():
                                        template=args.pr_review=='template',action=args.review_action)
             if args.pr_review=='template':print(evidence);return 0
             result=source_check()
+            analyses=verify_pr_codeql(ROOT,args.pr,args.expected_head)
             if inspect_pr_review(ROOT,decision,args.pr,args.expected_head,args.expected_base)!=evidence:
                 raise ValueError('Review changed during verification')
-            result.update(prReview=evidence,mergeAuthorized=False,remainingChecks='Required CI, CodeQL and unresolved threads')
+            result.update(prReview=evidence,analyses=analyses,mergeAuthorized=False,remainingChecks='Required CI and unresolved threads')
         else:
             if not args.purpose or not args.task or not args.task.strip() or len(args.task)>200 or any((args.pr,args.expected_head,args.expected_base,args.review_action)):
                 p.error('Purpose and task are required; review flags cannot authorize work')

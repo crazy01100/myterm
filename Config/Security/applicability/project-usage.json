@@ -5,7 +5,7 @@
   "workflows": {
     ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
     ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
-    ".github/workflows/security-gate.yml": "24c6d354273c87c118c437aee5902048904c4e5d5b942cf3be982d79f8b7882a",
+    ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"
   },
   "actions": [

@@ -160,9 +160,13 @@ CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./
   --expected-head <完整head SHA> --expected-base <完整base SHA>
 ```
 
-本機政策檔須與已推送head完全相同。取得維護者對具體內容的明確同意後，才由本人或經明確委託的代理以GitHub review API提交 `event=COMMENT`、`commit_id=<完整head SHA>` 及原樣正文。普通聊天同意不會被CI讀取，一般實作授權不代表未來提交已獲核准。撤銷時用相同template入口加 `--review-action revoke` 產生新Review正文；不要刪改舊紀錄。本人之後提交其他Review也會使舊自核准不能沿用，普通PR討論留言不受此限。
+本機政策檔須與已推送head完全相同。template為兩種作者產生相同的精確head／base／政策摘要正文：自建PR提交 `event=COMMENT`，其他作者的PR提交 `event=APPROVE`，均指定 `commit_id=<完整head SHA>`。取得維護者對具體內容的明確同意與代送委託後，才提交原樣正文；一般實作授權不代表未來提交已獲核准。撤銷時用相同template入口加 `--review-action revoke` 產生新Review正文；不要刪改舊紀錄。本人之後提交其他Review也會使舊自核准不能沿用，普通PR討論留言不受此限。
 
-核准或撤銷後，明確重跑同一head的必要安全檢查；不改CI權限、測試分流或branch ruleset。合併前先檢查全部必要CI、CodeQL及未解決討論，再執行：
+安全workflow分為技術驗證、政策核准及最終彙總。技術成功後，政策敏感PR在專用`policy-approval` environment等待，不因缺Review先失敗。此環境須先設定維護者required reviewer、禁止管理員繞過、允許本人核准、僅PR merge ref，且不放Secrets或variables；不借用production。普通PR及main不額外索取政策核准，但最終關卡仍檢查技術成功與可信的分類，不能靠skipped／neutral放行。
+
+完成技術報告及四語言CodeQL核對後，使用者只需一次確認最終提交；同一明確委託可涵蓋代送Review與放行相同run的政策等待工作。GitHub將此原生功能稱為`Review deployments`，本工作沒有部署動作。放行後僅驗證Review、精確head／base、技術receipt、GitHub artifact hash及獨立掃描日誌摘要，不重新安裝npm／Java、執行回歸或掃描。若只需補正Review，重跑失敗的政策／彙總job，不重跑整個workflow。技術證據限同一run／實際技術attempt與提交，保留報告不得超過既有監測證據的48小時上限；這不是風險例外。提交、base或必要證據變動／失效時重驗對應內容，main及發布仍各自執行原必要檢查。
+
+核准撤銷不代表舊綠燈仍有效。合併前先檢查全部必要CI、CodeQL及未解決討論，再執行：
 
 ```sh
 ./scripts/project-python.sh scripts/security-source-review.py \
@@ -170,7 +174,7 @@ CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./
   --expected-head <已驗證head SHA> --expected-base <已驗證base SHA>
 ```
 
-此命令重新讀取 PR、受保護來源樹及 Review，完成後再讀 Review；成功只代表來源與精確核准當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#通用政策來源審閱)。
+此命令重新讀取 PR、受保護來源樹及 Review，核對所有PR的四語言有效CodeQL／可讀SARIF後再讀 Review；成功只代表來源與精確核准當下符合，輸出 `mergeAuthorized=false`，不代表全部CI已通過。再核對遠端必要checks／討論無變，使用正常 `gh pr merge --match-head-commit <已驗證head SHA>` 路徑，禁止admin繞過；來源或base改變就停止並重核。首次導入新驗證器需另外審閱其實作及精確基準，不能用待審程式的成功回傳取代本人決策。已完成check不會因撤銷自動變紅，故不要跳過此標準合併前檢查。完整規則及限制見[安全維護指南](SECURITY_MAINTENANCE.md#通用政策來源審閱)。
 
 
 
