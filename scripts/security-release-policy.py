@@ -313,11 +313,11 @@ def latest_run(runs):
     return ordered[-1]
 
 
-def require_analyses(analyses, commit):
+def require_analyses(analyses, commit, *, ref='refs/heads/main'):
     expected = {'/language:swift', '/language:python', '/language:javascript-typescript', '/language:actions'}
     groups = {}
     for item in analyses:
-        if item.get('commit_sha') != commit or item.get('ref') != 'refs/heads/main': continue
+        if item.get('commit_sha') != commit or item.get('ref') != ref: continue
         category = item.get('category')
         if category in expected: groups.setdefault(category, []).append(item)
     latest = {category: latest_run(rows) for category, rows in groups.items()}

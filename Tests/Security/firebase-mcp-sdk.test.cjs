@@ -1,6 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {PassThrough}=require('node:stream');
+const {createServer}=require('node:http');
 const {createRequire}=require('node:module');
 const path=require('node:path');
 const cli=createRequire(path.resolve(__dirname,'../../node_modules/firebase-tools/package.json'));
@@ -12,6 +13,7 @@ const {StdioServerTransport}=sdk('server/stdio');
 const {ReadBuffer}=sdk('shared/stdio');
 const {ListToolsRequestSchema,LATEST_PROTOCOL_VERSION}=sdk('types');
 const {fetchToken}=sdk('client/auth');
+const {StreamableHTTPServerTransport}=sdk('server/streamableHttp');
 
 function fixtureServer(){
  const server=new Server({name:'synthetic-fixture',version:'1.0.0'});
@@ -30,6 +32,39 @@ test('Firebase-style Server APIs retain in-memory handshake and tool listing',{t
  assert.equal(client.getServerVersion().name,'synthetic-fixture');
  assert.equal(server.getClientVersion().name,'synthetic-client');
  assert.equal((await client.listTools()).tools[0].name,'fixture');
+});
+
+test('MCP Node adapter retains a normal local HTTP initialization',{timeout:5000},async t=>{
+ const server=fixtureServer();
+ const transport=new StreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});
+ await server.connect(transport);
+ let handlerError;
+ const http=createServer((req,res)=>{
+  transport.handleRequest(req,res).catch(error=>{
+   handlerError=error;
+   res.writeHead(500).end();
+  });
+ });
+ t.after(async()=>{
+  await server.close();
+  http.closeAllConnections();
+  await new Promise((resolve,reject)=>http.close(error=>error?reject(error):resolve()));
+ });
+ await new Promise((resolve,reject)=>{
+  http.once('error',reject);
+  http.listen(0,'127.0.0.1',resolve);
+ });
+ const response=await fetch(`http://127.0.0.1:${http.address().port}/mcp`,{
+  method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json, text/event-stream'},
+  body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{
+   protocolVersion:LATEST_PROTOCOL_VERSION,capabilities:{},clientInfo:{name:'http-fixture',version:'1.0.0'}
+  }})
+ });
+ assert.equal(response.status,200);
+ const message=await response.json();
+ assert.equal(message.id,1);
+ assert.equal(message.result.serverInfo.name,'synthetic-fixture');
+ assert.equal(handlerError,undefined);
 });
 
 test('stdio server accepts fragmented initialization and tool-list messages',{timeout:5000},async t=>{

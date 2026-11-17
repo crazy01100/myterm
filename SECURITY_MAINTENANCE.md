@@ -94,11 +94,11 @@ Firebase CLI 固定為 `15.36.0`，上游已原生支援安全版本的 `stream-
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
-`@modelcontextprotocol/sdk 1.32.1`、`hono 4.13.11`及`@hono/node-server 2.1.3`沿父套件相容範圍鎖定，不新增覆寫。SDK 1.x仍在官方bug／security維護期，本輪不遷移至2.x。Firebase MCP使用SDK Server，具備stdio及可選HTTP/SSE模式；專案wrapper拒絕mcp及experimental:mcp，正常允許用途不啟動這些入口。Firebase未設定實驗taskStore，未使用SDK HTTP/OAuth client、bearer middleware或Hono serveStatic；OneMcpServer使用Firebase自身apiv2.Client。這些來源判斷不涵蓋直接繞過wrapper或其他獨立MCP應用。
+`@modelcontextprotocol/sdk 1.32.1`、`hono 4.13.16`及`@hono/node-server 2.1.6`沿父套件相容範圍鎖定，不新增覆寫。SDK 1.x仍在官方bug／security維護期，本輪不遷移至2.x。Firebase MCP使用SDK Server，具備stdio及可選HTTP/SSE模式；專案wrapper拒絕mcp及experimental:mcp，正常允許用途不啟動這些入口。Firebase未設定實驗taskStore，未使用SDK HTTP/OAuth client、bearer middleware或Hono serveStatic；OneMcpServer使用Firebase自身apiv2.Client。這些來源判斷不涵蓋直接繞過wrapper或其他獨立MCP應用。
 
 SDK更新修正tasks的session綁定及HTTP/OAuth跨來源redirect政策；不設定`redirectPolicy: 'follow'`恢復舊行為。GHSA-46jr-4wx8-v453與GHSA-rvq5-wwqv-78pq的新保護選項預設關閉：未來若允許HTTP MCP，須另外限制工具輸入元素（`maxToolInputElements`）與request body；採用SDK bearer驗證時須同時設定`expectedResource`及由verifier回傳`AuthInfo.resource`。不得把單純升級宣稱為所有HTTP用法已受保護。先前OAuth issuer／expectedIssuer與舊憑證界線亦維持。
 
-Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
+Hono與Node adapter保留serveStatic重複路徑解碼修正，並包含路由／表單驗證、CSS輸出、CSRF及adapter路徑解析／WebSocket錯誤處理的官方修補；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查，另以臨時loopback HTTP驗證adapter正常初始化相容性，不讀取Firebase帳號或啟用專案MCP入口；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
 
 `ip-address 10.7.4`與`stream-json 3.7.0`分別在父相依`^10.2.0`／`^3.6.0`範圍更新鎖檔，沒有新增override或來源相容層。前者由MCP的express-rate-limit引入；正常IPv4、IPv6子網及IPv4-mapped位址沿真實ipKeyGenerator驗證。後者沿用Firebase的Auth、DatabaseImporter及Next.js管線回歸；CLI橋接沒有使用公告所指FlexAssembler規則filter。這些來源範圍不是漏洞豁免，不涵蓋繞過wrapper的獨立用途；修復依官方版本、相容回歸及完整掃描確認。兩者只屬開發工具，不隨App封裝。
 
@@ -132,6 +132,10 @@ Firebase CLI 15.34.0 已移除未使用的 `proxy-agent`、`universal-analytics`
 ```
 
 涉及安全設定、信任、權限、豁免、gate 或其執行入口的修改，在最終 PR 集中審閱一次；比較 head／base 的受保護檔案樹，包含刪除、改名與權限變更。一般文件、測試與公告游標不單獨要求政策核准。自建 PR 使用 `MYTERM-POLICY-REVIEW-V2`、`action=approve-policy`，綁定維護者身分、精確 head／base 與政策原始內容摘要；撤銷或 head／base 改變必須重核。唯讀 CI 可先完成測試，政策核准是獨立的合併前必要條件。成功仍回報 `mergeAuthorized=false`；必要 CI／CodeQL、討論與分支保護不得略過。
+
+`security-gate.yml` 將技術驗證、`policy-approval` 等待及最終彙總分成三個job。缺少最終Review時正常等待，不把已通過測試標成失敗；等待環境沒有機密、禁止管理員繞過，須先配置並讀回。其他作者的原生Approve也須使用工具產生的V2正文，明確綁定base及政策摘要；一般「Approved」文字不作政策接受證據。分類取自已審base的predicate與實際雙方檔案樹，不由PR新規則決定自己免審。
+
+`security-ci-gate.py`只讀取當次技術receipt、完整報告、GitHub artifact摘要、實際成功technical job與獨立掃描步驟日誌，重驗精確run／技術attempt／head／base／測試commit。核准接續不重新執行回歸或掃描；receipt仍限定既有48小時證據範圍，錯誤／過期／被替換即停止，不授予風險例外。政策PR最終關卡核對四語言有效CodeQL與可讀SARIF；普通PR保持獨立分析，所有PR在合併前verify命令均須通過同樣核對；main及發布沿原後續驗證，發布不得沿用PR通過。合併前仍須重新核對Review撤銷、最新提交及討論；具體新風險使原證據失效時重新驗證，不因核准而永久重用舊結果。
 
 ### 工具清冊、覆蓋與公告追蹤
 

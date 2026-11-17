@@ -134,7 +134,7 @@ Development tools require Node.js 24 LTS (24.12.0 or later for Firebase 13) and 
 ./scripts/project-node.sh scripts/verify-firebase-tools.cjs --apply-minimatch
 ```
 
-The pinned versions are SDK13.2.0, CLI15.36.0 and Rules testing6.0.0; the version-qualified minimatch override must match the CLI. The SDK is used only in Rules development tests: its Crashlytics/OpenTelemetry features are not enabled or packaged in the App. CLI regressions cover parent/nested .gitignore rules, stopping on ignore-file read failures, and existing archive/filter behavior.
+The pinned versions are SDK13.3.0, CLI15.36.0 and Rules testing6.0.0; the version-qualified minimatch override must match the CLI. The SDK is used only in Rules development tests: its Crashlytics/OpenTelemetry features are not enabled or packaged in the App. CLI regressions cover parent/nested .gitignore rules, stopping on ignore-file read failures, and existing archive/filter behavior.
 
 Before launching the CLI, the wrapper verifies both prepared files and the resolved dependencies without writing to them. Run `./scripts/project-node.sh --npm run test:development-tools` for the installation and its consumers, then `./scripts/project-node.sh --npm run test:firestore-rules` for the local demo emulator. See [Security maintenance](SECURITY_MAINTENANCE.en.md).
 
@@ -160,9 +160,13 @@ For security policy, trust, permissions or gate changes, consolidate approval of
   --expected-head <full-head-SHA> --expected-base <full-base-SHA>
 ```
 
-Local policy bytes must match the pushed head. Only after explicit maintainer consent to that concrete content may the maintainer, or an explicitly delegated agent, submit the unchanged body with GitHub's review API, `event=COMMENT` and `commit_id=<full-head-SHA>`. CI does not read consent in a chat; general implementation authorization does not approve future commits. To revoke, add `--review-action revoke` to the same template command and submit a new Review; do not delete or edit old records. A later Review by the owner also prevents reuse of an earlier self-approval; ordinary PR discussion comments do not.
+Local policy bytes must match the pushed head. The template binds the exact head, base and policy for both author types: use `event=COMMENT` for self-authored PRs and `event=APPROVE` for other authors, always with `commit_id=<full-head-SHA>`. Submit the unchanged body only after explicit maintainer approval and delegation; implementation authorization does not approve future commits. To revoke, add `--review-action revoke` to the same template command and submit a new Review; do not delete or edit old records. A later Review by the owner also prevents reuse of an earlier self-approval; ordinary PR discussion comments do not.
 
-After acceptance or revocation, explicitly rerun the required security check for the same head. Do not alter CI permissions, test profiles or branch rulesets. Before merging, check all required CI, CodeQL and unresolved discussions, then run:
+The security workflow separates technical validation, policy approval and final aggregation. After technical success, policy-sensitive PRs wait in the dedicated `policy-approval` environment instead of failing for a missing Review. Configure its maintainer reviewer, disabled administrator bypass, permitted self-approval and PR merge refs before use; store no secrets or variables and do not reuse production. Ordinary PRs and main need no additional policy approval, but the final check still requires technical success and trusted classification; skipped/neutral results cannot bypass it.
+
+After verifying the technical report and all four CodeQL analyses, obtain one final decision. The same explicit delegation may cover submitting the Review and approving the policy job for that exact run. GitHub calls this native control `Review deployments`; this job performs no deployment. It only verifies Review, exact head/base, technical receipt, GitHub artifact hash and the independent scan-log digest, without reinstalling npm/Java or rerunning regressions or scans. To correct a Review, rerun only failed policy/aggregation jobs, not the whole workflow. Evidence is bound to the same run, actual technical attempt and commits, and must remain within the existing monitor evidence horizon of 48 hours; this is not a risk exception. Changed commits/base or invalid evidence require the corresponding revalidation. Main and publication keep their own required checks.
+
+A revoked approval invalidates an earlier green result. Before merging, check all required CI, CodeQL and unresolved discussions, then run:
 
 ```sh
 ./scripts/project-python.sh scripts/security-source-review.py \

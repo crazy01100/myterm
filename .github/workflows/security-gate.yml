@@ -5,14 +5,19 @@ on:
     branches: [main]
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
+  security-events: read
 concurrency:
   group: security-gate-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 jobs:
-  gate:
-    name: Release policy (unresolved risks block approval)
+  technical:
+    name: Technical security validation
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      policy_required: ${{ steps.receipt.outputs.policy_required }}
     env:
       GH_TOKEN: ${{ github.token }}
       MYTERM_CI_OPENSSL: required
@@ -62,9 +67,9 @@ jobs:
         run: ./scripts/security-python.sh scripts/run-policy-tests.py
       - name: Enforce existing merge scope and complete expanded monitoring
         run: ./scripts/project-python.sh scripts/security-audit.py --merge-gate --output build/security-report.json
-      - name: Verify final policy-change approval
-        if: always() && github.event_name == 'pull_request'
-        run: ./scripts/project-python.sh scripts/security-source-review.py --ci-review
+      - name: Bind successful technical evidence to this run
+        id: receipt
+        run: ./scripts/project-python.sh -B scripts/security-ci-gate.py record
       - name: Save policy evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -76,5 +81,51 @@ jobs:
             build/security-preflight.json
             build/python-tooling-preflight.json
             build/python-tooling-inventory.json
+            build/security-technical-receipt.json
           retention-days: 14
           if-no-files-found: error
+  policy:
+    name: Policy approval (exact head/base)
+    needs: technical
+    if: github.event_name == 'pull_request' && needs.technical.result == 'success' && needs.technical.outputs.policy_required == 'true'
+    environment: policy-approval
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.16'
+      - name: Prepare pinned metadata CLI only
+        run: ./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup
+      - name: Verify exact approval and retained technical evidence
+        run: ./scripts/project-python.sh -B scripts/security-ci-gate.py approve
+  gate:
+    # Preserve the protected branch's required context. Skipped upstream jobs
+    # are accepted only after independently confirming no policy change.
+    name: Release policy (unresolved risks block approval)
+    needs: [technical, policy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TECHNICAL_RESULT: ${{ needs.technical.result }}
+      POLICY_RESULT: ${{ needs.policy.result }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12.16'
+      - name: Prepare pinned metadata CLI only
+        run: ./scripts/project-python.sh -I -B scripts/project-gh-runtime.py setup
+      - name: Require successful technical and policy results
+        run: ./scripts/project-python.sh -B scripts/security-ci-gate.py finish

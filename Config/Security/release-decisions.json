@@ -195,15 +195,15 @@
   "sourceFiles": {
     ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
     ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
-    ".github/workflows/security-gate.yml": "24c6d354273c87c118c437aee5902048904c4e5d5b942cf3be982d79f8b7882a",
+    ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
     "Config/Security/action-bundles.json": "699ed7a194f3286f559a0f47375526c71a75f01600f0057a76e403edf04e6a7c",
     "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
     "Tools/Deployment/package-lock.json": "38510d9ed9c5fca6165ab26b579603dde90bf1b265ea455b0920d734fc81e65b",
     "Tools/Deployment/package.json": "e2a742d8849689fb6077f14a1227de251f74e86679636e6571d6b18caf2575f9",
-    "package-lock.json": "c1f388f5ee0f1c75b4146692685b70d0822b7759ea2408da17ab9f1dbaf8474e",
-    "package.json": "4fa9e7cd54b2e0f4ae2ebaf46fc4224894d853168a3beae8de4965992c8864a6",
+    "package-lock.json": "17a66d286e21f4d71c990c241d205334cf0f8148132e145f506dcb20ae802e3a",
+    "package.json": "9448dc2ce1d2b533937471fd09f8b7e65640da94f53e901b6db2c44c11b0a0e0",
     "scripts/node-toolchain.py": "47da8b56aac6bcf0d422a60816e9b7e9a7bdb74b51466f17d89667aca40b9216",
     "scripts/package-app.sh": "8dcbfe070e5b54785ed5446a06f780329a25243992fab0ca998fa873331093e4",
     "scripts/prepare-local-update-lab.sh": "1663ea7aff0188bd3d3f340e0613785872c6062c34ecd6df5bf0408ede7dfaa6",
@@ -224,7 +224,10 @@
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
     "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27",
     "scripts/security-risk-triage.py": "f03bde9fa105e8fd13823f7097992f669b452156e1c67d43c398763288027d4b",
-    "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297"
+    "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297",
+    "scripts/security-source-review.py": "12f59878b56d3b62909ba625b3aed6c9caa3a69494ab5234574f37fb7a56e64b",
+    "scripts/security-release-policy.py": "20ffc89d1b23382281558f3abae3f4a73837ad1a9a30c3e9201b91f6fe0dcf45",
+    "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc"
   },
   "workflows": [
     ".github/workflows/deploy-update-site.yml",
