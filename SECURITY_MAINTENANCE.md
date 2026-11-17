@@ -94,11 +94,11 @@ Firebase CLI 固定為 `15.36.0`，上游已原生支援安全版本的 `stream-
 
 `compression 1.8.2`與`proxy-addr 2.0.8`以父套件原相容範圍更新鎖檔，沒有新增覆寫。`firebase-http-dependencies.test.cjs`涵蓋gzip／deflate／Brotli回應中止後資源釋放、真實superstatic壓縮／非壓縮回應，以及Firebase與MCP使用的Express 4／5代理信任子網和loopback HTTP正反例。兩項只屬開發工具；Hosting入口限制不代替相依修補。
 
-`@modelcontextprotocol/sdk 1.32.1`、`hono 4.13.11`及`@hono/node-server 2.1.3`沿父套件相容範圍鎖定，不新增覆寫。SDK 1.x仍在官方bug／security維護期，本輪不遷移至2.x。Firebase MCP使用SDK Server，具備stdio及可選HTTP/SSE模式；專案wrapper拒絕mcp及experimental:mcp，正常允許用途不啟動這些入口。Firebase未設定實驗taskStore，未使用SDK HTTP/OAuth client、bearer middleware或Hono serveStatic；OneMcpServer使用Firebase自身apiv2.Client。這些來源判斷不涵蓋直接繞過wrapper或其他獨立MCP應用。
+`@modelcontextprotocol/sdk 1.32.1`、`hono 4.13.16`及`@hono/node-server 2.1.6`沿父套件相容範圍鎖定，不新增覆寫。SDK 1.x仍在官方bug／security維護期，本輪不遷移至2.x。Firebase MCP使用SDK Server，具備stdio及可選HTTP/SSE模式；專案wrapper拒絕mcp及experimental:mcp，正常允許用途不啟動這些入口。Firebase未設定實驗taskStore，未使用SDK HTTP/OAuth client、bearer middleware或Hono serveStatic；OneMcpServer使用Firebase自身apiv2.Client。這些來源判斷不涵蓋直接繞過wrapper或其他獨立MCP應用。
 
 SDK更新修正tasks的session綁定及HTTP/OAuth跨來源redirect政策；不設定`redirectPolicy: 'follow'`恢復舊行為。GHSA-46jr-4wx8-v453與GHSA-rvq5-wwqv-78pq的新保護選項預設關閉：未來若允許HTTP MCP，須另外限制工具輸入元素（`maxToolInputElements`）與request body；採用SDK bearer驗證時須同時設定`expectedResource`及由verifier回傳`AuthInfo.resource`。不得把單純升級宣稱為所有HTTP用法已受保護。先前OAuth issuer／expectedIssuer與舊憑證界線亦維持。
 
-Hono與Node adapter的serveStatic重複路徑解碼修正一併納入；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
+Hono與Node adapter保留serveStatic重複路徑解碼修正，並包含路由／表單驗證、CSS輸出、CSRF及adapter路徑解析／WebSocket錯誤處理的官方修補；不啟用`allowPercentInPath`回退。`firebase-mcp-sdk.test.cjs`保留合成Server／stdio握手、工具列舉及OAuth issuer檢查，另以臨時loopback HTTP驗證adapter正常初始化相容性，不讀取Firebase帳號或啟用專案MCP入口；`test_firebase_policy.py`明確驗證MCP命令與別名被拒絕。各公告的來源綁定評估保留在`Config/Security/impact-assessments.json`；歷史版本命中不等於已證明可利用，既有風險判定不因這些說明降低。
 
 `ip-address 10.7.4`與`stream-json 3.7.0`分別在父相依`^10.2.0`／`^3.6.0`範圍更新鎖檔，沒有新增override或來源相容層。前者由MCP的express-rate-limit引入；正常IPv4、IPv6子網及IPv4-mapped位址沿真實ipKeyGenerator驗證。後者沿用Firebase的Auth、DatabaseImporter及Next.js管線回歸；CLI橋接沒有使用公告所指FlexAssembler規則filter。這些來源範圍不是漏洞豁免，不涵蓋繞過wrapper的獨立用途；修復依官方版本、相容回歸及完整掃描確認。兩者只屬開發工具，不隨App封裝。
 
