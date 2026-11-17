@@ -72,6 +72,14 @@ Findings, raw findings and severity remain intact; riskTriage separately counts 
 
 Reviewed Node content that remains a preannouncement may be marked awaiting-details, retained for notification without automatically stopping release. Source, content and actual tool version must match exactly. New details, query failure or tool changes cannot inherit that treatment; concrete delivery risks still require assessment. Neither local notes nor GitHub Issue state authorize publication. This routing has no periodic renewal; ordinary temporary-exception rules remain unchanged.
 
+### Exact applicability of Sparkle update use
+
+`GHSA-gcjm-h3jh-p2vc` is scoped to the reviewed Sparkle 2.10.1 revision and the official MyTerm `.app` update path. Raw version matches remain; Sparkle is not labeled patched. Source evidence binds the standard build, ZIP, signing/verification entry points and official product/key. Released-App evidence independently retrieves all five official assets and verifies feed/ZIP signatures, version/Build/commit, actual Info.plist/framework identity, required signed feeds and App-only installation. A ZIP filename or HTTPS alone is insufficient; self-hosted, other products, Beta and unknown versions cannot inherit the result.
+
+`Config/Security/applicability/sparkle-package-update.json` and `security-sparkle-applicability.py` hold this narrow contract. Publication/deployment independently verifies the actual signed delivery, never borrowing current-source or older-release evidence. Raw findings and the evidence partition remain traceable. Changed sources, assets, advisories or protections invalidate the old decision and reopen only its original #217/#218 records. Missing evidence or query failure can conservatively reopen, but cannot close risks or produce a complete successful receipt. Even if notice publication fails, only these two conservative reopens are attempted; other writes stop. Original findings, severity, history and trusted-main write restrictions remain. This is not a risk exception.
+
+
+
 ## Security Issue remediation summaries
 
 At closure, decide whether a summary is needed by asking whether a future maintainer can understand the remediation and its verification evidence. Within the task's authorized Issue-update scope, read the Issue body and existing comments first:

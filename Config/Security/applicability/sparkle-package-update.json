@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "state": "approved",
+  "decision": "sparkle-app-bundle-updates",
+  "grantsRiskException": false,
+  "id": "GHSA-gcjm-h3jh-p2vc",
+  "component": "sparkle-project/Sparkle",
+  "scopes": {
+    "current-source": 217,
+    "released-app": 218
+  },
+  "version": "2.10.1",
+  "revision": "ab7d71291238df6e0492143b120c9b696a35f603",
+  "repository": "crazy01100/myterm",
+  "bundleIdentifier": "tw.local.MySSHClient",
+  "baseURL": "https://mtus.lieniapp.work",
+  "advisorySHA256": "4a8d835e82cd9dc7a43c1c3ef9cea7b3610e27b08dc569f8f92d249dd74635ff",
+  "publicKeySHA256": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
+  "sourceSHA256": {
+    "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
+    "Package.resolved": "00d4933f6131e3fc59f93f7246ce5d1224bc93a0031f2117e7e9ef91453f3739",
+    "Package.swift": "4f47f85e933dc1431cb950d7e440c15589e11c459236324850884c4ea96ee538",
+    "Resources/Info.plist": "5d888a84e0750dc2cd42c568f981f64673ee4f4d82846b207f0db7b621a1257d",
+    "Sources/MySSHClient/Services/AppUpdaterStore.swift": "185603bb926833eac16997ed2c2da3385f1fade8b60a4210c80ef5011ce858eb",
+    "scripts/bind-release-metadata.py": "757d4d714f874b0a02c3c7787ef7bb45fb5011aeb06af3c233e506da0ab92783",
+    "scripts/build-app.sh": "b4aab91a60cd9fa034fa3a13bf7ec86b9c005b1f958a33282bcd8440335018d7",
+    "scripts/package-app.sh": "8dcbfe070e5b54785ed5446a06f780329a25243992fab0ca998fa873331093e4",
+    "scripts/prepare-release-assets.sh": "734a01db109730c55797c5c93b1835d923ca4876958ee9575c9c0eb865c5ac1f",
+    "scripts/prepare-release-build.sh": "1cad63cade753cebb210772dae20e39d2a932543e4534b43a3a632af7828e3e3",
+    "scripts/python-openssl-env.sh": "e310ebad409b3521a48905be8949267a3b365f1de3b26c141acaca4a1565a803",
+    "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
+    "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
+    "scripts/sparkle-key-common.sh": "930b5f1d83359f1e7014f33d46e2e000f32e6789cb5876b4da207ab61ec51a9c",
+    "scripts/verify-app.sh": "285a08aa75a1574a17eb131d58002b6460199b23a0e1d13a18e5da98e2c1086a",
+    "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
+    "scripts/verify-signed-release.py": "7c59ebf8dac63a65c62eb4012c2f7f735bdc9374a22f9c0fefda48960b37fc27"
+  }
+}

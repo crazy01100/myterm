@@ -206,6 +206,11 @@ def context(stage, version, build=None, assets=None, *, root=ROOT):
         result['build'] = verified['build']
         result['deliveryInventory'] = verified['dependencies']
         result['assetHashes'] = verified['hashes']
+        sparkle=load('security-sparkle-applicability')
+        if any(d.get('name')=='https://github.com/'+sparkle.COMPONENT and d.get('version')==sparkle.VERSION for d in verified['dependencies']):
+            policy,_=sparkle.configuration(root)
+            result['sparkleDeliveryEvidence']=sparkle.asset_evidence(root,Path(assets),policy,
+                version=version,build=verified['build'],commit=release_sha)
     return result
 
 
@@ -232,6 +237,7 @@ def classify(report, ctx, *, root=ROOT, reader=None):
             not ctx.get('deliveryInventory') or report.get('deliveryInventoryDigest') != digest(ctx['deliveryInventory'])):
         raise ValueError('The actual signed delivery inventory was not scanned')
     decisions = []; notices = []; unresolved_notices = []; preannouncements = []
+    decisions.extend(load('security-sparkle-applicability').delivery_decision(report,ctx,root,reader))
     triage = load('security-risk-triage').verify(report, root)
     if triage is not None:
         if any(row['releaseEffect'] == 'block' for row in triage['rows']):

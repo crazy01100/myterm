@@ -192,6 +192,8 @@ The page integrates HostStore and the existing KeychainStore. Its reader cancels
 
 System authentication temporarily takes foreground focus, so a resign notification alone must not cancel an outstanding request. The page separately checks the activated application, exact system authentication-agent identity and path, other windows, and system interruptions. A successful reply may wait up to two seconds for the original window to regain focus; it grants no credential access while waiting. Unknown transitions and expiry leave the page locked; focus loss is not universally ignored during authentication.
 
+For focused Sparkle applicability regression, run `./scripts/security-python.sh -m unittest discover -s Tests/Security -p test_sparkle_applicability.py -v`. It uses synthetic metadata, normally signed inert ZIP fixtures and an in-memory Issue API, without running Sparkle, installing a package or attempting a downgrade. Full CI retains its existing fixed regressions and per-task authorization requirements. Source conditions or an older release cannot substitute for the actual signed delivery.
+
 ### Document languages and synchronized maintenance
 
 GitHub's default homepage is the Traditional Chinese [README.md](README.md); the English entry point is [README.en.md](README.en.md). The project's own document pairs are listed below. Current guides provide language links at the top. English documents should link to English counterparts and Chinese documents to Chinese counterparts where available.

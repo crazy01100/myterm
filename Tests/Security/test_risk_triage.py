@@ -196,7 +196,8 @@ class CandidateTests(unittest.TestCase):
     def test_monitor_order_saves_candidates_before_closing_and_receipt(self):
         text=(ROOT/'.github/workflows/security-checks.yml').read_text()
         self.assertLess(text.index('id: notice_issues'),text.index('id: risk_issues'))
-        self.assertIn("steps.notice_issues.outcome == 'success'",text)
+        self.assertIn('NOTICE_ISSUES_OUTCOME: ${{ steps.notice_issues.outcome }}',text)
+        self.assertIn('if [[ "$NOTICE_ISSUES_OUTCOME" != "success" ]]; then args+=(--reopen-sparkle-only); fi',text)
     def test_candidate_gate_does_not_remove_raw_results(self):
         before=copy.deepcopy(self.r['findings'])
         with patch.object(a,'ROOT',self.root),patch.object(a,'pip_applicability'),patch.object(a,'openssl_supplier'),patch.object(a,'project_applicability'),patch.object(a,'supplier_notices'):

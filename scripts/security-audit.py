@@ -333,6 +333,7 @@ def scan_actions(report,cache):
 
 def run(include_release=None, *, delivery_inventory=None):
     report={'schemaVersion':1,'checkedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'findings':[],'errors':[],'upstreamReleases':{}}
+    report['sparkleReleaseRequested'] = bool(include_release)
     report['collectionEvidence']={'schemaVersion':1,
         'baselineCommit':'22c3361bd0cce52086527a979ae61c3201d93763','collectors':[]}
     cache={}
@@ -365,6 +366,7 @@ def run(include_release=None, *, delivery_inventory=None):
         try:
             tag,items=released_inventory(include_release)
             report['releaseTag']=tag;scan_runtime(items,'released-app',report,cache)
+            for finding in report['findings'][start:]: finding['releaseTag'] = tag
         except Exception as error:report['errors'].append('Released inventory unavailable: '+type(error).__name__)
         attest(start,error_count,'released-app')
     for collector,function in [('npm-project',scan_npm),('python-verifier',scan_verifier)]:
@@ -402,6 +404,10 @@ def run(include_release=None, *, delivery_inventory=None):
         project_applicability().classify(report, ROOT)
     except Exception as error:
         report['errors'].append('Project applicability unavailable: '+type(error).__name__)
+    try:
+        sparkle_applicability().classify(report, ROOT)
+    except Exception as error:
+        report['errors'].append('Sparkle applicability unavailable: '+type(error).__name__)
     try:
         spec=importlib.util.spec_from_file_location('source_review',ROOT/'scripts/security-source-review.py')
         policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
@@ -628,6 +634,11 @@ def project_applicability():
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
 
+def sparkle_applicability():
+    spec=importlib.util.spec_from_file_location('sparkle_applicability',Path(__file__).with_name('security-sparkle-applicability.py'))
+    helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
+
+
 def risk_triage():
     spec=importlib.util.spec_from_file_location('risk_triage',Path(__file__).with_name('security-risk-triage.py'))
     helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper);return helper
@@ -702,6 +713,11 @@ def blocking(report, *, merge_gate=False, release_context=None):
         return True
     try:
         findings=baseline_findings(report) if merge_gate else report['findings']
+        if 'sparkleApplicability' in report:
+            sparkle_applicability().revalidate(report, ROOT)
+            if any(r['status']!='not-affected' for r in report['sparkleApplicability']['outcomes']):
+                return True
+            findings=sparkle_applicability().filtered(report, findings)
     except (KeyError,ValueError,TypeError,OSError):return True
     notice_block=not merge_gate and report.get('vendorNotices',{}).get('requiresNoticeReview')
     if release_context is not None:
@@ -787,6 +803,8 @@ def write_summary(report, monitor, *, merge_gate=False):
         lines.append('- 供應商已修補（原版本命中保留）：'+html.escape(review['finding']['id']))
     for proof in report.get('projectApplicabilityProofs', []):
         lines.append('- 精確平台／封裝不適用（非套件修補）：'+html.escape(proof['id'])+' — '+html.escape(proof['reason']))
+    for proof in report.get('sparkleApplicability', {}).get('outcomes', []):
+        lines.append('- Sparkle目前用途：'+html.escape(proof['scope'])+' / '+html.escape(proof['status'])+' — '+html.escape(proof['reason']))
     for proof in report.get('supplierNotices',{}).get('remediations',[]):
         lines.append('- 已採官方建議的專案 Java 信任處置（非上游新版）：'+html.escape(proof['id']))
     for error in report['errors']:
@@ -842,6 +860,7 @@ def main():
     report['lastSuccessfulScanAt']=report['checkedAt'] if not report['errors'] else (previous or {}).get('lastSuccessfulScanAt')
     report['stalePreviousScan']=bool(previous and previous.get('lastSuccessfulScanAt') and (dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(previous['lastSuccessfulScanAt'])).total_seconds()>48*3600)
     fingerprint=lambda r:json.dumps({**{k:r.get(k) for k in ['findings','rawFindings','riskTriage','applicabilityReviews','supplierFixReviews','projectApplicabilityProofs','projectApplicabilityReviews','errors','upstreamReleases','releaseTag','stalePreviousScan','toolchainCoverage','packageMonitoring','observedEnvironment','observedOrigins']},
+        'sparkleOutcomes':r.get('sparkleApplicability',{}).get('outcomes',[]),
         'noticeChanges':r.get('vendorNotices',{}).get('changes',[]),
         'javaRemediations':r.get('supplierNotices',{}).get('remediations',[])},sort_keys=True)
     changed=previous is None or fingerprint(previous)!=fingerprint(report)

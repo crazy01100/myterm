@@ -265,6 +265,8 @@ SFTPBookmarkSyncCodec只接受遠端型別，以既有Vault Master Key及專案�
 
 ## 開發工具風險決策
 
+Sparkle 的單一 package-update 公告由 `security-sparkle-applicability.py` 限定判定：目前來源綁定標準建置／封裝／簽署入口，已發布 App 則重新驗證官方五項資產、ZIP 內的產品／框架身分與 signed-feed 設定。兩個範圍不共用結論，原始命中仍保留；正式交付另核對當次簽署成品。判定條件或證據失效時，只能保守重開本機制結案的原 Issue，不能因監測失敗留下成功的不適用結論或關閉其他風險。此機制不執行安裝器，也不授予漏洞例外。
+
 PR安全流程分離技術驗證、政策等待與最終彙總。`security-ci-gate.py`以已審base規則判斷政策差異，保存技術run／attempt／head／base／測試commit及報告摘要；政策敏感PR透過無機密的`policy-approval` environment等待維護者決定。核准後只核對精確Review及仍有效的技術證據，另以GitHub artifact摘要和獨立掃描日誌交叉驗證，不重跑整套技術工作。最後保留原必要check名稱，拒絕未知、失敗、被跳過或證據漂移；政策PR的最終彙總及所有PR的合併前verify都要求四語言有效可讀分析；普通PR不把仍執行中的獨立分析當成技術失敗，main與發布仍依各自流程驗證。
 
 已結案的條件式接受保留為歷史，不再做個案專屬查詢。日常入口使用通用來源政策審閱，與工具清冊、公告查詢及風險gate分開；新公告另案處理，不授予永久豁免。供應商證據有限及未驗證環境明列限制，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。

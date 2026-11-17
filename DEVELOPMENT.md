@@ -192,6 +192,8 @@ CLI 啟動前會唯讀核對兩份準備後的來源及實際相依。執行 `./
 
 系統認證面板會讓 App 暫時失去前景，認證中不可單憑 resign 通知取消。頁面另外核對實際前景程式與系統認證代理的精確身分／路徑、其他視窗與系統中斷；成功回覆最多等待原視窗恢復 2 秒，等待期間不提供密碼取用。無法辨識或逾時即保持鎖定，不把認證中的所有失焦一律忽略。
 
+Sparkle 更新用途判定的聚焦回歸可執行 `./scripts/security-python.sh -m unittest discover -s Tests/Security -p test_sparkle_applicability.py -v`。這組使用合成 metadata、正常簽署的惰性 ZIP fixture 與記憶體 Issue API，不執行 Sparkle、套件安裝或降級。完整 CI 仍保留既有固定回歸及當次授權要求；發布前不能以來源條件或舊正式版的證據代替當次簽署成品。
+
 ### 文件語系與同步維護
 
 GitHub 的預設首頁是繁體中文 [README.md](README.md)，英文入口為 [README.en.md](README.en.md)。專案自有的文件配對如下；現行指南在頁首提供雙向語言切換，英文文件優先連到英文版，中文文件優先連到中文版。
