@@ -334,6 +334,7 @@ def scan_actions(report,cache):
 def run(include_release=None, *, delivery_inventory=None):
     report={'schemaVersion':1,'checkedAt':dt.datetime.now(dt.timezone.utc).isoformat(),'findings':[],'errors':[],'upstreamReleases':{}}
     report['sparkleReleaseRequested'] = bool(include_release)
+    report['picomatchReviewRequested'] = True
     report['collectionEvidence']={'schemaVersion':1,
         'baselineCommit':'22c3361bd0cce52086527a979ae61c3201d93763','collectors':[]}
     cache={}
@@ -713,6 +714,9 @@ def blocking(report, *, merge_gate=False, release_context=None):
         return True
     try:
         findings=baseline_findings(report) if merge_gate else report['findings']
+        if merge_gate and any(p.get('decision')=='picomatch-fixed-build-patterns'
+                              for p in report.get('projectApplicabilityProofs', [])):
+            findings=project_applicability().load('security-picomatch-applicability').filter_baseline(report,findings)
         if 'sparkleApplicability' in report:
             sparkle_applicability().revalidate(report, ROOT)
             if any(r['status']!='not-affected' for r in report['sparkleApplicability']['outcomes']):

@@ -87,8 +87,8 @@ jobs:
           args=()
           if [[ "$REFRESH_ISSUE_FORMAT" == "true" ]]; then args+=(--refresh-format); fi
           # A failed notice write never permits normal Issue changes, but must
-          # not strand the two previously closed Sparkle decisions as safe.
-          if [[ "$NOTICE_ISSUES_OUTCOME" != "success" ]]; then args+=(--reopen-sparkle-only); fi
+          # not strand the owned Sparkle/picomatch decisions as safe.
+          if [[ "$NOTICE_ISSUES_OUTCOME" != "success" ]]; then args+=(--reopen-applicability-only); fi
           ./scripts/project-python.sh scripts/sync-security-issues.py --report build/security-report.json --allow-public --apply "${args[@]}"
       - name: Bind scan and notification receipt
         if: always()

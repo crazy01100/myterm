@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "decision": "picomatch-fixed-build-patterns",
+  "grantsRiskException": false,
+  "sourceFiles": {
+    ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
+    ".github/workflows/security-checks.yml": "3e97d3b4be46e668b0a26a44257d37cdb460a219126b71155d4acb6d83327d7b",
+    ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
+    "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
+    "package-lock.json": "17a66d286e21f4d71c990c241d205334cf0f8148132e145f506dcb20ae802e3a",
+    "package.json": "9448dc2ce1d2b533937471fd09f8b7e65640da94f53e901b6db2c44c11b0a0e0",
+    "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
+    "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
+    "scripts/node-toolchain.py": "47da8b56aac6bcf0d422a60816e9b7e9a7bdb74b51466f17d89667aca40b9216",
+    "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
+    "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
+  },
+  "packages": {
+    "node_modules/firebase-tools": {
+      "lockEntry": {
+        "version": "15.36.0",
+        "resolved": "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.36.0.tgz",
+        "integrity": "sha512-z1fnT75IkGmARzRSP9Blb4BzAnYJOhwoSbe/lKpUKy/hpQzLhUM39KUesAfUM5U1PnDu6syFdwV1JsSGcdQ32w==",
+        "dev": true,
+        "license": "MIT",
+        "dependencies": {
+          "@electric-sql/pglite": "^0.3.3",
+          "@electric-sql/pglite-tools": "^0.2.8",
+          "@google-cloud/cloud-sql-connector": "^1.3.3",
+          "@google-cloud/pubsub": "^5.2.0",
+          "@inquirer/prompts": "^7.10.1",
+          "@modelcontextprotocol/sdk": "^1.24.0",
+          "abort-controller": "^3.0.0",
+          "ajv": "^8.17.1",
+          "ajv-formats": "3.0.1",
+          "archiver": "^7.0.0",
+          "async-lock": "1.4.1",
+          "body-parser": "^1.20.9",
+          "chokidar": "^4.0.3",
+          "cjson": "^0.3.1",
+          "cli-table3": "0.6.5",
+          "colorette": "^2.0.19",
+          "commander": "^5.1.0",
+          "configstore": "^5.0.1",
+          "cors": "^2.8.5",
+          "cross-env": "^7.0.3",
+          "cross-spawn": "^7.0.5",
+          "csv-parse": "^7.0.2",
+          "exegesis": "^4.2.0",
+          "exegesis-express": "^4.0.0",
+          "express": "^4.16.4",
+          "form-data": "^4.0.1",
+          "fs-extra": "^10.1.0",
+          "fuzzy": "^0.1.3",
+          "gaxios": "^6.7.0",
+          "glob": "^10.5.0",
+          "google-auth-library": "^9.11.0",
+          "ignore": "^7.0.4",
+          "js-yaml": "^4.2.0",
+          "jsonwebtoken": "^9.0.2",
+          "libsodium-wrappers": "^0.7.10",
+          "lodash": "^4.18.0",
+          "lsofi": "^2.0.0",
+          "marked": "^13.0.2",
+          "marked-terminal": "^7.0.0",
+          "minimatch": "^3.0.4",
+          "morgan": "^1.10.0",
+          "node-fetch": "^2.6.7",
+          "open": "^6.3.0",
+          "ora": "^5.4.1",
+          "pg": "^8.11.3",
+          "pg-gateway": "^0.3.0-beta.4",
+          "pglite-2": "npm:@electric-sql/pglite@0.2.17",
+          "portfinder": "^1.0.32",
+          "progress": "^2.0.3",
+          "retry": "^0.13.1",
+          "semver": "^7.5.2",
+          "sql-formatter": "^15.3.0",
+          "stream-chain": "^4.2.5",
+          "stream-json": "^3.6.0",
+          "superstatic": "^10.0.0",
+          "tar": "^7.5.21",
+          "tcp-port-used": "^1.0.2",
+          "tmp": "^0.2.3",
+          "triple-beam": "^1.3.0",
+          "undici": "^6.19.0",
+          "update-notifier-cjs": "^5.1.6",
+          "winston": "^3.0.0",
+          "winston-transport": "^4.4.0",
+          "ws": "^8.21.1",
+          "yaml": "^2.8.3",
+          "zod": "^4.0.0"
+        },
+        "bin": {
+          "firebase": "lib/bin/firebase.js"
+        },
+        "engines": {
+          "node": ">=20.0.0 || >=22.0.0 || >=24.0.0"
+        }
+      },
+      "sourceDigest": "df4db15bde65409323069bed85fb99abad0abf6d1811fd2a15f0b997f4bbc897"
+    },
+    "node_modules/superstatic": {
+      "lockEntry": {
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/superstatic/-/superstatic-10.0.0.tgz",
+        "integrity": "sha512-4xIenBdrIIYuqXrIVx/lejyCh4EJwEMPCwfk9VGFfRlhZcdvzTd3oVOUILrAGfC4pFUWixzPgaOVzAEZgeYI3w==",
+        "dev": true,
+        "license": "MIT",
+        "dependencies": {
+          "basic-auth-connect": "^1.1.0",
+          "commander": "^10.0.0",
+          "compression": "^1.7.0",
+          "connect": "^3.7.0",
+          "destroy": "^1.0.4",
+          "glob-slasher": "^1.0.1",
+          "is-url": "^1.2.2",
+          "join-path": "^1.1.1",
+          "lodash": "^4.17.19",
+          "mime-types": "^2.1.35",
+          "minimatch": "^6.1.6",
+          "morgan": "^1.8.2",
+          "on-finished": "^2.2.0",
+          "on-headers": "^1.0.0",
+          "path-to-regexp": "^1.9.0",
+          "router": "^2.0.0",
+          "update-notifier-cjs": "^5.1.6"
+        },
+        "bin": {
+          "superstatic": "lib/bin/server.js"
+        },
+        "engines": {
+          "node": "20 || 22 || 24"
+        },
+        "optionalDependencies": {
+          "re2": "^1.17.7"
+        }
+      },
+      "sourceDigest": "c43335be6e236e208f854e0ae417bd4b9ef19af2df3b4e3bab38b1961c0fbc14"
+    },
+    "node_modules/re2": {
+      "lockEntry": {
+        "version": "1.26.1",
+        "resolved": "https://registry.npmjs.org/re2/-/re2-1.26.1.tgz",
+        "integrity": "sha512-oi79a4h6EO3PAwNsDMWgeCcsRGQEUa52DIgOiFTZGDEZocEXG9h+oXy0qZqndo47huUeJuVWSoOJIEhOupqOcg==",
+        "dev": true,
+        "hasInstallScript": true,
+        "license": "BSD-3-Clause",
+        "optional": true,
+        "dependencies": {
+          "install-artifact-from-github": "^1.7.0",
+          "nan": "^2.28.0",
+          "node-gyp": "^13.0.1"
+        },
+        "engines": {
+          "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+        },
+        "funding": {
+          "url": "https://github.com/sponsors/uhop"
+        }
+      },
+      "sourceDigest": "6b5793e4e71f6f469c829f7f00a6d21de2b2cc25fbdc50c52ac32cbda3c42ec0"
+    },
+    "node_modules/node-gyp": {
+      "lockEntry": {
+        "version": "13.0.2",
+        "resolved": "https://registry.npmjs.org/node-gyp/-/node-gyp-13.0.2.tgz",
+        "integrity": "sha512-SXTvw3PxznpowYhJSOD9mVQBgDaCTWXffX+wQZsQ7PbcTV86TsXCUcSZhHnskFQvrvn/OdSzJPMsptT2pIj9ww==",
+        "dev": true,
+        "license": "MIT",
+        "optional": true,
+        "dependencies": {
+          "env-paths": "^2.2.0",
+          "exponential-backoff": "^3.1.1",
+          "graceful-fs": "^4.2.6",
+          "nopt": "^10.0.0",
+          "proc-log": "^7.0.0",
+          "semver": "^7.3.5",
+          "tar": "^7.5.4",
+          "tinyglobby": "^0.2.12",
+          "undici": "^8.4.1",
+          "which": "^7.0.0"
+        },
+        "bin": {
+          "node-gyp": "bin/node-gyp.js"
+        },
+        "engines": {
+          "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+        }
+      },
+      "sourceDigest": "c337abdd6c4b639e9af3edad871b7b5dafd61eb28329899b00869eff10138d94"
+    },
+    "node_modules/tinyglobby": {
+      "lockEntry": {
+        "version": "0.2.17",
+        "resolved": "https://registry.npmjs.org/tinyglobby/-/tinyglobby-0.2.17.tgz",
+        "integrity": "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==",
+        "dev": true,
+        "license": "MIT",
+        "optional": true,
+        "dependencies": {
+          "fdir": "^6.5.0",
+          "picomatch": "^4.0.4"
+        },
+        "engines": {
+          "node": ">=12.0.0"
+        },
+        "funding": {
+          "url": "https://github.com/sponsors/SuperchupuDev"
+        }
+      },
+      "sourceDigest": "76db0465207b005d40044216f0465e8eaa4fab45f24a070228e60415662f8018"
+    },
+    "node_modules/tinyglobby/node_modules/fdir": {
+      "lockEntry": {
+        "version": "6.5.0",
+        "resolved": "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz",
+        "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
+        "dev": true,
+        "license": "MIT",
+        "optional": true,
+        "engines": {
+          "node": ">=12.0.0"
+        },
+        "peerDependencies": {
+          "picomatch": "^3 || ^4"
+        },
+        "peerDependenciesMeta": {
+          "picomatch": {
+            "optional": true
+          }
+        }
+      },
+      "sourceDigest": "9363612ee4c64a18005e2c350548e1a1e0faeb6d6c1f140700343228e65587aa"
+    },
+    "node_modules/tinyglobby/node_modules/picomatch": {
+      "lockEntry": {
+        "version": "4.0.7",
+        "resolved": "https://registry.npmjs.org/picomatch/-/picomatch-4.0.7.tgz",
+        "integrity": "sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==",
+        "dev": true,
+        "license": "MIT",
+        "optional": true,
+        "engines": {
+          "node": ">=12"
+        },
+        "funding": {
+          "url": "https://github.com/sponsors/jonschlinkert"
+        }
+      },
+      "sourceDigest": "1007813dc646613872feb6320df56129e866fa254dbfcb8ce7a746bda96be7ae"
+    }
+  },
+  "preparedSources": {
+    "node_modules/firebase-tools/lib/fsAsync.js": {
+      "upstream": "0b883e0ebe5d65cbfd550c7fb3f489f18f46e19ea7e51d37fd9dfc1c712bf183",
+      "prepared": "664d53bdc43ac812265dd6c443ff285667b332a469e40853a6da911b0046c11a"
+    },
+    "node_modules/superstatic/lib/utils/patterns.js": {
+      "upstream": "072c6a97a1979527cfb5bbbbe4e86c94d3a822105de529ee924fb9b6540c65c3",
+      "prepared": "cde84d89fc51e6c50540a8c9c43e4071fc5150afb38907d063bbfd997d13835c"
+    }
+  },
+  "npmPolicy": {
+    "schemaVersion": 1,
+    "nodeVersion": "24.22.3",
+    "npm": {
+      "version": "11.21.1",
+      "url": "https://registry.npmjs.org/npm/-/npm-11.21.1.tgz",
+      "integrity": "sha512-YTzL6QBEJXyHcTu0JiUc7RKMp+mzlJtl7rGLmERaXUQeFHIMc9atdr6G9M9C8vDWbv40epoTQAzNL2/PtZVDhQ=="
+    }
+  },
+  "npmSources": {
+    "lib/commands/ci.js": "fb9ed5eb26d841dfcdf8cffaa3c33be3edda6ee27797b5db5ccbfbaba86e4315",
+    "node_modules/@npmcli/arborist/lib/arborist/rebuild.js": "31cff57da873a9b2ce1fd16fbb6ce7d68108ce2bae628ca43b5772ab5ee5336c",
+    "node_modules/@npmcli/run-script/lib/run-script-pkg.js": "94dea9ff50028869f4f88c4ec5e520d56fa7c2f6cc03422a9f06c44d291a0c34",
+    "node_modules/node-gyp/lib/build.js": "d11b1d799a2522bd38a364bc39d36175d9e68225e0e5a36d9fc3a64e1710fbc0",
+    "node_modules/node-gyp/package.json": "be870d036a73791dab2e00cdfad8090548ef20c5490846641e3d7899261dc901",
+    "node_modules/tinyglobby/dist/index.cjs": "ee408bbc9665cba5800a6b2a0c89dd3df9820baa30d4ff3ba2f2435f16ce9f94",
+    "node_modules/tinyglobby/dist/index.mjs": "fc1bed0d5da56d4638002af7deaf6d179e183a85de648c180839ca36b21b3b50",
+    "node_modules/tinyglobby/node_modules/fdir/dist/index.cjs": "ec92c1fdd78905a7b6d1ea3391aeca2cf19d10e6bbd04db0de158fbfc8b6cff4",
+    "node_modules/tinyglobby/node_modules/fdir/package.json": "aca49395d61ef383a09f74555c66ed45817ca2b5724e710a4dc9e0471b83d8f5",
+    "node_modules/tinyglobby/node_modules/picomatch/package.json": "b8deb10b4e1f7cc2fe8236a70995f4c6b5ec3ecf93f02f2b6427a8600d2c1d20",
+    "node_modules/tinyglobby/package.json": "bd2b2af3c9ba0580f1acfb22c55d0b6d29abf683af5cac8a2efe82fa7c943f23",
+    "package.json": "7b9dd464a74df2a96e608a36f6e6213ebe7a869659019083786ef685bf1908c2"
+  },
+  "resolutions": {
+    "node_modules/firebase-tools": {
+      "superstatic": "node_modules/superstatic"
+    },
+    "node_modules/superstatic": {
+      "re2": "node_modules/re2"
+    },
+    "node_modules/re2": {
+      "node-gyp": "node_modules/node-gyp"
+    },
+    "node_modules/node-gyp": {
+      "tinyglobby": "node_modules/tinyglobby"
+    },
+    "node_modules/tinyglobby": {
+      "picomatch": "node_modules/tinyglobby/node_modules/picomatch",
+      "fdir": "node_modules/tinyglobby/node_modules/fdir"
+    },
+    "node_modules/tinyglobby/node_modules/fdir": {
+      "picomatch": "node_modules/tinyglobby/node_modules/picomatch"
+    },
+    ".build/npm-runtime/node_modules/node-gyp": {
+      "tinyglobby": ".build/npm-runtime/node_modules/tinyglobby"
+    },
+    ".build/npm-runtime/node_modules/tinyglobby": {
+      "picomatch": ".build/npm-runtime/node_modules/tinyglobby/node_modules/picomatch",
+      "fdir": ".build/npm-runtime/node_modules/tinyglobby/node_modules/fdir"
+    },
+    ".build/npm-runtime/node_modules/tinyglobby/node_modules/fdir": {
+      "picomatch": ".build/npm-runtime/node_modules/tinyglobby/node_modules/picomatch"
+    }
+  },
+  "reviewedCallInputs": [
+    "build/*.sln",
+    "build/*.mk"
+  ],
+  "reviewedBoundary": "Exact node-gyp callers supply fixed patterns; standard project installs disable lifecycle scripts. No user or remote content becomes an extglob pattern. Not a package fix or an arbitrary npm/node-gyp assurance."
+}

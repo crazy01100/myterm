@@ -149,13 +149,13 @@ class GitHub:
         raise ValueError('GitHub pagination limit reached')
 
 
-def reopen_sparkle(report, current, api, *, apply=False, environ=None, allow_public=False):
+def reopen_owned_applicability(report, current, api, helper, *, apply=False, environ=None, allow_public=False):
     """Conservative reopen only, even when unrelated scans cannot complete.
 
     Never closes/creates an Issue or turns a failed scan into a successful one.
-    Only the two exact records previously closed by this decision are eligible.
+    Only the exact records previously closed by the approved helper are eligible.
     """
-    helper=load('security-sparkle-applicability');helper.validate_envelope(report)
+    helper.validate_envelope(report)
     source=report.get('sourceReview',{});env=os.environ if environ is None else environ
     stamp=dt.datetime.fromisoformat(report['checkedAt'])
     if (source.get('sourceVerified') is not True or source.get('grantsRiskException') is not False
@@ -181,10 +181,10 @@ def reopen_sparkle(report, current, api, *, apply=False, environ=None, allow_pub
         old=fmt.parse_issue(issue)
         if not helper.owned_resolution(old,number):continue
         f=old['finding'];key=digest([f[k] for k in ['id','component','scope']])
-        if key!=marker[1]:raise ValueError('Previous Sparkle Issue identity differs')
+        if key!=marker[1]:raise ValueError('Previous applicability Issue identity differs')
         f['impact']={'status':'needs-review','reason':row['reason']}
         title,body=render(key,f,{'checkedAt':old['checkedAt']},resolutions=old['resolutions'])
-        comment_marker='<!-- myterm-sparkle-reopen:'+digest([number,old['applicabilityResolution']['proofSHA256'],row['reason']])+' -->'
+        comment_marker='<!-- myterm-'+getattr(helper,'TRACKING_NAME','sparkle')+'-reopen:'+digest([number,old['applicabilityResolution']['proofSHA256'],row['reason']])+' -->'
         comment=comment_marker+'\n目前用途不適用的證據已失效或無法完成核對，重新開啟原 Issue 待審。原始命中／嚴重度保留；這不表示已證明可利用，也不授予例外。\n\n'+row['reason']
         change={'title':title,'body':body,'state':'open'}
         if apply:
@@ -194,9 +194,14 @@ def reopen_sparkle(report, current, api, *, apply=False, environ=None, allow_pub
             api.request(f'issues/{number}','PATCH',change)
             stored=api.request(f'issues/{number}')
             if any(stored.get(k)!=v for k,v in change.items()) or stored.get('user',{}).get('login')!=BOT:
-                raise ValueError('Sparkle reopen readback differs')
+                raise ValueError('Applicability reopen readback differs')
         changes.append({'action':'reopen-applicability','number':number,'reason':row['reason']})
     return changes
+
+
+def reopen_sparkle(report, current, api, *, apply=False, environ=None, allow_public=False):
+    return reopen_owned_applicability(report,current,api,load('security-sparkle-applicability'),
+                                     apply=apply,environ=environ,allow_public=allow_public)
 
 
 def check_sparkle_for_publication(report, api, *, apply=False, environ=None, allow_public=False, root=None):
@@ -211,6 +216,14 @@ def check_sparkle_for_publication(report, api, *, apply=False, environ=None, all
             if helper.digest(r)!=helper.digest(old.get(r['scope'])):
                 r.update(status='needs-review',evidenceStatus='changed',reason='掃描後適用性證據已變更，原結論不可沿用；須重新取得完整證據。')
     return reopen_sparkle(report,current,api,apply=apply,environ=environ,allow_public=allow_public),changed
+
+
+def check_picomatch_for_publication(report, api, *, apply=False, environ=None, allow_public=False, root=None):
+    if report.get('picomatchReviewRequested') is not True:return [],False
+    helper=load('security-picomatch-applicability');helper.validate_envelope(report)
+    current,changed=helper.publication_state(report,root or Path(__file__).resolve().parents[1])
+    return reopen_owned_applicability(report,current,api,helper,apply=apply,environ=environ,
+                                      allow_public=allow_public),changed
 
 
 def synchronize(report, api, apply=False, environ=None, allow_public=False, refresh_format=False, enrich=None, root=None):
@@ -324,6 +337,8 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
             proof=load('security-project-applicability').previous_decision(report,f)
             if proof is None and issue['number']==sparkle.SCOPES.get(f.get('scope')):
                 proof=sparkle.previous_decision(report,f)
+            picomatch=load('security-picomatch-applicability')
+            if picomatch.target(f) and issue['number']!=220:proof=None
             if proof is not None and not additive:
                 if issue['state']=='closed' and (load('security-project-applicability').owned_resolution(old)
                         or sparkle.owned_resolution(old,issue['number'])):
@@ -340,9 +355,9 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                 operations.append((issue,{'title':title,'body':body,'state':'closed','state_reason':'not_planned'},comment))
                 actions.append({'action':'close-not-applicable','number':issue['number'],'key':key})
                 continue
-            if sparkle.target(f):
+            if sparkle.target(f) or picomatch.target(f):
                 actions.append({'action':'preserve','number':issue['number'],
-                                'reason':'Sparkle absence is not an applicability proof or package fix'})
+                                'reason':'Absence is not an applicability proof or package fix'})
                 continue
             if key in excluded_keys:
                 # A precise subset decision is not a package upgrade. Preserve
@@ -406,7 +421,8 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                     api.request(f"issues/{issue['number']}/comments",'POST',{'body':comment})
             api.request(f"issues/{issue['number']}",'PATCH',change)
             if ('myterm-candidate-transfer:' in (comment or '') or triage.owned_transfer(fmt.parse_issue(issue))
-                    or load('security-sparkle-applicability').target(fmt.parse_issue(issue)['finding'])):
+                    or load('security-sparkle-applicability').target(fmt.parse_issue(issue)['finding'])
+                    or load('security-picomatch-applicability').target(fmt.parse_issue(issue)['finding'])):
                 stored=api.request(f"issues/{issue['number']}")
                 if (any(stored.get(k)!=v for k,v in change.items())
                         or stored.get('user',{}).get('login')!=BOT):
@@ -418,7 +434,8 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--report',type=Path,required=True);p.add_argument('--apply',action='store_true')
     p.add_argument('--allow-public',action='store_true',help='Allow reviewed public-advisory metadata in public Issues')
     p.add_argument('--refresh-format',action='store_true',help='Refresh managed historical records without changing their state')
-    p.add_argument('--reopen-sparkle-only',action='store_true',help='On failed notice publication, only conservatively reopen #217/#218; never report full success')
+    p.add_argument('--reopen-applicability-only','--reopen-sparkle-only',dest='reopen_applicability_only',
+                   action='store_true',help='On failed notice publication, only reopen owned #217/#218/#220 decisions; never report full success')
     args=p.parse_args()
     repo=os.environ.get('GITHUB_REPOSITORY','')
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',repo): raise ValueError('GITHUB_REPOSITORY is required')
@@ -434,13 +451,15 @@ def main():
     if report.get('errors') or report.get('toolchainCoverage',{}).get('checksComplete',True) is not True:
         report['publicationMode']='additive'
     reopened,changed=check_sparkle_for_publication(report,GitHub(repo),apply=args.apply,allow_public=args.allow_public)
-    if reopened or changed or args.reopen_sparkle_only:
+    pico_reopened,pico_changed=check_picomatch_for_publication(report,GitHub(repo),apply=args.apply,allow_public=args.allow_public)
+    reopened+=pico_reopened;changed=changed or pico_changed
+    if reopened or changed or args.reopen_applicability_only:
         result={'applied':args.apply,'complete':False,'changes':reopened,
                 'reportSHA256':hashlib.sha256(args.report.read_bytes()).hexdigest()}
         args.report.with_name('security-issues-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
-    if changed:raise ValueError('Sparkle evidence changed after scan; conservative reopen recorded, rescan required')
-    if args.reopen_sparkle_only:
-        raise ValueError('Notice publication failed; only conservative Sparkle reopen attempted')
+    if changed:raise ValueError('Applicability evidence changed after scan; conservative reopen recorded, rescan required')
+    if args.reopen_applicability_only:
+        raise ValueError('Notice publication failed; only conservative applicability reopen attempted')
     audit=load('security-audit');context=load('security-risk-context');cache={}
     load('security-pip-applicability').revalidate(report,Path(__file__).resolve().parents[1],audit.gh)
     load('security-openssl-supplier').revalidate(report,Path(__file__).resolve().parents[1])
