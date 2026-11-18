@@ -28,6 +28,7 @@ TARGETS = {
     'GHSA-j586-36cw-2gc2': ('pip-msgpack-c-absent', 'msgpack', 'verification-tool'),
     'GO-2026-6860': ('gh-html-functions-absent', 'golang.org/x/net', 'development'),
     'GO-2026-6866': ('gh-html-functions-absent', 'golang.org/x/net', 'development'),
+    'GHSA-fc5q-39xc-vjpf': ('picomatch-fixed-build-patterns', 'picomatch', 'development'),
 }
 HEX = re.compile('[a-f0-9]{64}')
 
@@ -254,7 +255,9 @@ def verify(rule, root, fetch=None):
     if (record.get('ghsa_id', record.get('id')) != rule['id'] or record.get('withdrawn_at') or record.get('withdrawn')
             or advisory_digest(record, rule['advisoryKind']) != rule['advisorySHA256']):
         raise ValueError('Official applicability conditions changed')
-    proof = (load('security-usage-applicability').verify(root, rule)
+    proof = (load('security-picomatch-applicability').verify(root, rule)
+             if rule['decision'] == 'picomatch-fixed-build-patterns' else
+             load('security-usage-applicability').verify(root, rule)
              if rule['decision'] == 'reviewed-project-usage' else
              {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
               'gh-html-functions-absent': gh_html_subset, 'pip-msgpack-c-absent': pip_msgpack_subset,
@@ -269,6 +272,8 @@ def verify(rule, root, fetch=None):
 
 
 def covers(proof, finding, environment):
+    if proof.get('decision') == 'picomatch-fixed-build-patterns':
+        return load('security-picomatch-applicability').covers(proof, finding, environment)
     observations = finding.get('environmentObservations', [])
     origin_versions = proof.get('originVersions')
     if origin_versions is not None:

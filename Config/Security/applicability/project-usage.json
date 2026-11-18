@@ -4,7 +4,7 @@
   "reviewedCommit": "148dc15158496a3450ca7ee5c46b8ea6c3b0d7b4",
   "workflows": {
     ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
-    ".github/workflows/security-checks.yml": "59efb41ba3636c1413255db0ae46904c82b6e1ac1912906d91f5a42ac45739d7",
+    ".github/workflows/security-checks.yml": "3e97d3b4be46e668b0a26a44257d37cdb460a219126b71155d4acb6d83327d7b",
     ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5"
   },
