@@ -227,6 +227,10 @@ def classify(report, root, fetch):
 
 
 def validate_envelope(report):
+    if 'sparkleApplicability' in report or report.get('sparkleApplicabilityReviews'):
+        spec=importlib.util.spec_from_file_location('sparkle_partition',Path(__file__).with_name('security-sparkle-applicability.py'))
+        helper=importlib.util.module_from_spec(spec);spec.loader.exec_module(helper)
+        helper.validate_envelope(report)
     if 'applicabilityReviews' not in report and 'rawFindings' not in report:
         return  # Existing report format without any exclusions.
     reviews = report.get('applicabilityReviews'); raw = report.get('rawFindings')
@@ -245,7 +249,8 @@ def validate_envelope(report):
     original = [digest(f) for f in raw]
     partition = ([digest(f) for f in report['findings']] + [digest(r['finding']) for r in reviews]
                  + [digest(r['finding']) for r in report.get('supplierFixReviews', [])]
-                 + [digest(r['finding']) for r in report.get('projectApplicabilityReviews', [])])
+                 + [digest(r['finding']) for r in report.get('projectApplicabilityReviews', [])]
+                 + [digest(r['finding']) for r in report.get('sparkleApplicabilityReviews', [])])
     if len(original) != len(set(original)) or sorted(original) != sorted(partition):
         raise ValueError('Raw version matches were removed or modified')
 
@@ -261,5 +266,6 @@ def revalidate(report, root, fetch):
     if (digest(fresh['applicabilityReviews']) != digest(report['applicabilityReviews'])
             or sorted(map(digest, fresh['findings'])) != sorted(map(digest,
                 report['findings'] + [r['finding'] for r in report.get('supplierFixReviews', [])]
-                + [r['finding'] for r in report.get('projectApplicabilityReviews', [])]))):
+                + [r['finding'] for r in report.get('projectApplicabilityReviews', [])]
+                + [r['finding'] for r in report.get('sparkleApplicabilityReviews', [])]))):
         raise ValueError('Applicability evidence changed; preserve Issues and rescan')

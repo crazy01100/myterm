@@ -194,7 +194,7 @@
   ],
   "sourceFiles": {
     ".github/workflows/deploy-update-site.yml": "5065abc50bbe19362e878e053b7529420c13a3d37cc129875ba158ccc286e81e",
-    ".github/workflows/security-checks.yml": "1bac205b23cf9f65aa98fe38dff6303681594082048b8684fe0f546ac2d1b265",
+    ".github/workflows/security-checks.yml": "59efb41ba3636c1413255db0ae46904c82b6e1ac1912906d91f5a42ac45739d7",
     ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     ".github/workflows/security-monitor-health.yml": "174055bef751a298299248c5ce107989191964cd0e7f6996625475c9d4d9d2c5",
     "Config/Release/SparklePublicKey.txt": "bbf8cf94fa2ce3e7dc1ff6b21e50f472c8dad7b79c6ebd40e9c02e7ee686baae",
@@ -214,7 +214,7 @@
     "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c",
     "scripts/publish-release.sh": "bdd82f34ad3ae3b9aa66d3e16bbb4a811720640088620ba7ea9878f581d9553d",
     "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
-    "scripts/security-audit.py": "f2fa8b60fc441f300d505a05a3e22693df4910e0d6849a874a7ddfdd6c9363ac",
+    "scripts/security-audit.py": "48a23c37df90589997f4db1096d38ee89377b8c61bbd0770910dad3ec52de446",
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
     "scripts/update-lab-key.py": "1465b13e70e8e5532218a394178fd946b9a252f4301b62dfede1ef41c7277334",
     "scripts/verify-app.sh": "285a08aa75a1574a17eb131d58002b6460199b23a0e1d13a18e5da98e2c1086a",
@@ -226,8 +226,10 @@
     "scripts/security-risk-triage.py": "f03bde9fa105e8fd13823f7097992f669b452156e1c67d43c398763288027d4b",
     "Config/Security/risk-triage.json": "c2eaac7163fc81a2498d732376611f4e9cb03b4efa930bdb2974959ebd567297",
     "scripts/security-source-review.py": "12f59878b56d3b62909ba625b3aed6c9caa3a69494ab5234574f37fb7a56e64b",
-    "scripts/security-release-policy.py": "20ffc89d1b23382281558f3abae3f4a73837ad1a9a30c3e9201b91f6fe0dcf45",
-    "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc"
+    "scripts/security-release-policy.py": "f3d1c98e14dd6723473c9930f16ff70a2d1de3e27778a78889f8f51e99a00909",
+    "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc",
+    "scripts/security-sparkle-applicability.py": "5d6c24620bfc67f48cb0f51c6f0c2dc7c06310bdb880adb0b4f6245822072aa4",
+    "Config/Security/applicability/sparkle-package-update.json": "4ccff2e7f3cb6ccc2d8eab8a85716c3a7a9d921b94b59b6ba8d98cb88a4ab73b"
   },
   "workflows": [
     ".github/workflows/deploy-update-site.yml",

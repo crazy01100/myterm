@@ -122,8 +122,12 @@ class MonitorMergeScopeTests(unittest.TestCase):
              patch.object(a.module,'inventory',return_value=[]), \
              patch.object(a,'scan_runtime'),patch.object(a,'scan_actions'), \
              patch.object(a,'scan_npm',side_effect=lambda r:r['findings'].append(finding())), \
-             patch.object(a,'scan_verifier'),patch.object(a,'scan_toolchain',side_effect=expanded):
+             patch.object(a,'scan_verifier'),patch.object(a,'scan_toolchain',side_effect=expanded), \
+             patch.object(a,'sparkle_applicability') as sparkle:
             report=a.run()
+            # This collector fixture has no Sparkle observation. Its live
+            # evidence boundary is tested separately, never queried here.
+            sparkle.return_value.classify.assert_called_once_with(report,ROOT)
         self.assertEqual(report['errors'],[])
         self.assertEqual(len(report['rawFindings']),1)
         core=a.baseline_findings(report)

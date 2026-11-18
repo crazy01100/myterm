@@ -72,6 +72,14 @@ Python 工具最低 3.12，CI 使用 3.12，管理腳本統一由 `scripts/proje
 
 已核對仍只有預告的Node官方內容可列為awaiting-details，保留通知而不自動停發；必須精確匹配來源、內容與實際工具版本。公告轉為新細節、來源失敗或工具改變時不得沿用，具體交付風險仍須判斷。本機資料與GitHub Issue是否開啟都不是發布授權。此分流沒有期限展延，普通臨時例外規則不變。
 
+### Sparkle 更新用途的精確判定
+
+`GHSA-gcjm-h3jh-p2vc` 僅對已審 Sparkle 2.10.1／精確 revision 的 MyTerm 官方 `.app` 更新途徑判定；版本原始命中不刪除，也不把套件標為已修補。來源證據綁定標準建置、ZIP 封裝、簽署／驗簽入口及正式產品／公鑰；已發布範圍獨立取得官方五資產，驗證 feed／ZIP 簽章、版本／Build／commit、實際 Info.plist／Sparkle 身分、強制 signed feed 與 App-only 安裝方式。僅有 ZIP 名稱或 HTTPS 不足以通過；自架、其他產品、Beta 或未知版本不得套用。
+
+`Config/Security/applicability/sparkle-package-update.json` 與 `security-sparkle-applicability.py` 保存此限定契約。正式發布／部署另驗當次已簽署交付，不借用目前來源或舊版的判定。原始 findings 與證據分區可追溯；來源／資產／公告或保護條件變動會撤銷舊結論，僅重開本判定擁有的 #217／#218。缺少來源或查詢失敗時可做保守重開，但不能關單或產生完整成功收據；即使公告彙總寫入失敗，也只允許這兩筆的保守重開，其他寫入仍停止。原始告警、嚴重度、歷史與正常 main 寫入限制維持，這不是風險例外。
+
+
+
 ## 安全 Issue 的修正摘要
 
 結案時以「後續維護者能否理解修正方式與驗證依據」判斷是否補寫摘要。在任務已授權的 Issue 更新範圍內，先讀取正文與既有留言，再依下列原則處理：
