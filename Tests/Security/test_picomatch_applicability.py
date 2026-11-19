@@ -129,6 +129,108 @@ class PicomatchTests(unittest.TestCase):
         api=API();f=r['rawFindings'][0];key=s.digest([f[k] for k in ('id','component','scope')]);title,body=s.render(key,f,r)
         api.issues=[{'number':220,'title':title,'body':body,'state':'open','user':{'login':s.BOT}}];return api
 
+    def withdrawn_report(self):
+        r=self.report();finding=copy.deepcopy(r['rawFindings'][0])
+        previous=self.rule['advisorySHA256']
+        stamp=(dt.datetime.now(dt.timezone.utc)-dt.timedelta(days=1)).isoformat()
+        self.advisory.update(withdrawn_at=stamp,cve_id='CVE-2026-112366',
+            html_url='https://github.com/advisories/'+m.ID,
+            vulnerabilities=[{'package':{'ecosystem':'npm','name':'picomatch'}}])
+        self.rule['withdrawal']={'state':'reviewed','withdrawnAt':stamp,
+            'previousAdvisorySHA256':previous,'reason':'Synthetic reviewed official withdrawal; not a repair'}
+        self.rule['advisorySHA256']=p.advisory_digest(self.advisory,'ghsa')
+        r['findings']=[];r['rawFindings']=[]
+        for row in r['collectionEvidence']['collectors']:row['findings']=[]
+        for key in ('projectApplicabilityProofs','projectApplicabilityReviews'):del r[key]
+        p.classify(r,self.root)
+        return r,finding
+
+    def test_withdrawal_is_distinct_and_never_excludes_a_current_risk(self):
+        r,f=self.withdrawn_report();self.assertEqual(r['errors'],[])
+        proof=r['projectApplicabilityProofs'][0]
+        self.assertEqual(proof['status'],'withdrawn');self.assertFalse(m.covers(proof,f,'local'))
+        self.assertEqual(r['projectApplicabilityReviews'],[])
+        p.revalidate(r,self.root);s.validate_report(r)
+        summary=self.root/'summary.md'
+        with patch.dict(os.environ,{'GITHUB_STEP_SUMMARY':str(summary)}):a.write_summary(r,True)
+        self.assertIn('官方公告已撤回（非套件修補）',summary.read_text())
+        self.assertNotIn('精確平台／封裝不適用',summary.read_text())
+        self.assertEqual(m.filter_baseline(r,[f]),[f])
+        r['rawFindings']=[f]
+        with self.assertRaises(ValueError):p.revalidate(r,self.root)
+
+    def test_withdrawal_records_evidence_without_closing_then_reopens_original(self):
+        r,f=self.withdrawn_report();api=self.api({**r,'rawFindings':[f]})
+        changes=s.synchronize(r,api,True,ENV)
+        self.assertEqual(changes[0]['action'],'record-withdrawal')
+        self.assertEqual(api.issues[0]['state'],'open');self.assertEqual(api.comments,[])
+        snapshot=s.fmt.parse_issue(api.issues[0]);self.assertEqual(snapshot['finding'],s.fmt.public_finding(f))
+        self.assertTrue(m.owned_resolution(snapshot,220));self.assertTrue(p.owned_resolution(snapshot))
+        self.assertIn('非套件修補',api.issues[0]['body']);self.assertEqual(s.synchronize(r,api,True,ENV),[])
+        # Simulate the separately authorized maintainer closure after health.
+        api.issues[0].update(state='closed',state_reason='not_planned')
+        self.assertEqual(s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)[0],[])
+        self.assertEqual(s.synchronize(r,api,True,ENV),[])
+        self.advisory['withdrawn_at']=None
+        changes,changed=s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)
+        self.assertTrue(changed);self.assertEqual(changes[0]['number'],220)
+        self.assertEqual(api.issues[0]['state'],'open');self.assertEqual(len(api.issues),1)
+        self.assertNotIn('withdrawalReview',s.fmt.parse_issue(api.issues[0]))
+        self.assertEqual(s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)[0],[])
+
+    def test_withdrawal_content_time_identity_and_source_drift_rejected(self):
+        r,_=self.withdrawn_report();original=copy.deepcopy(self.advisory)
+        for changes in ({'description':'changed'}, {'withdrawn_at':None}, {'withdrawn_at':'2020-01-01T00:00:00Z'},
+                        {'cve_id':'CVE-other'},{'ghsa_id':'GHSA-other'},
+                        {'vulnerabilities':[{'package':{'ecosystem':'npm','name':'other'}}]}):
+            with self.subTest(changes=changes):
+                self.advisory.clear();self.advisory.update(original);self.advisory.update(changes)
+                with self.assertRaises(ValueError):p.revalidate(r,self.root)
+        self.advisory.clear();self.advisory.update(original)
+        self.write('node_modules/node-gyp/index.js',b'changed source')
+        with self.assertRaises(ValueError):p.revalidate(r,self.root)
+
+    def test_withdrawal_query_failure_reopens_closed_owned_record(self):
+        r,f=self.withdrawn_report();api=self.api({**r,'rawFindings':[f]});s.synchronize(r,api,True,ENV)
+        api.issues[0].update(state='closed',state_reason='not_planned')
+        with patch.object(p,'fetch_advisory',side_effect=TimeoutError):
+            changes,changed=s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)
+        self.assertTrue(changed);self.assertEqual(changes[0]['number'],220)
+
+    def test_failed_scan_cannot_record_or_close_withdrawal(self):
+        r,f=self.withdrawn_report();api=self.api({**r,'rawFindings':[f]})
+        r['scanStatus']='failed';r['errors']=['unrelated query failed']
+        with self.assertRaises(ValueError):s.synchronize(r,api,True,ENV)
+        r['publicationMode']='additive'
+        self.assertEqual(s.synchronize(r,api,True,ENV)[0]['action'],'preserve')
+        self.assertEqual(api.issues[0]['state'],'open')
+        self.assertNotIn('withdrawalReview',s.fmt.parse_issue(api.issues[0]))
+
+    def test_withdrawal_proof_cannot_be_borrowed_or_forged(self):
+        r,f=self.withdrawn_report();original=copy.deepcopy(r)
+        for changes in ({'id':'GHSA-other'}, {'component':'other'}, {'scope':'released-app'},
+                        {'status':'fixed'}, {'evidence':{}}, {'grantsRiskException':True}):
+            r=copy.deepcopy(original);r['projectApplicabilityProofs'][0].update(changes)
+            with self.assertRaises(ValueError):p.validate_envelope(r)
+        r=copy.deepcopy(original);r['projectApplicabilityProofs'][0]['evidence']['withdrawal']['advisorySHA256']='b'*64
+        with self.assertRaises(ValueError):p.validate_envelope(r)
+        self.assertFalse(m.owned_resolution({'finding':f,'withdrawalReview':{
+            'kind':'official-withdrawal','decision':m.DECISION,'proofSHA256':'a'*64}},999))
+
+    def test_withdrawn_advisory_without_review_still_fails(self):
+        self.advisory['withdrawn_at']=dt.datetime.now(dt.timezone.utc).isoformat()
+        self.rule['advisorySHA256']=p.advisory_digest(self.advisory,'ghsa')
+        with self.assertRaisesRegex(ValueError,'conditions changed'):p.verify(self.rule,self.root)
+
+    def test_withdrawal_reopen_write_failure_is_not_success_and_comment_deduplicates(self):
+        r,f=self.withdrawn_report();api=self.api({**r,'rawFindings':[f]});s.synchronize(r,api,True,ENV)
+        api.issues[0].update(state='closed',state_reason='not_planned');self.advisory['withdrawn_at']=None
+        api.fail_patch=True
+        with self.assertRaises(RuntimeError):s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)
+        count=len(api.comments);api.fail_patch=False
+        s.check_picomatch_for_publication(r,api,apply=True,environ=ENV,root=self.root)
+        self.assertEqual(len(api.comments),count);self.assertEqual(api.issues[0]['state'],'open')
+
     def test_exact_official_sources_preserve_raw_and_validate_partition(self):
         r=self.report();self.assertEqual(r['errors'],[]);self.assertEqual(r['findings'],[])
         self.assertEqual(len(r['projectApplicabilityReviews']),1);self.npm.verify.assert_called()

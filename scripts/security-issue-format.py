@@ -50,10 +50,18 @@ def semantic(f):
     return result
 
 
-def render(key,f,report,resolved=False,resolutions=None,applicability=None,candidate=None):
+def render(key,f,report,resolved=False,resolutions=None,applicability=None,candidate=None,withdrawal=None):
     f=public_finding(f);resolutions=list(resolutions or [])
     if resolved and not resolutions: resolutions=[report['checkedAt']]
     snapshot={'finding':f,'checkedAt':report['checkedAt'],'resolutions':resolutions}
+    if withdrawal is not None:
+        if (applicability is not None or candidate is not None or resolved
+                or withdrawal.get('kind') != 'official-withdrawal'
+                or not re.fullmatch('[a-f0-9]{64}',withdrawal.get('proofSHA256',''))
+                or not isinstance(withdrawal.get('reason'),str)):
+            raise ValueError('Invalid withdrawal review')
+        display_time(withdrawal['checkedAt']);display_time(withdrawal['withdrawnAt'])
+        snapshot['withdrawalReview']=withdrawal
     if applicability is not None:
         if (not isinstance(applicability,dict) or not re.fullmatch('[a-f0-9]{64}',applicability.get('proofSHA256',''))
                 or not isinstance(applicability.get('reason'),str)):
@@ -73,6 +81,8 @@ def render(key,f,report,resolved=False,resolutions=None,applicability=None,candi
         title=f"[不適用] {f['component']}：{SCOPES[f['scope']]}公告（{f['id']}）"
     if candidate is not None:
         title=f"[轉候選監測] {f['component']}：公告（{f['id']}）"
+    if withdrawal is not None:
+        title=f"[公告已撤回] {f['component']}：{SCOPES[f['scope']]}公告（{f['id']}）"
     if len(title)>240: raise ValueError('Issue title too long')
     body=marker+FORMAT+'<!-- myterm-security-snapshot:'+encoded+' -->\n'
     body+='- **公告**：['+safe(f['id'])+']('+f['url']+')\n'
@@ -106,6 +116,12 @@ def render(key,f,report,resolved=False,resolutions=None,applicability=None,candi
     if f.get('exceptionExpiresAt'):
         rows.extend([('暫時例外','有效' if f.get('acceptedRisk') else '已到期或無效'),('例外期限',display_time(f['exceptionExpiresAt']))])
     rows.append(('掃描時間',display_time(report['checkedAt'])))
+    if withdrawal is not None:
+        # Keep the original finding in the snapshot; current text must not
+        # mislabel a withdrawn notice as a package repair or an active risk.
+        rows=[(k,v) for k,v in rows if k not in ('判斷','修補版本','實際影響','評估依據')]
+        rows.extend([('判斷','官方公告已撤回；非套件修補'),('撤回時間',display_time(withdrawal['withdrawnAt'])),
+                     ('評估依據',withdrawal['reason'])])
     body+='\n'.join('- **'+k+'**：'+safe(v) for k,v in rows)+'\n'
     links=[]
     for index,url in enumerate(impact.get('evidence',[]),1):
@@ -123,6 +139,10 @@ def render(key,f,report,resolved=False,resolutions=None,applicability=None,candi
         body+='- 已保存至 #'+str(candidate['aggregateIssue'])+'；獨立修補 Issue 關閉，原始命中與歷史保留。\n'
         body+='- 尚未建立受影響操作與正常專案用途的具體連結；不是已修補、已確認不適用或風險例外。\n'
         body+='- 出現具體適用／交付影響證據時重新開啟原 Issue。\n'
+    if withdrawal is not None:
+        body+='\n## 官方撤回審閱\n- '+display_time(withdrawal['checkedAt'])+'：'+safe(withdrawal['reason'])+'\n'
+        body+='- 保留原始版本命中及嚴重度；不是套件已修補或新增風險例外。正式監測及健康驗證完成後由維護者結案。\n'
+        body+='- 官方恢復公告、撤回證據或精確工具條件失效時，恢復待審並重新開啟原紀錄。\n'
     return title,body
 
 

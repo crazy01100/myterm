@@ -806,7 +806,8 @@ def write_summary(report, monitor, *, merge_gate=False):
     for review in report.get('supplierFixReviews', []):
         lines.append('- 供應商已修補（原版本命中保留）：'+html.escape(review['finding']['id']))
     for proof in report.get('projectApplicabilityProofs', []):
-        lines.append('- 精確平台／封裝不適用（非套件修補）：'+html.escape(proof['id'])+' — '+html.escape(proof['reason']))
+        label = '官方公告已撤回（非套件修補）：' if proof.get('status') == 'withdrawn' else '精確平台／封裝不適用（非套件修補）：'
+        lines.append('- '+label+html.escape(proof['id'])+' — '+html.escape(proof['reason']))
     for proof in report.get('sparkleApplicability', {}).get('outcomes', []):
         lines.append('- Sparkle目前用途：'+html.escape(proof['scope'])+' / '+html.escape(proof['status'])+' — '+html.escape(proof['reason']))
     for proof in report.get('supplierNotices',{}).get('remediations',[]):

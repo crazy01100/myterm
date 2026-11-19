@@ -172,6 +172,7 @@ def reopen_owned_applicability(report, current, api, helper, *, apply=False, env
     changes=[]
     for row in current['outcomes']:
         if row['status']=='not-affected':continue
+        if getattr(helper,'TRACKING_NAME',None)=='picomatch' and row['status']=='withdrawn':continue
         number=helper.SCOPES[row['scope']];issue=api.request(f'issues/{number}')
         if (issue.get('number')!=number or 'pull_request' in issue
                 or issue.get('user',{}).get('login')!=BOT or issue.get('state')!='closed'
@@ -184,8 +185,9 @@ def reopen_owned_applicability(report, current, api, helper, *, apply=False, env
         if key!=marker[1]:raise ValueError('Previous applicability Issue identity differs')
         f['impact']={'status':'needs-review','reason':row['reason']}
         title,body=render(key,f,{'checkedAt':old['checkedAt']},resolutions=old['resolutions'])
-        comment_marker='<!-- myterm-'+getattr(helper,'TRACKING_NAME','sparkle')+'-reopen:'+digest([number,old['applicabilityResolution']['proofSHA256'],row['reason']])+' -->'
-        comment=comment_marker+'\n目前用途不適用的證據已失效或無法完成核對，重新開啟原 Issue 待審。原始命中／嚴重度保留；這不表示已證明可利用，也不授予例外。\n\n'+row['reason']
+        prior=old.get('withdrawalReview') or old['applicabilityResolution']
+        comment_marker='<!-- myterm-'+getattr(helper,'TRACKING_NAME','sparkle')+'-reopen:'+digest([number,prior['proofSHA256'],row['reason']])+' -->'
+        comment=comment_marker+'\n公告／用途審閱的證據已失效或無法完成核對，重新開啟原 Issue 待審。原始命中／嚴重度保留；這不表示已證明可利用，也不授予例外。\n\n'+row['reason']
         change={'title':title,'body':body,'state':'open'}
         if apply:
             comments=api.pages(f'issues/{number}/comments')
@@ -339,6 +341,22 @@ def synchronize(report, api, apply=False, environ=None, allow_public=False, refr
                 proof=sparkle.previous_decision(report,f)
             picomatch=load('security-picomatch-applicability')
             if picomatch.target(f) and issue['number']!=220:proof=None
+            withdrawn=picomatch.previous_withdrawal(report,f) if issue['number']==220 else None
+            if withdrawn is not None and not additive:
+                evidence=withdrawn['evidence']['withdrawal']
+                review={'kind':'official-withdrawal','decision':withdrawn['decision'],
+                        'proofSHA256':load('security-project-applicability').digest(withdrawn),
+                        'reason':withdrawn['reason'],'withdrawnAt':evidence['withdrawnAt'],
+                        'checkedAt':report['checkedAt']}
+                previous=old.get('withdrawalReview')
+                if previous and all(previous.get(k)==v for k,v in review.items() if k!='checkedAt'):
+                    continue
+                title,body=render(key,f,{'checkedAt':old['checkedAt']},resolutions=old['resolutions'],withdrawal=review)
+                # A successful monitor/health receipt must precede maintainer
+                # closure. This write deliberately never changes Issue state.
+                operations.append((issue,{'title':title,'body':body},None))
+                actions.append({'action':'record-withdrawal','number':issue['number'],'key':key})
+                continue
             if proof is not None and not additive:
                 if issue['state']=='closed' and (load('security-project-applicability').owned_resolution(old)
                         or sparkle.owned_resolution(old,issue['number'])):

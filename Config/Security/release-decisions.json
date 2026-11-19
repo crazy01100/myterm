@@ -214,7 +214,7 @@
     "scripts/project-python.sh": "4319351e7374d957f1f13fc85d5d9af89cbf5615102c03809566a73435a77b9c",
     "scripts/publish-release.sh": "bdd82f34ad3ae3b9aa66d3e16bbb4a811720640088620ba7ea9878f581d9553d",
     "scripts/release.sh": "89b7ae6f3146635156c4db418b661aaf144785cd24dc53dabcc1cab9d0d66c6d",
-    "scripts/security-audit.py": "0e08b9f5d51c32c5c1fe113670a572cf41a9565e939242a0b8052a5642352229",
+    "scripts/security-audit.py": "790795655f96344ad860ec7f25a8a3adf2d3842472403bcfdf86767d0603a9f9",
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
     "scripts/update-lab-key.py": "1465b13e70e8e5532218a394178fd946b9a252f4301b62dfede1ef41c7277334",
     "scripts/verify-app.sh": "285a08aa75a1574a17eb131d58002b6460199b23a0e1d13a18e5da98e2c1086a",
@@ -230,9 +230,9 @@
     "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc",
     "scripts/security-sparkle-applicability.py": "5d6c24620bfc67f48cb0f51c6f0c2dc7c06310bdb880adb0b4f6245822072aa4",
     "Config/Security/applicability/sparkle-package-update.json": "4ccff2e7f3cb6ccc2d8eab8a85716c3a7a9d921b94b59b6ba8d98cb88a4ab73b",
-    "scripts/security-picomatch-applicability.py": "ff53a8e4642658ae2a82925783dfa545b5217b09bf3735ed24078b4cab58758c",
-    "scripts/security-project-applicability.py": "a41062e6c19cd66c359cff9dbee73863ee3c4bea5122c941372a6a3f6923e6f7",
-    "Config/Security/project-applicability.json": "781fccca4a0b51551aa9a041714df1b8a4cfd9f10ab7385e6abc0b7f2ad14495",
+    "scripts/security-picomatch-applicability.py": "d5ee2f244d4ac34f1d277b412e8a36c7a9afe0921257d02c739fb21fb2b0ba77",
+    "scripts/security-project-applicability.py": "edad20e6a129cec1c7bfb24c2c9d6dac893d6859f8b0a3864fead18b41a4aff4",
+    "Config/Security/project-applicability.json": "1f76ec44f0b0013b8b9fdf062796b4766b24ee64a4b26431898fa5f7b2d7d47b",
     "Config/Security/applicability/picomatch-build-patterns.json": "b793cb0a59cfd7a24e358971df3dc4e631f8177b9ef2daf62a653ee455074185"
   },
   "workflows": [
