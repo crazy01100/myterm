@@ -252,21 +252,30 @@ def action_subset(root, rule):
 
 def verify(rule, root, fetch=None):
     record = (fetch or fetch_advisory)(rule, root)
-    if (record.get('ghsa_id', record.get('id')) != rule['id'] or record.get('withdrawn_at') or record.get('withdrawn')
+    if (record.get('ghsa_id', record.get('id')) != rule['id']
             or advisory_digest(record, rule['advisoryKind']) != rule['advisorySHA256']):
         raise ValueError('Official applicability conditions changed')
-    proof = (load('security-picomatch-applicability').verify(root, rule)
-             if rule['decision'] == 'picomatch-fixed-build-patterns' else
-             load('security-usage-applicability').verify(root, rule)
-             if rule['decision'] == 'reviewed-project-usage' else
-             {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
-              'gh-html-functions-absent': gh_html_subset, 'pip-msgpack-c-absent': pip_msgpack_subset,
-              'upload-lodash-subset': action_subset}[rule['decision']](root, rule))
+    withdrawn = 'withdrawal' in rule
+    if withdrawn:
+        if rule['id'] != 'GHSA-fc5q-39xc-vjpf':
+            raise ValueError('Unreviewed withdrawal scope')
+        proof = load('security-picomatch-applicability').verify_withdrawal(root, rule, record)
+    elif record.get('withdrawn_at') or record.get('withdrawn'):
+        raise ValueError('Official applicability conditions changed')
+    else:
+        proof = (load('security-picomatch-applicability').verify(root, rule)
+                 if rule['decision'] == 'picomatch-fixed-build-patterns' else
+                 load('security-usage-applicability').verify(root, rule)
+                 if rule['decision'] == 'reviewed-project-usage' else
+                 {'cpython-windows-only': python_platforms, 'gh-openpgp-absent': gh_subset,
+                  'gh-html-functions-absent': gh_html_subset, 'pip-msgpack-c-absent': pip_msgpack_subset,
+                  'upload-lodash-subset': action_subset}[rule['decision']](root, rule))
     config = load('security-usage-applicability').CONFIG if rule['decision'] == 'reviewed-project-usage' else CONFIG
     return {'id': rule['id'], 'decision': rule['decision'], 'component': rule['component'],
             'scope': rule['scope'], 'origins': rule['origins'], 'version': rule.get('version'),
             **({'originVersions': rule['originVersions']} if 'originVersions' in rule else {}),
-            'status': 'not-affected', 'reason': rule['reason'], 'evidence': proof,
+            'status': 'withdrawn' if withdrawn else 'not-affected',
+            'reason': rule['withdrawal']['reason'] if withdrawn else rule['reason'], 'evidence': proof,
             'advisorySHA256': rule['advisorySHA256'], 'grantsRiskException': False,
             'ruleSHA256': hashlib.sha256((root/config).read_bytes()).hexdigest()}
 
@@ -309,6 +318,9 @@ def classify(report, root=ROOT, fetch=None, verifier=None):
         try:
             proof = (verifier or verify)(rule, root, fetch)
             proof['environment'] = environment
+            if proof['status'] == 'withdrawn' and any(identity(f) == identity(proof)
+                    for f in report.get('rawFindings', []) + report['findings']):
+                raise ValueError('Withdrawn advisory has contradictory current findings')
             report['projectApplicabilityProofs'].append(proof)
             for finding in list(report['findings']):
                 if finding.get('queryComplete') is True and covers(proof, finding, environment):
@@ -338,7 +350,9 @@ def validate_envelope(report):
     seen = set()
     for p in proofs:
         if (target(p) is None or identity(p) in seen or p.get('decision') != target(p)
-                or p.get('status') != 'not-affected' or p.get('grantsRiskException') is not False
+                or (p.get('status') != 'not-affected'
+                    and not load('security-picomatch-applicability').withdrawal_proof(p))
+                or p.get('grantsRiskException') is not False
                 or p.get('environment') != report.get('observedEnvironment') or not isinstance(p.get('evidence'), dict)
                 or any(not HEX.fullmatch(p.get(k, '')) for k in ('ruleSHA256', 'advisorySHA256'))):
             raise ValueError('Unrecognized project applicability proof')
@@ -368,6 +382,8 @@ def previous_decision(report, finding):
 
 
 def owned_resolution(snapshot):
+    if load('security-picomatch-applicability').owned_withdrawal(snapshot):
+        return True
     value = snapshot.get('applicabilityResolution', {})
     finding = snapshot.get('finding', {})
     return (target(finding) is not None and value.get('decision') == target(finding)

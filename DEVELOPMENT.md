@@ -467,3 +467,5 @@ OpenSSL 供應商修補證據保存在 `.build/openssl-supplier/`，僅供唯讀
 安全報告的工具版本候選由既有彙總待審清單保存，與獨立修補Issue及發布阻擋分開。原始命中不刪除；具體交付風險與必要來源／簽章／CI／收據失敗仍阻擋。已核對的預告只在來源與內容未變時保留待細節通知。轉候選不是套件已修補或期限例外，詳見[安全維護指南](SECURITY_MAINTENANCE.md)。
 
 picomatch 的用途與生命週期回歸使用 `./scripts/security-python.sh -m unittest discover -s Tests/Security -p test_picomatch_applicability.py -v`，只處理惰性封裝、合成 metadata 與記憶體 Issue API，不執行 glob 或漏洞輸入。實際核對唯讀使用專案 npm 快取中符合鎖檔完整性的官方封裝與已安裝來源；缺少快取或來源漂移須先恢復標準固定安裝／核對，不能將缺證據改成略過。完整固定回歸與 CI 仍依當次授權。
+
+官方撤回生命週期同樣以合成資料驗證：已審撤回只保存明確審閱，不在健康驗證之前自動關閉 #220；重新公告／撤回取消／證據失效重開原單。其他公告、原始風險及必要門檻不受此單筆處理影響。

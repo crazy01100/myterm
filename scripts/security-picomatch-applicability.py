@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exact node-gyp consumer evidence for one advisory; never execute patterns."""
 import base64
+import datetime as dt
 import hashlib
 import importlib.util
 import io
@@ -193,6 +194,59 @@ def target(finding):
     return all(finding.get(k) == v for k, v in {'id': ID, 'component': COMPONENT, 'scope': 'development'}.items())
 
 
+def verify_withdrawal(root, rule, record):
+    """One reviewed official withdrawal; not a general withdrawn-risk bypass."""
+    reviewed = rule['withdrawal']
+    when = dt.datetime.fromisoformat(reviewed['withdrawnAt'])
+    if (not target(rule) or rule.get('decision') != DECISION
+            or reviewed.get('state') != 'reviewed' or not reviewed.get('reason')
+            or not HEX.fullmatch(reviewed.get('previousAdvisorySHA256', ''))
+            or record.get('ghsa_id') != ID or record.get('cve_id') != 'CVE-2026-112366'
+            or record.get('html_url') != 'https://github.com/advisories/'+ID
+            or record.get('withdrawn_at') != reviewed['withdrawnAt']
+            or when.tzinfo is None or when > dt.datetime.now(dt.timezone.utc)
+            or not record.get('vulnerabilities') or any(
+                v.get('package') != {'ecosystem': 'npm', 'name': COMPONENT}
+                for v in record['vulnerabilities'])):
+        raise ValueError('Official picomatch withdrawal no longer matches reviewed evidence')
+    # Preserve the already reviewed exact environment and consumer boundary.
+    return {'withdrawal': {'id': ID, 'withdrawnAt': reviewed['withdrawnAt'],
+                          'advisorySHA256': rule['advisorySHA256'],
+                          'previousAdvisorySHA256': reviewed['previousAdvisorySHA256']},
+            'usage': verify(root, rule)}
+
+
+def withdrawal_proof(proof):
+    evidence = proof.get('evidence', {})
+    row = evidence.get('withdrawal', {}) if isinstance(evidence, dict) else {}
+    try:
+        when = dt.datetime.fromisoformat(row['withdrawnAt'])
+        valid_time = when.tzinfo is not None and when <= dt.datetime.now(dt.timezone.utc)
+    except (KeyError, TypeError, ValueError):
+        valid_time = False
+    return (target(proof) and proof.get('decision') == DECISION and proof.get('status') == 'withdrawn'
+            and proof.get('grantsRiskException') is False and valid_time
+            and row.get('id') == ID and row.get('advisorySHA256') == proof.get('advisorySHA256')
+            and HEX.fullmatch(row.get('advisorySHA256', '')) is not None
+            and HEX.fullmatch(row.get('previousAdvisorySHA256', '')) is not None
+            and isinstance(evidence.get('usage'), dict) and bool(evidence['usage']))
+
+
+def previous_withdrawal(report, finding):
+    for proof in report.get('projectApplicabilityProofs', []):
+        if withdrawal_proof(proof) and covers({**proof, 'status': 'not-affected'}, finding,
+                                             report.get('observedEnvironment')):
+            return proof
+    return None
+
+
+def owned_withdrawal(snapshot):
+    row = snapshot.get('withdrawalReview', {})
+    return (target(snapshot.get('finding', {})) and row.get('decision') == DECISION
+            and row.get('kind') == 'official-withdrawal'
+            and HEX.fullmatch(row.get('proofSHA256', '')) is not None)
+
+
 def covers(proof, finding, environment):
     observations = finding.get('environmentObservations', [])
     seen = {}
@@ -228,8 +282,8 @@ def filter_baseline(report, findings):
 
 def owned_resolution(snapshot, number):
     r = snapshot.get('applicabilityResolution', {})
-    return (number == 220 and target(snapshot.get('finding', {}))
-            and r.get('decision') == DECISION and HEX.fullmatch(r.get('proofSHA256', '')) is not None)
+    return (number == 220 and (owned_withdrawal(snapshot) or (target(snapshot.get('finding', {}))
+            and r.get('decision') == DECISION and HEX.fullmatch(r.get('proofSHA256', '')) is not None)))
 
 
 def validate_envelope(report):
@@ -251,9 +305,10 @@ def publication_state(report, root):
             raise ValueError('Observed picomatch scope or version changed')
         if len(old) != 1 or digest(old[0]) != digest(fresh):
             raise ValueError('Picomatch evidence changed after scan')
-        row.update(status='not-affected', reason=rule['reason'])
+        row.update(status=fresh['status'], reason=fresh['reason'])
     except Exception as error:
         detail = str(error) if type(error) is ValueError else type(error).__name__
-        row['reason'] = 'picomatch目前用途證據失效或無法核對，恢復待審：'+detail
-    changed = bool(old) and (fresh is None or digest(old[0]) != digest(fresh) or row['status'] != 'not-affected')
+        row['reason'] = 'picomatch公告／用途證據失效或無法核對，恢復待審：'+detail
+    changed = bool(old) and (fresh is None or digest(old[0]) != digest(fresh)
+                            or row['status'] not in ('not-affected', 'withdrawn'))
     return {'outcomes': [row]}, changed
