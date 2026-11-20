@@ -5,9 +5,11 @@ import io
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import tarfile
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -235,16 +237,38 @@ class LinuxRulesIntegrationTests(unittest.TestCase):
         policy=json.loads((ROOT/'Config/Security/toolchain-inventory.json').read_text())
         emulator,=[r for r in policy['supplierBoundaries'] if r['component']=='firestore-emulator']
         source=ROOT/'.build/security-inventory-artifacts'/emulator['filename']
-        cached=ROOT/'.firebase/emulators'/emulator['filename']
+        self.assertFalse(source.is_symlink())
+        self.assertEqual(source.stat().st_size,emulator['size'])
         self.assertEqual(j.digest_file(source),emulator['sha256'])
-        cached.parent.mkdir(parents=True,exist_ok=True)
-        if not cached.exists():
-            os.link(source,cached)
-            self.addCleanup(cached.unlink)
-        self.assertFalse(cached.is_symlink())
-        self.assertEqual(j.digest_file(cached),emulator['sha256'])
-        subprocess.run([str(ROOT/'scripts/project-node.sh'),'--npm','run','test:firestore-rules'],
-                       cwd=ROOT,check=True,timeout=120)
+        with socket.socket() as probe:
+            probe.bind(('127.0.0.1',0))
+            port=probe.getsockname()[1]
+        endpoint=f'127.0.0.1:{port}'
+        with tempfile.TemporaryDirectory() as directory:
+            log=Path(directory)/'emulator.log'
+            with log.open('wb') as output:
+                process=subprocess.Popen([str(ROOT/'scripts/project-java.sh'),'-jar',str(source),
+                    '--host','127.0.0.1','--port',str(port),'--project_id','demo-myterm',
+                    '--single_project_mode','true','--rules',str(ROOT/'firestore.rules')],
+                    cwd=directory,stdout=output,stderr=subprocess.STDOUT)
+                try:
+                    deadline=time.monotonic()+30
+                    while process.poll() is None and time.monotonic()<deadline:
+                        if 'Dev App Server is now running.' in log.read_text():
+                            break
+                        time.sleep(0.1)
+                    else:
+                        self.fail('The isolated Firestore emulator did not start: '+log.read_text())
+                    self.assertIn('API endpoint: http://'+endpoint+'\n',log.read_text())
+                    subprocess.run([str(ROOT/'scripts/project-node.sh'),'--test',
+                        'Tests/FirebaseRules/firestore.rules.test.mjs'],cwd=ROOT,check=True,timeout=90,
+                        env={**os.environ,'FIRESTORE_EMULATOR_HOST':endpoint})
+                finally:
+                    process.terminate()
+                    try:process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
 
 
 if __name__=='__main__':unittest.main()
