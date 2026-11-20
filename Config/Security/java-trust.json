@@ -4,9 +4,9 @@
   "decision": "vendor-recommended-root-removal",
   "grantsRiskException": false,
   "source": "https://ops.java/emudhra",
-  "reviewedAt": "2026-10-27",
-  "upstreamTruststoreSHA256": "628b436e6698c364c5498a32c5bff91806bea7a9b501f75e2289ddc60b4ca7ef",
-  "derivedTruststoreSHA256": "873dfdb867a573a85a3df93de3913943086259db608b530913efe99572ede59c",
+  "reviewedAt": "2026-11-21",
+  "upstreamTruststoreSHA256": "868c92b50f99bcb97b1b84b87850a69623264972b3e18e868646a894535980a5",
+  "derivedTruststoreSHA256": "00a778fb802d1524a886c27e8a31880b54eadd6b997f869e90c22171fe13acc8",
   "excludedRootCNs": [
     "emSign Root CA - G1",
     "emSign Root CA - G2",

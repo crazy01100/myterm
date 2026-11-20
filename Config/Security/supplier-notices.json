@@ -5,7 +5,7 @@
     {
       "id": "CVE-2026-114820",
       "component": "Temurin",
-      "version": "21.0.13+9",
+      "version": "21.0.13.1+2",
       "scope": "development",
       "severity": "critical",
       "status": "needs-review",
@@ -19,7 +19,7 @@
           "environment": "local",
           "origin": "platform/java",
           "versions": [
-            "21.0.13+9"
+            "21.0.13.1+2"
           ]
         }
       ]
@@ -96,7 +96,7 @@
   "reviewedJDKs": [
     {
       "vendor": "Eclipse Adoptium",
-      "runtimeVersion": "21.0.13+9-LTS"
+      "runtimeVersion": "21.0.13.1+2-LTS"
     }
   ]
 }
