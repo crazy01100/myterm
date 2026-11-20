@@ -232,7 +232,7 @@
     "Config/Security/applicability/sparkle-package-update.json": "4ccff2e7f3cb6ccc2d8eab8a85716c3a7a9d921b94b59b6ba8d98cb88a4ab73b",
     "scripts/security-picomatch-applicability.py": "d5ee2f244d4ac34f1d277b412e8a36c7a9afe0921257d02c739fb21fb2b0ba77",
     "scripts/security-project-applicability.py": "edad20e6a129cec1c7bfb24c2c9d6dac893d6859f8b0a3864fead18b41a4aff4",
-    "Config/Security/project-applicability.json": "1f76ec44f0b0013b8b9fdf062796b4766b24ee64a4b26431898fa5f7b2d7d47b",
+    "Config/Security/project-applicability.json": "ebb760d5ed0aa3f26d64e7f247daca5bbec474c329cbb9197c210a3d92dce6f4",
     "Config/Security/applicability/picomatch-build-patterns.json": "b793cb0a59cfd7a24e358971df3dc4e631f8177b9ef2daf62a653ee455074185"
   },
   "workflows": [
