@@ -214,6 +214,10 @@
         {
           "id": "d4af201e3a6bd934ce42a09433ecb098b2a9a6c8c34b1a9bc4c46c696000e0cb",
           "contentSHA256": "054769387639acdef93b57ec1b9a35f28abce63f69004929d3fe24600e90613b"
+        },
+        {
+          "id": "e03011c48905b459431ef4dc5d6d7386d6d277ef2ce369b9dbe6fecf38696ee5",
+          "contentSHA256": "7baba53c0255a8fd844911924a06267d25d8e36d7d205cb501a77ded1154bb9e"
         }
       ],
       "reviewScope": "Change-detection initialization for exact project runtime and trust configuration; historical captures are not vulnerability waivers. Current package/core/native findings remain independently blocking.",
@@ -4507,6 +4511,14 @@
         {
           "id": "130d9bc72a1a0f48649a0bf11fa18461afd053fe8c4b029d9153099e507309e4",
           "contentSHA256": "4abeaa671cd8c7908fe2c9cf9fbb496c0cab9d6930d9f26ac2a36984470bed1d"
+        },
+        {
+          "id": "f5edeb08fb160e7fbaa1feea022dd53d34d26b6df4d25b3e217515c79a084900",
+          "contentSHA256": "bdc556f7594a942e3f4839e9831bc26c32797927419c46c518429dfb9bd14b98"
+        },
+        {
+          "id": "5fe38e686529aa56719f1feaf73cb74dfae6d77c0c423c218e18a978172507f4",
+          "contentSHA256": "9d81f423651bc44b8239a4fb811fb60e16a91f8d6d02e0b3de856210058da7b9"
         }
       ],
       "reviewScope": "Change-detection initialization for exact project runtime and trust configuration; historical captures are not vulnerability waivers. Current package/core/native findings remain independently blocking.",
@@ -4568,6 +4580,10 @@
         {
           "id": "f4c2e83180faa7973c4518fc33e728be21e79c9e4f79c41c99deed964659d7d0",
           "contentSHA256": "a4bff90f72724ba18c9154f5c176ebfc3d3f1f68336947b4254bf3cc6b008b13"
+        },
+        {
+          "id": "5d02d4931b52a6ca70368b92a46814837ceedc0ea9cc3175693cae0dbde43128",
+          "contentSHA256": "fe02fdafd233da49a2d9631601406e667450efbd10765247e624d27688ad2480"
         }
       ],
       "reviewScope": "Release notice change-detection baseline for exact local Firebase CLI and loopback emulator policy; package advisories remain independently blocking"
