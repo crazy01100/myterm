@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Prepare/verify the reviewed project JDK without changing global Java or CAs."""
 import argparse
+import errno
 import hashlib
 import json
 import os
@@ -14,8 +15,6 @@ import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 CONFIG='Config/Security/java-runtime.json'
-TARGET='.build/java-runtime'
-MANIFEST='.build/java-runtime-files.json'
 TRUST='Config/Security/java-trust.json'
 EXCLUDED_ROOTS={'emSign Root CA - G1','emSign Root CA - G2',
                 'emSign ECC Root CA - G3','AAA Certificate Services'}
@@ -38,7 +37,7 @@ def configuration(root):
     expected_platform='aarch64-apple-darwin' if config==CONFIG else 'x86_64-linux-gnu'
     version=row.get('version','')
     if (row.get('schemaVersion')!=1 or row.get('vendor')!='Eclipse Temurin' or
-            row.get('platform')!=expected_platform or not re.fullmatch(r'21\.0\.[0-9]+\+[0-9]+',version) or
+            row.get('platform')!=expected_platform or not re.fullmatch(r'21\.0\.[0-9]+(?:\.[0-9]+)?\+[0-9]+',version) or
             row.get('archiveRoot')!='jdk-'+version or type(row.get('size')) is not int or not 0<row['size']<256*1024*1024):
         raise ValueError('Unreviewed Java runtime policy')
     for key in ('sha256','fileManifestSHA256','truststoreSHA256','blockedCertsSHA256'):
@@ -183,15 +182,19 @@ def derive_trust(home, root, row):
 
 
 def upstream_manifest(root, row):
-    manifest=storage(root,MANIFEST)
+    manifest=storage(root,installation(root,row)/'files.json')
     raw=manifest.read_bytes()
     if hashlib.sha256(raw).hexdigest()!=row['fileManifestSHA256']:
         raise ValueError('Java installed manifest differs from reviewed artifact')
     return json.loads(raw)
 
 
+def installation(root, row):
+    return storage(root, '.build/temurin-' + row['version'])
+
+
 def verify(root=ROOT):
-    row=configuration(root);target=storage(root,TARGET)
+    row=configuration(root);target=storage(root,installation(root,row)/row['archiveRoot'])
     files=upstream_manifest(root,row);verify_tree(target,installed_manifest(root,row,files))
     home=java_home(target,row)
     if digest_file(home/'lib/security/blocked.certs')!=row['blockedCertsSHA256']:
@@ -216,8 +219,9 @@ def clean_environment():
 
 
 def setup(root=ROOT):
-    row=configuration(root);archive=storage(root,'.build/java-base-download/'+row['url'].rsplit('/',1)[-1]);target=storage(root,TARGET)
-    if target.exists():
+    row=configuration(root);archive=storage(root,'.build/java-base-download/'+row['url'].rsplit('/',1)[-1])
+    install=installation(root,row);target=storage(root,install/row['archiveRoot'])
+    if install.exists():
         try:return verify(root)
         except ValueError:
             # The one explicit migration accepts a completely unchanged official
@@ -244,8 +248,13 @@ def setup(root=ROOT):
         if 'Temurin-'+row['version'] not in result.stderr:
             raise ValueError('Java vendor/build differs from reviewed runtime')
         derive_trust(java_home(candidate,row),root,row)
-        candidate.rename(target)
-    storage(root,MANIFEST).write_bytes(raw)
+        (stage/'files.json').write_bytes(raw)
+        try:
+            stage.rename(install)
+        except OSError as error:
+            if error.errno not in (errno.EEXIST,errno.ENOTEMPTY):
+                raise
+            # Another setup published this version first. Verify its entire tree below.
     return verify(root)
 
 

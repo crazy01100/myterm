@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "vendor": "Eclipse Temurin",
-  "version": "21.0.13+9",
+  "version": "21.0.13.1+2",
   "platform": "x86_64-linux-gnu",
-  "archiveRoot": "jdk-21.0.13+9",
-  "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13_9.tar.gz",
-  "size": 207858352,
-  "sha256": "d7f5d5cf865a2902b70ff549b97586a7d3f234e016f041ab447ea740c7d66d1c",
-  "fileManifestSHA256": "33bee794bf06502e613ba36199a59a785eea259af066d87bb84809d2cef4a7b2",
-  "truststoreSHA256": "628b436e6698c364c5498a32c5bff91806bea7a9b501f75e2289ddc60b4ca7ef",
-  "blockedCertsSHA256": "96572f243f31c2ef81a6e627542e596f6a9295cff3c7ae095c1b595cb1457ded",
+  "archiveRoot": "jdk-21.0.13.1+2",
+  "url": "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13.1%2B2/OpenJDK21U-jdk_x64_linux_hotspot_21.0.13.1_2.tar.gz",
+  "size": 207869899,
+  "sha256": "bb8a93f9ae6e7a693b2b721e85dbeff26ae1a77447985a8d7afcdd9c7cf6222e",
+  "fileManifestSHA256": "8c633e2715cd465d78a6e0e648f828179f9aa0905048e4452c1b984f1cec6a75",
+  "truststoreSHA256": "868c92b50f99bcb97b1b84b87850a69623264972b3e18e868646a894535980a5",
+  "blockedCertsSHA256": "2596bb6dda83c66d96c5a252d7b2ae1f24cc1ae3f1890223b4f3591a8d52bf10",
   "removedTrustAnchorsSHA256": [
     "86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b",
     "d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4"

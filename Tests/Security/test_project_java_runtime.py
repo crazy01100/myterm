@@ -1,12 +1,15 @@
-"""Inert runtime archives and file-integrity fixtures; no JVM or certificate-chain tests."""
+"""JDK integrity fixtures and a loopback Firestore Rules check on the Linux CI runner."""
 import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import socket
 import subprocess
 import tarfile
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -69,11 +72,15 @@ class JavaRuntimeTests(unittest.TestCase):
                          patch.object(j.subprocess,'run',side_effect=run) as calls, \
                          patch.object(j,'derive_trust',side_effect=derive) as trust_step:
                         if outcome=='valid':
-                            self.assertEqual(j.setup(root),j.java_home(root/j.TARGET,row))
+                            legacy=root/'.build/java-runtime/legacy'
+                            legacy.parent.mkdir(parents=True);legacy.write_text('previous installation')
+                            self.assertEqual(j.setup(root),j.java_home(j.installation(root,row)/row['archiveRoot'],row))
+                            self.assertEqual(legacy.read_text(),'previous installation')
+                            self.assertEqual(j.setup(root),j.verify(root))
                             self.assertEqual(calls.call_count,2);trust_step.assert_called_once()
                         else:
                             with self.assertRaises((ValueError,subprocess.SubprocessError)):j.setup(root)
-                            self.assertFalse((root/j.TARGET).exists());self.assertEqual(calls.call_count,1)
+                            self.assertFalse(j.installation(root,row).exists());self.assertEqual(calls.call_count,1)
                             self.assertFalse((root/'.build/java-base-download'/fixture.name).exists())
                             trust_step.assert_not_called()
                     self.assertFalse(list((root/'.build/java-base-download').glob('download-*')))
@@ -110,7 +117,7 @@ class JavaRuntimeTests(unittest.TestCase):
     def test_setup_refuses_unknown_drift_instead_of_repairing(self):
         row=j.configuration(ROOT)
         with tempfile.TemporaryDirectory() as directory:
-            root=Path(directory);(root/j.TARGET).mkdir(parents=True)
+            root=Path(directory);j.installation(root,row).mkdir(parents=True)
             with patch.object(j,'configuration',return_value=row),patch.object(j,'verify',side_effect=ValueError('drift')), \
                  patch.object(j,'upstream_manifest',return_value={}),patch.object(j,'verify_tree',side_effect=ValueError('modified')), \
                  patch.object(j,'derive_trust') as derive:
@@ -195,8 +202,9 @@ class JavaRuntimeTests(unittest.TestCase):
     def test_runtime_storage_and_members_cannot_redirect_to_external_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);(root/'.build').mkdir();outside=root/'outside';outside.mkdir()
-            (root/j.TARGET).symlink_to(outside,target_is_directory=True)
-            with self.assertRaises(ValueError):j.storage(root,j.TARGET)
+            row=j.configuration(ROOT)
+            j.installation(root,row).symlink_to(outside,target_is_directory=True)
+            with self.assertRaises(ValueError):j.installation(root,row)
             (outside/'alias').symlink_to(root/'missing')
             with self.assertRaises(ValueError):j.verify_tree(outside,{})
 
@@ -219,6 +227,48 @@ class JavaRuntimeTests(unittest.TestCase):
         with patch.dict(j.os.environ,{'JAVA_TOOL_OPTIONS':'fixture','JDK_JAVA_OPTIONS':'fixture','_JAVA_OPTIONS':'fixture'}):
             result=j.clean_environment()
         self.assertFalse({'JAVA_TOOL_OPTIONS','JDK_JAVA_OPTIONS','_JAVA_OPTIONS'}&set(result))
+
+
+@unittest.skipUnless(os.environ.get('GITHUB_ACTIONS')=='true' and
+                     (j.platform.system(),j.platform.machine())==('Linux','x86_64'),
+                     'Requires the project Linux x64 CI toolchain')
+class LinuxRulesIntegrationTests(unittest.TestCase):
+    def test_rules_with_pinned_jdk_and_emulator(self):
+        policy=json.loads((ROOT/'Config/Security/toolchain-inventory.json').read_text())
+        emulator,=[r for r in policy['supplierBoundaries'] if r['component']=='firestore-emulator']
+        source=ROOT/'.build/security-inventory-artifacts'/emulator['filename']
+        self.assertFalse(source.is_symlink())
+        self.assertEqual(source.stat().st_size,emulator['size'])
+        self.assertEqual(j.digest_file(source),emulator['sha256'])
+        with socket.socket() as probe:
+            probe.bind(('127.0.0.1',0))
+            port=probe.getsockname()[1]
+        endpoint=f'127.0.0.1:{port}'
+        with tempfile.TemporaryDirectory() as directory:
+            log=Path(directory)/'emulator.log'
+            with log.open('wb') as output:
+                process=subprocess.Popen([str(ROOT/'scripts/project-java.sh'),'-jar',str(source),
+                    '--host','127.0.0.1','--port',str(port),'--project_id','demo-myterm',
+                    '--single_project_mode','true','--rules',str(ROOT/'firestore.rules')],
+                    cwd=directory,stdout=output,stderr=subprocess.STDOUT)
+                try:
+                    deadline=time.monotonic()+30
+                    while process.poll() is None and time.monotonic()<deadline:
+                        if 'Dev App Server is now running.' in log.read_text():
+                            break
+                        time.sleep(0.1)
+                    else:
+                        self.fail('The isolated Firestore emulator did not start: '+log.read_text())
+                    self.assertIn('API endpoint: http://'+endpoint+'\n',log.read_text())
+                    subprocess.run([str(ROOT/'scripts/project-node.sh'),'--test',
+                        'Tests/FirebaseRules/firestore.rules.test.mjs'],cwd=ROOT,check=True,timeout=90,
+                        env={**os.environ,'FIRESTORE_EMULATOR_HOST':endpoint})
+                finally:
+                    process.terminate()
+                    try:process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
 
 
 if __name__=='__main__':unittest.main()
