@@ -18,10 +18,11 @@ REPO = 'crazy01100/myterm'
 TRACKING_NAME = 'picomatch'
 EVIDENCE = 'Config/Security/applicability/picomatch-build-patterns.json'
 VERSIONS = {'project-npm': ['4.0.7'], 'project-npm-tool': ['4.0.4']}
-CHAIN = ('firebase-tools@15.36.0 → superstatic@10.0.0 → re2@1.26.1 → '
-         'node-gyp@13.0.2 → tinyglobby@0.2.17 → picomatch@4.0.7')
+BUILD_CHAIN = 'superstatic@10.0.0 → re2@1.26.1 → node-gyp@13.0.2 → tinyglobby@0.2.17 → picomatch@4.0.7'
+CHAIN = 'firebase-tools@15.37.0 → ' + BUILD_CHAIN
+ISSUE_220_ORIGINAL_CHAIN = 'firebase-tools@15.36.0 → ' + BUILD_CHAIN
 PACKAGES = {'node_modules/'+name: version for name, version in (
-    ('firebase-tools', '15.36.0'), ('superstatic', '10.0.0'), ('re2', '1.26.1'),
+    ('firebase-tools', '15.37.0'), ('superstatic', '10.0.0'), ('re2', '1.26.1'),
     ('node-gyp', '13.0.2'), ('tinyglobby', '0.2.17'),
     ('tinyglobby/node_modules/fdir', '6.5.0'), ('tinyglobby/node_modules/picomatch', '4.0.7'))}
 SOURCES = {'package.json', 'package-lock.json', 'Config/Security/node-tools.json',
@@ -234,8 +235,13 @@ def withdrawal_proof(proof):
 
 def previous_withdrawal(report, finding):
     for proof in report.get('projectApplicabilityProofs', []):
-        if withdrawal_proof(proof) and covers({**proof, 'status': 'not-affected'}, finding,
-                                             report.get('observedEnvironment')):
+        if not withdrawal_proof(proof):
+            continue
+        # The stored finding retains the path recorded before the CLI upgrade.
+        # Only withdrawal history may match that path; live findings use CHAIN.
+        if any(covers({**proof, 'status': 'not-affected'}, finding,
+                      report.get('observedEnvironment'), chain=chain)
+               for chain in (CHAIN, ISSUE_220_ORIGINAL_CHAIN)):
             return proof
     return None
 
@@ -247,7 +253,7 @@ def owned_withdrawal(snapshot):
             and HEX.fullmatch(row.get('proofSHA256', '')) is not None)
 
 
-def covers(proof, finding, environment):
+def covers(proof, finding, environment, *, chain=CHAIN):
     observations = finding.get('environmentObservations', [])
     seen = {}
     for o in observations:
@@ -259,7 +265,7 @@ def covers(proof, finding, environment):
             and proof.get('status') == 'not-affected' and proof.get('grantsRiskException') is False
             and proof.get('environment') == environment
             and seen == {k: set(v) for k, v in VERSIONS.items()}
-            and set(finding.get('dependencyPaths', [])) == set(VERSIONS) | {CHAIN}
+            and set(finding.get('dependencyPaths', [])) == set(VERSIONS) | {chain}
             and {v.strip() for v in finding.get('version', '').split(',')} == {'4.0.4', '4.0.7'})
 
 

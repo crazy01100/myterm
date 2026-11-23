@@ -202,8 +202,8 @@
     "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
     "Tools/Deployment/package-lock.json": "38510d9ed9c5fca6165ab26b579603dde90bf1b265ea455b0920d734fc81e65b",
     "Tools/Deployment/package.json": "e2a742d8849689fb6077f14a1227de251f74e86679636e6571d6b18caf2575f9",
-    "package-lock.json": "17a66d286e21f4d71c990c241d205334cf0f8148132e145f506dcb20ae802e3a",
-    "package.json": "9448dc2ce1d2b533937471fd09f8b7e65640da94f53e901b6db2c44c11b0a0e0",
+    "package-lock.json": "289401a9ebcb73072206b8341f9ce27d23a3745d6fa294406dffd61b8c6272b3",
+    "package.json": "7dbf1a8c4c1eed0c935d7e56f3e3d62abdc7821b795863a389e489b70ef54e6a",
     "scripts/node-toolchain.py": "47da8b56aac6bcf0d422a60816e9b7e9a7bdb74b51466f17d89667aca40b9216",
     "scripts/package-app.sh": "8dcbfe070e5b54785ed5446a06f780329a25243992fab0ca998fa873331093e4",
     "scripts/prepare-local-update-lab.sh": "1663ea7aff0188bd3d3f340e0613785872c6062c34ecd6df5bf0408ede7dfaa6",
@@ -218,7 +218,7 @@
     "scripts/security-python.sh": "82648c06ccd1c98db0ad4d67622f37ae712eecc47cdf800830b980c03e8ceadd",
     "scripts/update-lab-key.py": "1465b13e70e8e5532218a394178fd946b9a252f4301b62dfede1ef41c7277334",
     "scripts/verify-app.sh": "285a08aa75a1574a17eb131d58002b6460199b23a0e1d13a18e5da98e2c1086a",
-    "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec",
+    "scripts/verify-firebase-tools.cjs": "ee7a81b7380a894595a211ad1fc8541b90847498e37e91d2c21c0678ca1ca732",
     "scripts/verify-local-update-lab-security.sh": "4b09d6a1edbac3ff75757b76de9d3f6e43fce005c68fef167ad167616e0b5557",
     "scripts/verify-public-update-site.sh": "99c8cc90e985b63dd4610fabdb47fff2476c96267ed7309eb144779e4f642d4e",
     "scripts/verify-release-assets.sh": "4571aacc5bcc79e1fc9ef9a35668a8f34073c8d8ad4d81f15f3ec9e21bfb581a",
@@ -230,10 +230,10 @@
     "scripts/security-ci-gate.py": "75012adc0a110c36ee8baee681c4b12f2e949269286495725a90e285aa6769cc",
     "scripts/security-sparkle-applicability.py": "5d6c24620bfc67f48cb0f51c6f0c2dc7c06310bdb880adb0b4f6245822072aa4",
     "Config/Security/applicability/sparkle-package-update.json": "4ccff2e7f3cb6ccc2d8eab8a85716c3a7a9d921b94b59b6ba8d98cb88a4ab73b",
-    "scripts/security-picomatch-applicability.py": "d5ee2f244d4ac34f1d277b412e8a36c7a9afe0921257d02c739fb21fb2b0ba77",
+    "scripts/security-picomatch-applicability.py": "48ac7ece0be83674ee1c773402e9b46de6285dd95632a7f076a7aae36b57f912",
     "scripts/security-project-applicability.py": "edad20e6a129cec1c7bfb24c2c9d6dac893d6859f8b0a3864fead18b41a4aff4",
-    "Config/Security/project-applicability.json": "ebb760d5ed0aa3f26d64e7f247daca5bbec474c329cbb9197c210a3d92dce6f4",
-    "Config/Security/applicability/picomatch-build-patterns.json": "b793cb0a59cfd7a24e358971df3dc4e631f8177b9ef2daf62a653ee455074185"
+    "Config/Security/project-applicability.json": "49535a11fb66f14754120a2daf053efc1eb0e509bd7e130c390471988a7970d4",
+    "Config/Security/applicability/picomatch-build-patterns.json": "b789a9f5fc9992eea56fdc64e8dd6742d90d9f358f733cea4d0a612393be8879"
   },
   "workflows": [
     ".github/workflows/deploy-update-site.yml",

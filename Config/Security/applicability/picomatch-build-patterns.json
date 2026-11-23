@@ -7,20 +7,20 @@
     ".github/workflows/security-checks.yml": "3e97d3b4be46e668b0a26a44257d37cdb460a219126b71155d4acb6d83327d7b",
     ".github/workflows/security-gate.yml": "39893acebd14cbaf08428714ef91899d1205cddbc87c69b6449c592c70f44f42",
     "Config/Security/node-tools.json": "d828ed313c311cb3ccfda3c4179dc96f43033cb0e0bdbceb29713c1280889914",
-    "package-lock.json": "17a66d286e21f4d71c990c241d205334cf0f8148132e145f506dcb20ae802e3a",
-    "package.json": "9448dc2ce1d2b533937471fd09f8b7e65640da94f53e901b6db2c44c11b0a0e0",
+    "package-lock.json": "289401a9ebcb73072206b8341f9ce27d23a3745d6fa294406dffd61b8c6272b3",
+    "package.json": "7dbf1a8c4c1eed0c935d7e56f3e3d62abdc7821b795863a389e489b70ef54e6a",
     "scripts/firebase-command-policy.py": "826f96d9b13bbd26b97b3eb9229aab6345265a8617a8e9c111744a675184497a",
     "scripts/firebase-tools.sh": "c9f79f4ec897f8cd0ad88234f574bb3f1681efd8b755f6d8aea9b454f35dd708",
     "scripts/node-toolchain.py": "47da8b56aac6bcf0d422a60816e9b7e9a7bdb74b51466f17d89667aca40b9216",
     "scripts/project-node.sh": "82b730cbb9885ffe8d654a4dc7acd0a89c03db44fd03c6872c2940d7eefa46f2",
-    "scripts/verify-firebase-tools.cjs": "8531f8754cd68d83fd33e727726f193d8417cd3522723c5b237c073b98d90bec"
+    "scripts/verify-firebase-tools.cjs": "ee7a81b7380a894595a211ad1fc8541b90847498e37e91d2c21c0678ca1ca732"
   },
   "packages": {
     "node_modules/firebase-tools": {
       "lockEntry": {
-        "version": "15.36.0",
-        "resolved": "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.36.0.tgz",
-        "integrity": "sha512-z1fnT75IkGmARzRSP9Blb4BzAnYJOhwoSbe/lKpUKy/hpQzLhUM39KUesAfUM5U1PnDu6syFdwV1JsSGcdQ32w==",
+        "version": "15.37.0",
+        "resolved": "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.37.0.tgz",
+        "integrity": "sha512-px7Du9nXLHxANs0RzqB5EPnVGNChJju9bTAEJewWniGKtJoFTMYgRIEH30FfA1llYK5LwgYCko3bcl0bIq4BvQ==",
         "dev": true,
         "license": "MIT",
         "dependencies": {
@@ -29,7 +29,7 @@
           "@google-cloud/cloud-sql-connector": "^1.3.3",
           "@google-cloud/pubsub": "^5.2.0",
           "@inquirer/prompts": "^7.10.1",
-          "@modelcontextprotocol/sdk": "^1.24.0",
+          "@modelcontextprotocol/sdk": "^1.32.2",
           "abort-controller": "^3.0.0",
           "ajv": "^8.17.1",
           "ajv-formats": "3.0.1",
@@ -83,7 +83,7 @@
           "tcp-port-used": "^1.0.2",
           "tmp": "^0.2.3",
           "triple-beam": "^1.3.0",
-          "undici": "^6.19.0",
+          "undici": "^6.29.1",
           "update-notifier-cjs": "^5.1.6",
           "winston": "^3.0.0",
           "winston-transport": "^4.4.0",
@@ -98,7 +98,7 @@
           "node": ">=20.0.0 || >=22.0.0 || >=24.0.0"
         }
       },
-      "sourceDigest": "df4db15bde65409323069bed85fb99abad0abf6d1811fd2a15f0b997f4bbc897"
+      "sourceDigest": "d8f6803b0375686e15da0b49c02f812b1edb24a7042f45586f77e0d7e7068592"
     },
     "node_modules/superstatic": {
       "lockEntry": {

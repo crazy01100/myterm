@@ -145,7 +145,7 @@
       "advisoryKind": "ghsa",
       "advisorySHA256": "99b027d6e58b8807ba989a4f0dbc3d44ca074ed5861fc1dfc49f7b4003b1b050",
       "evidenceFile": "Config/Security/applicability/picomatch-build-patterns.json",
-      "evidenceSHA256": "b793cb0a59cfd7a24e358971df3dc4e631f8177b9ef2daf62a653ee455074185",
+      "evidenceSHA256": "b789a9f5fc9992eea56fdc64e8dd6742d90d9f358f733cea4d0a612393be8879",
       "reason": "此精確Firebase開發相依及官方npm內附組合只由node-gyp傳入build/*.sln、build/*.mk固定樣式；標準安裝停用生命週期腳本。已核對官方封裝、實際來源及兩條消費路徑，沒有公告所需的外部重複extglob輸入；不是picomatch已修補。版本、來源、用途或公告變更即恢復待審。",
       "withdrawal": {
         "state": "reviewed",
