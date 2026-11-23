@@ -159,6 +159,16 @@ class PicomatchTests(unittest.TestCase):
         r['rawFindings']=[f]
         with self.assertRaises(ValueError):p.revalidate(r,self.root)
 
+    def test_original_cli_path_matches_only_a_verified_withdrawal(self):
+        report, finding = self.withdrawn_report()
+        proof = report['projectApplicabilityProofs'][0]
+        original = {**finding, 'dependencyPaths': [*m.VERSIONS, m.ISSUE_220_ORIGINAL_CHAIN]}
+        self.assertEqual(m.previous_withdrawal(report, original), proof)
+        self.assertFalse(m.covers({**proof, 'status': 'not-affected'}, original, 'local'))
+        unknown = m.CHAIN.replace('firebase-tools@15.37.0', 'firebase-tools@99.0.0')
+        self.assertIsNone(m.previous_withdrawal(report, {**original, 'dependencyPaths': [*m.VERSIONS, unknown]}))
+        self.assertIsNone(m.previous_withdrawal({**report, 'projectApplicabilityProofs': []}, original))
+
     def test_withdrawal_records_evidence_without_closing_then_reopens_original(self):
         r,f=self.withdrawn_report();api=self.api({**r,'rawFindings':[f]})
         changes=s.synchronize(r,api,True,ENV)
